@@ -4,9 +4,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { updateClientLocaleAction, getClientLocaleAction } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ClientLanguagePreferenceProps {
   /** Client ID */
@@ -53,6 +61,10 @@ export function ClientLanguagePreference({
     const loadClientLocale = async () => {
       try {
         const locale = await getClientLocaleAction(clientId);
+        if (isReturnedActionError(locale)) {
+          handleError(locale, getErrorMessage(locale));
+          return;
+        }
         if (locale) {
           setCurrentLocale(locale);
         }
@@ -73,7 +85,11 @@ export function ClientLanguagePreference({
 
     setIsChanging(true);
     try {
-      await updateClientLocaleAction(clientId, locale);
+      const result = await updateClientLocaleAction(clientId, locale);
+      if (isReturnedActionError(result)) {
+        handleError(result, getErrorMessage(result));
+        return;
+      }
       setCurrentLocale(locale);
       toast.success(t('clientLanguagePreference.saveSuccess', {
         defaultValue: 'Default language for {{clientName}} contacts updated to {{language}}',

@@ -14,9 +14,9 @@ const ticketAuditLogInsertMock = vi.fn(async () => undefined);
 
 const trxMock = vi.fn((table: string) => {
   if (table === 'tenant_settings') {
-    const whereMock = vi.fn().mockReturnValue({ first: tenantSettingsFirstMock });
     return {
-      select: vi.fn().mockReturnValue({ where: whereMock }),
+      select: vi.fn().mockReturnThis(),
+      first: tenantSettingsFirstMock,
     };
   }
 
@@ -32,6 +32,9 @@ const trxMock = vi.fn((table: string) => {
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
+  tenantDb: (trx: any) => ({
+    table: (tableName: string) => trx(tableName),
+  }),
 }));
 
 vi.mock('@alga-psa/shared/models/ticketModel', () => ({

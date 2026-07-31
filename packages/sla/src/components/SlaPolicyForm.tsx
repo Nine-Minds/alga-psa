@@ -35,6 +35,13 @@ import { Label } from '@alga-psa/ui/components/Label';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import { Plus, Trash2, ChevronDown, Search } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
+import {
+  type ActionMessageError,
+  type ActionPermissionError,
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface SlaPolicyFormProps {
   policyId?: string;  // If provided, edit mode
@@ -64,6 +71,9 @@ interface ThresholdFormData {
   notify_escalation_manager: boolean;
   channels: SlaNotificationChannel[];
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // Predefined time options
 const RESPONSE_TIME_OPTIONS: SelectOption[] = [
@@ -498,7 +508,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
       }
     } catch (err) {
       console.error('Error loading SLA policy data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError('Failed to load data');
     } finally {
       setIsLoading(false);
     }
@@ -579,10 +589,20 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
 
       if (isEditMode && policyId) {
         // Update existing policy
-        savedPolicy = await updateSlaPolicy(policyId, policyInput);
+        const result = await updateSlaPolicy(policyId, policyInput);
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
+        savedPolicy = result;
       } else {
         // Create new policy (without seeding default thresholds since we'll set our own)
-        savedPolicy = await createSlaPolicy(policyInput, false);
+        const result = await createSlaPolicy(policyInput, false);
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
+        savedPolicy = result;
       }
 
       // Prepare and save targets
@@ -599,7 +619,11 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
         }));
 
       if (targetInputs.length > 0) {
-        await upsertSlaPolicyTargets(savedPolicy.sla_policy_id, targetInputs);
+        const result = await upsertSlaPolicyTargets(savedPolicy.sla_policy_id, targetInputs);
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       }
 
       // Prepare and save notification thresholds
@@ -612,19 +636,28 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
         channels: t.channels
       }));
 
-      await upsertSlaNotificationThresholds(savedPolicy.sla_policy_id, thresholdInputs);
+      const thresholdsResult = await upsertSlaNotificationThresholds(savedPolicy.sla_policy_id, thresholdInputs);
+      if (isReturnedActionError(thresholdsResult)) {
+        setError(getErrorMessage(thresholdsResult));
+        return;
+      }
 
       // Save board and client assignments
-      await Promise.all([
+      const assignmentResults = await Promise.all([
         updateSlaPolicyBoardAssignments(savedPolicy.sla_policy_id, selectedBoardIds),
         updateSlaPolicyClientAssignments(savedPolicy.sla_policy_id, selectedClientIds)
       ]);
+      const assignmentError = assignmentResults.find(isReturnedActionError);
+      if (assignmentError) {
+        setError(getErrorMessage(assignmentError));
+        return;
+      }
 
       // Notify parent
       onSave?.(savedPolicy);
     } catch (err) {
       console.error('Error saving SLA policy:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save SLA policy');
+      setError('Failed to save SLA policy');
     } finally {
       setIsSaving(false);
     }

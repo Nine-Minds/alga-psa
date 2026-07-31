@@ -1,12 +1,15 @@
 import { Knex } from 'knex';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportService } from './accountingExportService';
 import { AccountingExportBatch, AccountingExportServicePeriodSource } from '@alga-psa/types';
 import { AppError } from '@alga-psa/core';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps the default QBO realm so realm-scoped mappings resolve
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
+import { getDefaultXeroTenantId } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { satisfyExportOpsForManualBatch } from './accountingSync/syncProducers';
+import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
 
 type Nullable<T> = T | null | undefined;
 
@@ -46,6 +49,11 @@ export interface InvoicePreviewLine {
   isCredit: boolean;
   isZeroAmount: boolean;
   transactionIds: string[];
+  chargeType?: 'project_milestone' | 'project_deposit';
+  projectId?: string;
+  projectNumber?: string | null;
+  projectName?: string;
+  scheduleEntryId?: string;
 }
 
 type InvoicePreviewSelectionRow = {
@@ -70,6 +78,11 @@ type InvoicePreviewSelectionRow = {
   detail_service_period_start?: string | Date | null;
   detail_service_period_end?: string | Date | null;
   detail_billing_timing?: 'arrears' | 'advance' | null;
+  project_entry_type?: 'milestone' | 'deposit' | null;
+  project_schedule_entry_id?: string | null;
+  project_id?: string | null;
+  project_number?: string | null;
+  project_name?: string | null;
 };
 
 interface CreateBatchOptions {
@@ -106,17 +119,16 @@ export class AccountingExportInvoiceSelector {
     const invoiceStatusesForQuery = expandInvoiceStatuses(filters.invoiceStatuses);
     const includePendingExternalDrafts =
       shouldIncludePendingExternalDrafts(adapterType, invoiceStatusesForQuery);
+    const db = tenantDb(this.knex, tenantId);
 
-    const query = this.knex('invoices as inv')
-      .join('invoice_charges as ch', function joinCharges() {
-        this.on('inv.invoice_id', '=', 'ch.invoice_id').andOn('inv.tenant', '=', 'ch.tenant');
-      })
-      .leftJoin('invoice_charge_details as iid', function joinChargeDetails() {
-        this.on('ch.item_id', '=', 'iid.item_id').andOn('ch.tenant', '=', 'iid.tenant');
-      })
-      .leftJoin('clients as cli', function joinClients() {
-        this.on('inv.client_id', '=', 'cli.client_id').andOn('inv.tenant', '=', 'cli.tenant');
-      })
+    const query = db.table('invoices as inv');
+    db.tenantJoin(query, 'invoice_charges as ch', 'inv.invoice_id', 'ch.invoice_id');
+    db.tenantJoin(query, 'invoice_charge_details as iid', 'ch.item_id', 'iid.item_id', { type: 'left' });
+    db.tenantJoin(query, 'clients as cli', 'inv.client_id', 'cli.client_id', { type: 'left' });
+    db.tenantJoin(query, 'project_billing_schedule_entries as pbe', 'ch.item_id', 'pbe.invoice_charge_id', { type: 'left' });
+    db.tenantJoin(query, 'project_billing_configs as pbc', 'pbe.config_id', 'pbc.config_id', { type: 'left' });
+    db.tenantJoin(query, 'projects as project', 'pbc.project_id', 'project.project_id', { type: 'left' });
+    query
       .select([
         'inv.invoice_id',
         'inv.invoice_number',
@@ -135,10 +147,13 @@ export class AccountingExportInvoiceSelector {
         'ch.is_manual as charge_is_manual',
         'iid.service_period_start as detail_service_period_start',
         'iid.service_period_end as detail_service_period_end',
-        'iid.billing_timing as detail_billing_timing'
-      ])
-      .where('inv.tenant', this.tenantId)
-      .andWhere('ch.tenant', this.tenantId);
+        'iid.billing_timing as detail_billing_timing',
+        'pbe.entry_type as project_entry_type',
+        'pbe.schedule_entry_id as project_schedule_entry_id',
+        'project.project_id',
+        'project.project_number as project_number',
+        'project.project_name'
+      ]);
 
     if (filters.startDate) {
       query.andWhere('inv.invoice_date', '>=', filters.startDate);
@@ -177,23 +192,21 @@ export class AccountingExportInvoiceSelector {
     const shouldExcludeSynced = Boolean(adapterType) && filters.excludeSyncedInvoices !== false;
 
     if (shouldExcludeSynced) {
-      const knex = this.knex;
-      query.whereNotExists(function () {
-        this.select(knex.raw('1'))
-          .from('tenant_external_entity_mappings as map')
-          .where('map.tenant', tenantId)
-          .andWhere('map.integration_type', adapterType)
-          .andWhere('map.alga_entity_type', 'invoice')
-          .andWhereRaw('map.alga_entity_id = inv.invoice_id::text');
+      const mappingExists = db.table('tenant_external_entity_mappings as map')
+        .select(this.knex.raw('1'))
+        .where('map.integration_type', adapterType)
+        .andWhere('map.alga_entity_type', 'invoice')
+        .andWhereRaw('map.alga_entity_id = inv.invoice_id::text');
 
-        if (targetRealm) {
-          this.andWhere(function () {
-            this.where('map.external_realm_id', targetRealm).orWhereNull('map.external_realm_id');
-          });
-        } else {
-          this.whereNull('map.external_realm_id');
-        }
-      });
+      if (targetRealm) {
+        mappingExists.andWhere(function () {
+          this.where('map.external_realm_id', targetRealm).orWhereNull('map.external_realm_id');
+        });
+      } else {
+        mappingExists.whereNull('map.external_realm_id');
+      }
+
+      query.whereNotExists(mappingExists);
     }
 
     const rows = (await query.orderBy('inv.invoice_date', 'asc').orderBy('inv.invoice_number', 'asc')) as InvoicePreviewSelectionRow[];
@@ -298,7 +311,16 @@ export class AccountingExportInvoiceSelector {
         isMultiPeriod,
         isCredit: amountCents < 0 || totalAmountCents < 0,
         isZeroAmount: amountCents === 0,
-        transactionIds: transactionMap.get(row.invoice_id) ?? []
+        transactionIds: transactionMap.get(row.invoice_id) ?? [],
+        ...(row.project_entry_type
+          ? {
+              chargeType: row.project_entry_type === 'deposit' ? 'project_deposit' as const : 'project_milestone' as const,
+              projectId: row.project_id ?? undefined,
+              projectNumber: row.project_number ?? null,
+              projectName: row.project_name ?? undefined,
+              scheduleEntryId: row.project_schedule_entry_id ?? undefined,
+            }
+          : {}),
       } satisfies InvoicePreviewLine;
     });
   }
@@ -309,6 +331,9 @@ export class AccountingExportInvoiceSelector {
       // Live QBO mappings are realm-scoped, so a batch without a realm cannot
       // resolve them; default to the tenant's connected company.
       targetRealm = await getDefaultQboRealmId(this.tenantId).catch(() => null);
+    } else if (!targetRealm && options.adapterType === 'xero') {
+      // Live Xero mappings use the Xero organisation tenant id as their realm.
+      targetRealm = await getDefaultXeroTenantId(this.tenantId).catch(() => null);
     }
 
     const preview = await this.previewInvoiceLines({
@@ -349,8 +374,8 @@ export class AccountingExportInvoiceSelector {
 
     const lineInputs = preview.map((line) => ({
       batch_id: batch.batch_id,
-      invoice_id: line.invoiceId,
-      invoice_charge_id: line.chargeId,
+      document_id: line.invoiceId,
+      document_line_id: line.chargeId,
       client_id: line.clientId,
       amount_cents: line.amountCents,
       currency_code: line.currencyCode,
@@ -367,7 +392,16 @@ export class AccountingExportInvoiceSelector {
           manual_charge: line.isManualCharge,
           multi_period: line.isMultiPeriod,
           credit_memo: line.isCredit,
-          zero_amount: line.isZeroAmount
+          zero_amount: line.isZeroAmount,
+          ...(line.chargeType
+            ? {
+                charge_type: line.chargeType,
+                project_id: line.projectId,
+                project_number: line.projectNumber ?? null,
+                project_name: line.projectName,
+                schedule_entry_id: line.scheduleEntryId,
+              }
+            : {})
         },
         transaction_ids: line.transactionIds
       }
@@ -383,9 +417,8 @@ export class AccountingExportInvoiceSelector {
       return new Map();
     }
 
-    const rows = await this.knex('transactions')
+    const rows = await tenantDb(this.knex, this.tenantId).table('transactions')
       .select('invoice_id', 'transaction_id')
-      .where('tenant', this.tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     const map = new Map<string, string[]>();
@@ -450,50 +483,7 @@ function toInteger(value: unknown): number {
 }
 
 function toIsoString(value: unknown): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  if (value instanceof Date) {
-    const isLocalMidnight =
-      value.getHours() === 0 &&
-      value.getMinutes() === 0 &&
-      value.getSeconds() === 0 &&
-      value.getMilliseconds() === 0;
-    const isUtcMidnight =
-      value.getUTCHours() === 0 &&
-      value.getUTCMinutes() === 0 &&
-      value.getUTCSeconds() === 0 &&
-      value.getUTCMilliseconds() === 0;
-
-    const year = isLocalMidnight ? value.getFullYear() : value.getUTCFullYear();
-    const month = isLocalMidnight ? value.getMonth() + 1 : value.getUTCMonth() + 1;
-    const day = isLocalMidnight ? value.getDate() : value.getUTCDate();
-
-    if (isLocalMidnight || isUtcMidnight) {
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00.000Z`;
-    }
-
-    return value.toISOString();
-  }
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-      return `${trimmed}T00:00:00.000Z`;
-    }
-  }
-
-  const date = new Date(value as string);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toISOString();
+  return normalizeAccountingExportCalendarDate(value) ?? null;
 }
 
 function expandInvoiceStatuses(input?: string[]): string[] | undefined {

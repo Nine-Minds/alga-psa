@@ -524,7 +524,7 @@ describe('inbound webhook request processor', () => {
         tenant: 'tenant-a',
         deliveryId: 'delivery-1',
         dispatchStatus: 'failed',
-        handlerOutcome: { error: 'Workflow engine unavailable' },
+        handlerOutcome: { error: 'Inbound webhook dispatch failed' },
         responseStatus: 500,
       }),
     );
@@ -601,7 +601,7 @@ describe('inbound webhook request processor', () => {
         tenant: 'tenant-a',
         deliveryId: 'delivery-1',
         dispatchStatus: 'failed',
-        handlerOutcome: { error: 'Required field title is missing' },
+        handlerOutcome: { error: 'Inbound webhook dispatch failed' },
         responseStatus: 500,
         responseBody: {
           delivery_id: 'delivery-1',
@@ -723,7 +723,7 @@ describe('inbound webhook request processor', () => {
         tenant: 'tenant-a',
         deliveryId: 'delivery-1',
         dispatchStatus: 'failed',
-        handlerOutcome: { error: 'lookup_miss: ticket external_id alert-42 was not found' },
+        handlerOutcome: { error: 'Inbound webhook dispatch failed' },
         responseStatus: 500,
         responseBody: {
           delivery_id: 'delivery-1',

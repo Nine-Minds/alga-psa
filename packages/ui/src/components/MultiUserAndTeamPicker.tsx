@@ -100,12 +100,15 @@ const MultiUserAndTeamPicker = ({
   const validTeamValues = teamValues.filter(id => teamIds.has(id));
 
   useEffect(() => {
-    if (!isOpen || !getTeamAvatarUrlsBatch || teams.length === 0) return;
+    if (!getTeamAvatarUrlsBatch || teams.length === 0) return;
 
     const tenant = teams[0]?.tenant;
     if (!tenant) return;
 
-    const teamIdsToFetch = teams
+    // Selected teams render in the collapsed trigger, so fetch those eagerly;
+    // the full list only once the dropdown opens.
+    const wantedTeams = isOpen ? teams : teams.filter((team) => validTeamValues.includes(team.team_id));
+    const teamIdsToFetch = wantedTeams
       .map((team) => team.team_id)
       .filter((teamId) => !fetchedTeamIdsRef.current.has(teamId));
 
@@ -126,7 +129,7 @@ const MultiUserAndTeamPicker = ({
     };
 
     fetchTeamAvatars();
-  }, [isOpen, teams, getTeamAvatarUrlsBatch]);
+  }, [isOpen, teams, getTeamAvatarUrlsBatch, validTeamValues]);
 
   // If values contained stale IDs, notify parent to clean them up
   // Use a ref to prevent infinite loops - only clean once per unique values array

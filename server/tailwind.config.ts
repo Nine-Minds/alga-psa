@@ -11,12 +11,13 @@ const config: Config = {
 
     // Monorepo UI sources consumed by the Next.js app. Keep this list explicit to avoid
     // accidentally scanning `node_modules` and to reduce Tailwind's file-watching workload.
-    "../packages/{ui,ui-kit,client-portal,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,auth,workflows,onboarding,tags,jobs,notifications,reference-data,tenancy,users,ee,sla}/src/**/*.{jsx,tsx,mdx}",
+    "../packages/{ui,ui-kit,client-portal,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,inventory,auth,workflows,onboarding,tags,jobs,notifications,reference-data,tenancy,users,ee,sla}/src/**/*.{jsx,tsx,mdx}",
 
     // A small number of `.ts` files contain Tailwind class strings (not JSX). Include them
     // explicitly rather than enabling a broad `**/*.ts` glob.
     "../packages/scheduling/src/components/technician-dispatch/utils.ts",
     "../packages/tickets/src/actions/optimizedTicketActions.ts",
+    "../packages/core/src/lib/projectBillingStatus.ts",
   ],
   theme: {
     extend: {
@@ -166,6 +167,7 @@ const config: Config = {
         'alert-warning-bg': 'rgb(var(--color-alert-warning-bg))',
         'alert-success-bg': 'rgb(var(--color-alert-success-bg))',
         'alert-info-bg': 'rgb(var(--color-alert-info-bg))',
+        'alert-default-bg': 'rgb(var(--color-alert-default-bg))',
       },
       backgroundColor: { // Extend background colors specifically
         destructive: 'rgb(var(--color-destructive) / <alpha-value>)',

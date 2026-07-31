@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import { parseEmailAddress, parseEmailAddressList } from '@alga-psa/shared/lib/email/addressUtils';
 
 /**
@@ -154,8 +155,8 @@ export class GmailAdapter extends BaseEmailAdapter {
       // Persist updated credentials to database
       try {
         const knex = await getAdminConnection();
-        await knex('google_email_provider_config')
-          .where({ tenant: this.config.tenant, email_provider_id: this.config.id })
+        await tenantDb(knex, this.config.tenant).table('google_email_provider_config')
+          .where({ email_provider_id: this.config.id })
           .update({
             access_token: this.accessToken,
             refresh_token: this.refreshToken,
@@ -230,9 +231,9 @@ This indicates a problem with the OAuth token saving process.`;
       if (requestedFilters.length === 0) {
         try {
           const knex = await getAdminConnection();
-          const rec: any = await knex('google_email_provider_config')
+          const rec: any = await tenantDb(knex, this.config.tenant).table('google_email_provider_config')
             .select('label_filters')
-            .where({ tenant: this.config.tenant, email_provider_id: this.config.id })
+            .where({ email_provider_id: this.config.id })
             .first();
           const fromDb = Array.isArray(rec?.label_filters)
             ? rec.label_filters
@@ -304,8 +305,8 @@ This indicates a problem with the OAuth token saving process.`;
       // Save updated history_id and watch_expiration to database
       try {
         const knex = await getAdminConnection();
-        await knex('google_email_provider_config')
-          .where({ tenant: this.config.tenant, email_provider_id: this.config.id })
+        await tenantDb(knex, this.config.tenant).table('google_email_provider_config')
+          .where({ email_provider_id: this.config.id })
           .update({
             history_id: response.data.historyId,
             watch_expiration: expirationISO,
@@ -324,6 +325,19 @@ This indicates a problem with the OAuth token saving process.`;
   }
 
   /**
+   * Stop Gmail push notifications for the configured account.
+   */
+  async stopWatch(): Promise<void> {
+    try {
+      await this.ensureValidToken();
+      await this.gmail.users.stop({ userId: 'me' });
+      this.log('info', 'Stopped Gmail watch subscription');
+    } catch (error) {
+      throw this.handleError(error, 'stopWatch');
+    }
+  }
+
+  /**
    * Renew webhook subscription
    */
   async renewWebhookSubscription(): Promise<void> {
@@ -333,8 +347,7 @@ This indicates a problem with the OAuth token saving process.`;
       
       // Stop existing watch subscription first
       try {
-        // await this.gmail.users.stop({ userId: 'me' });
-        this.log('info', 'Stopped existing Gmail watch subscription');
+        await this.stopWatch();
       } catch (error: any) {
         // It's okay if there's no existing watch to stop
         this.log('warn', `No existing watch to stop: ${error.message}`);
@@ -689,10 +702,10 @@ This indicates a problem with the OAuth token saving process.`;
       }
 
       return { success: true };
-    } catch (error: any) {
+    } catch {
       return {
         success: false,
-        error: error.message || 'Failed to connect to Gmail API'
+        error: 'Gmail connection test failed. Check mailbox permissions and OAuth credentials.'
       };
     }
   }

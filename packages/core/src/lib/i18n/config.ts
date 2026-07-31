@@ -120,7 +120,7 @@ export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
  * translations, not QA fills. Promote to a production locale by removing the
  * code from this list once review passes.
  */
-export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = ['pt'];
+export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
 
 /**
  * Locales whose translation packs are still in progress and should never be
@@ -159,7 +159,7 @@ export const ROUTE_NAMESPACES = {
   '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
   '/client-portal/request-services': ['common', 'client-portal', 'client-portal/service-requests'],
   '/msp': ['common', 'msp/core', 'msp/dashboard', 'msp/keyboard-shortcuts'],
-  '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard'],
+  '/msp/dashboard': ['common', 'msp/core', 'msp/dashboard', 'msp/opportunities'],
   '/msp/surveys': ['common', 'msp/core', 'msp/surveys'],
   '/msp/schedule': ['common', 'msp/core', 'msp/schedule'],
   '/msp/knowledge-base': ['common', 'msp/core', 'features/documents', 'msp/knowledge-base'],
@@ -170,7 +170,9 @@ export const ROUTE_NAMESPACES = {
   '/msp/billing': ['common', 'msp/core', 'features/billing', 'msp/quotes', 'msp/reports', 'msp/billing', 'msp/contract-lines', 'msp/contracts', 'msp/invoicing'],
   '/msp/quote-approvals': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
   '/msp/quote-document-templates': ['common', 'msp/core', 'features/billing', 'msp/quotes'],
+  '/msp/inventory': ['common', 'msp/core', 'features/inventory'],
   '/msp/clients': ['common', 'msp/core', 'msp/clients'],
+  '/msp/opportunities': ['common', 'msp/core', 'msp/opportunities'],
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],
   '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],

@@ -21,12 +21,10 @@ export interface RmmProviderMetadata {
   badge?: RmmProviderBadge;
   capabilities: RmmProviderCapabilityFlags;
   requiresEnterprise: boolean;
-  featureFlagKey?: 'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration' | 'huntress-rmm-integration';
 }
 
 export interface RmmProviderAvailabilityContext {
   isEnterprise: boolean;
-  enabledFeatureFlags: Partial<Record<'tactical-rmm-integration' | 'tanium-rmm-integration' | 'levelio-rmm-integration' | 'huntress-rmm-integration', boolean>>;
 }
 
 const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
@@ -42,8 +40,7 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
       events: true,
       remoteActions: true
     },
-    requiresEnterprise: false,
-    featureFlagKey: 'tactical-rmm-integration'
+    requiresEnterprise: false
   },
   {
     id: 'ninjaone',
@@ -73,8 +70,7 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
       events: false,
       remoteActions: false
     },
-    requiresEnterprise: true,
-    featureFlagKey: 'tanium-rmm-integration'
+    requiresEnterprise: true
   },
   {
     id: 'levelio',
@@ -89,8 +85,7 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
       events: true,
       remoteActions: false
     },
-    requiresEnterprise: true,
-    featureFlagKey: 'levelio-rmm-integration'
+    requiresEnterprise: true
   },
   {
     id: 'huntress',
@@ -105,8 +100,7 @@ const RMM_PROVIDER_REGISTRY: RmmProviderMetadata[] = [
       events: false,
       remoteActions: false
     },
-    requiresEnterprise: true,
-    featureFlagKey: 'huntress-rmm-integration'
+    requiresEnterprise: true
   }
 ];
 
@@ -115,10 +109,6 @@ export function getAvailableRmmProviderRegistry(
 ): RmmProviderMetadata[] {
   return RMM_PROVIDER_REGISTRY.filter((provider) => {
     if (provider.requiresEnterprise && !context.isEnterprise) {
-      return false;
-    }
-
-    if (provider.featureFlagKey && !context.enabledFeatureFlags[provider.featureFlagKey]) {
       return false;
     }
 

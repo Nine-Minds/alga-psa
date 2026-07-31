@@ -200,7 +200,10 @@ describe('app_search_index migration contract', () => {
     expect(migration).toMatch(/ON app_search_index USING gin \(search_vector\)/);
     expect(migration).toMatch(/ON app_search_index USING gin \(title gin_trgm_ops\)/);
     expect(migration).toMatch(/ON app_search_index USING gin \(subtitle gin_trgm_ops\)/);
-    expect(searchQuery).toContain('WHERE s.tenant = ?::uuid');
+    expect(searchQuery).toContain('scopedSearchIndexSql(options.knex, options.tenant)');
+    expect(searchQuery).toContain("tenantDb(knex, tenant)");
+    expect(searchQuery).toContain('FROM ${searchIndex.sql}');
+    expect(searchQuery).not.toContain('WHERE s.tenant = ?::uuid');
     expect(searchQuery).toContain('s.search_vector @@ q.tsq');
     expect(searchQuery).toContain('s.title % q.raw');
     expect(searchQuery).toContain("coalesce(s.subtitle, '') % q.raw");

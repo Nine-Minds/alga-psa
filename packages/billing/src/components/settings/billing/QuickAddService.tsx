@@ -8,13 +8,14 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect'
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect'
 import { Switch } from '@alga-psa/ui/components/Switch'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
-import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices, getDefaultBillingSettings } from '@alga-psa/billing/actions'
+import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions/serviceActions'
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions'
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
 // Import getTaxRates and ITaxRate instead
-import { getTaxRates } from '@alga-psa/billing/actions'; // Removed getActiveTaxRegions
+import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions'; // Removed getActiveTaxRegions
 import { ITaxRate } from '@alga-psa/types'; // Removed ITaxRegion
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
-import { getServiceCategories } from '@alga-psa/billing/actions'
+import { getServiceCategories } from '@alga-psa/billing/actions/categoryActions'
 import { IService, IServiceCategory, IServiceType } from '@alga-psa/types' // Added IServiceType
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider'
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling'
@@ -158,6 +159,11 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
     const fetchCategories = async () => {
       try {
         const fetchedCategories = await getServiceCategories()
+        if (isActionMessageError(fetchedCategories) || isActionPermissionError(fetchedCategories)) {
+          setError(getErrorMessage(fetchedCategories))
+          setCategories([])
+          return
+        }
         setCategories(fetchedCategories)
       } catch (error) {
         console.error('Error fetching categories:', error)
@@ -176,6 +182,11 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
            const rates = await getTaxRates();
            // Log fetched rates to confirm structure (optional, can be removed later)
            console.log('[QuickAddService] Fetched Tax Rates:', rates);
+           if (isActionMessageError(rates) || isActionPermissionError(rates)) {
+             setErrorTaxRates(getErrorMessage(rates));
+             setTaxRates([]);
+             return;
+           }
            setTaxRates(rates);
        } catch (error) {
            console.error('Error loading tax rates:', error);
@@ -447,15 +458,24 @@ if (createdService?.service_id) {
                 }}
                 serviceTypes={allServiceTypes}
                 onCreateType={async (name) => {
-                  await createServiceTypeInline(name);
+                  const result = await createServiceTypeInline(name);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   onServiceTypesChange(); // Refresh the service types list
                 }}
                 onUpdateType={async (id, name) => {
-                  await updateServiceTypeInline(id, name);
+                  const result = await updateServiceTypeInline(id, name);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   onServiceTypesChange(); // Refresh the service types list
                 }}
                 onDeleteType={async (id) => {
-                  await deleteServiceTypeInline(id);
+                  const result = await deleteServiceTypeInline(id);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   onServiceTypesChange(); // Refresh the service types list
                 }}
                 placeholder={t('quickAddService.fields.serviceType.placeholder', {

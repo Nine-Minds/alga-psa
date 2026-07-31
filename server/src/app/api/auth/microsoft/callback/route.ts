@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers.js';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
-import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import {
+  MicrosoftGraphAdapter,
+  MicrosoftSubscriptionError,
+} from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 import { getWebhookBaseUrl } from '../../../../../utils/email/webhookHelpers';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import axios from 'axios';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,8 +87,59 @@ export async function GET(request: NextRequest) {
       return new NextResponse(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
     };
 
+    const parseStateValue = (rawState: string) => {
+      try {
+        const decodedState = Buffer.from(rawState, 'base64').toString();
+        return JSON.parse(decodedState);
+      } catch (e: any) {
+        console.error('[MS OAuth] Failed to parse state:', {
+          error: e.message,
+          stateLength: rawState?.length,
+          statePreview: rawState ? `${rawState.substring(0, 20)}...` : 'null'
+        });
+        return null;
+      }
+    };
+
+    const persistProviderError = async (stateData: any, errorCode: string, description?: string | null) => {
+      if (!stateData?.providerId || !stateData?.tenant) {
+        return;
+      }
+
+      const sessionUser = await getCurrentUser();
+      if (!sessionUser?.tenant || sessionUser.tenant !== stateData.tenant) {
+        console.error('[MS OAuth] Skipping provider error persistence because session tenant does not match state tenant', {
+          hasSession: Boolean(sessionUser?.tenant),
+          stateTenant: stateData.tenant,
+        });
+        return;
+      }
+
+      const message = [errorCode, description].filter(Boolean).join(': ');
+      await runWithTenant(stateData.tenant, async () => {
+        const { knex } = await createTenantKnex();
+        await tenantDb(knex, stateData.tenant)
+          .table('email_providers')
+          .where({ id: stateData.providerId })
+          .update({
+            status: 'error',
+            error_message: message,
+            updated_at: knex.fn.now(),
+          });
+      });
+    };
+
     // Handle OAuth errors
     if (error) {
+      const errorStateData = state ? parseStateValue(state) : null;
+      if (errorStateData?.providerId) {
+        try {
+          await persistProviderError(errorStateData, error, errorDescription || '');
+        } catch (persistError: any) {
+          console.warn('⚠️ Failed to persist Microsoft OAuth error:', persistError?.message || persistError);
+        }
+      }
+
       console.error('[MS OAuth] OAuth error from Microsoft:', {
         error,
         errorDescription: errorDescription || '',
@@ -94,7 +151,7 @@ export async function GET(request: NextRequest) {
         provider: 'microsoft',
         success: false,
         error,
-        errorDescription: errorDescription || ''
+        errorDescription: 'Microsoft authorization failed. Please try again.'
       });
     }
 
@@ -112,14 +169,11 @@ export async function GET(request: NextRequest) {
     // Parse state to get tenant and other info
     let stateData;
     try {
-      const decodedState = Buffer.from(state, 'base64').toString();
-      stateData = JSON.parse(decodedState);
+      stateData = parseStateValue(state);
+      if (!stateData) {
+        throw new Error('Invalid state parameter');
+      }
     } catch (e: any) {
-      console.error('[MS OAuth] Failed to parse state:', {
-        error: e.message,
-        stateLength: state?.length,
-        statePreview: state ? `${state.substring(0, 20)}...` : 'null'
-      });
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
@@ -194,6 +248,11 @@ export async function GET(request: NextRequest) {
 
     if (!clientId || !clientSecret) {
       console.error('Microsoft OAuth credentials not configured');
+      try {
+        await persistProviderError(stateData, 'configuration_error', 'OAuth credentials not configured');
+      } catch (persistError: any) {
+        console.warn('⚠️ Failed to persist Microsoft OAuth configuration error:', persistError?.message || persistError);
+      }
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
@@ -205,7 +264,7 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     try {
-      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
+      const tokenUrl = getMicrosoftTokenUrl('common');
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
@@ -231,21 +290,25 @@ export async function GET(request: NextRequest) {
         try {
           await runWithTenant(stateData.tenant, async () => {
             const { knex } = await createTenantKnex();
+            const db = tenantDb(knex, stateData.tenant);
             // Save tokens
-            await knex('microsoft_email_provider_config')
+            await db.table('microsoft_email_provider_config')
               .where('email_provider_id', stateData.providerId)
-              .andWhere('tenant', stateData.tenant)
               .update({
                 access_token: access_token,
                 refresh_token: refresh_token || null,
                 token_expires_at: expiresAt.toISOString(),
+                client_id: clientId,
+                client_secret: clientSecret,
+                tenant_id: microsoftProfile.status === 'ready' ? microsoftProfile.microsoftTenantId || 'common' : 'common',
+                microsoft_profile_id: microsoftProfile.status === 'ready' ? microsoftProfile.profileId || null : null,
+                client_secret_ref: microsoftProfile.status === 'ready' ? microsoftProfile.clientSecretRef || null : null,
                 updated_at: new Date().toISOString(),
               });
 
             // Mark provider connected
-            await knex('email_providers')
+            await db.table('email_providers')
               .where('id', stateData.providerId)
-              .andWhere('tenant', stateData.tenant)
               .update({
                 status: 'connected',
                 error_message: null,
@@ -254,14 +317,12 @@ export async function GET(request: NextRequest) {
 
             // Build provider config and register webhook subscription
             try {
-              const provider = await knex('email_providers')
+              const provider = await db.table('email_providers')
                 .where('id', stateData.providerId)
-                .andWhere('tenant', stateData.tenant)
                 .first();
 
-              const msConfig = await knex('microsoft_email_provider_config')
+              const msConfig = await db.table('microsoft_email_provider_config')
                 .where('email_provider_id', stateData.providerId)
-                .andWhere('tenant', stateData.tenant)
                 .first();
 
               if (provider && msConfig) {
@@ -299,6 +360,8 @@ export async function GET(request: NextRequest) {
                     access_token: access_token,
                     refresh_token: refresh_token || null,
                     token_expires_at: expiresAt.toISOString(),
+                    microsoft_profile_id: microsoftProfile.status === 'ready' ? microsoftProfile.profileId : undefined,
+                    client_secret_ref: microsoftProfile.status === 'ready' ? microsoftProfile.clientSecretRef : undefined,
                   },
                 };
 
@@ -321,23 +384,55 @@ export async function GET(request: NextRequest) {
                   });
 
                   await adapter.registerWebhookSubscription();
+                  await new EmailWebhookMaintenanceService().recordWebhookDeliveryMode({
+                    providerId: provider.id,
+                    tenant: provider.tenant,
+                    reason: 'OAuth setup subscription succeeded',
+                  });
 
                   console.log('[MS OAuth Callback] Webhook subscription registration attempted');
                 } catch (subErr: any) {
+                  if (subErr instanceof MicrosoftSubscriptionError && subErr.kind === 'validation') {
+                    const nextProbeAt = await new EmailWebhookMaintenanceService().usePollingDelivery({
+                      providerId: provider.id,
+                      tenant: provider.tenant,
+                      reason: subErr.message,
+                    });
+                    console.info('[MS OAuth Callback] Webhook endpoint validation failed; using polling delivery', {
+                      tenant: provider.tenant,
+                      providerId: provider.id,
+                      nextProbeAt,
+                    });
+                    return;
+                  }
                   console.warn('⚠️ Failed to register Microsoft webhook subscription in callback:', {
                     message: subErr?.message || String(subErr),
                     status: subErr?.status,
                     code: subErr?.code,
                     requestId: subErr?.requestId,
                   });
+                  throw subErr;
                 }
               }
             } catch (e) {
-              console.warn('⚠️ Skipped webhook initialization after OAuth due to setup error:', (e as any)?.message || e);
+              console.warn('⚠️ Microsoft webhook initialization failed after OAuth:', (e as any)?.message || e);
+              throw e;
             }
           });
         } catch (persistErr: any) {
           console.warn('⚠️ Failed to persist Microsoft OAuth tokens or initialize webhook:', persistErr?.message || persistErr);
+          try {
+            await persistProviderError(stateData, 'token_persistence_failed', persistErr?.message || 'Failed to persist Microsoft OAuth tokens or initialize webhook');
+          } catch (providerErrorPersistErr: any) {
+            console.warn('⚠️ Failed to persist Microsoft OAuth token persistence error:', providerErrorPersistErr?.message || providerErrorPersistErr);
+          }
+          return respondWithPostMessage({
+            type: 'oauth-callback',
+            provider: 'microsoft',
+            success: false,
+            error: 'token_persistence_failed',
+            errorDescription: persistErr?.message || 'Failed to persist Microsoft OAuth tokens or initialize webhook'
+          });
         }
       }
 
@@ -370,13 +465,19 @@ export async function GET(request: NextRequest) {
         hasCode: !!code,
         hasState: !!state
       });
+
+      try {
+        await persistProviderError(stateData, errorCode, errorMessage);
+      } catch (persistError: any) {
+        console.warn('⚠️ Failed to persist Microsoft OAuth token exchange error:', persistError?.message || persistError);
+      }
       
       return respondWithPostMessage({
         type: 'oauth-callback',
         provider: 'microsoft',
         success: false,
         error: errorCode,
-        errorDescription: errorMessage
+        errorDescription: 'Microsoft authorization failed. Please try again.'
       });
     }
   } catch (error: any) {
@@ -388,7 +489,7 @@ export async function GET(request: NextRequest) {
           provider: 'microsoft',
           success: false,
           error: 'unexpected_error',
-          errorDescription: error?.message || 'Unexpected error'
+          errorDescription: 'Microsoft authorization failed. Please try again.'
         })).toString('base64');
         return `<!DOCTYPE html>
         <html>

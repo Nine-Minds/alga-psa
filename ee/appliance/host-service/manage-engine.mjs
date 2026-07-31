@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { appUrlFromInput, hostFromAppUrl, setYamlScalar } from './setup-engine.mjs';
+import { licenseSeedFromRedeem } from './install-code.mjs';
 
 const JWS_RE = /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/;
 
@@ -98,15 +99,57 @@ function decodeSecretValue(value) {
 // Read edition + license expiry from the appliance-license-seed secret.
 export async function readLicenseStatus(deps) {
   const { kube, namespace = 'msp', secretName = 'appliance-license-seed' } = deps;
+  const live = await kube.run('exec -i deploy/alga-core-sebastian -n msp -c sebastian -- node /app/server/scripts/appliance-license-status.mjs');
+  if (live?.ok) {
+    try {
+      const body = JSON.parse(live.stdout.trim());
+      if (body.ok && body.row) {
+        return { ...licenseStatusFromClaims(decodeLicenseClaims(body.row.license_token), body.row.edition_choice), source: 'live', lastCheckinAt: body.row.last_checkin_at };
+      }
+    } catch { /* use seed fallback */ }
+  }
   const res = await kube.json(`get secret ${secretName} -n ${namespace}`);
   if (!res || !res.ok || !res.value || !res.value.data) {
-    return { edition: null, expiresAt: null, status: 'unknown' };
+    return { edition: null, expiresAt: null, status: 'unknown', source: 'seed-fallback' };
   }
   const data = res.value.data;
   const token = decodeSecretValue(data.LICENSE_TOKEN);
   const edition = decodeSecretValue(data.EDITION_CHOICE) || null;
   const claims = token ? decodeLicenseClaims(token) : null;
-  return licenseStatusFromClaims(claims, edition);
+  return { ...licenseStatusFromClaims(claims, edition), source: 'seed-fallback' };
+}
+
+function parseWorkflowResult(execResult) {
+  // The in-pod scripts print a structured JSON result to stdout AND exit
+  // nonzero on failure, so stdout wins whenever it parses — a nonzero exit
+  // must not mask structured codes like invalid_claim_code.
+  try { return JSON.parse(execResult.stdout.trim()); }
+  catch {
+    if (!execResult?.ok) return { ok: false, code: 'app_unavailable', error: 'The app is still starting — try again shortly.' };
+    return { ok: false, code: 'invalid_response', error: 'The app returned an invalid activation response.' };
+  }
+}
+
+const REDEEM_ERRORS = {
+  invalid_claim_code: 'Invalid claim code. Check the code and try again.',
+  expired_claim_code: 'Claim code has expired. Request a new one from your licensing portal.',
+  consumed_claim_code: 'Claim code has already been used.',
+  superseded_claim_code: 'Claim code was superseded. Request the newest code from your licensing portal.',
+  tenant_mismatch: 'This code belongs to a different account — reissue a code from your licensing portal.',
+};
+
+export async function redeemClaimCode({ claimCode, kube, namespace = 'msp', secretName = 'appliance-license-seed' }) {
+  const normalized = String(claimCode || '').trim().toUpperCase().replace(/[\s-]/g, '');
+  if (!normalized) return { ok: false, status: 400, error: 'A claim code is required.' };
+  const executed = await kube.run('exec -i deploy/alga-core-sebastian -n msp -c sebastian -- node /app/server/scripts/appliance-redeem-claim-code.mjs', { stdin: JSON.stringify({ claimCode: normalized }) });
+  const body = parseWorkflowResult(executed);
+  if (!body.ok) return { ok: false, status: body.code === 'app_unavailable' ? 503 : 400, error: REDEEM_ERRORS[body.code] || body.error };
+  const literals = licenseSeedFromRedeem(body.result);
+  const data = Object.fromEntries(Object.entries(literals).map(([key, value]) => [key, Buffer.from(String(value), 'utf8').toString('base64')]));
+  const patch = JSON.stringify({ data });
+  const patched = await kube.run(`patch secret ${secretName} -n ${namespace} --type merge -p ${kube.quote(patch)}`);
+  if (!patched.ok) return { ok: false, status: 412, error: 'License active; recovery seed not yet updated — retry activation.' };
+  return { ok: true, result: body.result };
 }
 
 export async function applyLicense(deps) {
@@ -127,6 +170,10 @@ export async function applyLicense(deps) {
     return { ok: false, status: 400, error: 'Invalid license key format. Expected a signed JWS (three dot-separated base64url segments).' };
   }
 
+  const executed = await kube.run(`exec -i deploy/${appDeployment} -n ${appNamespace} -c sebastian -- node /app/server/scripts/appliance-apply-license-key.mjs`, { stdin: JSON.stringify({ licenseKey: token }) });
+  const applied = parseWorkflowResult(executed);
+  if (!applied.ok) return { ok: false, status: applied.code === 'app_unavailable' ? 503 : 400, error: REDEEM_ERRORS[applied.code] || applied.error };
+
   // Patch only LICENSE_TOKEN so the edition and any connected-refresh fields are
   // preserved. Secret.data values are base64.
   const tokenB64 = Buffer.from(token, 'utf8').toString('base64');
@@ -136,12 +183,7 @@ export async function applyLicense(deps) {
     return { ok: false, status: 412, error: `Could not update the license secret: ${(patched.stderr || patched.stdout || '').trim()}` };
   }
 
-  // Restart the app so it re-reads the license seed.
-  const restarted = await kube.run(`rollout restart deploy/${appDeployment} -n ${appNamespace}`);
-  if (!restarted.ok) {
-    return { ok: false, status: 412, error: `License updated but app restart failed: ${(restarted.stderr || restarted.stdout || '').trim()}` };
-  }
-  return { ok: true };
+  return { ok: true, result: applied.result };
 }
 
 // --- Settings: app URL / DNS ----------------------------------------------
@@ -155,7 +197,9 @@ export async function applyAppUrl(deps) {
     releaseSelectionFile,
     valuesNamespace = 'alga-system',
     valuesConfigMapName = 'appliance-values-alga-core',
+    temporalWorkerValuesConfigMapName = 'appliance-values-temporal-worker',
     helmReleaseName = 'alga-core',
+    temporalWorkerHelmReleaseName = 'temporal-worker',
     timestamp
   } = deps;
 
@@ -168,35 +212,69 @@ export async function applyAppUrl(deps) {
   }
   const host = hostFromAppUrl(appUrl);
 
-  // 1. Read the current alga-core values configmap, rewrite the URL scalars.
-  const cm = await kube.json(`get configmap ${valuesConfigMapName} -n ${valuesNamespace}`);
-  if (!cm || !cm.ok || !cm.value || !cm.value.data) {
-    return { ok: false, status: 412, error: `Could not read ${valuesConfigMapName} in ${valuesNamespace}.` };
-  }
-  const dataKeys = Object.keys(cm.value.data);
-  const valuesKey = dataKeys.find((k) => k.startsWith('alga-core.')) || dataKeys[0];
-  if (!valuesKey) {
-    return { ok: false, status: 412, error: `${valuesConfigMapName} has no values data key.` };
-  }
-  let yaml = cm.value.data[valuesKey];
-  try {
-    yaml = setYamlScalar(yaml, ['appUrl'], JSON.stringify(appUrl));
-    yaml = setYamlScalar(yaml, ['host'], JSON.stringify(host));
-    yaml = setYamlScalar(yaml, ['domainSuffix'], '""');
-  } catch (error) {
-    return { ok: false, status: 412, error: `Could not rewrite app URL in values: ${error instanceof Error ? error.message : String(error)}` };
+  // 1. Read and rewrite both values ConfigMaps before applying either one.
+  //    The app keeps its internal service URL, while recipient-facing links
+  //    from temporal-worker follow the operator's public hostname.
+  const valuesTargets = [
+    {
+      configMapName: valuesConfigMapName,
+      valuesKeyPrefix: 'alga-core.',
+      rewrite(yaml) {
+        let updated = setYamlScalar(yaml, ['appUrl'], JSON.stringify(appUrl));
+        updated = setYamlScalar(updated, ['host'], JSON.stringify(host));
+        return setYamlScalar(updated, ['domainSuffix'], '""');
+      }
+    },
+    {
+      configMapName: temporalWorkerValuesConfigMapName,
+      valuesKeyPrefix: 'temporal-worker.',
+      rewrite(yaml) {
+        return setYamlScalar(yaml, ['publicBaseUrl'], JSON.stringify(appUrl));
+      }
+    }
+  ];
+  const manifests = [];
+
+  for (const target of valuesTargets) {
+    const cm = await kube.json(`get configmap ${target.configMapName} -n ${valuesNamespace}`);
+    if (!cm || !cm.ok || !cm.value || !cm.value.data) {
+      return { ok: false, status: 412, error: `Could not read ${target.configMapName} in ${valuesNamespace}.` };
+    }
+    const dataKeys = Object.keys(cm.value.data);
+    const valuesKey = dataKeys.find((key) => key.startsWith(target.valuesKeyPrefix)) || dataKeys[0];
+    if (!valuesKey) {
+      return { ok: false, status: 412, error: `${target.configMapName} has no values data key.` };
+    }
+
+    let yaml = cm.value.data[valuesKey];
+    try {
+      yaml = target.rewrite(yaml);
+    } catch (error) {
+      return {
+        ok: false,
+        status: 412,
+        error: `Could not rewrite app URL in ${target.configMapName}: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+
+    manifests.push({
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      metadata: { name: target.configMapName, namespace: valuesNamespace },
+      data: { [valuesKey]: yaml.endsWith('\n') ? yaml : `${yaml}\n` }
+    });
   }
 
-  // 2. Apply the updated configmap (full object so the data key is preserved).
-  const manifest = {
-    apiVersion: 'v1',
-    kind: 'ConfigMap',
-    metadata: { name: valuesConfigMapName, namespace: valuesNamespace },
-    data: { [valuesKey]: yaml.endsWith('\n') ? yaml : `${yaml}\n` }
-  };
-  const applied = await kube.apply(manifest);
-  if (!applied.ok) {
-    return { ok: false, status: 412, error: `Could not apply updated values: ${(applied.stderr || applied.stdout || '').trim()}` };
+  // 2. Apply the updated ConfigMaps with their existing data keys preserved.
+  for (const manifest of manifests) {
+    const applied = await kube.apply(manifest);
+    if (!applied.ok) {
+      return {
+        ok: false,
+        status: 412,
+        error: `Could not apply updated ${manifest.metadata.name} values: ${(applied.stderr || applied.stdout || '').trim()}`
+      };
+    }
   }
 
   // 3. Persist the operator intent in release-selection.json so the next update
@@ -217,17 +295,29 @@ export async function applyAppUrl(deps) {
     }
   }
 
-  // 4. Reconcile the HelmRelease so NEXTAUTH_URL re-renders from the new values.
+  // 4. Reconcile both HelmReleases so the public URL reaches the app and worker.
   const ts = timestamp || String(Math.floor(nowMs() / 1000));
-  const reconciled = await kube.run(`annotate helmrelease ${helmReleaseName} -n ${valuesNamespace} reconcile.fluxcd.io/requestedAt=${ts} --overwrite`);
-  if (!reconciled.ok) {
-    return { ok: false, status: 412, error: `Values applied but HelmRelease reconcile failed: ${(reconciled.stderr || reconciled.stdout || '').trim()}` };
+  for (const releaseName of [helmReleaseName, temporalWorkerHelmReleaseName]) {
+    const reconciled = await kube.run(`annotate helmrelease ${releaseName} -n ${valuesNamespace} reconcile.fluxcd.io/requestedAt=${ts} --overwrite`);
+    if (!reconciled.ok) {
+      return {
+        ok: false,
+        status: 412,
+        error: `Values applied but ${releaseName} HelmRelease reconcile failed: ${(reconciled.stderr || reconciled.stdout || '').trim()}`
+      };
+    }
   }
   return { ok: true, appUrl, host };
 }
 
 // --- Control-plane upgrade request (-> host-agent over the socket) ----------
 
+// LEVERAGE: friction appliance-host-agent-out-of-band — the control plane is
+// delivered via the OCI release channel, but this upgrade hops to the host-agent
+// (a host systemd service baked at install) which the channel can't update. So a
+// new control-plane image can call a host-agent route an older install lacks
+// (-> relayed 404 {"error":"not found"}). The host should be inside the update
+// plane, or the upgrade shouldn't depend on a separately-shipped host-agent route.
 export function requestControlPlaneUpgrade(deps) {
   const { hostAgentSocket = '/run/alga-appliance/host-agent.sock', timeoutMs = 10000 } = deps;
   return new Promise((resolve) => {
@@ -281,6 +371,21 @@ function digestOf(imageRef) {
   return at >= 0 ? imageRef.slice(at + 1) : null;
 }
 
+// Live readiness of a HelmRelease's Ready condition. Returns true/false, or null
+// when it cannot be determined (kube error / not found) — callers must treat null
+// as "unknown" and not as a failure.
+async function isHelmReleaseReady(kube, namespace, name) {
+  try {
+    const res = await kube.json(`get helmrelease ${name} -n ${namespace}`);
+    if (!res || !res.ok || !res.value) return null;
+    const condition = (res.value.status?.conditions || []).find((c) => c.type === 'Ready');
+    if (!condition) return null;
+    return condition.status === 'True';
+  } catch {
+    return null;
+  }
+}
+
 export async function collectManageStatus(deps) {
   const {
     kube,
@@ -292,6 +397,9 @@ export async function collectManageStatus(deps) {
     cpNamespace = 'alga-appliance-control-plane',
     cpDeployment = 'appliance-control-plane',
     resolveControlPlaneRef,
+    resolveReleaseManifest,
+    appHelmReleaseNamespace = 'alga-system',
+    appHelmReleaseName = 'alga-core',
     licenseNamespace = 'msp',
     licenseSecretName = 'appliance-license-seed'
   } = deps;
@@ -317,6 +425,32 @@ export async function collectManageStatus(deps) {
   const resolvedDigest = digestOf(resolvedRef) || (resolvedRef && resolvedRef.includes('sha256:') ? resolvedRef.split('@').pop() : null);
   const upgradeAvailable = Boolean(runningDigest && resolvedDigest && runningDigest !== resolvedDigest);
 
+  // App release update availability. The box pins the channel -> release-manifest
+  // digest at install time (selection.manifestDigest). Re-resolve the channel's
+  // *current* manifest digest and compare: a moved channel tag (e.g. a published
+  // pointer-update) points at new app images but never reaches an installed box
+  // until an operator runs an update. Without this, app.updateAvailable was a
+  // hardcoded false, so the Manage UI could never surface — or offer — an update.
+  // LEVERAGE: pattern appliance-channel-digest-drift — "resolve channel ref, diff
+  // against the installed/pinned digest -> available?" is now written twice here
+  // (control-plane image above, app release below). A shared helper
+  // (installedDigest + resolver -> { available, resolvedDigest }) would dedupe it.
+  let resolvedReleaseDigest = null;
+  let resolvedReleaseVersion = null;
+  try {
+    if (resolveReleaseManifest && selection.manifestDigest) {
+      const resolved = await resolveReleaseManifest(channel, {
+        registryHost: selection.registryHost,
+        releaseRepository: selection.repository
+      });
+      resolvedReleaseDigest = resolved?.manifestDigest || null;
+      resolvedReleaseVersion = resolved?.manifest?.version || null;
+    }
+  } catch { /* best effort — leave updateAvailable false when the registry is unreachable */ }
+  const updateAvailable = Boolean(
+    selection.manifestDigest && resolvedReleaseDigest && selection.manifestDigest !== resolvedReleaseDigest
+  );
+
   // App URL / DNS (from persisted operator intent).
   const runtime = selection.runtime || {};
   const appUrl = {
@@ -332,12 +466,27 @@ export async function collectManageStatus(deps) {
     license = await readLicenseStatus({ kube, namespace: licenseNamespace, secretName: licenseSecretName });
   } catch { /* best effort */ }
 
+  // App-update status, reconciled against live reality. install-state persists the
+  // *last* update attempt's outcome, which goes stale: a block that has since
+  // converged (or a transient that recovered) must not keep showing as a current
+  // error. If the alga-core HelmRelease is actually Ready, the app is healthy and
+  // there is no error to show — surface no failure rather than a stale one.
+  let appUpdateStatus = mapUpdateStatus(installState.status);
+  let appUpdateMessage = installState.lastAction || null;
+  if (appUpdateStatus === 'blocked' && (await isHelmReleaseReady(kube, appHelmReleaseNamespace, appHelmReleaseName)) === true) {
+    appUpdateStatus = 'idle';
+    appUpdateMessage = null;
+  }
+
   return {
     app: {
       version: selection.selectedReleaseVersion || null,
       channel,
-      updateAvailable: false,
-      update: { status: mapUpdateStatus(installState.status), message: installState.lastAction || null }
+      updateAvailable,
+      availableVersion: updateAvailable ? resolvedReleaseVersion : null,
+      pinnedReleaseDigest: selection.manifestDigest || null,
+      resolvedReleaseDigest,
+      update: { status: appUpdateStatus, message: appUpdateMessage }
     },
     controlPlane: {
       channel,

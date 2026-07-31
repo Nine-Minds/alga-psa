@@ -34,7 +34,7 @@ export async function downloadDocumentInBrowser(documentId: string, documentName
     console.error('Error downloading document:', error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Download failed' 
+      error: 'Download failed'
     };
   }
 }

@@ -3,6 +3,7 @@
     "noClient": "Nenhum cliente"
   },
   "reactions": {
+    "add": "Reagir",
     "ariaSummary_one": "Reação {{emoji}} {{count}}",
     "ariaSummary_other": "Reações {{emoji}} {{count}}",
     "ariaYouReacted": ", você reagiu"
@@ -13,17 +14,22 @@
     "expiringForClient_one": "O crédito {{count}} para {{clientName}} expirará em breve",
     "expiringForClient_other": "Os créditos {{count}} para {{clientName}} expirarão em breve"
   },
+  "staleAction": {
+    "message": "Esta página está desatualizada. Atualize-a para restaurar atualizações e ações."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "A avaliação empresarial expira no dia {{count}}. Insira uma chave de licença para manter os recursos empresariais.",
-    "trialExpiresIn_other": "A avaliação empresarial expira em {{count}} dias. Insira uma chave de licença para manter os recursos empresariais.",
-    "trialDaysRemaining_one": "Avaliação empresarial ativa — {{count}} dias restantes.",
-    "trialDaysRemaining_other": "Avaliação empresarial ativa — {{count}} dias restantes.",
+    "trialExpiresIn_one": "A avaliação Pro expira no dia {{count}}. Insira uma chave de licença para manter os recursos Pro.",
+    "trialExpiresIn_other": "A avaliação Pro expira em {{count}} dias. Insira uma chave de licença para manter os recursos Pro.",
+    "trialDaysRemaining_one": "Avaliação Pro ativa — {{count}} dia restante.",
+    "trialDaysRemaining_other": "Avaliação Pro ativa — {{count}} dias restantes.",
+    "trialAvailable": "Os recursos Essentials estão ativos. Inicie uma avaliação Pro gratuita de 15 dias para desbloquear todos os recursos.",
+    "trialExpired": "A avaliação Pro expirou. A instalação agora usa os recursos Essentials.",
     "licenseExpiresIn_one": "A licença expira no dia {{count}}. Renove para evitar interrupção do serviço.",
     "licenseExpiresIn_other": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço."
   },
   "nav": {
     "dashboard": "Painel",
-    "tickets": "Chamados",
+    "tickets": "Tickets",
     "clients": "Clientes",
     "projects": "Projetos",
     "billing": "Cobrança",
@@ -79,7 +85,8 @@
     "fromDate": "A partir da data",
     "toDate": "A data",
     "noResults": "Nenhum resultado encontrado",
-    "searchPlaceholder": "Procurar..."
+    "searchPlaceholder": "Procurar...",
+    "showingOfTotal": "Mostrando {{shown}} de {{total}} — digite para refinar"
   },
   "pickers": {
     "addNewClient": "Adicionar novo cliente",
@@ -140,11 +147,11 @@
     },
     "permissions": {
       "tickets": {
-        "read": "Permissões insuficientes para visualizar chamados",
-        "readDetails": "Permissões insuficientes para visualizar detalhes do chamado",
-        "create": "Permissões insuficientes para criar chamados",
-        "update": "Permissões insuficientes para atualizar chamados",
-        "updateStatus": "Permissões insuficientes para atualizar o status do chamado",
+        "read": "Permissões insuficientes para visualizar tickets",
+        "readDetails": "Permissões insuficientes para visualizar detalhes do ticket",
+        "create": "Permissões insuficientes para criar tickets",
+        "update": "Permissões insuficientes para atualizar tickets",
+        "updateStatus": "Permissões insuficientes para atualizar o status do ticket",
         "addComments": "Permissões insuficientes para adicionar comentários",
         "updateComments": "Permissões insuficientes para atualizar comentários",
         "deleteComments": "Permissões insuficientes para excluir comentários"
@@ -394,7 +401,9 @@
     "ariaLabel": "Paginação",
     "totalItems": "{{count}} {{itemLabel}} no total",
     "totalRecordsInline": "(total de registros {{count}})",
-    "pageOf": "Página {{current}} de {{total}}"
+    "pageOf": "Página {{current}} de {{total}}",
+    "itemsLabel_one": "item",
+    "itemsLabel_other": "itens"
   },
   "documents": {
     "title": "Documentos",
@@ -617,7 +626,7 @@
         "Authentication": "Autenticação",
         "Invoices": "Faturas",
         "Projects": "Projetos",
-        "Tickets": "Chamados",
+        "Tickets": "Tickets",
         "Time Entries": "Entradas de tempo"
       }
     },
@@ -674,7 +683,7 @@
     "settings": {
       "tabLabel": "Pesquisas",
       "title": "Pesquisas de satisfação do cliente",
-      "subtitle": "Configure modelos, gatilhos e entrega para coletar feedback pós-chamado.",
+      "subtitle": "Configure modelos, gatilhos e entrega para coletar feedback pós-ticket.",
       "tabs": {
         "templates": "Modelos",
         "triggers": "Gatilhos"
@@ -743,10 +752,10 @@
       },
       "triggerList": {
         "title": "Gatilhos de pesquisa",
-        "description": "Envie convites automaticamente quando chamados ou projetos forem concluídos.",
+        "description": "Envie convites automaticamente quando tickets ou projetos forem concluídos.",
         "createButton": "Novo gatilho",
         "emptyTitle": "Nenhum acionador de pesquisa configurado",
-        "emptyDescription": "Crie um gatilho para enviar pesquisas quando os chamados forem fechados ou os projetos terminarem.",
+        "emptyDescription": "Crie um gatilho para enviar pesquisas quando os tickets forem fechados ou os projetos terminarem.",
         "table": {
           "template": "Modelo",
           "type": "Acionar",
@@ -760,7 +769,7 @@
           "statuses": "Status",
           "priorities": "Prioridades",
           "any": "Qualquer",
-          "unrestricted": "Aplica-se a todos os chamados e projetos"
+          "unrestricted": "Aplica-se a todos os tickets e projetos"
         },
         "status": {
           "enabled": "Habilitado",
@@ -803,7 +812,7 @@
           "delete": "Excluir gatilho"
         },
         "triggerTypes": {
-          "ticket_closed": "Chamado fechado",
+          "ticket_closed": "Ticket fechado",
           "project_completed": "Projeto concluído"
         },
         "errors": {
@@ -917,7 +926,7 @@
       "requestedDateTime": "Data e hora solicitadas",
       "duration": "Duração",
       "preferredTechnician": "Técnico preferencial",
-      "linkedTicket": "Chamado vinculado",
+      "linkedTicket": "Ticket vinculado",
       "actions": "Ações"
     },
     "approvalModal": {
@@ -925,7 +934,7 @@
       "confirmDateTime": "Confirmar data e hora",
       "modifyDateTime": "Modificar data e hora",
       "assignedUser": "Técnico Designado",
-      "linkToTicket": "Link para chamado",
+      "linkToTicket": "Link para ticket",
       "internalNotes": "Notas internas",
       "approve": "Aprovar e criar entrada de agendamento",
       "approving": "Aprovando..."
@@ -1142,7 +1151,7 @@
     },
     "loading": {
       "billingDashboard": "Carregando painel de faturamento...",
-      "onboarding": "Carregando integração...",
+      "onboarding": "Carregando onboarding...",
       "extension": "Carregando extensão...",
       "extensionSettings": "Carregando configurações de extensão...",
       "ssoSettings": "Carregando configurações de SSO..."
@@ -1174,8 +1183,8 @@
           "summary": "A guia pessoal do Teams está pronta para carregar a fila de trabalho do PSA."
         },
         "ticket": {
-          "title": "Chamado {{ticketId}}",
-          "summary": "Você está abrindo o chamado {{ticketId}} do Teams."
+          "title": "Ticket {{ticketId}}",
+          "summary": "Você está abrindo o ticket {{ticketId}} do Teams."
         },
         "projectTask": {
           "title": "Tarefa do projeto {{taskId}}",
@@ -1240,5 +1249,8 @@
     "showingAllColumns": "Mostrando todas as colunas; role horizontalmente para vê-los.",
     "showLess": "Mostrar menos",
     "columnsHidden": "Colunas {{count}} ocultadas devido ao espaço limitado."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Carregando editor…"
   }
 }

@@ -17,6 +17,24 @@ vi.mock('@alga-psa/db', () => ({
   User: {
     getReportsToSubordinateIds: (...args: unknown[]) => reportsToMock(...args),
   },
+  tenantDb: (conn: any, tenant: string) => ({
+    tenant,
+    table: (table: string) => {
+      const builder = conn(table);
+      // The facade builds joins via .modify(); the mock-knex builders here do
+      // not implement it, so provide a pass-through that runs the callback.
+      if (builder && typeof builder.modify !== 'function') {
+        builder.modify = (fn: (qb: any) => void) => {
+          fn(builder);
+          return builder;
+        };
+      }
+      return builder;
+    },
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, table: string, _left?: string, _right?: string, opts?: any) =>
+      opts?.type === 'left' ? query.leftJoin?.(table) ?? query : query.join?.(table) ?? query,
+  }),
 }));
 
 vi.mock('@alga-psa/authorization/bundles/service', () => ({

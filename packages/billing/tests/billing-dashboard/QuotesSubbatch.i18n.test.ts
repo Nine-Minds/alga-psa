@@ -459,54 +459,6 @@ describe('Quotes i18n wiring contract', () => {
     }
   });
 
-  it('T014: QuoteConversionDialog uses msp/quotes keys for dialog copy, mode descriptions, and summary labels', () => {
-    const source = read('../../src/components/billing-dashboard/quotes/QuoteConversionDialog.tsx');
-    const en = readJson<Record<string, unknown>>(
-      '../../../../server/public/locales/en/msp/quotes.json',
-    );
-
-    expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useFormatters', 'useTranslation']);
-    expect(source).toContain("const { t } = useTranslation('msp/quotes');");
-
-    const keyChecks = [
-      'quoteConversion.title',
-      'quoteConversion.description',
-      'quoteConversion.loading',
-      'quoteConversion.errors.title',
-      'quoteConversion.errors.load',
-      'quoteConversion.errors.convert',
-      'quoteConversion.partial.title',
-      'quoteConversion.partial.alreadyConverted',
-      'quoteConversion.partial.contractCreated',
-      'quoteConversion.partial.invoiceCreated',
-      'quoteConversion.partial.remainingItems',
-      'quoteConversion.mode.contract.label',
-      'quoteConversion.mode.contract.description',
-      'quoteConversion.mode.invoice.label',
-      'quoteConversion.mode.invoice.description',
-      'quoteConversion.mode.both.label',
-      'quoteConversion.mode.both.description',
-      'quoteConversion.sections.conversionMode',
-      'quoteConversion.sections.itemMappingPreview',
-      'quoteConversion.sections.contractItems',
-      'quoteConversion.sections.invoiceItems',
-      'quoteConversion.sections.excludedItems',
-      'quoteConversion.sections.quoteTotal',
-      'quoteConversion.sections.statusAfterConversion',
-      'quoteConversion.summary.fixed',
-      'quoteConversion.summary.discount',
-      'quoteConversion.summary.converted',
-      'quoteConversion.actions.converting',
-      'quoteConversion.actions.convertQuote',
-      'common.actions.cancel',
-    ];
-
-    for (const key of keyChecks) {
-      expect(source).toContain(`t('${key}'`);
-      expect(getLeaf(en, key)).toBeDefined();
-    }
-  });
-
   it('T015: QuoteApprovalDashboard uses msp/quotes keys for page labels, filters, loading/empty states, and table columns', () => {
     const source = read('../../src/components/billing-dashboard/quotes/QuoteApprovalDashboard.tsx');
     const en = readJson<Record<string, unknown>>(
@@ -619,7 +571,6 @@ describe('Quotes i18n wiring contract', () => {
     const files = [
       '../../src/components/billing-dashboard/quotes/QuotesTab.tsx',
       '../../src/components/billing-dashboard/quotes/QuoteDetail.tsx',
-      '../../src/components/billing-dashboard/quotes/QuoteConversionDialog.tsx',
       '../../src/components/billing-dashboard/quotes/QuoteApprovalDashboard.tsx',
       '../../src/components/billing-dashboard/quotes/QuoteTemplatesList.tsx',
     ].map(read);

@@ -8,8 +8,10 @@
     "start": "next start"
   },
   "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
     "lucide-react": "^0.548.0",
-    "next": "^16.1.6",
+    "next": "^16.2.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
@@ -17,5 +19,10 @@
     "@types/node": "25.9.1",
     "@types/react": "19.2.15",
     "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "next": {
+      "postcss": ">=8.5.10"
+    }
   }
 }

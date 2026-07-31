@@ -3,9 +3,16 @@
  * Handles CRUD operations for email provider configurations
  */
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
+import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
+import {
+  EmailProviderLifecycleService,
+  type InboundPauseReason,
+  type ResumeProviderResult,
+} from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { GmailWebhookService } from './GmailWebhookService';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
@@ -40,6 +47,7 @@ export interface ProviderStatus {
 }
 
 export class EmailProviderService {
+  private readonly lifecycleService = new EmailProviderLifecycleService();
   private async getDb(tenant: string) {
     const { knex } = await createTenantKnex(tenant);
     return knex;
@@ -60,8 +68,8 @@ export class EmailProviderService {
   async getProviders(filters: GetProvidersFilter): Promise<EmailProviderConfig[]> {
     try {
       const db = await this.getDb(filters.tenant);
-      let query = db('email_providers')
-        .where('tenant', filters.tenant)
+      const scopedDb = tenantDb(db, filters.tenant);
+      let query = scopedDb.table('email_providers')
         .orderBy('created_at', 'desc');
 
       if (filters.providerType) {
@@ -81,17 +89,18 @@ export class EmailProviderService {
       // Load vendor configs for each provider
       const providersWithConfig = await Promise.all(providers.map(async (provider) => {
         let vendorConfig = null;
+        const providerDb = tenantDb(db, provider.tenant);
         if (provider.provider_type === 'google') {
-          vendorConfig = await db('google_email_provider_config')
-            .where({ email_provider_id: provider.id, tenant: provider.tenant })
+          vendorConfig = await providerDb.table('google_email_provider_config')
+            .where('email_provider_id', provider.id)
             .first();
         } else if (provider.provider_type === 'microsoft') {
-          vendorConfig = await db('microsoft_email_provider_config')
-            .where({ email_provider_id: provider.id, tenant: provider.tenant })
+          vendorConfig = await providerDb.table('microsoft_email_provider_config')
+            .where('email_provider_id', provider.id)
             .first();
         } else if (provider.provider_type === 'imap') {
-          vendorConfig = await db('imap_email_provider_config')
-            .where({ email_provider_id: provider.id, tenant: provider.tenant })
+          vendorConfig = await providerDb.table('imap_email_provider_config')
+            .where('email_provider_id', provider.id)
             .first();
         }
         return this.mapCurrentDbRowToProvider(provider, vendorConfig);
@@ -110,9 +119,9 @@ export class EmailProviderService {
   async getProvider(providerId: string, tenant: string): Promise<EmailProviderConfig | null> {
     try {
       const db = await this.getDb(tenant);
-      const provider = await db('email_providers')
+      const scopedDb = tenantDb(db, tenant);
+      const provider = await scopedDb.table('email_providers')
         .where('id', providerId)
-        .where('tenant', tenant)
         .first();
 
       if (!provider) {
@@ -122,15 +131,15 @@ export class EmailProviderService {
       // Load vendor-specific configuration
       let vendorConfig = null;
       if (provider.provider_type === 'google') {
-        vendorConfig = await db('google_email_provider_config')
-          .where({ email_provider_id: providerId, tenant: provider.tenant })
+        vendorConfig = await scopedDb.table('google_email_provider_config')
+          .where('email_provider_id', providerId)
           .first();
       } else if (provider.provider_type === 'microsoft') {
-        vendorConfig = await db('microsoft_email_provider_config')
-          .where({ email_provider_id: providerId, tenant: provider.tenant })
+        vendorConfig = await scopedDb.table('microsoft_email_provider_config')
+          .where('email_provider_id', providerId)
           .first();
       } else if (provider.provider_type === 'imap') {
-        vendorConfig = await db('imap_email_provider_config')
+        vendorConfig = await scopedDb.table('imap_email_provider_config')
           .where('email_provider_id', providerId)
           .first();
       }
@@ -148,9 +157,10 @@ export class EmailProviderService {
   async createProvider(data: CreateProviderData): Promise<EmailProviderConfig> {
     try {
       const db = await this.getDb(data.tenant);
+      const scopedDb = tenantDb(db, data.tenant);
       
       // Create main provider record
-      const [provider] = await db('email_providers')
+      const [provider] = await scopedDb.table('email_providers')
         .insert({
           id: db.raw('gen_random_uuid()'),
           tenant: data.tenant,
@@ -173,7 +183,7 @@ export class EmailProviderService {
           insertPayload.label_filters = JSON.stringify(insertPayload.label_filters);
         }
         
-        await db('google_email_provider_config')
+        await scopedDb.table('google_email_provider_config')
           .insert({
             email_provider_id: provider.id,
             tenant: data.tenant,
@@ -182,7 +192,7 @@ export class EmailProviderService {
             updated_at: db.fn.now()
           });
       } else if (data.providerType === 'microsoft') {
-        await db('microsoft_email_provider_config')
+        await scopedDb.table('microsoft_email_provider_config')
           .insert({
             email_provider_id: provider.id,
             tenant: data.tenant,
@@ -195,9 +205,10 @@ export class EmailProviderService {
         if (insertPayload.folder_filters && Array.isArray(insertPayload.folder_filters)) {
           insertPayload.folder_filters = JSON.stringify(insertPayload.folder_filters);
         }
-        await db('imap_email_provider_config')
+        await scopedDb.table('imap_email_provider_config')
           .insert({
             email_provider_id: provider.id,
+            tenant: data.tenant,
             ...insertPayload,
             created_at: db.fn.now(),
             updated_at: db.fn.now()
@@ -225,6 +236,7 @@ export class EmailProviderService {
   async updateProvider(providerId: string, tenant: string, data: UpdateProviderData): Promise<EmailProviderConfig> {
     try {
       const db = await this.getDb(tenant);
+      const scopedDb = tenantDb(db, tenant);
 
       // Get existing provider to determine type and current config
       const existingProvider = await this.getProvider(providerId, tenant);
@@ -250,7 +262,7 @@ export class EmailProviderService {
       }
 
       // Update main provider record
-      await db('email_providers')
+      await scopedDb.table('email_providers')
         .where('id', providerId)
         .update(mainUpdateData);
 
@@ -270,16 +282,16 @@ export class EmailProviderService {
             updatePayload.label_filters = JSON.stringify(updatePayload.label_filters);
           }
           
-          await db('google_email_provider_config')
-            .where({ email_provider_id: providerId, tenant: existingProvider.tenant })
+          await scopedDb.table('google_email_provider_config')
+            .where('email_provider_id', providerId)
             .update({
               ...updatePayload,
               updated_at: db.fn.now()
             });
         } else if (existingProvider.provider_type === 'microsoft') {
           // Update Microsoft-specific configuration
-          await db('microsoft_email_provider_config')
-            .where({ email_provider_id: providerId, tenant: existingProvider.tenant })
+          await scopedDb.table('microsoft_email_provider_config')
+            .where('email_provider_id', providerId)
             .update({
               ...mergedConfig,
               updated_at: db.fn.now()
@@ -289,7 +301,7 @@ export class EmailProviderService {
           if (updatePayload.folder_filters && Array.isArray(updatePayload.folder_filters)) {
             updatePayload.folder_filters = JSON.stringify(updatePayload.folder_filters);
           }
-          await db('imap_email_provider_config')
+          await scopedDb.table('imap_email_provider_config')
             .where('email_provider_id', providerId)
             .update({
               ...updatePayload,
@@ -319,6 +331,7 @@ export class EmailProviderService {
   async updateProviderStatus(providerId: string, tenant: string, status: ProviderStatus): Promise<void> {
     try {
       const db = await this.getDb(tenant);
+      const scopedDb = tenantDb(db, tenant);
       const updateData: any = {
         status: status.status,
         updated_at: db.fn.now()
@@ -332,7 +345,7 @@ export class EmailProviderService {
         updateData.last_sync_at = status.lastSyncAt;
       }
 
-      await db('email_providers')
+      await scopedDb.table('email_providers')
         .where('id', providerId)
         .update(updateData);
 
@@ -344,51 +357,29 @@ export class EmailProviderService {
   }
 
   /**
+   * Pause inbound ingestion without changing the provider's configured active state.
+   */
+  async pauseProvider(
+    providerId: string,
+    tenant: string,
+    reason: InboundPauseReason
+  ): Promise<boolean> {
+    return this.lifecycleService.pauseProvider(providerId, tenant, reason);
+  }
+
+  /**
+   * Resume inbound ingestion and recreate webhook-mode subscriptions.
+   */
+  async resumeProvider(providerId: string, tenant: string): Promise<ResumeProviderResult> {
+    return this.lifecycleService.resumeProvider(providerId, tenant);
+  }
+
+  /**
    * Delete an email provider
    */
   async deleteProvider(providerId: string, tenant: string): Promise<void> {
-    try {
-      const db = await this.getDb(tenant);
-
-      // Get provider info to determine type for cleanup
-      const provider = await db('email_providers')
-        .where('id', providerId)
-        .where('tenant', tenant)
-        .first();
-
-      if (!provider) {
-        throw new Error('Provider not found');
-      }
-
-      // Delete vendor-specific configuration first
-      if (provider.provider_type === 'google') {
-        await db('google_email_provider_config')
-          .where({ email_provider_id: providerId, tenant: provider.tenant })
-          .del();
-      } else if (provider.provider_type === 'microsoft') {
-        await db('microsoft_email_provider_config')
-          .where({ email_provider_id: providerId, tenant: provider.tenant })
-          .del();
-      } else if (provider.provider_type === 'imap') {
-        await db('imap_email_provider_config')
-          .where('email_provider_id', providerId)
-          .del();
-      }
-
-      // Delete main provider record
-      const deleted = await db('email_providers')
-        .where('id', providerId)
-        .del();
-
-      if (deleted === 0) {
-        throw new Error('Provider not found');
-      }
-
-      console.log(`✅ Deleted email provider: ${providerId}`);
-    } catch (error: any) {
-      console.error(`Error deleting email provider ${providerId}:`, error);
-      throw new Error(`Failed to delete email provider: ${error.message}`);
-    }
+    await this.lifecycleService.deleteProvider(providerId, tenant);
+    console.log(`✅ Deleted email provider: ${providerId}`);
   }
 
   /**
@@ -404,13 +395,27 @@ export class EmailProviderService {
       console.log(`🔗 Initializing webhook for provider: ${provider.name}`);
 
       if (provider.provider_type === 'microsoft') {
-        const adapter = new MicrosoftGraphAdapter(provider);
+        const adapter = new MicrosoftGraphAdapter(await buildMicrosoftEmailProviderConfig(provider));
         const webhookUrl = this.generateWebhookUrl('/api/email/webhooks/microsoft');
         const result = await adapter.initializeWebhook(webhookUrl);
         
         if (!result.success) {
+          if (result.errorKind === 'validation') {
+            await new EmailWebhookMaintenanceService().usePollingDelivery({
+              providerId,
+              tenant,
+              reason: result.error || 'Microsoft webhook endpoint validation failed',
+            });
+            return;
+          }
           throw new Error(result.error);
         }
+
+        await new EmailWebhookMaintenanceService().recordWebhookDeliveryMode({
+          providerId,
+          tenant,
+          reason: 'provider configuration subscription succeeded',
+        });
 
         // Update provider with webhook subscription ID
         await this.updateProvider(providerId, tenant, {
@@ -532,11 +537,18 @@ export class EmailProviderService {
       mailbox: row.mailbox,
       folder_to_monitor: 'Inbox', // Default for current implementation
       active: row.is_active,
+      inboundPausedAt: row.inbound_paused_at || null,
+      inboundPauseReason: row.inbound_pause_reason || null,
       webhook_notification_url: this.generateWebhookUrl(webhookPath),
       webhook_subscription_id: vendorConfig?.webhook_subscription_id || null,
       webhook_verification_token: vendorConfig?.webhook_verification_token || null,
       webhook_expires_at: vendorConfig?.webhook_expires_at || null,
       last_subscription_renewal: vendorConfig?.last_subscription_renewal || null,
+      delivery_mode: vendorConfig?.delivery_mode ||
+        (vendorConfig?.webhook_subscription_id ? 'webhook' : 'polling'),
+      last_webhook_delivery_at: vendorConfig?.last_webhook_delivery_at || null,
+      webhook_silent_runs: vendorConfig?.webhook_silent_runs || 0,
+      next_subscription_probe_at: vendorConfig?.next_subscription_probe_at || null,
       connection_status: row.status || 'configuring',
       last_connection_test: row.last_sync_at || null,
       connection_error_message: row.error_message || null,

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -12,6 +13,11 @@ import {
 } from '@alga-psa/integrations/actions';
 import type { TaxImportPreviewResult, TaxImportResult } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface XeroCsvTaxImportPanelProps {
   onImportComplete?: (result: { successCount: number; totalTaxImported: number }) => void;
@@ -19,6 +25,7 @@ interface XeroCsvTaxImportPanelProps {
 
 export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPanelProps) {
   const { t } = useTranslation('msp/integrations');
+  const { money } = useCurrencyFormat();
   const [file, setFile] = useState<File | null>(null);
   const [csvContent, setCsvContent] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -75,8 +82,13 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
 
     try {
       const result = await previewXeroCsvTaxImport(csvContent);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setPreviewResult(result);
     } catch (err) {
+      console.error('Failed to validate Xero CSV tax import:', err);
       setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
@@ -94,6 +106,10 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
 
     try {
       const result = await executeXeroCsvTaxImport(csvContent);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setImportResult(result);
 
       if (result.success || result.successCount > 0) {
@@ -103,6 +119,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
         });
       }
     } catch (err) {
+      console.error('Failed to import Xero CSV tax data:', err);
       setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);
@@ -113,10 +130,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
   const canImport = previewResult && previewResult.matchedCount > 0 && !isValidating;
 
   const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(cents / 100);
+    return money(cents);
   };
 
   return (

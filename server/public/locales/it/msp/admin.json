@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "Indirizzo mittente",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Lascia vuoti nome utente e password se il tuo relay accetta la posta senza autenticazione.",
+      "security": {
+        "title": "Sicurezza della connessione",
+        "secure": "Usa TLS implicito (SSL alla connessione, in genere porta 465)",
+        "requireTls": "Richiedi l'aggiornamento STARTTLS (porte 587 / 25)",
+        "verifyCert": "Verifica il certificato del server",
+        "verifyCertHint": "Disattiva questa opzione solo per un relay attendibile sulla tua rete che utilizza un certificato autofirmato."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "Impossibile caricare le impostazioni email",
       "saveSettings": "Impossibile salvare le impostazioni",
       "addDomain": "Impossibile aggiungere il dominio",
-      "verifyDomain": "Impossibile verificare il dominio"
+      "verifyDomain": "Impossibile verificare il dominio",
+      "testOutbound": "Test dell'e-mail in uscita non riuscito"
+    },
+    "test": {
+      "title": "Prova e-mail in uscita",
+      "description": "Salva le impostazioni attuali, quindi verifica la connessione al provider. Inserisci un indirizzo per inviare anche un messaggio di prova.",
+      "recipientLabel": "Invia prova a (facoltativo)",
+      "recipientPlaceholder": "tu@esempio.com",
+      "run": "Prova connessione",
+      "testing": "Prova in corso..."
     }
   },
   "microsoft365": {

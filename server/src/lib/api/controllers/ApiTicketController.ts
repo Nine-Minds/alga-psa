@@ -7,19 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService } from '../services/TicketService';
 import { 
-  createTicketSchema,
-  updateTicketSchema,
-  ticketListQuerySchema,
-  ticketSearchSchema,
-  ticketStatsResponseSchema,
-  createTicketMaterialSchema,
-  createTicketCommentSchema,
-  updateTicketCommentSchema,
-  updateTicketStatusSchema,
-  updateTicketAssignmentSchema,
-  createTicketFromAssetSchema,
-  linkTicketAssetSchema
+  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, assignTicketTeamSchema, removeTicketTeamSchema
 } from '../schemas/ticket';
+import { uuidSchema } from '../schemas/common';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
@@ -35,9 +25,10 @@ import {
 } from '../../auth/rbac';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { compileResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
+import { compileTenantScopedResourceReadAuthorizationSql } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
+import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import {
@@ -66,7 +57,7 @@ import { ZodError } from 'zod';
 async function resolveTicketReadAuthorizationApplier(
   apiRequest: AuthenticatedApiRequest,
   knex: Knex
-): Promise<((query: Knex.QueryBuilder) => void) | null> {
+): Promise<((query: TenantScopedQuery) => void) | null> {
   const subject = buildAuthorizationPrincipalSubject(
     apiRequest.context.user,
     apiRequest.context.apiKeyId
@@ -79,8 +70,8 @@ async function resolveTicketReadAuthorizationApplier(
     knex,
   });
   const adapter = createTicketRelationshipSqlAdapter(knex, subject.tenant);
-  const compile = (query: Knex.QueryBuilder) =>
-    compileResourceReadAuthorizationSql(query, {
+  const compile = (query: TenantScopedQuery) =>
+    compileTenantScopedResourceReadAuthorizationSql(query, {
       resourceType: 'ticket',
       action: 'read',
       builtinRules: [],
@@ -89,10 +80,11 @@ async function resolveTicketReadAuthorizationApplier(
     });
 
   // Probe representability on a throwaway builder before committing to SQL.
-  if (!compile(knex('tickets as t').where('t.tenant', subject.tenant)).supported) {
+  const probe = tenantDb(knex, subject.tenant).scoped('tickets as t');
+  if (!compile(probe).supported) {
     return null;
   }
-  return (query: Knex.QueryBuilder) => {
+  return (query: TenantScopedQuery) => {
     compile(query);
   };
 }
@@ -793,6 +785,173 @@ export class ApiTicketController extends ApiBaseController {
           await this.ticketService.unlinkAsset(ticketId, assetId, apiRequest.context!);
 
           return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * List a ticket's primary and additional agents
+   */
+  getAgents() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const agents = await this.ticketService.getTicketAgents(ticketId, apiRequest.context!);
+
+          return createSuccessResponse(agents, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Add an additional agent to a ticket
+   */
+  addAgent() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const body = await req.json();
+          const validation = addTicketAgentSchema.safeParse(body);
+          if (!validation.success) {
+            throw new ValidationError('Validation failed', validation.error.errors);
+          }
+
+          const agents = await this.ticketService.addTicketAgent(ticketId, validation.data, apiRequest.context!);
+
+          return createSuccessResponse(agents, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Remove an additional agent from a ticket
+   */
+  removeAgent() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          // userId is the path segment after "agents".
+          const url = new URL(apiRequest.url || req.url);
+          const segments = url.pathname.split('/');
+          const agentsIndex = segments.indexOf('agents');
+          const userId = agentsIndex >= 0 ? segments[agentsIndex + 1] : undefined;
+
+          if (!userId || !uuidSchema.safeParse(userId).success) {
+            throw new ValidationError('Validation failed', [
+              { path: ['userId'], message: 'A valid user ID is required' },
+            ]);
+          }
+
+          await this.ticketService.removeTicketAgent(ticketId, userId, apiRequest.context!);
+
+          return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Assign a team to a ticket
+   */
+  assignTeam() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const body = await req.json();
+          const validation = assignTicketTeamSchema.safeParse(body);
+          if (!validation.success) {
+            throw new ValidationError('Validation failed', validation.error.errors);
+          }
+
+          const ticket = await this.ticketService.assignTeam(ticketId, validation.data, apiRequest.context!);
+
+          return createSuccessResponse(ticket, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Remove the team assignment from a ticket
+   */
+  removeTeam() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context!.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          // DELETE bodies are optional; no body means remove_all.
+          let body: unknown = {};
+          try {
+            const raw = await req.text();
+            if (raw.trim()) {
+              body = JSON.parse(raw);
+            }
+          } catch {
+            throw new ValidationError('Validation failed', [
+              { path: [], message: 'Request body must be valid JSON' },
+            ]);
+          }
+
+          const validation = removeTicketTeamSchema.safeParse(body);
+          if (!validation.success) {
+            throw new ValidationError('Validation failed', validation.error.errors);
+          }
+
+          const ticket = await this.ticketService.removeTeam(ticketId, validation.data, apiRequest.context!);
+
+          return createSuccessResponse(ticket, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

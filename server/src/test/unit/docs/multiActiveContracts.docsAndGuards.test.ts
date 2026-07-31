@@ -25,8 +25,13 @@ const runRg = (pattern: string, targets: string[]): string => {
 
 describe('multi-active contracts docs and static guards', () => {
   it('T052/T063/T064: static guard checks prevent singleton UI/action helper patterns from reappearing in live product paths', () => {
+    // disabledClientIds is not banned: it's a generic ClientPicker prop
+    // (packages/ui) used for non-contract concerns like preventing a client
+    // from being its own parent. The contract-singleton helpers below are the
+    // signatures that matter; a reintroduction has to fetch active-contract
+    // client ids through one of them to feed the picker.
     const singletonUiActionMatches = runRg(
-      'disabledClientIds|checkClientHasActiveContract|fetchClientIdsWithActiveContracts|terminate their current contract',
+      'checkClientHasActiveContract|fetchClientIdsWithActiveContracts|terminate their current contract',
       [
         'packages/billing/src/components/billing-dashboard/contracts',
         'packages/billing/src/actions',
@@ -67,6 +72,20 @@ describe('multi-active contracts docs and static guards', () => {
     expect(assignmentWritesSource).toContain('findMixedCurrencyActiveAssignment');
     expect(assignmentWritesSource).toContain('Mixed-currency contracts for the same client are not supported.');
     expect(assignmentWritesSource).not.toContain('hasActiveContractForClient');
+  });
+
+  // Thrown server-action errors are masked by Next.js in production; the
+  // mixed-currency guard message reaches the user only if every action
+  // boundary converts it to a returned actionError.
+  it('T062b: every action boundary translates the mixed-currency guard into a returned actionError', () => {
+    const guardMessage = 'Mixed-currency contracts for the same client are not supported';
+    for (const source of [
+      read('packages', 'billing', 'src', 'actions', 'billingClientsActions.ts'),
+      read('packages', 'billing', 'src', 'actions', 'contractWizardActionErrors.ts'),
+      read('packages', 'clients', 'src', 'actions', 'clientContractActions.ts'),
+    ]) {
+      expect(source).toContain(guardMessage);
+    }
   });
 
   it('T071: migration/runbook notes explicitly record invoice assignment snapshots as the preserved boundary', () => {

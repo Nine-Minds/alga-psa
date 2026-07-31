@@ -31,6 +31,33 @@ import {
   type RecurringBillingRunWindowIdentity,
 } from '@alga-psa/workflow-streams';
 
+export type RecurringBillingRunActionError =
+  | { readonly actionError: string }
+  | { readonly permissionError: string };
+
+function actionError(message: string): RecurringBillingRunActionError {
+  return { actionError: message };
+}
+
+function permissionError(message: string): RecurringBillingRunActionError {
+  return { permissionError: message };
+}
+
+function isRecurringBillingRunActionError(value: unknown): value is RecurringBillingRunActionError {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (
+        typeof (value as { actionError?: unknown }).actionError === 'string' ||
+        typeof (value as { permissionError?: unknown }).permissionError === 'string'
+      ),
+  );
+}
+
+function getRecurringBillingRunActionErrorMessage(error: RecurringBillingRunActionError): string {
+  return 'permissionError' in error ? error.permissionError : error.actionError;
+}
+
 function normalizeRecurringBillingRunTargets(params: {
   targets?: RecurringBillingRunTarget[];
 }): RecurringBillingRunTarget[] {
@@ -77,17 +104,20 @@ export async function selectClientCadenceRecurringRunTargets(
   page: number;
   pageSize: number;
   totalPages: number;
-}> {
+} | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
+    return permissionError('Unauthorized: No authenticated user found');
   }
 
   if (!await hasPermissionAsync(currentUser, 'billing', 'read')) {
-    throw new Error('Permission denied');
+    return permissionError('Permission denied: billing read required');
   }
 
   const recurringDueWork = await getAvailableRecurringDueWork(options);
+  if (isRecurringBillingRunActionError(recurringDueWork)) {
+    return recurringDueWork;
+  }
   const targets = mapClientCadenceInvoiceCandidatesToRecurringRunTargets(
     recurringDueWork.invoiceCandidates,
   );
@@ -110,22 +140,28 @@ function isDuplicateRecurringInvoiceError(error: unknown): boolean {
   );
 }
 
+function isDuplicateRecurringInvoiceActionError(error: RecurringBillingRunActionError): boolean {
+  return getRecurringBillingRunActionErrorMessage(error).startsWith(
+    'Invoice already exists for this recurring execution window',
+  );
+}
+
 export async function generateInvoicesAsRecurringBillingRun(params: {
   targets?: RecurringBillingRunTarget[];
   allowPoOverage?: boolean;
-}): Promise<RecurringBillingRunResult> {
+}): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
+    return permissionError('Unauthorized: No authenticated user found');
   }
 
   if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-    throw new Error('Permission denied');
+    return permissionError('Permission denied: invoice create or generate required');
   }
 
   const targets = normalizeRecurringBillingRunTargets(params);
   if (targets.length === 0) {
-    throw new Error('No recurring execution windows selected');
+    return actionError('Select at least one recurring billing period to generate.');
   }
 
   const tenantId = currentUser.tenant;
@@ -177,6 +213,18 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
           : await generateInvoiceForSelectionInput(selectorInput, {
               allowPoOverage: params.allowPoOverage,
             });
+        if (isRecurringBillingRunActionError(invoice)) {
+          if (isDuplicateRecurringInvoiceActionError(invoice)) {
+            continue;
+          }
+          failures.push({
+            billingCycleId: target.billingCycleId ?? null,
+            executionIdentityKey: executionWindow.identityKey,
+            executionWindowKind: executionWindow.kind,
+            errorMessage: getRecurringBillingRunActionErrorMessage(invoice),
+          });
+          continue;
+        }
         if (invoice) {
           invoicesCreated += 1;
         }
@@ -189,7 +237,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
           billingCycleId: target.billingCycleId ?? null,
           executionIdentityKey: executionWindow.identityKey,
           executionWindowKind: executionWindow.kind,
-          errorMessage: err instanceof Error ? err.message : 'Unknown error occurred',
+          errorMessage: 'Failed to generate invoice for this billing cycle.',
         });
       }
     }
@@ -259,19 +307,19 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
 export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
   groupedTargets?: RecurringBillingRunGroupedTarget[];
   allowPoOverage?: boolean;
-}): Promise<RecurringBillingRunResult> {
+}): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
-    throw new Error('Unauthorized: No authenticated user found');
+    return permissionError('Unauthorized: No authenticated user found');
   }
 
   if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
-    throw new Error('Permission denied');
+    return permissionError('Permission denied: invoice create or generate required');
   }
 
   const groupedTargets = normalizeRecurringBillingRunGroupedTargets(params);
   if (groupedTargets.length === 0) {
-    throw new Error('No recurring execution windows selected');
+    return actionError('Select at least one recurring billing period to generate.');
   }
 
   const flattenedExecutionWindows = groupedTargets.flatMap((group) =>
@@ -326,6 +374,18 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
           : await generateInvoiceForSelectionInputs(group.selectorInputs, {
               allowPoOverage: params.allowPoOverage,
             });
+        if (isRecurringBillingRunActionError(invoice)) {
+          if (isDuplicateRecurringInvoiceActionError(invoice)) {
+            continue;
+          }
+          failures.push({
+            billingCycleId: group.billingCycleId ?? null,
+            executionIdentityKey: executionWindow.identityKey,
+            executionWindowKind: executionWindow.kind,
+            errorMessage: getRecurringBillingRunActionErrorMessage(invoice),
+          });
+          continue;
+        }
         if (invoice) {
           invoicesCreated += 1;
         }
@@ -338,7 +398,7 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
           billingCycleId: group.billingCycleId ?? null,
           executionIdentityKey: executionWindow.identityKey,
           executionWindowKind: executionWindow.kind,
-          errorMessage: err instanceof Error ? err.message : 'Unknown error occurred',
+          errorMessage: 'Failed to generate invoice for this billing cycle.',
         });
       }
     }

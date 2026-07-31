@@ -7,6 +7,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { TemplateRenderer, PaperInvoice } from '@alga-psa/billing/components';
 import { getClientInvoiceById, getClientInvoiceTemplates } from '@alga-psa/client-portal/actions';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { IInvoiceTemplate } from '@alga-psa/types';
 
@@ -14,6 +15,11 @@ interface ClientInvoicePreviewProps {
   invoiceId: string;
   className?: string;
 }
+
+const isBillingActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 /**
  * Client Portal Invoice Preview Component
@@ -66,6 +72,20 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
           getClientInvoiceTemplates(),
         ]);
 
+        if (isBillingActionError(dbInvoiceData)) {
+          setInvoiceData(null);
+          setTemplate(null);
+          setError(getErrorMessage(dbInvoiceData));
+          return;
+        }
+
+        if (isBillingActionError(templates)) {
+          setInvoiceData(null);
+          setTemplate(null);
+          setError(getErrorMessage(templates));
+          return;
+        }
+
         if (!dbInvoiceData) {
           throw new Error('Invoice not found');
         }
@@ -85,7 +105,7 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
 
       } catch (err) {
         console.error('Error loading invoice preview:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load invoice');
+        setError('Failed to load invoice');
       } finally {
         setIsLoading(false);
       }

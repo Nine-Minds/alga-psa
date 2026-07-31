@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import path from 'path';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 function readRepoFile(relativePathFromRepoRoot: string): string {
   const repoRoot = path.resolve(__dirname, '../../../../..');
@@ -89,11 +89,8 @@ describe('teams observability migrations', () => {
     expect(conversationsMigration).toContain("create_distributed_table(?, 'tenant', colocate_with => 'teams_integrations')");
   });
 
-  it('keeps the observability migrations in the CE migration path without Citus-only mirrors', () => {
+  it('keeps the observability migrations in the CE migration path without a dead Citus overlay folder', () => {
     const repoRoot = path.resolve(__dirname, '../../../../..');
-    const citusMigrationNames = readdirSync(path.join(repoRoot, 'ee/server/migrations/citus'));
-    expect(citusMigrationNames).not.toContain('20260524090000_create_teams_notification_deliveries.cjs');
-    expect(citusMigrationNames).not.toContain('20260524090100_create_teams_audit_events.cjs');
-    expect(citusMigrationNames).not.toContain('20260524090200_create_teams_conversation_references.cjs');
+    expect(existsSync(path.join(repoRoot, 'ee/server/migrations/citus'))).toBe(false);
   });
 });

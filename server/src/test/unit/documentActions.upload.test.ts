@@ -13,6 +13,32 @@ vi.mock('@alga-psa/storage/StorageService', () => {
 });
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (tableExpr: string) => {
+      const builder = conn(tableExpr);
+      if (!builder || typeof builder.where !== 'function') {
+        return builder;
+      }
+      const aliasMatch = /\bas\s+([A-Za-z0-9_]+)\s*$/i.exec(tableExpr.trim());
+      const tenantColumn = aliasMatch ? `${aliasMatch[1]}.tenant` : 'tenant';
+      return {
+        ...builder,
+        where: (criteria: any, ...rest: any[]) =>
+          criteria && typeof criteria === 'object' && !Array.isArray(criteria)
+            ? builder.where({ [tenantColumn]: tenant, ...criteria })
+            : builder.where(criteria, ...rest),
+      };
+    },
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: vi.fn(),
   withTransaction: vi.fn(),
   runWithTenant: vi.fn((_tenant: string, callback: () => unknown) => callback()),
@@ -50,6 +76,7 @@ vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+  publishEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -238,19 +265,16 @@ describe('uploadDocument', () => {
     expect((knexStub.inserts[0] as IDocument).folder_path).toBe('/Tickets/Attachments');
   });
 
-  it('returns error result when validation fails before upload', async () => {
+  it('throws when validation fails before upload', async () => {
     validateFileUploadMock.mockRejectedValue(new Error('invalid file'));
 
     const formData = new FormData();
     const file = new File([Buffer.from('bad')], 'malware.exe', { type: 'application/octet-stream' });
     formData.set('file', file);
 
-    const result = await documentActions.uploadDocument(formData, {
+    await expect(documentActions.uploadDocument(formData, {
       userId: 'user-1',
-    });
-
-    expect(result.success).toBe(false);
-    expect(result).toHaveProperty('error', 'invalid file');
+    })).rejects.toThrow('invalid file');
     expect(uploadFileMock).not.toHaveBeenCalled();
     expect(generateDocumentPreviewsMock).not.toHaveBeenCalled();
   });

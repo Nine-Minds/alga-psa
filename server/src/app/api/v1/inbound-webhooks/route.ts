@@ -7,11 +7,18 @@
 import { NextResponse } from 'next/server';
 
 import { listInboundWebhooks, upsertInboundWebhook } from '@/lib/actions/inboundWebhookActions';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import {
+  createServerActionErrorResponse,
+  handleApiError,
+  isServerActionErrorResult,
+} from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET() {
   try {
     const webhooks = await listInboundWebhooks();
+    if (isServerActionErrorResult(webhooks)) {
+      return createServerActionErrorResponse(webhooks);
+    }
     return NextResponse.json({ data: webhooks });
   } catch (error) {
     return handleApiError(error);
@@ -22,6 +29,9 @@ export async function POST(request: Request) {
   try {
     const input = await request.json();
     const result = await upsertInboundWebhook(input);
+    if (isServerActionErrorResult(result)) {
+      return createServerActionErrorResponse(result);
+    }
     return NextResponse.json({ data: result.webhook, secret: result.secret }, { status: 201 });
   } catch (error) {
     return handleApiError(error);

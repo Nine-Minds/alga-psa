@@ -5,7 +5,7 @@
  * and delegating to the existing authenticator verification logic.
  */
 
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { verifyAuthenticator } from './authenticator/authenticator';
 
 /**
@@ -25,8 +25,8 @@ export async function verifyTwoFactorCode(
   const knex = await getConnection(tenant);
 
   // Fetch user's 2FA secret
-  const user = await knex('users')
-    .where({ tenant, user_id: userId })
+  const user = await tenantDb(knex, tenant).table('users')
+    .where({ user_id: userId })
     .select('two_factor_enabled', 'two_factor_secret')
     .first();
 
@@ -52,8 +52,8 @@ export async function isTwoFactorEnabled(
 ): Promise<boolean> {
   const knex = await getConnection(tenant);
 
-  const user = await knex('users')
-    .where({ tenant, user_id: userId })
+  const user = await tenantDb(knex, tenant).table('users')
+    .where({ user_id: userId })
     .select('two_factor_enabled')
     .first();
 

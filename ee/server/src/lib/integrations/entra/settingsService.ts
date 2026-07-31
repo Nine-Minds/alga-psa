@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { filterEntraUsers, type EntraUserFilterResult } from './sync/userFilterPipeline';
 import type { EntraSyncUser } from './sync/types';
 
@@ -35,8 +36,7 @@ export async function getEntraUserFilterSettings(
 ): Promise<EntraUserFilterSettings> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
-    const row = await knex('entra_sync_settings')
-      .where({ tenant })
+    const row = await tenantDb(knex, tenant).table('entra_sync_settings')
       .first(['user_filter_config']);
 
     return {

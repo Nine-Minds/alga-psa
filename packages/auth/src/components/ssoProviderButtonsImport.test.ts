@@ -5,6 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import SsoProviderButtons from './SsoProviderButtons';
 
+// The server-suite setup stubs this hook with empty automationIdProps, which
+// strips DOM ids off UI Buttons — this test locates the provider buttons by
+// id. No-op under this package's own config.
+vi.unmock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister');
+
 const reactWithAct = React as unknown as { act?: (callback: () => unknown) => unknown };
 if (typeof reactWithAct.act !== 'function') {
   reactWithAct.act = (callback: () => unknown) => callback();

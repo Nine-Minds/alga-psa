@@ -26,7 +26,8 @@ export const taggedEntityTypes = [
   'ticket', 
   'project', 
   'project_task', 
-  'workflow_form'
+  'workflow_form',
+  'opportunity'
 ] as const;
 
 export const taggedEntityTypeSchema = z.enum(taggedEntityTypes);

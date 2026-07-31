@@ -8,11 +8,17 @@ import type { ColumnDefinition, IQuoteWithClient, QuoteStatus } from '@alga-psa/
 import { useFormatQuoteStatus } from '@alga-psa/ui/hooks/useQuoteEnumOptions';
 import { getClientQuotes } from '@alga-psa/client-portal/actions';
 import { useRouter } from 'next/navigation';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface QuotesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
 }
+
+const isBillingActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
   draft: 'warning',
@@ -43,6 +49,11 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       setError(null);
       try {
         const fetchedQuotes = await getClientQuotes();
+        if (isBillingActionError(fetchedQuotes)) {
+          setQuotes([]);
+          setError(getErrorMessage(fetchedQuotes));
+          return;
+        }
         setQuotes(fetchedQuotes);
       } catch (err) {
         console.error('Error loading quotes:', err);

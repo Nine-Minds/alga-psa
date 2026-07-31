@@ -1,4 +1,6 @@
 exports.seed = async function (knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     let tenants;
     if (tenantId) {
         tenants = [{ tenant: tenantId }];
@@ -11,8 +13,9 @@ exports.seed = async function (knex, tenantId) {
     }
 
     for (const { tenant } of tenants) {
-        const roles = await knex('roles').where({ tenant });
-        const permissions = await knex('permissions').where({ tenant });
+        const db = tenantDb(knex, tenant);
+        const roles = await db.table('roles');
+        const permissions = await db.table('permissions');
 
         const permissionMap = new Map();
         permissions.forEach(p => {
@@ -20,7 +23,7 @@ exports.seed = async function (knex, tenantId) {
             permissionMap.set(key, p.permission_id);
         });
 
-        await knex('role_permissions').where({ tenant }).del();
+        await db.table('role_permissions').del();
         console.log(`Cleared existing Algadesk role permissions for tenant ${tenant}`);
 
         for (const role of roles) {
@@ -77,7 +80,7 @@ exports.seed = async function (knex, tenantId) {
                     permission_id: permissionId
                 }));
 
-                await knex('role_permissions').insert(rolePermissionsToAdd);
+                await db.table('role_permissions').insert(rolePermissionsToAdd);
                 console.log(`Added ${rolePermissionsToAdd.length} permissions to ${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) for tenant ${tenant}`);
             } else {
                 console.log(`No Algadesk permissions found for ${role.role_name} role (${role.msp ? 'MSP' : 'Client'}) for tenant ${tenant}`);

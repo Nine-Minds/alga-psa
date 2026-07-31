@@ -6,6 +6,7 @@ import {
   createTenantReactivationToken,
   hashTenantReactivationToken,
   reserveTenantReactivationToken,
+  verifyTenantReactivationToken,
 } from '../../../../../ee/server/src/lib/billing/tenantReactivationTokens';
 
 describe('tenant reactivation tokens', () => {
@@ -19,6 +20,7 @@ describe('tenant reactivation tokens', () => {
       (tableName: string) => {
         expect(tableName).toBe('tenant_reactivation_tokens');
         return {
+          where: vi.fn().mockReturnThis(),
           insert: vi.fn(async (row: Record<string, unknown>) => {
             insertedRows.push(row);
           }),
@@ -31,10 +33,11 @@ describe('tenant reactivation tokens', () => {
       },
     ) as any;
 
-    const expiresAt = new Date('2026-06-12T00:00:00.000Z');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
     const result = await createTenantReactivationToken({
       tenantId: 'tenant-1',
       deletionId: '11111111-1111-1111-1111-111111111111',
+      licenseCount: 5,
       expiresAt,
       knex,
     });
@@ -49,6 +52,24 @@ describe('tenant reactivation tokens', () => {
       expires_at: expiresAt,
     });
     expect(JSON.stringify(insertedRows[0])).not.toContain(result.token);
+    expect(verifyTenantReactivationToken(result.token)?.license_count).toBe(5);
+
+    const [encodedPayload, signature] = result.token.split('.');
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+    const tamperedToken = `${Buffer.from(JSON.stringify({
+      ...payload,
+      license_count: 6,
+    })).toString('base64url')}.${signature}`;
+    expect(verifyTenantReactivationToken(tamperedToken)).toBeNull();
+  });
+
+  it.each([0, -1, 1.5, 1001])('rejects invalid license count %s', async (licenseCount) => {
+    await expect(createTenantReactivationToken({
+      tenantId: 'tenant-1',
+      deletionId: '11111111-1111-1111-1111-111111111111',
+      licenseCount,
+      knex: vi.fn() as any,
+    })).rejects.toThrow('License count must be an integer from 1 through 1000');
   });
 
   it('T066/T067: atomically reserves a valid token once and rejects replay or expired tokens', async () => {
@@ -68,7 +89,11 @@ describe('tenant reactivation tokens', () => {
           }),
           where(criteriaOrColumn: Record<string, unknown> | string, operator?: string, value?: unknown) {
             if (typeof criteriaOrColumn === 'string') {
-              this.expiresAfterNow = operator === '>' && value === 'NOW()';
+              if (criteriaOrColumn.endsWith('.tenant') || criteriaOrColumn === 'tenant') {
+                this.criteria.tenant = operator;
+              } else {
+                this.expiresAfterNow = operator === '>' && value === 'NOW()';
+              }
             } else {
               this.criteria = { ...this.criteria, ...criteriaOrColumn };
             }
@@ -126,6 +151,7 @@ describe('tenant reactivation tokens', () => {
     const token = await createTenantReactivationToken({
       tenantId: 'tenant-1',
       deletionId: '11111111-1111-1111-1111-111111111111',
+      licenseCount: 5,
       expiresAt,
       knex: makeKnex(),
     });
@@ -134,6 +160,7 @@ describe('tenant reactivation tokens', () => {
       tenantId: 'tenant-1',
       deletionId: '11111111-1111-1111-1111-111111111111',
       tokenHash: token.tokenHash,
+      licenseCount: 5,
     });
     expect(rows[0].reserved_at).toBe('NOW()');
 

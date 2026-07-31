@@ -1,4 +1,7 @@
 import { getAdminConnection } from './admin';
+import { tenantDb } from './tenantDb';
+
+const TENANT_SLUG_DISCOVERY_TENANT = '__tenant_slug_discovery__';
 
 /**
  * Validates that a string matches the expected tenant slug format (12 hex characters).
@@ -38,7 +41,8 @@ export async function getTenantIdBySlug(slug: string): Promise<string | null> {
   const { prefix, suffix } = getSlugParts(slug);
   try {
     const adminDb = await getAdminConnection();
-    const matches = await adminDb<{ tenant: string }>('tenants')
+    const matches = await tenantDb(adminDb, TENANT_SLUG_DISCOVERY_TENANT)
+      .unscoped<{ tenant: string }>('tenants', 'tenant discovery from public portal slug')
       .select('tenant')
       .whereRaw("left(replace(tenant::text, '-', ''), 6) = ?", [prefix])
       .andWhereRaw("right(replace(tenant::text, '-', ''), 6) = ?", [suffix]);

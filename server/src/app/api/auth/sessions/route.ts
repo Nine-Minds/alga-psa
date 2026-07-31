@@ -15,6 +15,17 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+function sessionRouteError(error: unknown, fallback: string): { status: number; message: string } {
+  const message = error instanceof Error ? error.message : '';
+  if (message.includes('Unauthorized')) {
+    return { status: 401, message: 'Unauthorized' };
+  }
+  if (message.includes('Invalid 2FA')) {
+    return { status: 403, message: 'Invalid 2FA code' };
+  }
+  return { status: 500, message: fallback };
+}
+
 /**
  * GET /api/auth/sessions
  * Get current user's active sessions
@@ -25,8 +36,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('[GET /api/auth/sessions] Error:', error);
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    const status = message.includes('Unauthorized') ? 401 : 500;
+    const { status, message } = sessionRouteError(error, 'Failed to load sessions');
     return NextResponse.json({ error: message }, { status });
   }
 }
@@ -59,16 +69,14 @@ export async function DELETE(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.message },
-        { status: 400 }
+        { status: result.message.includes('Invalid 2FA') ? 403 : 400 }
       );
     }
 
     return NextResponse.json(result);
   } catch (error) {
     console.error('[DELETE /api/auth/sessions] Error:', error);
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    const status = message.includes('Unauthorized') ? 401 :
-                   message.includes('Invalid 2FA') ? 403 : 500;
+    const { status, message } = sessionRouteError(error, 'Failed to revoke sessions');
     return NextResponse.json({ error: message }, { status });
   }
 }

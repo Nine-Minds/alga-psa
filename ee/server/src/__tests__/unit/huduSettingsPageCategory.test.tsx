@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 /**
  * T030 — IntegrationsSettingsPage renders the Hudu item under the
- * "IT Documentation" category only when the Hudu gate (EE + the
- * `hudu-integration` feature flag, via useHuduIntegrationEnabled) is enabled.
+ * "IT Documentation" category only when the Hudu gate (EE edition, via
+ * useHuduIntegrationEnabled) is enabled.
  *
  * The page's sibling integration components, UI primitives, and i18n are
  * mocked; calendarAvailability keeps its real category-id logic with the
@@ -101,7 +101,7 @@ vi.mock('@alga-psa/integrations/components', () => ({
   EmailProviderConfiguration: () => <div data-testid="email-provider-stub" />,
 }));
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
-  EntraIntegrationSettings: () => <div data-testid="entra-stub" />,
+  EntraIntegrationSummaryCard: () => <div data-testid="entra-stub" />,
 }));
 
 describe('IntegrationsSettingsPage — Hudu IT Documentation category gating (T030)', () => {
@@ -113,7 +113,7 @@ describe('IntegrationsSettingsPage — Hudu IT Documentation category gating (T0
     isEEMock.mockReturnValue(true);
   });
 
-  it('renders the Hudu item under IT Documentation when the gate (EE + flag) is enabled', () => {
+  it('renders the Hudu item under IT Documentation when the gate (EE) is enabled', () => {
     useHuduIntegrationEnabledMock.mockReturnValue({ enabled: true, loading: false });
 
     render(<IntegrationsSettingsPage />);
@@ -125,7 +125,7 @@ describe('IntegrationsSettingsPage — Hudu IT Documentation category gating (T0
     expect(tab?.querySelectorAll('[data-testid="dynamic-integration-stub"]')).toHaveLength(1);
   });
 
-  it('hides the IT Documentation category when the gate is disabled (flag off)', () => {
+  it('hides the IT Documentation category when the gate is disabled', () => {
     useHuduIntegrationEnabledMock.mockReturnValue({ enabled: false, loading: false });
 
     render(<IntegrationsSettingsPage />);

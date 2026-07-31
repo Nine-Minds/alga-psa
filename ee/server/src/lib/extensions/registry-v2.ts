@@ -1,5 +1,6 @@
 // EE-only registry service v2 (Knex-backed)
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { ManifestV2, ManifestEndpoint } from './bundles/manifest';
 import { isValidSemverLike, isWildcardVersion, resolveWildcardVersion } from './bundles/manifest';
 import type { SignatureVerificationResult } from './bundles/verify';
@@ -8,6 +9,7 @@ import { isKnownCapability, normalizeCapability } from './providers';
 import { upsertInstallConfigRecord } from './installConfig';
 
 export const DUPLICATE_EXTENSION_VERSION_CODE = 'EXTENSION_VERSION_ALREADY_EXISTS';
+const EXTENSION_REGISTRY_GLOBAL_TENANT = '__extension_registry_global__';
 
 export class DuplicateExtensionVersionError extends Error {
   readonly status: number;
@@ -112,7 +114,7 @@ export class ExtensionRegistryServiceV2 {
         display_name: input.displayName ?? null,
         description: input.description ?? null,
       };
-      const [inserted] = await this.db('extension_registry')
+      const [inserted] = await tenantDb(this.db, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
         .insert(row)
         .returning(['id', 'publisher', 'name', 'display_name', 'description']);
       return {
@@ -133,7 +135,7 @@ export class ExtensionRegistryServiceV2 {
 
   // 2) List registry entries
   async listRegistryEntries(): Promise<RegistryEntry[]> {
-    const rows = await this.db('extension_registry')
+    const rows = await tenantDb(this.db, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
       .select([
         'id',
         'publisher',
@@ -155,7 +157,7 @@ export class ExtensionRegistryServiceV2 {
 
   // 3) Get by (publisher, name)
   async getRegistryEntryByName(publisher: string, name: string): Promise<RegistryEntry | null> {
-    const r = await this.db('extension_registry')
+    const r = await tenantDb(this.db, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
       .where({ publisher, name })
       .first(['id', 'publisher', 'name', 'display_name', 'description']);
     if (!r) return null;
@@ -190,7 +192,7 @@ export class ExtensionRegistryServiceV2 {
         ui: v.ui ? JSON.stringify(v.ui) : null,
       };
 
-      const [ins] = await this.db('extension_version')
+      const [ins] = await tenantDb(this.db, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_version')
         .insert(row)
         .returning([
           'id',
@@ -250,7 +252,7 @@ export class ExtensionRegistryServiceV2 {
       size_bytes: null,
     };
 
-    const [ins] = await this.db('extension_bundle')
+    const [ins] = await tenantDb(this.db, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_bundle')
       .insert(row)
       .returning(['id', 'version_id', 'content_hash', 'signature', 'precompiled']);
 
@@ -273,7 +275,7 @@ export class ExtensionRegistryServiceV2 {
     opts?: { grantedCaps?: string[]; config?: any }
   ): Promise<boolean> {
     // Resolve version_id
-    const v = await this.db('extension_version')
+    const v = await tenantDb(this.db, tenantId).table('extension_version')
       .where({ registry_id: registryId, version })
       .first(['id', 'capabilities']);
     if (!v) {
@@ -324,7 +326,7 @@ export class ExtensionRegistryServiceV2 {
       updated_at: now,
     };
 
-    const rows = await this.db('tenant_extension_install')
+    const rows = await tenantDb(this.db, tenantId).table('tenant_extension_install')
       .insert(payload)
       .onConflict(['tenant_id', 'registry_id'])
       .merge({
@@ -377,12 +379,12 @@ export class ExtensionRegistryServiceV2 {
     tenantId: string,
     registryId: string
   ): Promise<{ version_id: string; content_hash: string } | null> {
-    const ti = await this.db('tenant_extension_install')
-      .where({ tenant_id: tenantId, registry_id: registryId })
+    const ti = await tenantDb(this.db, tenantId).table('tenant_extension_install')
+      .where({ registry_id: registryId })
       .first(['version_id']);
     if (!ti) return null;
 
-    const bundle = await this.db('extension_bundle')
+    const bundle = await tenantDb(this.db, tenantId).table('extension_bundle')
       .where({ version_id: ti.version_id })
       .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
       .first(['content_hash']);

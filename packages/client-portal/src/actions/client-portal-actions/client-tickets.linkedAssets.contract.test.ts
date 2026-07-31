@@ -9,7 +9,7 @@ const source = fs.readFileSync(
 
 describe('getClientTicketDetails linked assets contract', () => {
   it('joins asset_associations -> assets and scopes by client_id', () => {
-    expect(source).toContain("trx('asset_associations as aa')");
+    expect(source).toContain("scopedDb.table('asset_associations as aa')");
     expect(source).toContain("'aa.entity_type': 'ticket'");
     expect(source).toContain("'a.client_id': visibility.clientId");
   });

@@ -7,6 +7,7 @@
  * - Database cross-referencing
  */
 
+import { tenantDb } from '@alga-psa/db';
 import {
   normalizeCSVHeaders,
   validateRequiredColumns,
@@ -471,8 +472,7 @@ export async function validateAgainstDatabase(
   }
 
   // Fetch matching invoices from database
-  const invoices = await knex('invoices')
-    .where({ tenant })
+  const invoices = await tenantDb(knex, tenant).table('invoices')
     .whereIn('invoice_number', invoiceNumbers)
     .select('invoice_id', 'invoice_number', 'invoice_date', 'tax_source', 'status');
 

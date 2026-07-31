@@ -10,11 +10,18 @@ function read(relativePath: string): string {
 
 describe('client details default-contact creation wiring contract', () => {
   it('T014: ClientDetails keeps add-new contact wired to the current client context', () => {
-    const source = read('./ClientDetails.tsx');
+    // ClientDetails composes the details tab through ClientDetailsTabContent,
+    // handing down the editable client and the default-contact handler.
+    const clientDetails = read('./ClientDetails.tsx');
+    expect(clientDetails).toContain('editedClient={editedClient}');
+    expect(clientDetails).toContain('onDefaultContactChange={handleDefaultContactChange}');
 
-    expect(source).toContain('onAddNew={() => setIsQuickAddContactOpen(true)}');
-    expect(source).toContain('isOpen={isQuickAddContactOpen}');
-    expect(source).toContain('selectedClientId={editedClient.client_id}');
-    expect(source).toContain('handleDefaultContactChange(newContact.contact_name_id);');
+    // The add-new contact dialog wiring now lives in the tab content child, but
+    // stays bound to the current client and feeds the default-contact selection.
+    const tabContent = read('./ClientDetailsTabContent.tsx');
+    expect(tabContent).toContain('onAddNew={() => setIsQuickAddContactOpen(true)}');
+    expect(tabContent).toContain('isOpen={isQuickAddContactOpen}');
+    expect(tabContent).toContain('selectedClientId={editedClient.client_id}');
+    expect(tabContent).toContain('onDefaultContactChange(newContact.contact_name_id);');
   });
 });

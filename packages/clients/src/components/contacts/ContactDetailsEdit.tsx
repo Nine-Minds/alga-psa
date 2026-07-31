@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { updateContact, listInboundTicketDestinationOptions, getAllCountries, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
@@ -15,6 +15,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { usePageSaveShortcut, usePanelSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -30,12 +32,21 @@ import ContactEmailAddressesEditor, {
   validateContactEmailAddresses,
 } from './ContactEmailAddressesEditor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type EditableContact = Omit<IContact, 'phone_numbers' | 'additional_email_addresses'> & {
   phone_numbers: ContactPhoneNumberInput[];
   primary_email_custom_type?: string | null;
   additional_email_addresses: ContactEmailAddressInput[];
 };
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -76,6 +87,11 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     const fetchData = async () => {
       try {
         const fetchedTags = await findTagsByEntityIds([contact.contact_name_id], 'contact');
+        if (isTagActionError(fetchedTags)) {
+          console.error('Error fetching contact tags:', fetchedTags);
+          setTags([]);
+          return;
+        }
         setTags(fetchedTags);
         
         if (contact.tenant) {
@@ -96,6 +112,11 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       try {
         const rows = await listInboundTicketDestinationOptions();
         if (cancelled) return;
+        if (isReturnedActionError(rows)) {
+          console.error('Error loading inbound ticket destination options:', getErrorMessage(rows));
+          setInboundDestinationOptions([]);
+          return;
+        }
         setInboundDestinationOptions(
           (rows ?? []).map((row: any) => ({
             value: row.id,
@@ -189,6 +210,10 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         ...compactedEmails,
         phone_numbers: compactContactPhoneNumbers(contact.phone_numbers),
       });
+      if (isReturnedActionError(updatedContact)) {
+        setError(getErrorMessage(updatedContact));
+        return;
+      }
 
       // Clean up phone type definitions the user chose to delete
       if (phoneTypesToDeleteRef.current.length > 0) {
@@ -220,10 +245,9 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             t('contactDetailsEdit.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })
           ));
         } else if (err.message.includes('SYSTEM_ERROR:')) {
-          setError(err.message.replace(
-            'SYSTEM_ERROR:',
-            t('contactDetailsEdit.errors.systemPrefix', { defaultValue: 'System error:' })
-          ));
+          setError(t('contactDetailsEdit.errors.saveFailed', {
+            defaultValue: 'An error occurred while saving. Please try again.'
+          }));
         } else {
           console.log('Unhandled error:', err.message);
           setError(t('contactDetailsEdit.errors.saveFailed', {
@@ -237,6 +261,11 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       }
     }
   };
+
+  // Drawer-hosted edits save via panel.submit (page.save is suppressed there).
+  const insideDrawer = useInsideDrawer() || isInDrawer;
+  usePageSaveShortcut(() => { void handleSave(); }, { enabled: !insideDrawer });
+  usePanelSubmitShortcut(() => { void handleSave(); }, { enabled: insideDrawer });
 
   const handleTagsChange = (updatedTags: ITag[]) => {
     setTags(updatedTags);

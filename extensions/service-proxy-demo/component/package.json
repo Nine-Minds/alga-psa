@@ -18,5 +18,8 @@
     "rimraf": "^5.0.0",
     "tsup": "^8.5.1",
     "typescript": "^5.4.0"
+  },
+  "overrides": {
+    "esbuild": ">=0.28.1"
   }
 }

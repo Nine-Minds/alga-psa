@@ -7,8 +7,8 @@ import AlgaDeskMspShell from "@/components/layout/AlgaDeskMspShell";
 import { TagProvider } from "@alga-psa/tags/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
-import { I18nWrapper } from "@alga-psa/tenancy/components";
-import { getTenantSettings } from "@alga-psa/tenancy/actions";
+import { I18nWrapper } from "@alga-psa/tenancy/components/i18n/I18nWrapper";
+import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { AIChatContextProvider } from '@product/chat/context';
 import { TierProvider } from "@/context/TierContext";
@@ -22,15 +22,26 @@ import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
+import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
 
 interface Props {
   children: React.ReactNode;
   session: Session | null;
+  /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
+  currencyCode?: string;
   productCode: ProductCode;
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
+  /** Server-embedded i18n resources for the route (skips per-namespace HTTP fetches). */
+  preloadedLocaleResources?: Record<string, Record<string, unknown>>;
+  /**
+   * True when the server authoritatively resolved onboarding status from tenant
+   * settings this request. Lets the client skip its defensive re-fetch of
+   * getTenantSettings (the server value already drives `needsOnboarding`).
+   */
+  onboardingResolvedServerSide?: boolean;
   /** Self-host install (license_state row present). Hosted/SaaS = false. */
   selfHostLicensing?: boolean;
 }
@@ -63,10 +74,13 @@ function OnboardingRedirectFallback() {
 export function MspLayoutClient({
   children,
   session,
+  currencyCode,
   productCode,
   needsOnboarding,
   initialSidebarCollapsed,
   initialLocale,
+  preloadedLocaleResources,
+  onboardingResolvedServerSide = false,
   selfHostLicensing = false,
 }: Props) {
   const router = useRouter();
@@ -94,9 +108,11 @@ export function MspLayoutClient({
     let isCancelled = false;
 
     setClientNeedsOnboarding(false);
-    setClientOnboardingCheckComplete(false);
+    // The server already resolved onboarding from tenant settings; trust it and
+    // skip the client re-fetch (avoids a getTenantSettings round-trip on load).
+    setClientOnboardingCheckComplete(onboardingResolvedServerSide);
 
-    if (needsOnboarding || isOnboardingPage || !sessionTenant) {
+    if (onboardingResolvedServerSide || needsOnboarding || isOnboardingPage || !sessionTenant) {
       return () => {
         isCancelled = true;
       };
@@ -144,7 +160,7 @@ export function MspLayoutClient({
   ) : (
     <AppSessionProvider session={session}>
       <ProductProvider>
-        <TierProvider>
+        <TierProvider selfHostLicensing={selfHostLicensing}>
           {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
@@ -193,8 +209,10 @@ export function MspLayoutClient({
   );
 
   return (
-    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined}>
-      {content}
+    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} preloadedResources={preloadedLocaleResources}>
+      <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
+        {content}
+      </CurrencyFormatProvider>
     </I18nWrapper>
   );
 }

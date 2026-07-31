@@ -39,6 +39,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { formatCurrency } from '@alga-psa/core';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,
@@ -55,8 +60,13 @@ import { useRangeSelection } from '@alga-psa/ui/hooks';
 
 interface AutomaticInvoicesProps {
   onGenerateSuccess: () => void;
+  onRefreshNeeded?: () => void;
   refreshTrigger?: number;
 }
+
+const isReturnedActionError = (result: unknown) => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
 
 // Placeholder for a DataTable while its (independent) section data loads, so the
 // rest of the screen can render immediately instead of waiting behind one spinner.
@@ -561,7 +571,7 @@ const matchesAutomaticInvoiceView = (
   }
 };
 
-const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, refreshTrigger = 0 }) => {
+const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, onRefreshNeeded, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
   const router = useRouter();
@@ -723,10 +733,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const initialLoadDone = useRef(false);
   const invoicedInitialLoadDone = useRef(false);
+  const lastAppliedClientFilter = useRef(clientFilter);
 
   // Debounce client filter for local ready/blocked row filtering and persist it in the URL.
   useEffect(() => {
     const timer = setTimeout(() => {
+      const filterChanged = lastAppliedClientFilter.current !== clientFilter;
+      lastAppliedClientFilter.current = clientFilter;
       setDebouncedClientFilter(clientFilter);
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
@@ -745,7 +758,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }
       }
 
-      if (initialLoadDone.current) {
+      if (initialLoadDone.current && filterChanged) {
         setCurrentReadyPage(1);
         setSelectedTargets(new Set()); // Clear selection when filter changes
         setExpandedParentGroups(new Set());
@@ -794,6 +807,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
         if (!isMounted) return;
 
+        if (isReturnedActionError(result)) {
+          setPeriods([]);
+          setMaterializationGaps([]);
+          setTotalPeriods(0);
+          setLoadError(getErrorMessage(result));
+          return;
+        }
+
         setPeriods(result.invoiceCandidates as ReadyPeriod[]);
         setMaterializationGaps(result.materializationGaps);
         setTotalPeriods(result.total);
@@ -839,12 +860,17 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }));
         return;
       }
-      setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllResult', {
-        schedules: result.schedulesRepaired,
-        clients: result.clientsRepaired,
-        defaultValue: 'Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).',
-      }));
-      onGenerateSuccess?.();
+      const repairedCount = result.schedulesRepaired + result.rowsBackfilled + result.rowsRealigned + result.rowsSuperseded;
+      setRepairAllMessage(repairedCount > 0
+        ? t('automaticInvoices.materializationGap.fixAllResult', {
+          schedules: result.schedulesRepaired,
+          clients: result.clientsRepaired,
+          defaultValue: 'Rebuilt {{schedules}} schedule(s) across {{clients}} client(s).',
+        })
+        : t('automaticInvoices.materializationGap.fixAllNoop', {
+          defaultValue: 'All billing schedules are already up to date. Anything still listed below needs individual review.',
+        }));
+      onRefreshNeeded?.();
     } catch (error) {
       console.error('Error rebuilding recurring service periods:', error);
       setRepairAllMessage(t('automaticInvoices.materializationGap.fixAllError', {
@@ -1300,6 +1326,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         });
 
         if (!isMounted) return;
+        if (isReturnedActionError(result)) {
+          setLoadError(getErrorMessage(result));
+          return;
+        }
 
         setInvoicedPeriods(result.rows as InvoicedPeriod[]);
         setTotalInvoicedPeriods(result.total);
@@ -1511,6 +1541,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           billingCycleId: group.billingCycleId,
         })),
       });
+      if (isReturnedActionError(runResult)) {
+        setErrors({ generation: getErrorMessage(runResult) });
+        return;
+      }
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
         const label = resolveRecurringFailureLabel(failure);
@@ -1570,6 +1604,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         })),
         allowPoOverage: decision === 'allow',
       });
+      if (isReturnedActionError(runResult)) {
+        setErrors({ generation: getErrorMessage(runResult) });
+        return;
+      }
       for (const failure of runResult.failures) {
         const label = resolveRecurringFailureLabel(failure);
         newErrors[label] = failure.errorMessage;
@@ -1593,10 +1631,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
     setIsReversing(true);
     try {
-      await reverseRecurringInvoice({
+      const result = await reverseRecurringInvoice({
         invoiceId: selectedCycleToReverse.invoiceId,
         billingCycleId: selectedCycleToReverse.billingCycleId,
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setErrors({ [selectedCycleToReverse.client]: getErrorMessage(result) });
+        setIsReversing(false);
+        return;
+      }
       setShowReverseDialog(false);
       setSelectedCycleToReverse(null);
       // Let onGenerateSuccess trigger refresh via refreshTrigger
@@ -1619,10 +1662,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setIsDeleting(true);
     setErrors({});
     try {
-      await hardDeleteRecurringInvoice({
+      const result = await hardDeleteRecurringInvoice({
         invoiceId: selectedCycleToDelete.invoiceId,
         billingCycleId: selectedCycleToDelete.billingCycleId,
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setErrors({ [selectedCycleToDelete.client]: getErrorMessage(result) });
+        setIsDeleting(false);
+        return;
+      }
       setShowDeleteDialog(false);
       setSelectedCycleToDelete(null);
       onGenerateSuccess();
@@ -1667,13 +1715,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           }),
         ],
       });
+      if (isReturnedActionError(runResult)) {
+        setErrors({ preview: getErrorMessage(runResult) });
+        return;
+      }
       if (runResult.failures.length > 0) {
-        throw new Error(
-          runResult.failures[0]?.errorMessage
-          || t('automaticInvoices.dialogs.preview.generateError', {
-            defaultValue: 'Failed to generate invoice from preview',
-          }),
-        );
+        setErrors({
+          preview: runResult.failures[0]?.errorMessage
+            || t('automaticInvoices.dialogs.preview.generateError', {
+              defaultValue: 'Failed to generate invoice from preview',
+            }),
+        });
+        return;
       }
       setShowPreviewDialog(false); // Close dialog on success
       setPreviewState({
@@ -1725,8 +1778,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         ],
         allowPoOverage: true,
       });
+      if (isReturnedActionError(runResult)) {
+        setErrors({ preview: getErrorMessage(runResult) });
+        return;
+      }
       if (runResult.failures.length > 0) {
-        throw new Error(runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview');
+        setErrors({
+          preview: runResult.failures[0]?.errorMessage || 'Failed to generate invoice from preview',
+        });
+        return;
       }
       setShowPreviewDialog(false);
       setPreviewState({

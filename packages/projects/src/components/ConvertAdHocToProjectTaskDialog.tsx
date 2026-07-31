@@ -10,7 +10,12 @@ import { mapTicketToTaskFields, TaskPrefillFields } from '../lib/taskTicketMappi
 import { useDrawer } from '@alga-psa/ui';
 import TaskQuickAdd from './TaskQuickAdd';
 import { useTicketIntegration, TicketIntegrationProvider } from '../context/TicketIntegrationContext';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface ConvertAdHocToProjectTaskDialogProps {
@@ -22,6 +27,10 @@ interface ConvertAdHocToProjectTaskDialogProps {
   assignedTo?: string | null;
   /** Called after the task is successfully created. */
   onConverted: () => void | Promise<void>;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 /**
@@ -76,8 +85,8 @@ export default function ConvertAdHocToProjectTaskDialog({
         setPhases([]);
         setStatuses([]);
         const projectDetails = await getProjectDetails(selectedProjectId);
-        if (isActionPermissionError(projectDetails)) {
-          handleError(projectDetails.permissionError);
+        if (isReturnedActionError(projectDetails)) {
+          handleError(getErrorMessage(projectDetails));
           return;
         }
         setPhases(projectDetails.phases || []);

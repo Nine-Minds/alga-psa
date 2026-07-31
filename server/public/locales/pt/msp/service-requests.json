@@ -102,7 +102,7 @@
       "visibilityProvider": "Provedor de visibilidade",
       "providerDisplay": "{{displayName}} ({{executionMode}})",
       "ticketRouting": {
-        "title": "Configuração de roteamento de chamados",
+        "title": "Configuração de roteamento de tickets",
         "board": "Quadro",
         "boardPlaceholder": "Selecione o quadro",
         "status": "Status",
@@ -122,7 +122,7 @@
         "priorityFormula": "{{label}} (Impacto {{impact}} x Urgência {{urgency}})",
         "titleFieldKey": "Chave do campo de título",
         "descriptionPrefix": "Descrição Prefixo",
-        "save": "Salvar roteamento de chamados"
+        "save": "Salvar roteamento de tickets"
       },
       "workflow": {
         "title": "Configuração do fluxo de trabalho",
@@ -176,10 +176,10 @@
       "errors": {
         "nameRequired": "O nome é obrigatório",
         "linkedServiceMissing": "O serviço vinculado não existe mais",
-        "executionBoardRequired": "Execução: quadro de roteamento de chamados é necessária",
-        "executionStatusRequired": "Execução: o status de roteamento do chamado é obrigatório",
-        "executionPriorityRequired": "Execução: a prioridade de roteamento do chamado é obrigatória",
-        "executionItilImpactUrgencyMismatch": "Execução: O roteamento de chamados requer impacto e urgência do ITIL quando a prioridade não é definida",
+        "executionBoardRequired": "Execução: quadro de roteamento de tickets é necessária",
+        "executionStatusRequired": "Execução: o status de roteamento do ticket é obrigatório",
+        "executionPriorityRequired": "Execução: a prioridade de roteamento do ticket é obrigatória",
+        "executionItilImpactUrgencyMismatch": "Execução: O roteamento de tickets requer impacto e urgência do ITIL quando a prioridade não é definida",
         "unknownExecutionProvider": "Provedor de execução desconhecido: {{key}}",
         "unknownFormBehaviorProvider": "Provedor de comportamento de formulário desconhecido: {{key}}",
         "unknownVisibilityProvider": "Provedor de visibilidade desconhecido: {{key}}"
@@ -194,12 +194,12 @@
       "requesterUser": "Usuário solicitante",
       "client": "Cliente",
       "contact": "Contato",
-      "ticketReference": "Referência de chamado",
+      "ticketReference": "Referência de ticket",
       "workflowReference": "Referência de fluxo de trabalho",
       "executionError": "Erro de execução",
       "submittedAtStatus": "{{date}} · {{status}}",
       "loadingTicket": "Carregando…",
-      "ticketLoadError": "Falha ao carregar detalhes do chamado."
+      "ticketLoadError": "Falha ao carregar detalhes do ticket."
     }
   },
   "icons": {
@@ -239,7 +239,7 @@
       "executionProviderUpdated": "Provedor de execução atualizado",
       "formBehaviorProviderUpdated": "Provedor de comportamento de formulário atualizado",
       "visibilityProviderUpdated": "Provedor de visibilidade atualizado",
-      "ticketRoutingUpdated": "Configuração de roteamento de chamados atualizada",
+      "ticketRoutingUpdated": "Configuração de roteamento de tickets atualizada",
       "workflowConfigurationUpdated": "Configuração do fluxo de trabalho atualizada",
       "formBehaviorConfigUpdated": "Configuração de comportamento do formulário atualizada",
       "visibilityConfigUpdated": "Configuração de visibilidade atualizada"

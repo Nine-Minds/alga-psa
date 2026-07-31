@@ -26,6 +26,12 @@ import {
   recordClientKBFeedback,
 } from '../../actions/client-portal-actions/client-kb';
 import type { IKBArticleWithDocument, ArticleType } from '@alga-psa/types';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const TYPE_ICONS: Record<ArticleType, React.ReactNode> = {
   how_to: <BookOpen className="w-5 h-5 text-blue-500" />,
@@ -47,6 +53,7 @@ export default function ClientKBArticleView({
   const formatArticleType = useFormatArticleType('features/documents');
   const [article, setArticle] = useState<IKBArticleWithDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<'helpful' | 'not_helpful' | null>(
     null
   );
@@ -54,8 +61,14 @@ export default function ClientKBArticleView({
 
   const loadArticle = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const result = await getClientKBArticle(articleIdOrSlug);
+      if (isReturnedActionError(result)) {
+        setArticle(null);
+        setLoadError(getErrorMessage(result));
+        return;
+      }
       setArticle(result);
     } catch (error) {
       console.error('Failed to load article:', error);
@@ -73,7 +86,11 @@ export default function ClientKBArticleView({
 
     setIsSubmittingFeedback(true);
     try {
-      await recordClientKBFeedback(article.article_id, helpful);
+      const result = await recordClientKBFeedback(article.article_id, helpful);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setFeedbackSubmitted(helpful ? 'helpful' : 'not_helpful');
       toast.success(t('kb.feedbackThanks', 'Thank you for your feedback!'));
     } catch (error) {
@@ -430,7 +447,7 @@ export default function ClientKBArticleView({
       <div className="text-center py-12">
         <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
         <p className="text-muted-foreground mb-4">
-          {t('kb.articleNotFound', 'Article not found')}
+          {loadError || t('kb.articleNotFound', 'Article not found')}
         </p>
         {onBack && (
           <Button id="kb-article-back" variant="outline" onClick={onBack}>

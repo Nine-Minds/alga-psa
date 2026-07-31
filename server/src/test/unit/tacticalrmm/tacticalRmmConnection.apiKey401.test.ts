@@ -18,6 +18,12 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/assets/actions/assetActions', () => ({
@@ -65,7 +71,7 @@ describe('Tactical RMM connection test (API key)', () => {
 
     const res = await testTacticalRmmConnection({} as any, { tenant: 'tenant_1' });
     expect(res.success).toBe(false);
-    expect(res.error).toBe('Unauthorized (401): invalid credentials or token expired.');
+    expect(res.error).toBe('Tactical RMM credentials are invalid or expired. Reconnect the integration.');
 
     expect(getSpy).toHaveBeenCalledTimes(1);
     expect(getSpy).toHaveBeenCalledWith(
@@ -77,4 +83,3 @@ describe('Tactical RMM connection test (API key)', () => {
     );
   });
 });
-

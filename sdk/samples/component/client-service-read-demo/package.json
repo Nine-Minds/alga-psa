@@ -23,7 +23,7 @@
   "devDependencies": {
     "@alga-psa/cli": "^0.2.0",
     "@bytecodealliance/componentize-js": "^0.19.3",
-    "esbuild": "^0.27.3",
+    "esbuild": "^0.28.1",
     "rimraf": "^6.0.0",
     "vitest": "^4.0.18"
   }

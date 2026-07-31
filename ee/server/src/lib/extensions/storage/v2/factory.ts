@@ -1,6 +1,7 @@
 'use server';
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { ExtensionStorageServiceV2 } from './service';
 import { StorageServiceError } from './errors';
@@ -25,7 +26,10 @@ export async function getStorageServiceForInstall(installId: string): Promise<St
   }
 
   const knex = await getConnection();
-  const install = await knex<InstallRow>('tenant_extension_install')
+  // Explicit unscoped probe: storage callers only pass installId, so this read
+  // discovers the tenant before the tenant facade can be constructed.
+  const install = await tenantDb(knex, 'tenant-discovery')
+    .unscoped<InstallRow>('tenant_extension_install', 'discover tenant for extension storage install')
     .where({ id: installId })
     .first(['id', 'tenant_id', 'is_enabled', 'status']);
 

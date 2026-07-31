@@ -9,10 +9,15 @@ import {
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory
-} from '@alga-psa/billing/actions';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
+} from '../../../actions/categoryActions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -28,6 +33,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
+
+const isReturnedActionError = (result: unknown) => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
 
 const ServiceCategoriesSettings: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
@@ -76,6 +85,10 @@ const ServiceCategoriesSettings: React.FC = () => {
   const fetchCategories = async () => {
     try {
       const allCategories = await getServiceCategories();
+      if (isReturnedActionError(allCategories)) {
+        setError(getErrorMessage(allCategories));
+        return;
+      }
       setCategories(allCategories);
     } catch (error) {
       console.error('Error fetching service categories:', error);
@@ -100,7 +113,11 @@ const ServiceCategoriesSettings: React.FC = () => {
         toast.error(t('serviceCategories.errors.missingId', { defaultValue: 'Category ID is missing' }));
         return;
       }
-      await deleteServiceCategory(deleteDialog.categoryId);
+      const result = await deleteServiceCategory(deleteDialog.categoryId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('serviceCategories.toast.deleted', {
         defaultValue: 'Service category deleted successfully'
       }));
@@ -126,12 +143,20 @@ const ServiceCategoriesSettings: React.FC = () => {
           setError(t('serviceCategories.errors.missingId', { defaultValue: 'Category ID is missing' }));
           return;
         }
-        await updateServiceCategory(editingCategory.category_id, formData);
+        const result = await updateServiceCategory(editingCategory.category_id, formData);
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
         toast.success(t('serviceCategories.toast.updated', {
           defaultValue: 'Service category updated successfully'
         }));
       } else {
-        await createServiceCategory(formData);
+        const result = await createServiceCategory(formData);
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
         toast.success(t('serviceCategories.toast.created', {
           defaultValue: 'Service category created successfully'
         }));

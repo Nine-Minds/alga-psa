@@ -1,9 +1,9 @@
 import type { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export interface TenantExternalEntityMapping {
   id: string;
-  tenant_id: string;
+  tenant: string;
   integration_type: string;
   alga_entity_type: string;
   alga_entity_id: string;
@@ -39,10 +39,10 @@ export async function lookupAlgaEntityByExternalId(
   externalId: string,
   options: ExternalEntityMappingLookupOptions = {},
 ): Promise<LookupAlgaEntityByExternalIdResult | null> {
-  const db = options.knex ?? (await createTenantKnex(tenant)).knex;
-  const query = db<TenantExternalEntityMapping>('tenant_external_entity_mappings')
+  const knex = options.knex ?? (await createTenantKnex(tenant)).knex;
+  const db = tenantDb(knex, tenant);
+  const query = db.table<TenantExternalEntityMapping>('tenant_external_entity_mappings')
     .where({
-      tenant_id: tenant,
       integration_type: webhookSlug,
       alga_entity_type: entityType,
       external_entity_id: externalId,
@@ -76,12 +76,12 @@ export async function writeEntityMapping(
   externalId: string,
   options: WriteEntityMappingOptions = {},
 ): Promise<TenantExternalEntityMapping> {
-  const db = options.knex ?? (await createTenantKnex(tenant)).knex;
+  const knex = options.knex ?? (await createTenantKnex(tenant)).knex;
+  const db = tenantDb(knex, tenant);
   const externalRealmId = options.externalRealmId || null;
 
-  const existingExternalMapping = await db<TenantExternalEntityMapping>('tenant_external_entity_mappings')
+  const existingExternalMapping = await db.table<TenantExternalEntityMapping>('tenant_external_entity_mappings')
     .where({
-      tenant_id: tenant,
       integration_type: webhookSlug,
       external_entity_id: externalId,
     })
@@ -100,19 +100,19 @@ export async function writeEntityMapping(
     );
   }
 
-  const [mapping] = await db<TenantExternalEntityMapping>('tenant_external_entity_mappings')
+  const [mapping] = await db.table<TenantExternalEntityMapping>('tenant_external_entity_mappings')
     .insert({
-      tenant_id: tenant,
+      tenant,
       integration_type: webhookSlug,
       alga_entity_type: entityType,
       alga_entity_id: algaId,
       external_entity_id: externalId,
       external_realm_id: externalRealmId,
       sync_status: 'synced',
-      last_synced_at: db.fn.now(),
+      last_synced_at: knex.fn.now(),
       metadata: options.metadata ?? null,
     })
-    .onConflict(['tenant_id', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
+    .onConflict(['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
     .merge({
       external_entity_id: externalId,
       external_realm_id: externalRealmId,

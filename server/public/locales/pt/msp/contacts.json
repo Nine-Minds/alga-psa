@@ -100,7 +100,7 @@
     },
     "tabs": {
       "details": "Detalhes",
-      "tickets": "Chamados",
+      "tickets": "Tickets",
       "documents": "Documentos",
       "interactions": "Interações",
       "notes": "Notas",
@@ -111,7 +111,7 @@
       "client": "Cliente",
       "email": "E-mail",
       "role": "Papel",
-      "inboundTicketDestinationOverride": "Substituição do destino do chamado de entrada",
+      "inboundTicketDestinationOverride": "Substituição do destino do ticket de entrada",
       "useClientDestination": "Usar destino do cliente",
       "inboundTicketDestinationHelp": "Se definido, isso substitui o destino do cliente para esse contato remetente exato. Precedência: Substituição de contato -> Destino do cliente -> Padrão do provedor.",
       "tags": "Etiquetas",
@@ -127,7 +127,7 @@
     },
     "loading": {
       "destinations": "Carregando destinos...",
-      "ticketFilters": "Carregando filtros de chamados..."
+      "ticketFilters": "Carregando filtros de tickets..."
     },
     "empty": {
       "notSet": "Não definido",
@@ -266,6 +266,47 @@
       "message": "Os contatos {{count}} já existem. Deseja atualizá-los com os novos dados?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Emails",
+    "description": "Adicione um ou mais endereços de email e escolha exatamente um padrão.",
+    "actions": {
+      "addEmail": "Adicionar email"
+    },
+    "emailTypes": {
+      "work": "Trabalho",
+      "personal": "Pessoal",
+      "billing": "Cobrança",
+      "other": "Outro",
+      "custom": "Personalizado"
+    },
+    "primary": {
+      "title": "Email principal",
+      "description": "Este permanece o endereço padrão armazenado no registro do contato"
+    },
+    "row": {
+      "title": "Email adicional {{number}}",
+      "secondaryDescription": "Armazenado como um endereço de email não padrão",
+      "defaultLabel": "Padrão",
+      "noEmailYet": "Nenhum email informado ainda",
+      "editLabel": "Editar",
+      "edit": "Editar email adicional {{number}}",
+      "doneLabel": "Concluir",
+      "done": "Concluir edição do email adicional {{number}}",
+      "moveUp": "Mova o email adicional {{number}} para cima",
+      "moveDown": "Mova o email adicional {{number}} para baixo",
+      "remove": "Remover email adicional {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Endereço de email",
+      "emailPlaceholder": "nome@exemplo.com",
+      "emailLabel": "Tipo de email",
+      "customEmailLabel": "Tipo de email personalizado",
+      "customTypePlaceholder": "Selecione ou insira um tipo de email personalizado",
+      "customTypeSearchPlaceholder": "Pesquise ou insira um tipo de email personalizado...",
+      "customTypeEmpty": "Nenhum tipo de email personalizado correspondente.",
+      "customTypeUseValue": "Usar \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Números de telefone",
     "description": "Editor de número de telefone com gerenciamento de tipos, validação, padrões e suporte a extensões",
@@ -274,8 +315,8 @@
     },
     "empty": "Ainda não há números de telefone.",
     "phoneTypes": {
-      "work": "Trabalhar",
-      "mobile": "Móvel",
+      "work": "Trabalho",
+      "mobile": "Celular",
       "home": "Residencial",
       "fax": "Fax",
       "other": "Outro",
@@ -324,6 +365,9 @@
     "noAccess": {
       "title": "Sem acesso ao portal",
       "description": "Este contato ainda não tem acesso ao portal do cliente"
+    },
+    "noClient": {
+      "description": "Atribua este contato a um cliente para gerenciar o acesso ao portal."
     },
     "portalAdmin": {
       "label": "Administrador do Portal",
@@ -406,7 +450,8 @@
         "noLocationEmail": "A localização padrão do cliente deve ter um email de contato configurado.",
         "noBaseUrl": "O URL base não está configurado para convites do portal.",
         "invitationNotFound": "Convite não encontrado ou já utilizado."
-      }
+      },
+      "userNotFound": "Client user not found"
     }
   },
   "quickAddContact": {
@@ -494,7 +539,7 @@
       "role": "Papel",
       "rolePlaceholder": "por exemplo, gerente, desenvolvedor, etc.",
       "phoneNumbers": "Números de telefone:",
-      "inboundTicketDestinationOverride": "Substituição do destino do chamado de entrada:",
+      "inboundTicketDestinationOverride": "Substituição do destino do ticket de entrada:",
       "inboundTicketDestinationHelp": "Precedência: Substituição de contato -> Destino do cliente -> Padrão do provedor.",
       "useClientDestination": "Usar destino do cliente",
       "client": "Cliente:",
@@ -523,8 +568,8 @@
       "unknownClient": "Cliente desconhecido"
     },
     "phoneTypes": {
-      "work": "Trabalhar",
-      "mobile": "Móvel",
+      "work": "Trabalho",
+      "mobile": "Celular",
       "home": "Residencial",
       "fax": "Fax",
       "other": "Outro"
@@ -571,13 +616,15 @@
       "name": "Nome",
       "email": "E-mail",
       "phoneNumber": "Número de telefone",
-      "actions": "Ações"
+      "actions": "Ações",
+      "role": "Função"
     },
     "filter": {
       "show": "Mostrar:",
       "active": "Contatos ativos",
       "inactive": "Contatos inativos",
-      "all": "Todos os contatos"
+      "all": "Todos os contatos",
+      "searchPlaceholder": "Pesquisar contatos..."
     },
     "actions": {
       "openMenu": "Abrir menu",
@@ -626,29 +673,36 @@
   },
   "contactTabs": {
     "tickets": {
-      "addTicket": "Adicionar chamado",
-      "empty": "Nenhum chamado encontrado para este contato",
+      "addTicket": "Adicionar ticket",
+      "empty": "Nenhum ticket encontrado para este contato",
       "filters": {
         "allAssignees": "Todos os responsáveis",
         "allPriorities": "Todas as prioridades",
         "categoryPlaceholder": "Filtrar por categoria",
         "reset": "Reiniciar",
-        "searchPlaceholder": "Pesquisar chamados...",
+        "searchPlaceholder": "Pesquisar tickets...",
         "statusPlaceholder": "Selecione o status"
       },
       "loadMore": {
-        "label": "Carregar mais chamados",
+        "label": "Carregar mais tickets",
         "loading": "Carregando..."
       },
       "loading": "Carregando...",
-      "title": "Chamados de contato",
+      "title": "Tickets de contato",
       "toasts": {
         "clientNotFound": "Cliente não encontrado",
         "loadClientFailed": "Falha ao carregar detalhes do cliente",
-        "loadTicketFailed": "Falha ao carregar o chamado",
-        "openTicketFailed": "Falha ao abrir chamado",
+        "loadTicketFailed": "Falha ao carregar o ticket",
+        "openTicketFailed": "Falha ao abrir ticket",
         "userNotAuthenticated": "Usuário não autenticado"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contato atualizado",
+      "saveFailed": "Nao foi possivel atualizar o contato",
+      "saveFailedDescription": "The contact could not be updated. Please try again."
     }
   }
 }

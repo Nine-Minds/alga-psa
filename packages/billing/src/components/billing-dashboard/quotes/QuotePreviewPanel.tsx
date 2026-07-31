@@ -10,6 +10,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { FileText } from 'lucide-react';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { renderQuotePreview, updateQuote } from '../../../actions/quoteActions';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface QuotePreviewPanelProps {
   quoteId: string | null;
@@ -77,13 +78,13 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
           quoteId,
           effectiveTemplateId || undefined,
         );
-        if (result && typeof result === 'object' && 'permissionError' in result) {
-          throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          throw new Error(getErrorMessage(result));
         }
         setPreviewHtml(result as { html: string; css: string });
       } catch (err) {
         console.error('Error loading quote preview:', err);
-        setError(err instanceof Error ? err.message : t('quotePreview.errors.load', {
+        setError(t('quotePreview.errors.load', {
           defaultValue: 'Failed to load preview',
         }));
       } finally {
@@ -100,7 +101,10 @@ const QuotePreviewPanel: React.FC<QuotePreviewPanelProps> = ({
     // Persist the selection to the quote.
     if (quoteId) {
       try {
-        await updateQuote(quoteId, { template_id: templateId || null } as any);
+        const result = await updateQuote(quoteId, { template_id: templateId || null } as any);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          throw new Error(getErrorMessage(result));
+        }
       } catch {
         // Non-blocking — the preview will still reflect the selection.
       }

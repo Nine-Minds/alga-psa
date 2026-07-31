@@ -1,8 +1,7 @@
 'use server'
 
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { marked } from 'marked';
@@ -35,9 +34,10 @@ import { deleteFile } from './file-actions/fileActions';
 import { NextResponse } from 'next/server';
 // deleteDocumentContent and deleteBlockContent imports removed – content rows are
 // now deleted inline inside the deleteDocument transaction.
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
+import { documentPreviewErrorMessage } from '@alga-psa/documents/handlers/previewErrors';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -46,6 +46,11 @@ import {
 } from '@alga-psa/workflow-streams';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  documentActionErrorFrom,
+  documentActionErrorMessage,
+  type DocumentActionError,
+} from './documentActionErrors';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -151,6 +156,14 @@ const SEARCHABLE_ASSOCIATION_ENTITY_TYPES = new Set<SearchableDocumentAssociatio
   'quote',
 ]);
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 export const getDocumentAssociationClientsForPicker = withAuth(async (
   user,
   { tenant }
@@ -162,9 +175,8 @@ export const getDocumentAssociationClientsForPicker = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clients = await trx('clients')
+    const clients = await tenantScopedTable(trx, 'clients', tenant)
       .select('*')
-      .where('tenant', tenant)
       .orderBy('client_name', 'asc');
 
     const logoUrls = await getClientLogoUrlsBatch(
@@ -191,12 +203,12 @@ export const getDocumentAssociationContactsForPicker = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const contacts = await trx('contacts as c')
-      .leftJoin('clients as cl', function joinClients() {
-        this.on('c.client_id', '=', 'cl.client_id').andOn('c.tenant', '=', 'cl.tenant');
-      })
+    const db = tenantDb(trx, tenant);
+    const contactsQuery = tenantScopedTable(trx, 'contacts as c', tenant);
+    db.tenantJoin(contactsQuery, 'clients as cl', 'c.client_id', 'cl.client_id', { type: 'left' });
+
+    const contacts = await contactsQuery
       .select('c.*', 'cl.client_name')
-      .where('c.tenant', tenant)
       .andWhere('c.is_inactive', false)
       .orderBy('c.full_name', 'asc');
 
@@ -230,17 +242,15 @@ async function ensureEntityFoldersInitializedInternal(
   entityType: string,
   createdBy: string | null | undefined
 ) {
-  const existingFolders = await knex('document_folders')
-    .where('tenant', tenant)
-    .andWhere('entity_id', entityId)
+  const existingFolders = await tenantScopedTable(knex, 'document_folders', tenant)
+    .where('entity_id', entityId)
     .andWhere('entity_type', entityType)
     .select('folder_path', 'folder_id');
 
   const existingPaths = new Set(existingFolders.map((folder: { folder_path: string }) => folder.folder_path));
 
-  const defaults = await knex('document_default_folders')
-    .where('tenant', tenant)
-    .andWhere('entity_type', entityType)
+  const defaults = await tenantScopedTable(knex, 'document_default_folders', tenant)
+    .where('entity_type', entityType)
     .select('folder_name', 'folder_path', 'is_client_visible', 'sort_order')
     .orderBy('sort_order', 'asc')
     .orderBy('folder_path', 'asc');
@@ -277,7 +287,7 @@ async function ensureEntityFoldersInitializedInternal(
     });
 
   if (foldersToInsert.length > 0) {
-    await knex('document_folders').insert(foldersToInsert);
+    await tenantScopedTable(knex, 'document_folders', tenant).insert(foldersToInsert);
   }
 }
 
@@ -318,8 +328,8 @@ async function resolveAuthorizationSubjectForUser(
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
     try {
-      const roleRows = await trx('user_roles')
-        .where({ tenant, user_id: user.user_id })
+      const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
+        .where('user_id', user.user_id)
         .select<{ role_id: string }[]>('role_id');
       roleIds = roleRows.map((row) => row.role_id);
     } catch {
@@ -330,15 +340,15 @@ async function resolveAuthorizationSubjectForUser(
   let teamRows: Array<{ team_id: string }> = [];
   let managedRows: Array<{ user_id: string }> = [];
   try {
-    teamRows = await trx('team_members')
-      .where({ tenant, user_id: user.user_id })
+    teamRows = await tenantScopedTable(trx, 'team_members', tenant)
+      .where('user_id', user.user_id)
       .select<{ team_id: string }[]>('team_id');
   } catch {
     teamRows = [];
   }
   try {
-    managedRows = await trx('users')
-      .where({ tenant, reports_to: user.user_id })
+    managedRows = await tenantScopedTable(trx, 'users', tenant)
+      .where('reports_to', user.user_id)
       .select<{ user_id: string }[]>('user_id');
   } catch {
     managedRows = [];
@@ -388,8 +398,7 @@ async function resolveDocumentAuthorizationRecords(
     return records;
   }
 
-  const associations = await trx('document_associations')
-    .where({ tenant })
+  const associations = await tenantScopedTable(trx, 'document_associations', tenant)
     .whereIn('document_id', documentIds)
     .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
 
@@ -405,6 +414,7 @@ async function resolveDocumentAuthorizationRecords(
   const projectTaskIds = new Set<string>();
   const contractIds = new Set<string>();
 
+  const scopedDb = tenantDb(trx, tenant);
   for (const association of associations) {
     if (association.entity_type === 'contact') {
       contactIds.add(association.entity_id);
@@ -422,32 +432,26 @@ async function resolveDocumentAuthorizationRecords(
 
   const [contactClientRows, ticketClientRows, projectTaskClientRows, contractClientRows] = await Promise.all([
     contactIds.size > 0
-      ? trx('contacts')
-          .where({ tenant })
+      ? tenantScopedTable(trx, 'contacts', tenant)
           .whereIn('contact_name_id', Array.from(contactIds))
           .select<{ contact_name_id: string; client_id: string | null }[]>('contact_name_id', 'client_id')
       : Promise.resolve([]),
     ticketIds.size > 0
-      ? trx('tickets')
-          .where({ tenant })
+      ? tenantScopedTable(trx, 'tickets', tenant)
           .whereIn('ticket_id', Array.from(ticketIds))
           .select<{ ticket_id: string; client_id: string | null }[]>('ticket_id', 'client_id')
       : Promise.resolve([]),
     projectTaskIds.size > 0
-      ? trx('project_tasks as pt')
-          .join('project_phases as pp', function joinPhases() {
-            this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
+      ? tenantScopedTable(trx, 'project_tasks as pt', tenant)
+          .modify((builder) => {
+            scopedDb.tenantJoin(builder, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+            scopedDb.tenantJoin(builder, 'projects as p', 'pp.project_id', 'p.project_id');
           })
-          .join('projects as p', function joinProjects() {
-            this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
-          })
-          .where('pt.tenant', tenant)
           .whereIn('pt.task_id', Array.from(projectTaskIds))
           .select<{ task_id: string; client_id: string | null }[]>('pt.task_id', 'p.client_id')
       : Promise.resolve([]),
     contractIds.size > 0
-      ? trx('client_contracts')
-          .where({ tenant })
+      ? tenantScopedTable(trx, 'client_contracts', tenant)
           .whereIn('contract_id', Array.from(contractIds))
           .select<{ contract_id: string; client_id: string | null }[]>('contract_id', 'client_id')
       : Promise.resolve([]),
@@ -630,8 +634,8 @@ export async function getAuthorizedDocumentByFileId(
   user: IUser,
   fileId: string
 ): Promise<IDocument | null> {
-  const document = await trx('documents')
-    .where({ tenant, file_id: fileId })
+  const document = await tenantScopedTable(trx, 'documents', tenant)
+    .where('file_id', fileId)
     .first();
 
   if (!document) {
@@ -648,8 +652,8 @@ export async function getAuthorizedDocumentById(
   user: IUser,
   documentId: string
 ): Promise<IDocument | null> {
-  const document = await trx('documents')
-    .where({ tenant, document_id: documentId })
+  const document = await tenantScopedTable(trx, 'documents', tenant)
+    .where('document_id', documentId)
     .first();
 
   if (!document) {
@@ -661,7 +665,15 @@ export async function getAuthorizedDocumentById(
 }
 
 function isActionPermissionErrorResult(value: unknown): value is ActionPermissionError {
-  return Boolean(value) && typeof value === 'object' && 'permissionError' in (value as Record<string, unknown>);
+  return Boolean(value) && typeof value === 'object' && typeof (value as { permissionError?: unknown }).permissionError === 'string';
+}
+
+function expectedDocumentActionError(message: string): DocumentActionError {
+  const expectedError = documentActionErrorFrom(new Error(message));
+  if (!expectedError) {
+    throw new Error(message);
+  }
+  return expectedError;
 }
 
 async function assertAuthorizedDocumentSetForMutation(
@@ -676,8 +688,7 @@ async function assertAuthorizedDocumentSetForMutation(
     return [];
   }
 
-  const documents = await trx('documents')
-    .where({ tenant })
+  const documents = await tenantScopedTable(trx, 'documents', tenant)
     .whereIn('document_id', uniqueDocumentIds)
     .select('document_id', 'created_by', 'is_client_visible');
 
@@ -819,12 +830,16 @@ export const addDocument = withAuth(async (user, { tenant }, data: DocumentInput
       };
 
       console.log('Adding document:', new_document);
-      await trx('documents').insert(new_document);
+      await tenantScopedTable(trx, 'documents', tenant).insert(new_document);
 
       return { _id: new_document.document_id };
     });
   } catch (error) {
     console.error(error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
     throw error;
   }
 });
@@ -845,8 +860,8 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
         return permissionError('Permission denied: Cannot update documents');
       }
 
-      await trx('documents')
-        .where({ document_id: documentId, tenant })
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where('document_id', documentId)
         .update({
           ...data,
           updated_at: new Date()
@@ -873,7 +888,11 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     );
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to update the document");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -914,8 +933,8 @@ export const deleteDocument = withAuth(async (
         throw new Error('Permission denied: Cannot delete documents');
       }
 
-      const document = await trx('documents')
-        .where({ document_id: documentId, tenant: tenantId })
+      const document = await tenantScopedTable(trx, 'documents', tenantId)
+        .where({ document_id: documentId })
         .first();
       if (!document) {
         throw new Error('Document not found');
@@ -923,35 +942,26 @@ export const deleteDocument = withAuth(async (
 
       await deleteEntityTags(trx, documentId, 'document');
 
-      await trx('clients')
-        .where({
-          notes_document_id: documentId,
-          tenant: tenantId
-        })
+      await tenantScopedTable(trx, 'clients', tenantId)
+        .where({ notes_document_id: documentId })
         .update({
           notes_document_id: null
         });
 
-      await trx('assets')
-        .where({
-          notes_document_id: documentId,
-          tenant: tenantId
-        })
+      await tenantScopedTable(trx, 'assets', tenantId)
+        .where({ notes_document_id: documentId })
         .update({
           notes_document_id: null
         });
 
-      await trx('contacts')
-        .where({
-          notes_document_id: documentId,
-          tenant: tenantId
-        })
+      await tenantScopedTable(trx, 'contacts', tenantId)
+        .where({ notes_document_id: documentId })
         .update({
           notes_document_id: null
         });
 
-      const existingAssociations = await trx('document_associations')
-        .where({ document_id: document.document_id, tenant: tenantId })
+      const existingAssociations = await tenantScopedTable(trx, 'document_associations', tenantId)
+        .where({ document_id: document.document_id })
         .select('association_id', 'document_id', 'entity_id', 'entity_type');
 
       detachedAssociations = existingAssociations.map((row: any) => ({
@@ -966,13 +976,13 @@ export const deleteDocument = withAuth(async (
       // downstream auth checks in deleteDocumentContent/deleteBlockContent can
       // resolve the parent document.  These rows would be orphaned if deleted
       // after the document row is removed.
-      await trx('document_content')
-        .where({ document_id: documentId, tenant: tenantId })
+      await tenantScopedTable(trx, 'document_content', tenantId)
+        .where({ document_id: documentId })
         .delete();
-      await trx('document_block_content')
-        .where({ document_id: documentId, tenant: tenantId })
+      await tenantScopedTable(trx, 'document_block_content', tenantId)
+        .where({ document_id: documentId })
         .delete();
-      await trx('documents').where({ document_id: documentId, tenant: tenantId }).delete();
+      await tenantScopedTable(trx, 'documents', tenantId).where({ document_id: documentId }).delete();
       deletedDocument = document;
     });
 
@@ -1059,11 +1069,16 @@ export const deleteDocument = withAuth(async (
     };
   } catch (error) {
     console.error('Error deleting document:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (!expectedError) {
+      throw error;
+    }
+
     return {
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to delete the document',
+      message: documentActionErrorMessage(expectedError),
       dependencies: [],
       alternatives: []
     };
@@ -1082,7 +1097,8 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
 
     // Use direct query to join with users table
     const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('documents')
+      const db = tenantDb(trx, tenant);
+      const documentQuery = tenantScopedTable(trx, 'documents', tenant)
         .select(
           'documents.*',
           'users.first_name',
@@ -1092,20 +1108,13 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
             COALESCE(dt.type_name, sdt.type_name) as type_name,
             COALESCE(dt.icon, sdt.icon) as type_icon
           `)
-        )
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
+        );
+      db.tenantJoin(documentQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+      db.tenantJoin(documentQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+      return await documentQuery
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-        .where({
-          'documents.document_id': documentId,
-          'documents.tenant': tenant
-        })
+        .where({ 'documents.document_id': documentId })
         .first();
     });
 
@@ -1147,7 +1156,11 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
     return authorizedDocument;
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get the document");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1162,25 +1175,17 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await trx('documents')
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('documents.tenant', '=', 'document_associations.tenant');
-        })
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
+      const db = tenantDb(trx, tenant);
+      const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
+      db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+      db.tenantJoin(documentsQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+      db.tenantJoin(documentsQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+      const documents = await documentsQuery
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': ticketId,
-          'document_associations.entity_type': 'ticket',
-          'documents.tenant': tenant,
-          'document_associations.tenant': tenant
+          'document_associations.entity_type': 'ticket'
         })
         .select(
           'documents.*',
@@ -1197,7 +1202,11 @@ export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId:
     });
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get the documents");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1212,25 +1221,17 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await trx('documents')
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('documents.tenant', '=', 'document_associations.tenant');
-        })
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
+      const db = tenantDb(trx, tenant);
+      const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
+      db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+      db.tenantJoin(documentsQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+      db.tenantJoin(documentsQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+      const documents = await documentsQuery
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': clientId,
-          'document_associations.entity_type': 'client',
-          'documents.tenant': tenant,
-          'document_associations.tenant': tenant
+          'document_associations.entity_type': 'client'
         })
         .select(
           'documents.*',
@@ -1247,7 +1248,11 @@ export const getDocumentByClientId = withAuth(async (user, { tenant }, clientId:
     });
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get the documents");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1307,7 +1312,11 @@ export const associateDocumentWithClient = withAuth(async (user, { tenant }, inp
     return created;
   } catch (error) {
     console.error('Error associating document with client:', error);
-    throw new Error('Failed to associate document with client');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1322,25 +1331,17 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await trx('documents')
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('documents.tenant', '=', 'document_associations.tenant');
-        })
-        .leftJoin('users', function() {
-          this.on('documents.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
+      const db = tenantDb(trx, tenant);
+      const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
+      db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+      db.tenantJoin(documentsQuery, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+      db.tenantJoin(documentsQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+      const documents = await documentsQuery
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
         .where({
           'document_associations.entity_id': contactNameId,
-          'document_associations.entity_type': 'contact',
-          'documents.tenant': tenant,
-          'document_associations.tenant': tenant
+          'document_associations.entity_type': 'contact'
         })
         .select(
           'documents.*',
@@ -1357,7 +1358,11 @@ export const getDocumentByContactNameId = withAuth(async (user, { tenant }, cont
     });
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get the documents");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1377,23 +1382,25 @@ export const getDocumentsByContractId = withAuth(async (user, { tenant }, contra
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const documents = await trx('documents')
-        .join('document_associations', function() {
-          this.on('documents.document_id', '=', 'document_associations.document_id')
-              .andOn('documents.tenant', '=', 'document_associations.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const documentsQuery = tenantScopedTable(trx, 'documents', tenant);
+      db.tenantJoin(documentsQuery, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+
+      const documents = await documentsQuery
         .where({
           'document_associations.entity_id': contractId,
-          'document_associations.entity_type': 'contract',
-          'documents.tenant': tenant,
-          'document_associations.tenant': tenant
+          'document_associations.entity_type': 'contract'
         })
         .select('documents.*', 'document_associations.association_id');
       return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);
     });
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to get contract documents");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1456,7 +1463,11 @@ export const associateDocumentWithContract = withAuth(async (user, { tenant }, i
     return created;
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to associate document with contract");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1476,10 +1487,9 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existing = await trx('document_associations')
+      const existing = await tenantScopedTable(trx, 'document_associations', tenant)
         .where({
           association_id: associationId,
-          tenant,
           entity_type: 'contract'
         })
         .first();
@@ -1491,10 +1501,9 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
         return permissionError('Permission denied: Cannot remove document associations');
       }
 
-      await trx('document_associations')
+      await tenantScopedTable(trx, 'document_associations', tenant)
         .where({
           association_id: associationId,
-          tenant,
           entity_type: 'contract'
         })
         .delete();
@@ -1534,7 +1543,11 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
     return;
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to remove document from contract");
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -1605,20 +1618,20 @@ export const getDocumentPreview = withAuth(async (
 
     // Check if the identifier is a document ID
     let document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('documents')
+      const db = tenantDb(trx, tenant);
+      const documentQuery = tenantScopedTable(trx, 'documents', tenant)
         .select(
           'documents.*',
           trx.raw(`
             COALESCE(dt.type_name, sdt.type_name) as type_name,
             COALESCE(dt.icon, sdt.icon) as type_icon
           `)
-        )
-        .leftJoin('document_types as dt', function() {
-          this.on('documents.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
+        );
+      db.tenantJoin(documentQuery, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+      return await documentQuery
         .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-        .where({ 'documents.document_id': identifier, 'documents.tenant': tenant })
+        .where({ 'documents.document_id': identifier })
         .first();
     });
     console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${document ? 'found' : 'not found'}`);
@@ -1694,7 +1707,7 @@ export const getDocumentPreview = withAuth(async (
     console.error(`[getDocumentPreview] General error for identifier ${identifier}:`, error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to preview file'
+      error: documentPreviewErrorMessage(error, 'Failed to preview file')
     };
   }
 });
@@ -1815,9 +1828,8 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
 
         // Get document by file_id or document_id
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('documents')
-                .where({ tenant })
-                .andWhere(function() {
+            return await tenantScopedTable(trx, 'documents', tenant)
+                .where(function() {
                     this.where({ file_id: documentIdOrFileId })
                         .orWhere({ document_id: documentIdOrFileId });
                 })
@@ -1871,6 +1883,12 @@ export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFi
         });
     } catch (error) {
         console.error('Error downloading document:', error);
+        const expectedError = documentActionErrorFrom(error);
+        if (expectedError) {
+          const message = documentActionErrorMessage(expectedError);
+          const status = 'permissionError' in expectedError ? 403 : 404;
+          return new Response(message, { status });
+        }
         throw error;
     }
 });
@@ -1899,11 +1917,11 @@ export const getDocumentCountsForEntities = withAuth(async (
         return countMap;
       }
 
-      const rows = await trx('document_associations as da')
-        .join('documents as d', function joinDocuments() {
-          this.on('da.document_id', '=', 'd.document_id').andOn('da.tenant', '=', 'd.tenant');
-        })
-        .where('da.tenant', tenant)
+      const db = tenantDb(trx, tenant);
+      const rowsQuery = tenantScopedTable(trx, 'document_associations as da', tenant);
+      db.tenantJoin(rowsQuery, 'documents as d', 'da.document_id', 'd.document_id');
+
+      const rows = await rowsQuery
         .whereIn('da.entity_id', entityIds)
         .where('da.entity_type', entityType)
         .select('da.entity_id', 'd.document_id', 'd.created_by', 'd.is_client_visible');
@@ -1961,7 +1979,7 @@ export const getDocumentsByEntity = withAuth(async (
   filters?: DocumentFilters,
   page: number = 1,
   limit: number = 15
-): Promise<PaginatedDocumentsResponse | ActionPermissionError> => {
+): Promise<PaginatedDocumentsResponse | DocumentActionError> => {
   try {
     if (!await hasPermission(user, 'document', 'read')) {
       return permissionError('Permission denied: Cannot read documents');
@@ -1971,21 +1989,14 @@ export const getDocumentsByEntity = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-        let query = trx('documents')
-          .join('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          })
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
+        const db = tenantDb(trx, tenant);
+        let query = tenantScopedTable(trx, 'documents', tenant);
+        db.tenantJoin(query, 'document_associations', 'documents.document_id', 'document_associations.document_id');
+        db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+        db.tenantJoin(query, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+        query = query
           .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .where('documents.tenant', tenant)
           .where('document_associations.entity_id', entity_id)
           .andWhere('document_associations.entity_type', entity_type)
           .select(
@@ -2049,7 +2060,11 @@ export const getDocumentsByEntity = withAuth(async (
     });
   } catch (error) {
     console.error('Error fetching documents by entity:', error);
-    throw new Error('Failed to fetch documents');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -2070,17 +2085,13 @@ export const getAllDocuments = withAuth(async (
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-        let query = trx('documents')
-          .where('documents.tenant', tenant)
-          .leftJoin('document_types as dt', function() {
-            this.on('documents.type_id', '=', 'dt.type_id')
-                .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-          })
+        const db = tenantDb(trx, tenant);
+        let query = tenantScopedTable(trx, 'documents', tenant);
+        db.tenantJoin(query, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+        db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+
+        query = query
           .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-          .leftJoin('users', function() {
-            this.on('documents.created_by', '=', 'users.user_id')
-                .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-          })
           .select(
             'documents.*',
             'users.first_name',
@@ -2171,30 +2182,28 @@ export const getAllDocuments = withAuth(async (
           query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
         }
         if (filters?.excludeEntityId && filters?.excludeEntityType) {
-          query = query.whereNotExists(function() {
-            this.select('*')
-                .from('document_associations')
-                .whereRaw('document_associations.document_id = documents.document_id')
-                .andWhere('document_associations.entity_id', filters.excludeEntityId)
-                .andWhere('document_associations.entity_type', filters.excludeEntityType)
-                .andWhere('document_associations.tenant', tenant);
-          });
+          query = query.whereNotExists(
+            tenantScopedTable(trx, 'document_associations', tenant)
+              .select('*')
+              .whereRaw('document_associations.document_id = documents.document_id')
+              .andWhere('document_associations.entity_id', filters.excludeEntityId)
+              .andWhere('document_associations.entity_type', filters.excludeEntityType)
+          );
         }
         if (filters?.entityType || filters?.entityId) {
-          query = query.whereExists(function() {
-            this.select('*')
-              .from('document_associations as filter_da')
-              .whereRaw('filter_da.document_id = documents.document_id')
-              .andWhere('filter_da.tenant', tenant);
+          const filterAssociationQuery = tenantScopedTable(trx, 'document_associations as filter_da', tenant)
+            .select('*')
+            .whereRaw('filter_da.document_id = documents.document_id');
 
-            if (filters?.entityType) {
-              this.andWhere('filter_da.entity_type', filters.entityType);
-            }
+          if (filters?.entityType) {
+            filterAssociationQuery.andWhere('filter_da.entity_type', filters.entityType);
+          }
 
-            if (filters?.entityId) {
-              this.andWhere('filter_da.entity_id', filters.entityId);
-            }
-          });
+          if (filters?.entityId) {
+            filterAssociationQuery.andWhere('filter_da.entity_id', filters.entityId);
+          }
+
+          query = query.whereExists(filterAssociationQuery);
         }
         if (filters?.folder_path !== undefined && !filters.showAllDocuments) {
           if (filters.folder_path === null || filters.folder_path === '') {
@@ -2279,9 +2288,10 @@ export const searchDocumentAssociationEntities = withAuth(async (
       return Number(row?.count ?? 0);
     };
 
+    const db = tenantDb(trx, tenant);
+
     if (entityType === 'client') {
-      let query = trx('clients')
-        .where({ tenant })
+      let query = tenantScopedTable(trx, 'clients', tenant)
         .select('client_id as value', 'client_name as label')
         .orderBy('client_name', 'asc');
       query = applySearch(query, ['client_name']);
@@ -2291,11 +2301,9 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'contact') {
-      let query = trx('contacts as c')
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('c.client_id', '=', 'cl.client_id').andOn('c.tenant', '=', 'cl.tenant');
-        })
-        .where('c.tenant', tenant)
+      let query = tenantScopedTable(trx, 'contacts as c', tenant);
+      db.tenantJoin(query, 'clients as cl', 'c.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           'c.contact_name_id as value',
           trx.raw(`
@@ -2314,11 +2322,9 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'ticket') {
-      let query = trx('tickets as t')
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('t.client_id', '=', 'cl.client_id').andOn('t.tenant', '=', 'cl.tenant');
-        })
-        .where('t.tenant', tenant)
+      let query = tenantScopedTable(trx, 'tickets as t', tenant);
+      db.tenantJoin(query, 'clients as cl', 't.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           't.ticket_id as value',
           trx.raw(`
@@ -2342,11 +2348,9 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'asset') {
-      let query = trx('assets as a')
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('a.client_id', '=', 'cl.client_id').andOn('a.tenant', '=', 'cl.tenant');
-        })
-        .where('a.tenant', tenant)
+      let query = tenantScopedTable(trx, 'assets as a', tenant);
+      db.tenantJoin(query, 'clients as cl', 'a.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           'a.asset_id as value',
           trx.raw(`
@@ -2373,17 +2377,11 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'project_task') {
-      let query = trx('project_tasks as pt')
-        .leftJoin('project_phases as pp', function joinPhases() {
-          this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
-        })
-        .leftJoin('projects as p', function joinProjects() {
-          this.on('pp.project_id', '=', 'p.project_id').andOn('pp.tenant', '=', 'p.tenant');
-        })
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('p.client_id', '=', 'cl.client_id').andOn('p.tenant', '=', 'cl.tenant');
-        })
-        .where('pt.tenant', tenant)
+      let query = tenantScopedTable(trx, 'project_tasks as pt', tenant);
+      db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id', { type: 'left' });
+      db.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id', { type: 'left' });
+      db.tenantJoin(query, 'clients as cl', 'p.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           'pt.task_id as value',
           trx.raw(`
@@ -2410,14 +2408,10 @@ export const searchDocumentAssociationEntities = withAuth(async (
     }
 
     if (entityType === 'contract') {
-      let query = trx('contracts as c')
-        .leftJoin('client_contracts as cc', function joinClientContracts() {
-          this.on('c.contract_id', '=', 'cc.contract_id').andOn('c.tenant', '=', 'cc.tenant');
-        })
-        .leftJoin('clients as cl', function joinClients() {
-          this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
-        })
-        .where('c.tenant', tenant)
+      let query = tenantScopedTable(trx, 'contracts as c', tenant);
+      db.tenantJoin(query, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' });
+      db.tenantJoin(query, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
+      query = query
         .select(
           'c.contract_id as value',
           trx.raw("COALESCE(c.contract_name, 'Unnamed contract') as label")
@@ -2430,11 +2424,9 @@ export const searchDocumentAssociationEntities = withAuth(async (
       return { options: rows, total };
     }
 
-    let quoteQuery = trx('quotes as q')
-      .leftJoin('clients as cl', function joinClients() {
-        this.on('q.client_id', '=', 'cl.client_id').andOn('q.tenant', '=', 'cl.tenant');
-      })
-      .where('q.tenant', tenant)
+    let quoteQuery = tenantScopedTable(trx, 'quotes as q', tenant);
+    db.tenantJoin(quoteQuery, 'clients as cl', 'q.client_id', 'cl.client_id', { type: 'left' });
+    quoteQuery = quoteQuery
       .select(
         'q.quote_id as value',
         trx.raw(`
@@ -2465,7 +2457,7 @@ export const createDocumentAssociations = withAuth(async (
   entity_id: string,
   entity_type: DocumentAssociationEntityType,
   document_ids: string[]
-): Promise<{ success: boolean } | ActionPermissionError> => {
+): Promise<{ success: boolean } | DocumentActionError> => {
   try {
     // Check permission for document updates (associating documents is an update operation)
     if (!await hasPermission(user, 'document', 'update')) {
@@ -2543,7 +2535,11 @@ export const createDocumentAssociations = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error creating document associations:', error);
-    throw new Error('Failed to create document associations');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -2564,10 +2560,9 @@ export const removeDocumentAssociations = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      let query = trx('document_associations')
+      let query = tenantScopedTable(trx, 'document_associations', tenant)
         .where('entity_id', entity_id)
-        .andWhere('entity_type', entity_type)
-        .andWhere('tenant', tenant);
+        .andWhere('entity_type', entity_type);
 
       if (document_ids && document_ids.length > 0) {
         query = query.whereIn('document_id', document_ids);
@@ -2634,7 +2629,11 @@ export const removeDocumentAssociations = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error removing document associations:', error);
-    throw new Error('Failed to remove document associations');
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -2703,7 +2702,7 @@ export const uploadDocument = withAuth(async (
 
       // Get document type based on mime type
       const typeResult = await getDocumentTypeId(fileData.type);
-      if ('permissionError' in typeResult) return typeResult;
+      if (isActionPermissionErrorResult(typeResult)) return typeResult;
       const { typeId, isShared } = typeResult;
 
       // Auto-file into entity folder if folder_path not set and entity context exists
@@ -2728,8 +2727,7 @@ export const uploadDocument = withAuth(async (
             );
 
             const entityFolderQuery = () =>
-              knex('document_folders')
-                .where('tenant', tenant)
+              tenantScopedTable(knex, 'document_folders', tenant)
                 .andWhere('entity_id', primaryEntity.id)
                 .andWhere('entity_type', primaryEntity.type);
 
@@ -2767,9 +2765,8 @@ export const uploadDocument = withAuth(async (
       let isClientVisible = user.user_type === 'client';
       if (!isClientVisible && resolvedFolderPath) {
         try {
-          const folderVisibilityQuery = knex('document_folders')
+          const folderVisibilityQuery = tenantScopedTable(knex, 'document_folders', tenant)
             .select('is_client_visible')
-            .where('tenant', tenant)
             .andWhere('folder_path', resolvedFolderPath);
 
           const entityId = options.ticketId || options.projectTaskId || options.contractId
@@ -2812,7 +2809,7 @@ export const uploadDocument = withAuth(async (
 
       // Use transaction for document creation and associations
       const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        await trx('documents').insert(document);
+        await tenantScopedTable(trx, 'documents', tenant).insert(document);
         const documentWithId = document;
 
         // Create associations if any entity IDs are provided
@@ -2935,8 +2932,8 @@ export const uploadDocument = withAuth(async (
       try {
         const previewResult = await generateDocumentPreviews(document, buffer);
         if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
-          await knex('documents')
-            .where({ document_id: document.document_id, tenant })
+          await tenantScopedTable(knex, 'documents', tenant)
+            .where({ document_id: document.document_id })
             .update({
               thumbnail_file_id: previewResult.thumbnail_file_id,
               preview_file_id: previewResult.preview_file_id,
@@ -2955,9 +2952,14 @@ export const uploadDocument = withAuth(async (
       return result;
   } catch (error) {
     console.error('Error uploading document:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (!expectedError) {
+      throw error;
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to upload document'
+      error: documentActionErrorMessage(expectedError)
     };
   }
 });
@@ -2986,9 +2988,11 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
+
     // First try to find a tenant-specific type
-    const tenantType = await trx('document_types')
-      .where({ tenant, type_name: mimeType })
+    const tenantType = await tenantScopedTable(trx, 'document_types', tenant)
+      .where({ type_name: mimeType })
       .first();
 
     if (tenantType) {
@@ -2996,7 +3000,7 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
     }
 
     // Then try to find a shared type
-    const sharedType = await trx('shared_document_types')
+    const sharedType = await scopedDb.table('shared_document_types')
       .where({ type_name: mimeType })
       .first();
 
@@ -3008,8 +3012,8 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
     const generalType = mimeType.split('/')[0] + '/*';
 
     // Check tenant-specific general type first
-    const generalTenantType = await trx('document_types')
-      .where({ tenant, type_name: generalType })
+    const generalTenantType = await tenantScopedTable(trx, 'document_types', tenant)
+      .where({ type_name: generalType })
       .first();
 
     if (generalTenantType) {
@@ -3017,7 +3021,7 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
     }
 
     // Then check shared general type
-    const generalSharedType = await trx('shared_document_types')
+    const generalSharedType = await scopedDb.table('shared_document_types')
       .where({ type_name: generalType })
       .first();
 
@@ -3026,7 +3030,7 @@ export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: str
     }
 
     // If no match found, return the unknown type (application/octet-stream) from shared types
-    const unknownType = await trx('shared_document_types')
+    const unknownType = await scopedDb.table('shared_document_types')
       .where({ type_name: 'application/octet-stream' })
       .first();
 
@@ -3066,14 +3070,14 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
     // Fetch minimal file details to check MIME type and existence
     const fileDetails = useTransaction
       ? await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('external_files')
+          return await tenantScopedTable(trx, 'external_files', tenant)
             .select('mime_type', 'storage_path')
-            .where({ file_id, tenant })
+            .where({ file_id })
             .first();
         })
-      : await knex('external_files')
+      : await tenantScopedTable(knex, 'external_files', tenant)
           .select('mime_type', 'storage_path')
-          .where({ file_id, tenant })
+          .where({ file_id })
           .first();
 
     if (!fileDetails) {
@@ -3131,7 +3135,7 @@ export const getImageUrl = withAuth(async (user, { tenant }, file_id: string): P
   }
 });
 
-export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise<string[] | ActionPermissionError> => {
+export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise<string[] | DocumentActionError> => {
   try {
     // Check permission for document reading
     if (!await hasPermission(user, 'document', 'read')) {
@@ -3141,16 +3145,17 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
     const { knex } = await createTenantKnex();
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('document_associations')
+      return await tenantScopedTable(trx, 'document_associations', tenant)
         .distinct('entity_type')
-        .where('tenant', tenant)
         .orderBy('entity_type', 'asc');
     });
 
     return result.map((row: { entity_type: string }) => row.entity_type);
   } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) return expectedError;
     console.error('Error fetching distinct entity types:', error);
-    throw new Error('Failed to fetch distinct entity types');
+    throw error;
   }
 });
 
@@ -3178,9 +3183,8 @@ async function _getFolderTreeInternal(
   const hasEntityScope = Boolean(entityId && entityType);
 
   // Get explicit folders from document_folders table
-  const explicitFolderQuery = knex('document_folders')
-    .select('folder_path', 'entity_id', 'entity_type', 'is_client_visible')
-    .where('tenant', tenant);
+  const explicitFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
+    .select('folder_path', 'entity_id', 'entity_type', 'is_client_visible');
 
   if (hasEntityScope) {
     explicitFolderQuery
@@ -3209,21 +3213,19 @@ async function _getFolderTreeInternal(
   }
 
   // Get implicit folder paths from documents
-  const implicitFoldersQuery = knex('documents')
+  const implicitFoldersQuery = tenantScopedTable(knex, 'documents', tenant)
     .select('folder_path')
-    .where('tenant', tenant)
     .whereNotNull('folder_path')
     .andWhere('folder_path', '!=', '');
 
   if (hasEntityScope) {
-    implicitFoldersQuery.whereExists(function() {
-      this.select('*')
-        .from('document_associations as da')
+    implicitFoldersQuery.whereExists(
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
         .whereRaw('da.document_id = documents.document_id')
-        .andWhere('da.tenant', tenant)
         .andWhere('da.entity_id', entityId)
-        .andWhere('da.entity_type', entityType);
-    });
+        .andWhere('da.entity_type', entityType)
+    );
   }
   // When no entity scope, don't filter — include all documents' folder paths
   // so the global Documents page shows everything.
@@ -3280,9 +3282,8 @@ export const getFolders = withAuth(async (
   const hasEntityScope = Boolean(entityId && entityType);
 
   // Get explicit folders from document_folders table
-  const explicitFolderQuery = knex('document_folders')
-    .select('folder_path')
-    .where('tenant', tenant);
+  const explicitFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
+    .select('folder_path');
 
   if (hasEntityScope) {
     // Entity context: show ONLY this entity's folders
@@ -3296,22 +3297,20 @@ export const getFolders = withAuth(async (
   const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
 
   // Get implicit folder paths from documents
-  const implicitFoldersQuery = knex('documents')
+  const implicitFoldersQuery = tenantScopedTable(knex, 'documents', tenant)
     .select('folder_path')
-    .where('tenant', tenant)
     .whereNotNull('folder_path')
     .andWhere('folder_path', '!=', '');
 
   if (hasEntityScope) {
     // Entity context: show folders only from this entity's docs
-    implicitFoldersQuery.whereExists(function() {
-      this.select('*')
-        .from('document_associations as da')
+    implicitFoldersQuery.whereExists(
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
         .whereRaw('da.document_id = documents.document_id')
-        .andWhere('da.tenant', tenant)
         .andWhere('da.entity_id', entityId)
-        .andWhere('da.entity_type', entityType);
-    });
+        .andWhere('da.entity_type', entityType)
+    );
   }
   // No entity scope: show all documents' folder paths
 
@@ -3353,32 +3352,24 @@ export const getDocumentsByFolder = withAuth(async (
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const fetchPage = async (sourcePage: number, sourceLimit: number) => {
-      let query = trx('documents as d')
-        .where('d.tenant', tenant);
+      let query = tenantScopedTable(trx, 'documents as d', tenant);
+      const db = tenantDb(trx, tenant);
+
+      const associationExistsQuery = () =>
+        tenantScopedTable(trx, 'document_associations as da', tenant)
+          .select('*')
+          .whereRaw('da.document_id = d.document_id');
 
       if (hasEntityScope) {
-        query = query.whereExists(function() {
-          this.select('*')
-            .from('document_associations as da')
-            .whereRaw('da.document_id = d.document_id')
-            .andWhere('da.tenant', tenant)
+        query = query.whereExists(
+          associationExistsQuery()
             .andWhere('da.entity_id', entityId)
-            .andWhere('da.entity_type', entityType);
-        });
+            .andWhere('da.entity_type', entityType)
+        );
       } else {
         query = query.where(function() {
-          this.whereNotExists(function() {
-            this.select('*')
-              .from('document_associations as da')
-              .whereRaw('da.document_id = d.document_id')
-              .andWhere('da.tenant', tenant);
-          })
-          .orWhereExists(function() {
-            this.select('*')
-              .from('document_associations as da')
-              .whereRaw('da.document_id = d.document_id')
-              .andWhere('da.tenant', tenant);
-          });
+          this.whereNotExists(associationExistsQuery())
+            .orWhereExists(associationExistsQuery());
         });
       }
 
@@ -3395,11 +3386,8 @@ export const getDocumentsByFolder = withAuth(async (
         query = query.whereNull('d.folder_path');
       }
 
+      db.tenantJoin(query, 'document_types as dt', 'd.type_id', 'dt.type_id', { type: 'left' });
       query = query
-        .leftJoin('document_types as dt', function() {
-          this.on('d.type_id', '=', 'dt.type_id')
-              .andOn('dt.tenant', '=', trx.raw('?', [tenant]));
-        })
         .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id');
 
       if (filters?.searchTerm) {
@@ -3473,20 +3461,19 @@ export const getDocumentsByFolder = withAuth(async (
         query = query.where('d.updated_at', '<', endDate.toISOString().split('T')[0]);
       }
       if (filters?.entityType || filters?.entityId) {
-        query = query.whereExists(function() {
-          this.select('*')
-            .from('document_associations as filter_da')
-            .whereRaw('filter_da.document_id = d.document_id')
-            .andWhere('filter_da.tenant', tenant);
+        const filterAssociationQuery = tenantScopedTable(trx, 'document_associations as filter_da', tenant)
+          .select('*')
+          .whereRaw('filter_da.document_id = d.document_id');
 
-          if (filters?.entityType) {
-            this.andWhere('filter_da.entity_type', filters.entityType);
-          }
+        if (filters?.entityType) {
+          filterAssociationQuery.andWhere('filter_da.entity_type', filters.entityType);
+        }
 
-          if (filters?.entityId) {
-            this.andWhere('filter_da.entity_id', filters.entityId);
-          }
-        });
+        if (filters?.entityId) {
+          filterAssociationQuery.andWhere('filter_da.entity_id', filters.entityId);
+        }
+
+        query = query.whereExists(filterAssociationQuery);
       }
       if (filters?.clientVisibility === 'visible') {
         query = query.where('d.is_client_visible', true);
@@ -3496,11 +3483,8 @@ export const getDocumentsByFolder = withAuth(async (
         });
       }
 
+      db.tenantJoin(query, 'users', 'd.created_by', 'users.user_id', { type: 'left' });
       query = query
-        .leftJoin('users', function() {
-          this.on('d.created_by', '=', 'users.user_id')
-              .andOn('users.tenant', '=', trx.raw('?', [tenant]));
-        })
         .select(
           'd.*',
           trx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
@@ -3561,37 +3545,45 @@ export const moveDocumentsToFolder = withAuth(async (
   { tenant },
   documentIds: string[],
   newFolderPath: string | null
-): Promise<void | ActionPermissionError> => {
+): Promise<void | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
   }
 
-  const { knex } = await createTenantKnex();
-  const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const authorizationResult = await assertAuthorizedDocumentSetForMutation(
-      trx,
-      tenant,
-      user,
-      documentIds,
-      'Permission denied: Cannot move documents'
-    );
-    if (isActionPermissionErrorResult(authorizationResult)) {
-      return authorizationResult;
+  try {
+    const { knex } = await createTenantKnex();
+    const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        documentIds,
+        'Permission denied: Cannot move documents'
+      );
+      if (isActionPermissionErrorResult(authorizationResult)) {
+        return authorizationResult;
+      }
+
+      await tenantScopedTable(trx, 'documents', tenant)
+        .whereIn('document_id', documentIds)
+        .update({
+          folder_path: newFolderPath,
+          updated_at: new Date(),
+        });
+
+      return null;
+    });
+
+    if (isActionPermissionErrorResult(mutationResult)) {
+      return mutationResult;
     }
-
-    await trx('documents')
-      .whereIn('document_id', documentIds)
-      .andWhere('tenant', tenant)
-      .update({
-        folder_path: newFolderPath,
-        updated_at: new Date(),
-      });
-
-    return null;
-  });
-
-  if (isActionPermissionErrorResult(mutationResult)) {
-    return mutationResult;
+  } catch (error) {
+    console.error('Error moving documents:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
   }
 });
 
@@ -3607,7 +3599,7 @@ export const toggleDocumentVisibility = withAuth(async (
   { tenant },
   documentIds: string[],
   isClientVisible: boolean
-): Promise<number | ActionPermissionError> => {
+): Promise<number | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
   }
@@ -3616,31 +3608,39 @@ export const toggleDocumentVisibility = withAuth(async (
     return 0;
   }
 
-  const { knex } = await createTenantKnex();
-  const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const authorizationResult = await assertAuthorizedDocumentSetForMutation(
-      trx,
-      tenant,
-      user,
-      documentIds,
-      'Permission denied: Cannot update document visibility'
-    );
-    if (isActionPermissionErrorResult(authorizationResult)) {
-      return authorizationResult;
+  try {
+    const { knex } = await createTenantKnex();
+    const mutationResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorizationResult = await assertAuthorizedDocumentSetForMutation(
+        trx,
+        tenant,
+        user,
+        documentIds,
+        'Permission denied: Cannot update document visibility'
+      );
+      if (isActionPermissionErrorResult(authorizationResult)) {
+        return authorizationResult;
+      }
+
+      const updatedCount = await tenantScopedTable(trx, 'documents', tenant)
+        .whereIn('document_id', documentIds)
+        .update({
+          is_client_visible: isClientVisible,
+          updated_at: new Date(),
+        });
+
+      return Number(updatedCount || 0);
+    });
+
+    return mutationResult;
+  } catch (error) {
+    console.error('Error updating document visibility:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
     }
-
-    const updatedCount = await trx('documents')
-      .where('tenant', tenant)
-      .whereIn('document_id', documentIds)
-      .update({
-        is_client_visible: isClientVisible,
-        updated_at: new Date(),
-      });
-
-    return Number(updatedCount || 0);
-  });
-
-  return mutationResult;
+    throw error;
+  }
 });
 
 /**
@@ -3657,25 +3657,24 @@ export const toggleFolderVisibility = withAuth(async (
   folderId: string,
   isClientVisible: boolean,
   cascade: boolean = false
-): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
+): Promise<{ folderUpdated: boolean; updatedDocuments: number } | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
   }
 
+  try {
   const { knex } = await createTenantKnex();
 
-  const folder = await knex('document_folders')
+  const folder = await tenantScopedTable(knex, 'document_folders', tenant)
     .select('folder_id', 'folder_path', 'entity_id', 'entity_type')
-    .where('tenant', tenant)
     .andWhere('folder_id', folderId)
     .first();
 
   if (!folder) {
-    throw new Error('Folder not found');
+    return expectedDocumentActionError('Folder not found');
   }
 
-  const folderUpdatedCount = await knex('document_folders')
-    .where('tenant', tenant)
+  const folderUpdatedCount = await tenantScopedTable(knex, 'document_folders', tenant)
     .andWhere('folder_id', folderId)
     .update({
       is_client_visible: isClientVisible,
@@ -3686,29 +3685,25 @@ export const toggleFolderVisibility = withAuth(async (
   if (cascade) {
     // Escape SQL LIKE wildcards in folder path before using in pattern
     const escapedPath = folder.folder_path.replace(/%/g, '\\%').replace(/_/g, '\\_');
-    let documentsQuery = knex('documents as d')
-      .where('d.tenant', tenant)
+    let documentsQuery = tenantScopedTable(knex, 'documents as d', tenant)
       .where(function() {
         this.where('d.folder_path', folder.folder_path)
           .orWhere('d.folder_path', 'like', `${escapedPath}/%`);
       });
 
+    const associationExistsQuery = () =>
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
+        .whereRaw('da.document_id = d.document_id');
+
     if (folder.entity_id && folder.entity_type) {
-      documentsQuery = documentsQuery.whereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
+      documentsQuery = documentsQuery.whereExists(
+        associationExistsQuery()
           .andWhere('da.entity_id', folder.entity_id)
-          .andWhere('da.entity_type', folder.entity_type);
-      });
+          .andWhere('da.entity_type', folder.entity_type)
+      );
     } else {
-      documentsQuery = documentsQuery.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      });
+      documentsQuery = documentsQuery.whereNotExists(associationExistsQuery());
     }
 
     const documentsToUpdate = await documentsQuery
@@ -3739,6 +3734,13 @@ export const toggleFolderVisibility = withAuth(async (
     folderUpdated: Number(folderUpdatedCount || 0) > 0,
     updatedDocuments,
   };
+  } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -3752,16 +3754,16 @@ export const toggleFolderVisibilityByPath = withAuth(async (
   entityId?: string | null,
   entityType?: string | null,
   cascade?: boolean
-): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
+): Promise<{ folderUpdated: boolean; updatedDocuments: number } | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'update'))) {
     return permissionError('Permission denied');
   }
 
+  try {
   const { knex } = await createTenantKnex();
 
-  const query = knex('document_folders')
+  const query = tenantScopedTable(knex, 'document_folders', tenant)
     .select('folder_id', 'folder_path', 'entity_id', 'entity_type')
-    .where('tenant', tenant)
     .andWhere('folder_path', folderPath);
 
   if (entityId && entityType) {
@@ -3771,11 +3773,10 @@ export const toggleFolderVisibilityByPath = withAuth(async (
   const folder = await query.first();
 
   if (!folder) {
-    throw new Error('Folder not found');
+    return expectedDocumentActionError('Folder not found');
   }
 
-  const folderUpdatedCount = await knex('document_folders')
-    .where('tenant', tenant)
+  const folderUpdatedCount = await tenantScopedTable(knex, 'document_folders', tenant)
     .andWhere('folder_id', folder.folder_id)
     .update({
       is_client_visible: isClientVisible,
@@ -3785,29 +3786,25 @@ export const toggleFolderVisibilityByPath = withAuth(async (
 
   if (cascade) {
     const escapedPath = folder.folder_path.replace(/%/g, '\\%').replace(/_/g, '\\_');
-    let documentsQuery = knex('documents as d')
-      .where('d.tenant', tenant)
+    let documentsQuery = tenantScopedTable(knex, 'documents as d', tenant)
       .where(function() {
         this.where('d.folder_path', folder.folder_path)
           .orWhere('d.folder_path', 'like', `${escapedPath}/%`);
       });
 
+    const associationExistsQuery = () =>
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
+        .whereRaw('da.document_id = d.document_id');
+
     if (folder.entity_id && folder.entity_type) {
-      documentsQuery = documentsQuery.whereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
+      documentsQuery = documentsQuery.whereExists(
+        associationExistsQuery()
           .andWhere('da.entity_id', folder.entity_id)
-          .andWhere('da.entity_type', folder.entity_type);
-      });
+          .andWhere('da.entity_type', folder.entity_type)
+      );
     } else {
-      documentsQuery = documentsQuery.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      });
+      documentsQuery = documentsQuery.whereNotExists(associationExistsQuery());
     }
 
     const documentsToUpdate = await documentsQuery
@@ -3838,6 +3835,13 @@ export const toggleFolderVisibilityByPath = withAuth(async (
     folderUpdated: Number(folderUpdatedCount || 0) > 0,
     updatedDocuments,
   };
+  } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -3856,22 +3860,30 @@ export const ensureEntityFolders = withAuth(async (
   { tenant },
   entityId: string,
   entityType: string
-): Promise<IFolderNode[] | ActionPermissionError> => {
+): Promise<IFolderNode[] | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
     return permissionError('Permission denied');
   }
 
   if (!entityId || !entityType) {
-    throw new Error('Both entityId and entityType are required');
+    return expectedDocumentActionError('Both entityId and entityType are required');
   }
 
-  const { knex } = await createTenantKnex();
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    await ensureEntityFoldersInitializedInternal(trx, tenant, entityId, entityType, user.user_id);
+  try {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await ensureEntityFoldersInitializedInternal(trx, tenant, entityId, entityType, user.user_id);
 
-    // Return current folder tree
-    return _getFolderTreeInternal(trx, user, tenant, entityId, entityType);
-  });
+      // Return current folder tree
+      return _getFolderTreeInternal(trx, user, tenant, entityId, entityType);
+    });
+  } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -3892,8 +3904,7 @@ export const getFolderStats = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const rows = await trx('documents')
-      .where('tenant', tenant)
+    const rows = await tenantScopedTable(trx, 'documents', tenant)
       .where(function() {
         this.where('folder_path', folderPath)
           .orWhere('folder_path', 'like', `${folderPath}/%`);
@@ -3908,7 +3919,7 @@ export const getFolderStats = withAuth(async (
     })) as IDocument[];
     const authorizedDocuments = await authorizeAndRedactDocuments(trx, tenant, user, authorizationInput);
     const authorizedDocumentIds = new Set(authorizedDocuments.map((document) => document.document_id));
-    const totalSize = rows.reduce((sum, row: { document_id: string; file_size: number | string | null }) => {
+    const totalSize = rows.reduce((sum: number, row: { document_id: string; file_size: number | string | null }) => {
       if (!authorizedDocumentIds.has(row.document_id)) {
         return sum;
       }
@@ -3946,20 +3957,21 @@ export const createFolder = withAuth(async (
   entityId?: string | null,
   entityType?: string | null,
   isClientVisible: boolean = false
-): Promise<void | ActionPermissionError> => {
+): Promise<void | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'create'))) {
     return permissionError('Permission denied');
   }
 
+  try {
   const { knex } = await createTenantKnex();
 
   // Validate folder path
   if (!folderPath || !folderPath.startsWith('/')) {
-    throw new Error('Folder path must start with /');
+    return expectedDocumentActionError('Folder path must start with /');
   }
 
   if ((entityId && !entityType) || (!entityId && entityType)) {
-    throw new Error('Both entityId and entityType are required when scoping a folder to an entity');
+    return expectedDocumentActionError('Both entityId and entityType are required when scoping a folder to an entity');
   }
 
   const hasEntityScope = Boolean(entityId && entityType);
@@ -3967,7 +3979,7 @@ export const createFolder = withAuth(async (
   // Extract folder name from path
   const parts = folderPath.split('/').filter(p => p.length > 0);
   if (parts.length === 0) {
-    throw new Error('Invalid folder path');
+    return expectedDocumentActionError('Invalid folder path');
   }
   const folderName = parts[parts.length - 1];
 
@@ -3979,8 +3991,7 @@ export const createFolder = withAuth(async (
   // Get parent folder ID if exists
   let parentFolderId = null;
   if (parentPath) {
-    const parentFolderQuery = knex('document_folders')
-      .where('tenant', tenant)
+    const parentFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
       .where('folder_path', parentPath);
 
     if (hasEntityScope) {
@@ -4001,8 +4012,7 @@ export const createFolder = withAuth(async (
   }
 
   // Check if folder already exists
-  const existingFolderQuery = knex('document_folders')
-    .where('tenant', tenant)
+  const existingFolderQuery = tenantScopedTable(knex, 'document_folders', tenant)
     .where('folder_path', folderPath);
 
   if (hasEntityScope) {
@@ -4023,16 +4033,24 @@ export const createFolder = withAuth(async (
   }
 
   // Create folder
-  await knex('document_folders').insert({
-    tenant,
-    folder_path: folderPath,
-    folder_name: folderName,
-    parent_folder_id: parentFolderId,
-    entity_id: hasEntityScope ? entityId : null,
-    entity_type: hasEntityScope ? entityType : null,
-    is_client_visible: isClientVisible,
-    created_by: user.user_id,
-  });
+  await tenantScopedTable(knex, 'document_folders', tenant).insert({
+      tenant,
+      folder_path: folderPath,
+      folder_name: folderName,
+      parent_folder_id: parentFolderId,
+      entity_id: hasEntityScope ? entityId : null,
+      entity_type: hasEntityScope ? entityType : null,
+      is_client_visible: isClientVisible,
+      created_by: user.user_id,
+    });
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -4041,15 +4059,15 @@ export const createFolder = withAuth(async (
  * @param folderPath - Path to the folder to delete
  * @returns Promise<void>
  */
-export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string): Promise<void | ActionPermissionError> => {
+export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string): Promise<void | DocumentActionError> => {
   if (!(await hasPermission(user, 'document', 'delete'))) {
     return permissionError('Permission denied');
   }
 
+  try {
   const { knex } = await createTenantKnex();
 
-  const documentsInFolder = await knex('documents')
-    .where('tenant', tenant)
+  const documentsInFolder = await tenantScopedTable(knex, 'documents', tenant)
     .where('folder_path', folderPath)
     .select('document_id', 'created_by', 'is_client_visible');
 
@@ -4067,32 +4085,36 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
   }
 
   // Check if folder has documents
-  const docCount = await knex('documents')
-    .where('tenant', tenant)
+  const docCount = await tenantScopedTable(knex, 'documents', tenant)
     .where('folder_path', folderPath)
     .count('* as count')
     .first();
 
   if (parseInt(docCount?.count as string) > 0) {
-    throw new Error('Cannot delete folder: contains documents');
+    return expectedDocumentActionError('Cannot delete folder: contains documents');
   }
 
   // Check if folder has subfolders
-  const subfolderCount = await knex('document_folders')
-    .where('tenant', tenant)
+  const subfolderCount = await tenantScopedTable(knex, 'document_folders', tenant)
     .where('folder_path', 'like', `${folderPath}/%`)
     .count('* as count')
     .first();
 
   if (parseInt(subfolderCount?.count as string) > 0) {
-    throw new Error('Cannot delete folder: contains subfolders');
+    return expectedDocumentActionError('Cannot delete folder: contains subfolders');
   }
 
   // Delete folder
-  await knex('document_folders')
-    .where('tenant', tenant)
+  await tenantScopedTable(knex, 'document_folders', tenant)
     .where('folder_path', folderPath)
     .delete();
+  } catch (error) {
+    const expectedError = documentActionErrorFrom(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 });
 
 // Helper functions
@@ -4163,24 +4185,22 @@ async function enrichFolderTreeWithCounts(
   }
 
   // Gather candidate documents first, then apply kernel authorization before counting.
-  let documentsQuery = knex('documents as d')
-    .leftJoin('document_types as dt', function joinDocumentTypes() {
-      this.on('d.type_id', '=', 'dt.type_id')
-        .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-    })
+  const db = tenantDb(knex, tenant);
+  let documentsQuery = tenantScopedTable(knex, 'documents as d', tenant);
+  db.tenantJoin(documentsQuery, 'document_types as dt', 'd.type_id', 'dt.type_id', { type: 'left' });
+
+  documentsQuery = documentsQuery
     .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
-    .where('d.tenant', tenant)
     .whereIn('d.folder_path', allPaths);
 
   if (entityId && entityType) {
-    documentsQuery = documentsQuery.whereExists(function() {
-      this.select('*')
-        .from('document_associations as da')
+    documentsQuery = documentsQuery.whereExists(
+      tenantScopedTable(knex, 'document_associations as da', tenant)
+        .select('*')
         .whereRaw('da.document_id = d.document_id')
-        .andWhere('da.tenant', tenant)
         .andWhere('da.entity_id', entityId)
-        .andWhere('da.entity_type', entityType);
-    });
+        .andWhere('da.entity_type', entityType)
+    );
   } else {
     // No entity scope: include all documents and rely on kernel decisions for narrowing.
   }
@@ -4261,20 +4281,19 @@ async function enrichFolderTreeWithCounts(
   }
 
   if (filters?.entityType || filters?.entityId) {
-    documentsQuery = documentsQuery.whereExists(function filterEntityAssociation() {
-      this.select('*')
-        .from('document_associations as filter_da')
-        .whereRaw('filter_da.document_id = d.document_id')
-        .andWhere('filter_da.tenant', tenant);
+    const filterAssociationQuery = tenantScopedTable(knex, 'document_associations as filter_da', tenant)
+      .select('*')
+      .whereRaw('filter_da.document_id = d.document_id');
 
-      if (filters?.entityType) {
-        this.andWhere('filter_da.entity_type', filters.entityType);
-      }
+    if (filters?.entityType) {
+      filterAssociationQuery.andWhere('filter_da.entity_type', filters.entityType);
+    }
 
-      if (filters?.entityId) {
-        this.andWhere('filter_da.entity_id', filters.entityId);
-      }
-    });
+    if (filters?.entityId) {
+      filterAssociationQuery.andWhere('filter_da.entity_id', filters.entityId);
+    }
+
+    documentsQuery = documentsQuery.whereExists(filterAssociationQuery);
   }
 
   if (filters?.clientVisibility === 'visible') {

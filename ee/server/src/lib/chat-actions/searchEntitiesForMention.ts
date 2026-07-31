@@ -1,6 +1,7 @@
 'use server';
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
@@ -39,6 +40,7 @@ export async function searchEntitiesForMention(
   }
 
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, user.tenant);
   const limit = 5;
 
   // Split the query into words so that "Acme Corp" still matches rows named
@@ -75,9 +77,8 @@ export async function searchEntitiesForMention(
   const [tickets, clients, contacts, projects, assets, users] = await Promise.all([
     // Tickets: search by ticket_number and title
     (() => {
-      const qb = knex('tickets')
-        .select('ticket_id', 'ticket_number', 'title', 'status_id')
-        .where('tenant', user.tenant);
+      const qb = db.table('tickets')
+        .select('ticket_id', 'ticket_number', 'title', 'status_id');
       applyWordFilters(qb, [
         'LOWER(title) LIKE ?',
         'CAST(ticket_number AS TEXT) LIKE ?',
@@ -87,9 +88,8 @@ export async function searchEntitiesForMention(
 
     // Clients: search by client_name
     (() => {
-      const qb = knex('clients')
+      const qb = db.table('clients')
         .select('client_id', 'client_name')
-        .where('tenant', user.tenant)
         .andWhere('is_inactive', false);
       applyWordFilters(qb, ['LOWER(client_name) LIKE ?']);
       return qb.orderBy('client_name').limit(limit).catch(() => []);
@@ -97,9 +97,8 @@ export async function searchEntitiesForMention(
 
     // Contacts: search by full_name and email
     (() => {
-      const qb = knex('contacts')
-        .select('contact_name_id', 'full_name', 'email')
-        .where('tenant', user.tenant);
+      const qb = db.table('contacts')
+        .select('contact_name_id', 'full_name', 'email');
       applyWordFilters(qb, [
         'LOWER(full_name) LIKE ?',
         'LOWER(email) LIKE ?',
@@ -109,18 +108,16 @@ export async function searchEntitiesForMention(
 
     // Projects: search by project_name
     (() => {
-      const qb = knex('projects')
-        .select('project_id', 'project_name', 'status')
-        .where('tenant', user.tenant);
+      const qb = db.table('projects')
+        .select('project_id', 'project_name', 'status');
       applyWordFilters(qb, ['LOWER(project_name) LIKE ?']);
       return qb.orderBy('project_name').limit(limit).catch(() => []);
     })(),
 
     // Assets: search by name and asset_tag
     (() => {
-      const qb = knex('assets')
-        .select('asset_id', 'name', 'asset_tag', 'asset_type')
-        .where('tenant', user.tenant);
+      const qb = db.table('assets')
+        .select('asset_id', 'name', 'asset_tag', 'asset_type');
       applyWordFilters(qb, [
         'LOWER(name) LIKE ?',
         'LOWER(asset_tag) LIKE ?',
@@ -130,9 +127,8 @@ export async function searchEntitiesForMention(
 
     // Users: search by name, username, email
     (() => {
-      const qb = knex('users')
+      const qb = db.table('users')
         .select('user_id', 'username', 'first_name', 'last_name', 'email')
-        .where('tenant', user.tenant)
         .andWhere('user_type', 'internal')
         .andWhere('is_inactive', false);
       applyWordFilters(qb, [

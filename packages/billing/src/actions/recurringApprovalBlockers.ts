@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
-import type { ISO8601String } from '@alga-psa/types';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { tenantDb } from '@alga-psa/db';
+import { toISODate, toPlainDate } from '@alga-psa/core';
+import type { ISO8601String, IRecurringDueWorkWarning } from '@alga-psa/types';
 
 export type RecurringApprovalBlockerRow = {
   executionIdentityKey: string;
@@ -12,12 +13,67 @@ export type RecurringApprovalBlockerRow = {
 };
 
 export type RecurringApprovalBlockerCounts = Map<string, number>;
+export type RecurringApprovalWarnings = Map<string, IRecurringDueWorkWarning[]>;
 
 const APPROVED_TIME_STATUS = 'APPROVED';
 
 export function formatApprovalBlockedReason(unapprovedEntryCount: number): string {
   const noun = unapprovedEntryCount === 1 ? 'entry' : 'entries';
   return `Blocked until approval: ${unapprovedEntryCount} unapproved ${noun}.`;
+}
+
+export function formatStaleProjectBillingWarning(entryCount: number): string {
+  const noun = entryCount === 1 ? 'entry has' : 'entries have';
+  return `${entryCount} project billing schedule ${noun} been ready for more than 7 days.`;
+}
+
+export async function detectRecurringApprovalWarnings(params: {
+  knex: Knex;
+  tenant: string;
+  rows: RecurringApprovalBlockerRow[];
+  now?: Date;
+}): Promise<RecurringApprovalWarnings> {
+  const warnings: RecurringApprovalWarnings = new Map();
+  const clientIds = Array.from(new Set(params.rows.map((row) => row.clientId).filter(Boolean)));
+  if (clientIds.length === 0) return warnings;
+
+  const cutoff = new Date((params.now ?? new Date()).getTime() - 7 * 24 * 60 * 60 * 1000);
+  const db = tenantDb(params.knex, params.tenant);
+  // Stale-ready entries are few by construction, so count per client in JS
+  // rather than groupBy/countDistinct — the plain row fetch also keeps the
+  // query inside the builder subset the due-work reader test harnesses model.
+  const query = db.table('project_billing_schedule_entries as entry')
+    .where('entry.status', 'ready')
+    .whereNotNull('entry.ready_at')
+    .where('entry.ready_at', '<', cutoff.toISOString())
+    .whereIn('project.client_id', clientIds)
+    .select('project.client_id', 'entry.schedule_entry_id');
+  db.tenantJoin(query, 'project_billing_configs as config', 'entry.config_id', 'config.config_id');
+  db.tenantJoin(query, 'projects as project', 'config.project_id', 'project.project_id');
+  const rows = await query as unknown as Array<{
+    client_id: string;
+    schedule_entry_id: string;
+  }>;
+  const countsByClient = new Map<string, number>();
+  const seenEntries = new Set<string>();
+  for (const row of rows) {
+    if (seenEntries.has(row.schedule_entry_id)) continue;
+    seenEntries.add(row.schedule_entry_id);
+    countsByClient.set(row.client_id, (countsByClient.get(row.client_id) ?? 0) + 1);
+  }
+
+  for (const row of params.rows) {
+    const entryCount = countsByClient.get(row.clientId) ?? 0;
+    if (entryCount <= 0 || warnings.has(row.executionIdentityKey)) continue;
+    warnings.set(row.executionIdentityKey, [{
+      code: 'stale_project_billing_ready_entries',
+      severity: 'warning',
+      message: formatStaleProjectBillingWarning(entryCount),
+      entryCount,
+    }]);
+  }
+
+  return warnings;
 }
 
 function parseUnresolvedSelectionFromScheduleKey(scheduleKey: string | null | undefined): {
@@ -45,8 +101,16 @@ function applyNonApprovedStatusFilter(query: Knex.QueryBuilder, column: string) 
   });
 }
 
-function getContractServicePeriodEndExclusive(servicePeriodEndInclusive: ISO8601String): ISO8601String {
-  return toISODate(toPlainDate(servicePeriodEndInclusive).add({ days: 1 }));
+// `service_period_end` is persisted as the EXCLUSIVE end of a half-open service
+// period (e.g. a June period ends 2026-07-01, which is not itself part of June),
+// so it is already the correct upper bound for an `end_time < ...` comparison --
+// matching both the billing engine (`servicePeriodEndExclusive = coveredPeriod.end`)
+// and `countUnresolvedSelectionUnapprovedTimeEntries`, which uses it directly.
+// Previously this added a day, treating the value as inclusive, which pulled the
+// entire first day of the NEXT period into the approval scan and blocked a
+// completed period on unapproved time that belongs to the following one.
+export function getContractServicePeriodEndExclusive(servicePeriodEnd: ISO8601String): ISO8601String {
+  return toISODate(toPlainDate(servicePeriodEnd));
 }
 
 async function getServiceIdsForContractLine(params: {
@@ -54,9 +118,8 @@ async function getServiceIdsForContractLine(params: {
   tenant: string;
   contractLineId: string;
 }): Promise<string[]> {
-  const rows = await params.knex('contract_line_services')
+  const rows = await tenantDb(params.knex, params.tenant).table('contract_line_services')
     .where({
-      tenant: params.tenant,
       contract_line_id: params.contractLineId,
     })
     .select('service_id');
@@ -81,30 +144,9 @@ async function getUniquelyAssignableServiceIdsForLine(params: {
     return [];
   }
 
-  const rows = await params.knex('client_contracts as cc')
-    .join('contracts as c', function joinContracts() {
-      this.on('c.contract_id', '=', 'cc.contract_id').andOn(
-        'c.tenant',
-        '=',
-        'cc.tenant',
-      );
-    })
-    .join('contract_lines as cl', function joinContractLines() {
-      this.on('cl.contract_id', '=', 'c.contract_id').andOn(
-        'cl.tenant',
-        '=',
-        'c.tenant',
-      );
-    })
-    .join('contract_line_services as cls', function joinContractLineServices() {
-      this.on('cls.contract_line_id', '=', 'cl.contract_line_id').andOn(
-        'cls.tenant',
-        '=',
-        'cl.tenant',
-      );
-    })
+  const db = tenantDb(params.knex, params.tenant);
+  const query = db.table('client_contracts as cc')
     .where({
-      'cc.tenant': params.tenant,
       'cc.client_id': params.clientId,
     })
     .whereIn('cls.service_id', params.serviceIds)
@@ -122,14 +164,20 @@ async function getUniquelyAssignableServiceIdsForLine(params: {
       params.knex.raw('COUNT(DISTINCT cl.contract_line_id) as line_count'),
       params.knex.raw('MIN(cl.contract_line_id::text) as only_line_id'),
     );
+  db.tenantJoin(query, 'contracts as c', 'c.contract_id', 'cc.contract_id');
+  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'c.contract_id');
+  db.tenantJoin(query, 'contract_line_services as cls', 'cls.contract_line_id', 'cl.contract_line_id');
+  const rows = (await query) as unknown as Array<{
+    service_id: string;
+    line_count: string | number;
+    only_line_id?: string | null;
+  }>;
 
   return rows
     .filter(
-      (row: { line_count: string | number; only_line_id?: string | null }) =>
-        Number(row.line_count) === 1 &&
-        row.only_line_id === params.contractLineId,
+      (row) => Number(row.line_count) === 1 && row.only_line_id === params.contractLineId,
     )
-    .map((row: { service_id: string }) => row.service_id);
+    .map((row) => row.service_id);
 }
 
 async function countContractLineUnapprovedTimeEntries(params: {
@@ -152,9 +200,7 @@ async function countContractLineUnapprovedTimeEntries(params: {
   }
 
   const servicePeriodStartExclusive = row.servicePeriodStart;
-  const servicePeriodEndExclusive = getContractServicePeriodEndExclusive(
-    row.servicePeriodEnd,
-  );
+  const servicePeriodEndExclusive = row.servicePeriodEnd;
   const uniquelyAssignableServiceIds = await getUniquelyAssignableServiceIdsForLine({
     knex,
     tenant,
@@ -165,36 +211,8 @@ async function countContractLineUnapprovedTimeEntries(params: {
     servicePeriodEndExclusive,
   });
 
-  const query = knex('time_entries')
-    .leftJoin('project_tasks', function joinProjectTasks() {
-      this.on('time_entries.work_item_id', '=', 'project_tasks.task_id').andOn(
-        'project_tasks.tenant',
-        '=',
-        'time_entries.tenant',
-      );
-    })
-    .leftJoin('project_phases', function joinProjectPhases() {
-      this.on('project_tasks.phase_id', '=', 'project_phases.phase_id').andOn(
-        'project_phases.tenant',
-        '=',
-        'project_tasks.tenant',
-      );
-    })
-    .leftJoin('projects', function joinProjects() {
-      this.on('project_phases.project_id', '=', 'projects.project_id').andOn(
-        'projects.tenant',
-        '=',
-        'project_phases.tenant',
-      );
-    })
-    .leftJoin('tickets', function joinTickets() {
-      this.on('time_entries.work_item_id', '=', 'tickets.ticket_id').andOn(
-        'tickets.tenant',
-        '=',
-        'time_entries.tenant',
-      );
-    })
-    .where('time_entries.tenant', tenant)
+  const db = tenantDb(knex, tenant);
+  const query = db.table('time_entries')
     .where('time_entries.start_time', '>=', servicePeriodStartExclusive)
     .where('time_entries.end_time', '<', servicePeriodEndExclusive)
     .where('time_entries.invoiced', false)
@@ -227,6 +245,10 @@ async function countContractLineUnapprovedTimeEntries(params: {
         row.clientId,
       );
     });
+  db.tenantJoin(query, 'project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id', { type: 'left' });
+  db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
+  db.tenantJoin(query, 'projects', 'project_phases.project_id', 'projects.project_id', { type: 'left' });
+  db.tenantJoin(query, 'tickets', 'time_entries.work_item_id', 'tickets.ticket_id', { type: 'left' });
 
   applyNonApprovedStatusFilter(query, 'time_entries.approval_status');
 
@@ -242,8 +264,7 @@ async function countUnresolvedSelectionUnapprovedTimeEntries(params: {
 }): Promise<number> {
   const { knex, tenant, row, recordId } = params;
 
-  const query = knex('time_entries')
-    .where('time_entries.tenant', tenant)
+  const query = tenantDb(knex, tenant).table('time_entries')
     .where('time_entries.entry_id', recordId)
     .where('time_entries.start_time', '>=', row.servicePeriodStart)
     .where('time_entries.end_time', '<', row.servicePeriodEnd)
@@ -253,10 +274,12 @@ async function countUnresolvedSelectionUnapprovedTimeEntries(params: {
 
   applyNonApprovedStatusFilter(query, 'time_entries.approval_status');
 
-  const matchingRows = await query.select('time_entries.entry_id');
+  const matchingRows = (await query.select('time_entries.entry_id')) as unknown as Array<{
+    entry_id?: string | null;
+  }>;
   return new Set(
     matchingRows
-      .map((entry: { entry_id?: string | null }) => entry.entry_id)
+      .map((entry) => entry.entry_id)
       .filter((entryId): entryId is string => Boolean(entryId)),
   ).size;
 }

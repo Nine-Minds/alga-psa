@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IInvoiceTemplate } from '@alga-psa/types';
 import { exportWorkspaceToTemplateAst } from './ast/workspaceAst';
 import PaperInvoice from '../billing-dashboard/PaperInvoice';
@@ -167,6 +168,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
       sortBy: 'invoice_date',
       sortOrder: 'desc',
     });
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      throw new Error(getErrorMessage(result));
+    }
     return {
       options: result.invoices.map((inv) => ({
         value: inv.invoice_id,
@@ -188,6 +192,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
       .then((invoice) => {
         if (requestId !== detailRequestSequence.current) {
           return;
+        }
+        if (isActionMessageError(invoice) || isActionPermissionError(invoice)) {
+          throw new Error(getErrorMessage(invoice));
         }
         const mapped = mapDbInvoiceToWasmViewModel(invoice);
         if (!mapped) {

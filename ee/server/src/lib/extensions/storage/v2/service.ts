@@ -1,4 +1,5 @@
 import Ajv, { ValidateFunction } from 'ajv';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
   StorageBulkPutRequest,
@@ -148,6 +149,13 @@ export class ExtensionStorageServiceV2 {
     this.validatorCache = new Map();
   }
 
+  private table<Row extends object = Record<string, unknown>>(
+    conn: Knex | Knex.Transaction,
+    tableExpression: string,
+  ): Knex.QueryBuilder<Row, Row[]> {
+    return tenantDb(conn, this.tenantId).table<Row>(tableExpression);
+  }
+
   async put(request: StoragePutRequest): Promise<StoragePutResponse> {
     assertNamespace(request.namespace);
     assertKey(request.key);
@@ -170,7 +178,7 @@ export class ExtensionStorageServiceV2 {
       await this.cleanupExpired(trx);
       await this.validateAgainstSchema(trx, request.namespace, request.value, request.schemaVersion);
 
-      const existing = await trx<NamespaceRecord>('ext_storage_records')
+      const existing = await this.table<NamespaceRecord>(trx, 'ext_storage_records')
         .where({
           tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
@@ -187,7 +195,7 @@ export class ExtensionStorageServiceV2 {
       }
 
       const usageRow = await this.getUsageForUpdate(trx);
-      const namespaceCountRow = await trx('ext_storage_records')
+      const namespaceCountRow = await this.table(trx, 'ext_storage_records')
         .where({
           tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
@@ -233,7 +241,7 @@ export class ExtensionStorageServiceV2 {
         metadata_size_bytes: metadataSize,
       };
 
-      const [row] = await trx('ext_storage_records')
+      const [row] = await this.table<NamespaceRecord>(trx, 'ext_storage_records')
         .insert(insertRow)
         .onConflict(['tenant', 'extension_install_id', 'namespace', 'key'])
         .merge({
@@ -304,7 +312,7 @@ export class ExtensionStorageServiceV2 {
         schemaVersion,
       );
 
-      const existingRows = await trx<NamespaceRecord>('ext_storage_records')
+      const existingRows = await this.table<NamespaceRecord>(trx, 'ext_storage_records')
         .where({
           tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
@@ -328,7 +336,7 @@ export class ExtensionStorageServiceV2 {
       }
 
       const usageRow = await this.getUsageForUpdate(trx);
-      const namespaceCountRow = await trx('ext_storage_records')
+      const namespaceCountRow = await this.table(trx, 'ext_storage_records')
         .where({
           tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
@@ -389,7 +397,7 @@ export class ExtensionStorageServiceV2 {
         };
       });
 
-      const result = await trx('ext_storage_records')
+      const result = await this.table<NamespaceRecord>(trx, 'ext_storage_records')
         .insert(rows)
         .onConflict(['tenant', 'extension_install_id', 'namespace', 'key'])
         .merge({
@@ -427,7 +435,7 @@ export class ExtensionStorageServiceV2 {
     return this.knex.transaction(async (trx) => {
       await this.cleanupExpired(trx);
 
-      const existing = await trx<NamespaceRecord>('ext_storage_records')
+      const existing = await this.table<NamespaceRecord>(trx, 'ext_storage_records')
         .where({
           tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
@@ -444,7 +452,7 @@ export class ExtensionStorageServiceV2 {
         throw new StorageRevisionMismatchError('ifRevision did not match stored revision');
       }
 
-      await trx('ext_storage_records')
+      await this.table(trx, 'ext_storage_records')
         .where({
           tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
@@ -466,7 +474,7 @@ export class ExtensionStorageServiceV2 {
     return this.knex.transaction(async (trx) => {
       await this.cleanupExpired(trx);
 
-      const row = await trx<NamespaceRecord>('ext_storage_records')
+      const row = await this.table<NamespaceRecord>(trx, 'ext_storage_records')
         .where({
           tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
@@ -507,7 +515,7 @@ export class ExtensionStorageServiceV2 {
     return this.knex.transaction(async (trx) => {
       await this.cleanupExpired(trx);
 
-      let query = trx<NamespaceRecord>('ext_storage_records')
+      let query = this.table<NamespaceRecord>(trx, 'ext_storage_records')
         .where({
           tenant: this.tenantId,
           extension_install_id: this.extensionInstallId,
@@ -552,7 +560,7 @@ export class ExtensionStorageServiceV2 {
   }
 
   private async cleanupExpired(trx: Knex.Transaction): Promise<void> {
-    const deleted = await trx('ext_storage_records')
+    const deleted = await this.table(trx, 'ext_storage_records')
       .where({
         tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
@@ -567,7 +575,7 @@ export class ExtensionStorageServiceV2 {
   }
 
   private async refreshUsage(trx: Knex.Transaction) {
-    const row = await trx('ext_storage_records')
+    const row = await this.table(trx, 'ext_storage_records')
       .where({
         tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
@@ -584,7 +592,7 @@ export class ExtensionStorageServiceV2 {
     const namespacesCount = Number(row?.namespaces_count ?? 0);
     const now = new Date();
 
-    await trx('ext_storage_usage')
+    await this.table(trx, 'ext_storage_usage')
       .insert({
         tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
@@ -605,7 +613,7 @@ export class ExtensionStorageServiceV2 {
   private async getUsageForUpdate(trx: Knex.Transaction) {
     // Ensure a usage row exists, then lock it
     const now = new Date();
-    await trx('ext_storage_usage')
+    await this.table(trx, 'ext_storage_usage')
       .insert({
         tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
@@ -617,7 +625,7 @@ export class ExtensionStorageServiceV2 {
       .onConflict(['tenant', 'extension_install_id'])
       .ignore();
 
-    const row = await trx('ext_storage_usage')
+    const row = await this.table(trx, 'ext_storage_usage')
       .where({
         tenant: this.tenantId,
         extension_install_id: this.extensionInstallId,
@@ -664,7 +672,7 @@ export class ExtensionStorageServiceV2 {
     namespace: string,
     requestedSchemaVersion?: number | null,
   ): Promise<SchemaRow | null> {
-    const query = trx('ext_storage_schemas')
+    const query = this.table(trx, 'ext_storage_schemas')
       .select(['schema_version', 'schema_document'])
       .where({
         tenant: this.tenantId,

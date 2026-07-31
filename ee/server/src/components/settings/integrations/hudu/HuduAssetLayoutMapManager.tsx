@@ -17,11 +17,14 @@ import type {
   HuduLayoutMapActionResult,
 } from '../../../../lib/actions/integrations/huduLayoutMapActions';
 import HuduLayoutCreateTypeButton from './HuduLayoutCreateTypeButton';
-import { ALGA_ASSET_TYPES, HUDU_LAYOUT_EXCLUDED } from '../../../../lib/integrations/hudu/assetLayoutMap';
+// Import the pure constants/types from the client-safe shared module, not
+// './assetLayoutMap' (which imports huduIntegrationRepository -> @alga-psa/db
+// and would pull the server chain into this client component's bundle).
+import { ALGA_ASSET_TYPES, HUDU_LAYOUT_EXCLUDED } from '../../../../lib/integrations/hudu/assetLayoutMapShared';
 import type {
   HuduAssetLayoutTypeMap,
   HuduLayoutAssignment,
-} from '../../../../lib/integrations/hudu/assetLayoutMap';
+} from '../../../../lib/integrations/hudu/assetLayoutMapShared';
 
 // Explicit type guard: the EE tsconfig is non-strict, where `!result.success`
 // alone does not narrow the discriminated union.

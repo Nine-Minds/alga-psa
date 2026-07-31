@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
@@ -14,6 +16,10 @@ import { ensureSystemEmailWorkflow } from './helpers/workflowSeedHelper';
 applyPlaywrightAuthEnvDefaults();
 
 const BASE_URL = resolvePlaywrightBaseUrl();
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 const MANAGE_ONLY_PERMISSIONS: TenantPermissionTuple[] = [
   { resource: 'user', action: 'read' },
@@ -171,7 +177,7 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
       await workflowPage.selectWorkflowByName(newWorkflowName);
       await expect(page.getByText('Select a step to edit its configuration.')).toBeVisible();
     } finally {
-      await db('workflow_definitions').where({ name: newWorkflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: newWorkflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
@@ -332,7 +338,7 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
       await expect(failureMinInput).toBeEnabled();
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
@@ -387,7 +393,7 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
       await expect(failureThresholdInput).toHaveValue('0.25');
       await expect(failureMinInput).toHaveValue('7');
 
-      const record = await db('workflow_definitions').where({ name: workflowName }).first();
+      const record = await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).first();
       expect(record).toBeTruthy();
       expect(record.is_visible).toBe(false);
       expect(record.is_paused).toBe(true);
@@ -397,7 +403,7 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
       expect(Number(record.failure_rate_min_runs)).toBe(7);
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
@@ -429,12 +435,12 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
       await workflowPage.selectWorkflowByName(workflowName);
       await expect(pausedToggle).toHaveAttribute('data-state', 'checked');
 
-      const record = await db('workflow_definitions').where({ name: workflowName }).first();
+      const record = await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).first();
       expect(record).toBeTruthy();
       expect(record.is_paused).toBe(true);
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
@@ -488,7 +494,7 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
       await expect(failureMinInput).toHaveValue('9');
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();

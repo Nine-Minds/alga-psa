@@ -5,6 +5,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { 
@@ -183,10 +184,11 @@ export class ClientModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<void> {
+    const db = tenantDb(trx, tenant);
+
     // Get the first active tax rate to use as the default
-    const defaultTaxRate = await trx('tax_rates')
-      .where('tenant', tenant)
-      .andWhere('is_active', true)
+    const defaultTaxRate = await db.table('tax_rates')
+      .where('is_active', true)
       .orderBy('created_at', 'asc')
       .first();
 
@@ -195,7 +197,7 @@ export class ClientModel {
       const taxRateId = uuidv4();
       const now = new Date().toISOString();
       
-      await trx('tax_rates').insert({
+      await db.table('tax_rates').insert({
         tax_rate_id: taxRateId,
         tenant,
         rate: 0,
@@ -207,14 +209,14 @@ export class ClientModel {
       });
 
       // Link the tax rate to the client
-      await trx('client_tax_rate').insert({
+      await db.table('client_tax_rates').insert({
         client_id: clientId,
         tax_rate_id: taxRateId,
         tenant
       });
     } else {
       // Link existing default tax rate to the client
-      await trx('client_tax_rate').insert({
+      await db.table('client_tax_rates').insert({
         client_id: clientId,
         tax_rate_id: defaultTaxRate.tax_rate_id,
         tenant
@@ -222,7 +224,7 @@ export class ClientModel {
     }
 
     // Create default client tax settings
-    await trx('client_tax_settings').insert({
+    await db.table('client_tax_settings').insert({
       client_id: clientId,
       tenant,
       is_reverse_charge_applicable: false,
@@ -284,7 +286,7 @@ export class ClientModel {
     }
 
     // Insert client
-    const [client] = await trx('clients')
+    const [client] = await tenantDb(trx, tenant).table('clients')
       .insert(insertData)
       .returning('*');
 
@@ -353,8 +355,8 @@ export class ClientModel {
     }
 
     // Update client
-    await trx('clients')
-      .where({ client_id: clientId, tenant })
+    await tenantDb(trx, tenant).table('clients')
+      .where({ client_id: clientId })
       .update(dbData);
 
     // Email suffix functionality removed for security
@@ -368,8 +370,8 @@ export class ClientModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<any> {
-    const client = await trx('clients')
-      .where({ client_id: clientId, tenant })
+    const client = await tenantDb(trx, tenant).table('clients')
+      .where({ client_id: clientId })
       .first();
     
     if (client && client.properties) {
@@ -387,8 +389,8 @@ export class ClientModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<boolean> {
-    const result = await trx('clients')
-      .where({ client_id: clientId, tenant })
+    const result = await tenantDb(trx, tenant).table('clients')
+      .where({ client_id: clientId })
       .count('* as count')
       .first();
     
@@ -403,7 +405,7 @@ export class ClientModel {
     trx: Knex.Transaction,
     options: { includeInactive?: boolean } = {}
   ): Promise<any[]> {
-    let query = trx('clients').where({ tenant });
+    let query = tenantDb(trx, tenant).table('clients');
     
     if (!options.includeInactive) {
       query = query.where(function() {

@@ -18,9 +18,10 @@ describe('ContractBasicsStep renewal card rendering', () => {
 
   it('defines renewal mode selector options for none/manual/auto', () => {
     expect(source).toContain("const renewalModeOptions = [");
-    expect(source).toContain("{ value: 'none', label: 'No Renewal' }");
-    expect(source).toContain("{ value: 'manual', label: 'Manual Renewal' }");
-    expect(source).toContain("{ value: 'auto', label: 'Auto Renew' }");
+    // Labels are translated with English defaults since the i18n sweep.
+    expect(source).toContain("t('wizardBasics.renewal.modeOptions.none', { defaultValue: 'No Renewal' })");
+    expect(source).toContain("t('wizardBasics.renewal.modeOptions.manual', { defaultValue: 'Manual Renewal' })");
+    expect(source).toContain("t('wizardBasics.renewal.modeOptions.auto', { defaultValue: 'Auto Renew' })");
     expect(source).toContain('renewal_mode: value as NonNullable<ContractWizardData');
   });
 
@@ -45,9 +46,9 @@ describe('ContractBasicsStep renewal card rendering', () => {
   });
 
   it('includes renewal fields in the contract summary preview', () => {
-    expect(source).toContain('<strong>Renewal Mode:</strong>');
-    expect(source).toContain('<strong>Notice Period:</strong>');
-    expect(source).toContain('<strong>Renewal Term:</strong>');
+    expect(source).toContain("<strong>{t('wizardBasics.summary.labels.renewalMode', { defaultValue: 'Renewal Mode:' })}</strong>");
+    expect(source).toContain("<strong>{t('wizardBasics.summary.labels.noticePeriod', { defaultValue: 'Notice Period:' })}</strong>");
+    expect(source).toContain("<strong>{t('wizardBasics.summary.labels.renewalTerm', { defaultValue: 'Renewal Term:' })}</strong>");
   });
 
   it('includes use-tenant-defaults toggle wiring for renewal settings', () => {

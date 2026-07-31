@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
@@ -110,7 +110,15 @@ const { default: ServiceRequestsManagementPage } = await import(
 );
 
 describe('ServiceRequestsManagementPage', () => {
+  // RTL auto-cleanup only registers for the first test file in the shared fork
+  // (externalized @testing-library/react is cached process-wide), so clean up
+  // explicitly to keep renders from leaking across tests.
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
+    cleanup();
     vi.clearAllMocks();
 
     listServiceRequestDefinitionsActionMock.mockResolvedValue([]);
@@ -123,7 +131,8 @@ describe('ServiceRequestsManagementPage', () => {
       },
     ]);
     createServiceRequestDefinitionFromTemplateActionMock.mockResolvedValue({
-      definition_id: 'definition-123',
+      success: true,
+      data: { definition_id: 'definition-123' },
     });
   });
 
@@ -149,6 +158,27 @@ describe('ServiceRequestsManagementPage', () => {
     expect(pushMock).toHaveBeenCalledWith('/msp/service-requests/definition-123');
     expect(listServiceRequestDefinitionsActionMock).toHaveBeenCalledTimes(1);
     expect(listServiceRequestTemplatesActionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an expected template failure without navigating', async () => {
+    createServiceRequestDefinitionFromTemplateActionMock.mockResolvedValue({
+      success: false,
+      code: 'TEMPLATE_UNAVAILABLE',
+      message: 'This template is not available for this tenant',
+    });
+
+    render(<ServiceRequestsManagementPage />);
+
+    await screen.findByText('New Hire Onboarding');
+    fireEvent.click(screen.getByText(/New Hire Onboarding/));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'This template is not available for this tenant'
+      );
+    });
+    expect(toastSuccessMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('hides archived service requests by default and reveals them when toggled on', async () => {

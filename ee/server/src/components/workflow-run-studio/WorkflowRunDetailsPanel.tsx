@@ -53,6 +53,7 @@ import {
 import {
   buildRunDisplayError,
   buildStepDisplayError,
+  getWorkflowErrorCode,
   type WorkflowDisplayError,
 } from './workflowRunDisplayError';
 
@@ -107,6 +108,7 @@ type WorkflowActionInvocationRecord = {
   input_json?: Record<string, unknown> | null;
   output_json?: Record<string, unknown> | null;
   error_message?: string | null;
+  error_json?: Record<string, unknown> | null;
   created_at: string;
   started_at?: string | null;
   completed_at?: string | null;
@@ -1181,7 +1183,17 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
           <div className="flex items-start gap-2 text-sm text-destructive">
             <AlertTriangle className="h-4 w-4 mt-0.5" />
             <div>
-              <div>{runDisplayError.message}</div>
+              <div>
+                {runDisplayError.code && (
+                  <Badge
+                    id="run-error-code-badge"
+                    className="bg-destructive/10 text-destructive font-mono mr-2"
+                  >
+                    {runDisplayError.code}
+                  </Badge>
+                )}
+                {runDisplayError.message}
+              </div>
               <div className="text-xs text-destructive">
                 {runDisplayError.category
                   ?? t('runDetails.summary.errorCategoryFallback', { defaultValue: 'Error' })} · {formatDateTime(runDisplayError.at ?? null)}
@@ -1347,6 +1359,14 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
                 {t('runDetails.stepDetails.errorTitle', { defaultValue: 'Error' })}
               </div>
               <div className="text-sm text-destructive">
+                {selectedStepDisplayError.code && (
+                  <Badge
+                    id="step-error-code-badge"
+                    className="bg-destructive/10 text-destructive font-mono mr-2"
+                  >
+                    {selectedStepDisplayError.code}
+                  </Badge>
+                )}
                 {selectedStepDisplayError.message}
               </div>
               <div className="text-xs text-destructive/80">
@@ -1513,7 +1533,17 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
                     })}
                   </div>
                   {invocation.error_message && (
-                    <div className="text-xs text-destructive mt-1">{invocation.error_message}</div>
+                    <div className="mt-1">
+                      {getWorkflowErrorCode(invocation.error_json) && (
+                        <Badge
+                          id={`invocation-error-code-${invocation.invocation_id}`}
+                          className="bg-destructive/10 text-destructive font-mono"
+                        >
+                          {getWorkflowErrorCode(invocation.error_json)}
+                        </Badge>
+                      )}
+                      <div className="text-xs text-destructive mt-1">{invocation.error_message}</div>
+                    </div>
                   )}
                   <div className="text-xs text-gray-500 mt-1">
                     {t('runDetails.invocations.sizeLine', {

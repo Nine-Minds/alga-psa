@@ -1,0 +1,97 @@
+/* Grounded in alga-psa DESIGN.md ("Modern Workbench") + real ProjectPage/ProjectInfo/ProjectDetail structure */
+:root{
+  --purple:#8a4dea;--purple-hover:#7c45d3;--purple-soft:#f6f0fe;
+  --workspace:#f8fafc;--panel:#f1f5f9;--border:#e2e8f0;--border-strong:#94a3b8;
+  --text:#0f172a;--muted:#64748b;--ink:#0c111d;--ink-hover:#1e293b;
+  --success:#22c55e;--warning:#f59e0b;--error:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--workspace);color:var(--text);font-size:14px;line-height:1.5}
+.app{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+/* sidebar — sidebar-ink per DESIGN.md */
+.sidebar{background:var(--ink);color:#94a3b8;padding:12px 8px;display:flex;flex-direction:column;gap:1px}
+.sidebar .brand{color:#fff;font-weight:600;font-size:14px;padding:6px 10px 14px;display:flex;align-items:center;gap:8px}
+.sidebar .brand .mark{width:22px;height:22px;border-radius:5px;background:var(--purple);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700}
+.nav-item{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:6px;font-size:12.5px;font-weight:500}
+.nav-item svg,.nav-item i{width:14px;height:14px}
+.nav-item.active{background:var(--ink-hover);color:#fff}
+.main{min-width:0;display:flex;flex-direction:column}
+.content{padding:16px 24px 48px}
+/* header (ProjectInfo) */
+.hdr-line1{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hdr-left{display:flex;align-items:center;gap:20px;min-width:0}
+.backnav{font-size:13px;color:var(--muted);text-decoration:none;white-space:nowrap}
+.backnav:hover{color:var(--text)}
+.proj-num{font-size:13px;font-weight:500;color:var(--muted)}
+h1.proj-name{font-size:20px;font-weight:700;margin:0;letter-spacing:-0.01em;white-space:nowrap}
+.tag{display:inline-flex;padding:1px 9px;border-radius:9999px;font-size:11px;font-weight:600;letter-spacing:.04em;background:var(--panel);color:var(--muted)}
+.hdr-actions{display:flex;gap:8px;flex:none}
+/* buttons — outline sm per real header; primary per DESIGN.md */
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:500;border-radius:6px;padding:5px 12px;cursor:pointer;border:1px solid transparent;background:none;white-space:nowrap}
+.btn svg{width:14px;height:14px}
+.btn-outline{border-color:#d1d5db;color:var(--text);background:#fff}
+.btn-outline:hover{background:var(--workspace)}
+.btn-primary{background:var(--purple);color:#fff}
+.btn-primary:hover{background:var(--purple-hover)}
+.btn-ghost{color:var(--muted)}
+.btn-ghost:hover{color:var(--text);background:var(--panel)}
+.btn-xs{font-size:12px;padding:3px 9px;border-radius:5px}
+.proj-desc{font-size:13px;color:var(--muted);margin:6px 0 0}
+/* metadata row */
+.meta-row{display:flex;align-items:center;gap:32px;margin-top:8px;flex-wrap:wrap}
+.meta-item{display:flex;align-items:center;gap:8px;font-size:14px}
+.meta-item .k{font-weight:700;color:#1f2937}
+.meta-item .v{color:#1f2937}
+.hbar{width:170px;height:7px;border-radius:9999px;background:var(--panel);overflow:hidden;display:flex}
+.hbar .fill{background:var(--purple)}
+.hbar .fill.warn{background:var(--warning)}
+/* toolbar (ProjectDetail filter row) */
+.toolbar{display:flex;align-items:center;gap:10px;margin:16px 0 12px;flex-wrap:wrap}
+.toolbar h2{font-size:20px;font-weight:700;margin:0 14px 0 0}
+.search{position:relative}
+.search input{width:230px;padding:6px 10px 6px 30px;font-size:13px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:var(--text);font-family:inherit}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9ca3af}
+.select{display:inline-flex;align-items:center;gap:6px;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:13px;color:#374151;padding:6px 10px}
+.select svg{width:13px;height:13px;color:#9ca3af}
+.viewswitch{display:inline-flex;border:1px solid #d1d5db;border-radius:6px;overflow:hidden;background:#fff;margin-left:auto}
+.viewswitch span{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;font-size:13px;font-weight:500;color:var(--muted);border-right:1px solid var(--border)}
+.viewswitch span:last-child{border-right:none}
+.viewswitch span.on{background:var(--purple-soft);color:var(--purple)}
+.viewswitch svg{width:13px;height:13px}
+/* layout: phases panel + board */
+.detail{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
+.phases-panel{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px}
+.phases-panel h3{font-size:15px;font-weight:700;margin:0 0 10px}
+.phase{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:6px;font-size:13px;cursor:default}
+.phase .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.phase .cnt{color:var(--muted);font-size:11.5px}
+.phase.sel{background:var(--purple-soft);color:var(--purple);font-weight:600}
+.phase .done{color:var(--success)}
+.phase svg{width:13px;height:13px;flex:none}
+.mile-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;border-radius:4px;padding:1px 5px}
+.mile-badge.inv{background:#ecfdf5;color:#047857}
+.mile-badge.rdy{background:#fff6e6;color:#b45309}
+.mile-badge.pend{background:var(--panel);color:var(--muted)}
+/* kanban */
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.col{background:var(--panel);border-radius:8px;padding:10px}
+.col-h{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:2px 4px 8px}
+.col-h .n{background:#fff;border-radius:9999px;padding:0 7px;font-size:11px}
+.tcard{background:#fff;border:1px solid var(--border);border-radius:6px;padding:9px 11px;margin-bottom:8px;font-size:13px}
+.tcard .tt{font-weight:500}
+.tcard .tm{display:flex;align-items:center;gap:8px;margin-top:6px;color:var(--muted);font-size:11.5px}
+.tcard .av{width:18px;height:18px;border-radius:50%;background:var(--purple-soft);color:var(--purple);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+/* chips (status) */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:9999px;font-size:11px;font-weight:600;letter-spacing:.02em}
+.chip .dot{width:6px;height:6px;border-radius:50%}
+.chip.invoiced{background:#ecfdf5;color:#047857}.chip.invoiced .dot{background:var(--success)}
+.chip.ready{background:#fff6e6;color:#b45309}.chip.ready .dot{background:var(--warning)}
+.chip.pending{background:var(--panel);color:var(--muted)}.chip.pending .dot{background:var(--border-strong)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+.amount{font-variant-numeric:tabular-nums;font-weight:600}
+a{color:var(--purple);text-decoration:none;font-weight:500}
+/* option banner (mock chrome only) */
+.option-banner{background:var(--ink);color:#cbd5e1;padding:7px 20px;font-size:12px;display:flex;gap:12px;align-items:center}
+.option-banner b{color:#fff}
+.option-banner a{color:#94a3b8;font-weight:500}
+.option-banner a:hover{color:#fff}

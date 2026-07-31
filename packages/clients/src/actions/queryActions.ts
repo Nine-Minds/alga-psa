@@ -1,7 +1,7 @@
 'use server'
 
 import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga-psa/types';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
@@ -12,10 +12,13 @@ import {
 } from '@alga-psa/formatting/avatarUtils';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import InteractionModel from '../models/interactions';
-
-const CONTACT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
-const CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
-const CONTACT_LIST_SEARCH_TYPES = ['contact', 'document', 'interaction'] as const;
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { buildContactListSearchQuery } from '../lib/listSearchSql';
 
 type QueryActionUser = {
   user_id: string;
@@ -26,6 +29,28 @@ type QueryActionUser = {
 };
 
 type DbConnection = Knex | Knex.Transaction;
+type QueryActionError = ActionMessageError | ActionPermissionError;
+
+function queryActionErrorFrom(error: unknown): QueryActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+  if (error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+  if (error.message === 'Interaction not found') {
+    return actionError('Interaction not found');
+  }
+  return null;
+}
+
+function tenantScopedTable<Row extends object = Record<string, any>>(
+  conn: DbConnection,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 function isClientPortalUser(user: QueryActionUser): boolean {
   return user.user_type === 'client';
@@ -77,11 +102,10 @@ async function getClientPortalUserClientIdForAction(
     return null;
   }
 
-  const contact = await db('contacts')
+  const contact = await tenantScopedTable(db, 'contacts', tenant)
     .select('client_id')
     .where({
       contact_name_id: user.contact_id,
-      tenant
     })
     .first();
 
@@ -174,16 +198,18 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
   );
 
   const clientData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients as c')
-      .leftJoin('users as u', function() {
-        this.on('c.account_manager_id', '=', 'u.user_id')
-            .andOn('c.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('c.client_id', '=', 'cl.client_id')
-            .andOn('c.tenant', '=', 'cl.tenant')
-            .andOn('cl.is_default', '=', trx.raw('true'));
-      })
+    const db = tenantDb(trx, tenant);
+    const query = db.table<any>('clients as c');
+
+    db.tenantJoin(query, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+    db.tenantJoin(query, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+      type: 'left',
+      on(join) {
+        join.andOn('cl.is_default', '=', trx.raw('true'));
+      },
+    });
+
+    return await query
       .select(
         'c.*',
         'cl.email as location_email',
@@ -191,7 +217,7 @@ export const getClientById = withAuth(async (user, { tenant }, clientId: string)
         'cl.address_line1 as location_address',
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       )
-      .where({ 'c.client_id': clientId, 'c.tenant': tenant })
+      .where({ 'c.client_id': clientId })
       .first();
   });
 
@@ -213,9 +239,8 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
   const { knex: db } = await createTenantKnex();
 
   const clients = await withTransaction(db, async (trx) => {
-    const query = trx('clients')
+    const query = tenantScopedTable(trx, 'clients', tenant)
       .select('*')
-      .where('tenant', tenant)
       .orderBy('client_name', 'asc');
 
     if (!includeInactive) {
@@ -301,8 +326,8 @@ export const getContactsByClient = withAuth(async (
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .where({ client_id: clientId, tenant })
+      return await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
     });
 
@@ -311,20 +336,20 @@ export const getContactsByClient = withAuth(async (
     }
 
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const rows = await trx('contacts')
+      const facade = tenantDb(trx, tenant);
+      const contactQuery = facade.table('contacts')
         .select('contacts.*', 'clients.client_name')
-        .leftJoin('clients', function (this: Knex.JoinClause) {
-          this.on('contacts.client_id', 'clients.client_id')
-            .andOn('clients.tenant', 'contacts.tenant')
-        })
         .where('contacts.client_id', clientId)
-        .andWhere('contacts.tenant', tenant)
         .modify(function (queryBuilder: Knex.QueryBuilder) {
           if (status !== 'all') {
             queryBuilder.where('contacts.is_inactive', status === 'inactive');
           }
         })
         .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
+
+      facade.tenantJoin(contactQuery, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
+
+      const rows = await contactQuery;
 
       const hydratedRows = await ContactModel.hydrateContactsWithPhoneNumbers(rows as any[], tenant, trx);
       return sortContacts(hydratedRows as IContact[], safeSortBy, safeSortDirection);
@@ -356,21 +381,6 @@ export const getContactsByClient = withAuth(async (
   }
 });
 
-function buildContactListSearchPrefixTsquery(raw: string): string | null {
-  const tokens = raw
-    .toLowerCase()
-    .replace(CONTACT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
-
-  if (tokens.length === 0) {
-    return null;
-  }
-
-  return tokens.map((token) => `${token}:*`).join(' & ');
-}
-
 export const searchContactListIds = withAuth(async (
   user,
   { tenant },
@@ -391,83 +401,11 @@ export const searchContactListIds = withAuth(async (
     permissions.push('interaction:read');
   }
 
-  const prefixTsquery = buildContactListSearchPrefixTsquery(rawSearch);
-  const identifier = rawSearch.match(CONTACT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const result = await trx.raw<{ rows: Array<{ contact_id: string }> }>(
-      `
-        WITH q AS (
-          SELECT
-            websearch_to_tsquery('english', ?) AS tsq,
-            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-            ?::text AS raw,
-            ?::text AS identifier
-        ),
-        matched AS (
-          SELECT DISTINCT
-            CASE
-              WHEN si.object_type = 'contact' THEN si.object_id
-              WHEN si.object_type = 'interaction' THEN interaction_match.contact_name_id::text
-              WHEN si.object_type = 'document' THEN coalesce(note_contact.contact_name_id::text, document_contact_match.entity_id::text)
-            END AS contact_id
-          FROM app_search_index si
-          CROSS JOIN q
-          LEFT JOIN interactions interaction_match
-            ON si.object_type = 'interaction'
-            AND interaction_match.tenant = si.tenant
-            AND interaction_match.interaction_id::text = si.object_id
-          LEFT JOIN contacts note_contact
-            ON si.object_type = 'document'
-            AND note_contact.tenant = si.tenant
-            AND note_contact.notes_document_id::text = si.object_id
-          LEFT JOIN document_associations document_contact_match
-            ON si.object_type = 'document'
-            AND document_contact_match.tenant = si.tenant
-            AND document_contact_match.document_id::text = si.object_id
-            AND document_contact_match.entity_type = 'contact'
-          WHERE si.tenant = ?::uuid
-            AND si.object_type = ANY(?::text[])
-            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
-            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND (si.is_internal_only = false OR ?::boolean = true)
-            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND (
-              si.search_vector @@ q.tsq
-              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
-              OR si.title ILIKE '%' || q.raw || '%'
-              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-              OR si.title % q.raw
-              OR coalesce(si.subtitle, '') % q.raw
-              OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
-              )
-              OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
-              )
-            )
-        )
-        SELECT contact_id
-        FROM matched
-        WHERE contact_id IS NOT NULL
-      `,
-      [
-        rawSearch,
-        prefixTsquery,
-        prefixTsquery,
-        rawSearch,
-        identifier,
-        tenant,
-        [...CONTACT_LIST_SEARCH_TYPES],
-        permissions,
-        user.user_id,
-        true,
-        user.user_id,
-      ]
-    );
+    const { sql, bindings } = buildContactListSearchQuery(trx, tenant, rawSearch, permissions, user.user_id);
+    const result = await trx.raw<{ rows: Array<{ contact_id: string }> }>(sql, bindings);
 
     return result.rows.map((row) => row.contact_id);
   });
@@ -502,9 +440,8 @@ export const getAllContacts = withAuth(async (
           ? 'full_name'
           : CONTACT_SORT_COLUMNS_ALIASED[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS_ALIASED] || 'full_name';
 
-        const fetchedContacts = await trx('contacts')
+        const fetchedContacts = await tenantScopedTable(trx, 'contacts', tenant)
           .select('*')
-          .where('tenant', tenant)
           .modify(function (queryBuilder: Knex.QueryBuilder) {
             if (status !== 'all') {
               queryBuilder.where('is_inactive', status === 'inactive');
@@ -518,10 +455,9 @@ export const getAllContacts = withAuth(async (
           try {
             const clientIds = fetchedContacts.map((c: IContact) => c.client_id).filter(Boolean);
             if (clientIds.length > 0) {
-              const clients = await trx('clients')
+              const clients = await tenantScopedTable(trx, 'clients', tenant)
                 .select('client_id', 'client_name')
-                .whereIn('client_id', clientIds)
-                .where('tenant', tenant);
+                .whereIn('client_id', clientIds);
 
               const clientMap = new Map(clients.map((c: { client_id: string; client_name: string }) => [c.client_id, c.client_name]));
               const contactsWithClientNames = fetchedContacts.map((contact: IContact) => ({
@@ -638,9 +574,9 @@ export const createOrFindContactByEmail = withAuth(async (
           if (!existingContactInTenant.client_id) {
             throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
           }
-          const existingClient = await trx('clients')
+          const existingClient = await tenantScopedTable(trx, 'clients', tenant)
             .select('client_name')
-            .where({ client_id: existingContactInTenant.client_id, tenant })
+            .where({ client_id: existingContactInTenant.client_id })
             .first<{ client_name: string }>();
           throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingClient?.client_name || 'another client'}`);
         }
@@ -665,9 +601,9 @@ export const createOrFindContactByEmail = withAuth(async (
         is_inactive: false,
       }, tenant, trx);
 
-      const client = await trx('clients')
+      const client = await tenantScopedTable(trx, 'clients', tenant)
         .select('client_name')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId })
         .first();
 
       const contactWithClient = {
@@ -699,8 +635,14 @@ export const getInteractionById = withAuth(async (
   user,
   { tenant },
   interactionId: string
-): Promise<IInteraction> => {
-  await assertMspPermissionForAction(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+): Promise<IInteraction | QueryActionError> => {
+  try {
+    await assertMspPermissionForAction(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+  } catch (error) {
+    const expected = queryActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   try {
     const { knex } = await createTenantKnex();
@@ -713,6 +655,8 @@ export const getInteractionById = withAuth(async (
     return interaction;
   } catch (error) {
     console.error('Error fetching interaction:', error);
-    throw new Error('Failed to fetch interaction');
+    const expected = queryActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

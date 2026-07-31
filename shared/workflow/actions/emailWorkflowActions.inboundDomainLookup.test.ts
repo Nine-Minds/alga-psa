@@ -4,6 +4,9 @@ let trxImpl: any = null;
 
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: async (fn: any) => fn(trxImpl),
+  tenantDb: (trx: any) => ({
+    table: (tableName: string) => trx(tableName),
+  }),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -44,4 +47,3 @@ describe('emailWorkflowActions: findClientIdByInboundEmailDomain', () => {
     expect(builder.andWhereRaw).toHaveBeenCalledWith('lower(domain) = ?', ['example.com']);
   });
 });
-

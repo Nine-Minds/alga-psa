@@ -11,6 +11,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   runWithTenant: mocks.runWithTenant,
   getConnection: mocks.getConnection,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('../../../../../packages/jobs/src/lib/handler-utils/auditLog', () => ({
@@ -54,6 +60,7 @@ function buildFakeKnex(state: FakeDbState) {
         return builder;
       },
       whereNotNull: () => builder,
+      orderBy: () => builder,
       first: async () => {
         const rows = table === 'transactions' ? state.transactions : state.clients;
         return rows.find((row) => matches(row as Record<string, unknown>, objectFilters));
@@ -114,10 +121,10 @@ function buildState(overrides: Partial<FakeDbState> = {}): FakeDbState {
       },
     ],
     transactions: [
-      { transaction_id: 'txn-original-1', tenant: TENANT, type: 'credit_issuance' },
+      { transaction_id: 'txn-original-1', tenant: TENANT, client_id: 'client-1', type: 'credit_issuance', balance_after: 10000 },
     ],
     clients: [
-      { client_id: 'client-1', tenant: TENANT, credit_balance: 10000 },
+      { client_id: 'client-1', tenant: TENANT },
     ],
     insertedTransactions: [],
     creditTrackingUpdates: [],
@@ -143,7 +150,7 @@ describe('expiredCreditsHandler', () => {
     expect(mocks.getConnection).not.toHaveBeenCalled();
   });
 
-  it('should expire a credit: create the expiration transaction, zero the credit, and reduce the client balance', async () => {
+  it('should expire a credit: create the expiration transaction and zero the credit', async () => {
     const state = buildState();
     mocks.getConnection.mockResolvedValue(buildFakeKnex(state));
 
@@ -174,10 +181,8 @@ describe('expiredCreditsHandler', () => {
     expect(state.creditTrackingUpdates[0].where).toMatchObject({ credit_id: 'credit-1', tenant: TENANT });
     expect(state.creditTrackingUpdates[0].update).toMatchObject({ is_expired: true, remaining_amount: 0 });
 
-    // Client balance reduced by the expired amount
-    expect(state.clientUpdates).toHaveLength(1);
-    expect(state.clientUpdates[0].where).toMatchObject({ client_id: 'client-1', tenant: TENANT });
-    expect(state.clientUpdates[0].update).toMatchObject({ credit_balance: 7500 });
+    // The client row is untouched: balance is derived from credit_tracking
+    expect(state.clientUpdates).toHaveLength(0);
 
     // Expiration is audit logged as the system user
     expect(mocks.auditLog).toHaveBeenCalledTimes(1);
@@ -195,10 +200,11 @@ describe('expiredCreditsHandler', () => {
   it('should be idempotent: skip credits that already have a credit_expiration transaction', async () => {
     const state = buildState({
       transactions: [
-        { transaction_id: 'txn-original-1', tenant: TENANT, type: 'credit_issuance' },
+        { transaction_id: 'txn-original-1', tenant: TENANT, client_id: 'client-1', type: 'credit_issuance', balance_after: 10000 },
         {
           transaction_id: 'txn-expiration-1',
           tenant: TENANT,
+          client_id: 'client-1',
           type: 'credit_expiration',
           related_transaction_id: 'txn-original-1',
         },
@@ -260,13 +266,4 @@ describe('expiredCreditsHandler', () => {
     expect(state.clientUpdates).toHaveLength(0);
   });
 
-  it('should re-throw when the client owning the credit is missing', async () => {
-    const state = buildState({ clients: [] });
-    mocks.getConnection.mockResolvedValue(buildFakeKnex(state));
-
-    await expect(expiredCreditsHandler({ tenantId: TENANT })).rejects.toThrow(
-      'Client client-1 not found',
-    );
-    expect(state.insertedTransactions).toHaveLength(0);
-  });
 });

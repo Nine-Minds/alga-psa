@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createTenantKnex } from '@/lib/db'
-import { withTransaction } from '@alga-psa/db'
+import { tenantDb, withTransaction } from '@alga-psa/db'
 import { ExtensionRegistry } from '../extensions/registry'
 import { ExtensionStorageService } from '../extensions/storage/storageService'
 import logger from '@alga-psa/core/logger'
@@ -34,10 +34,9 @@ export const fetchExtensions = withAuth(async (user, { tenant }): Promise<Extens
 
   // Prefer Registry v2 installs (EE) when available, otherwise fall back to legacy extensions table.
   try {
-    const rows = await knex('tenant_extension_install as ti')
+    const rows = await tenantDb(knex, tenant).table('tenant_extension_install as ti')
       .join('extension_registry as er', 'er.id', 'ti.registry_id')
       .join('extension_version as ev', 'ev.id', 'ti.version_id')
-      .where('ti.tenant_id', tenant)
       .select({
         id: 'er.id',
         tenant_id: 'ti.tenant_id',
@@ -106,11 +105,10 @@ export const fetchExtensionById = withAuth(async (user, { tenant }, extensionId:
 
   // Prefer Registry v2 installs by registryId, fall back to legacy extensionId.
   try {
-    const row = await knex('tenant_extension_install as ti')
+    const row = await tenantDb(knex, tenant).table('tenant_extension_install as ti')
       .join('extension_registry as er', 'er.id', 'ti.registry_id')
       .join('extension_version as ev', 'ev.id', 'ti.version_id')
-      .where('ti.tenant_id', tenant)
-      .andWhere('ti.registry_id', extensionId)
+      .where('ti.registry_id', extensionId)
       .first({
         id: 'er.id',
         tenant_id: 'ti.tenant_id',
@@ -408,7 +406,7 @@ export const updateExtensionSecrets = withAuth(async (
 
   try {
     if (options?.clear) {
-      await deleteInstallSecretsRecord({ installId: installConfig.installId })
+      await deleteInstallSecretsRecord({ installId: installConfig.installId, tenantId: tenant })
       revalidatePath(`/msp/settings/extensions/${extensionId}/settings`)
       return { success: true, message: 'Secrets cleared successfully' }
     }

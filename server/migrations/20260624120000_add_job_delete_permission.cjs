@@ -3,6 +3,9 @@
  * tenants and grant it to the MSP Admin role. Job monitoring is an MSP-only
  * feature, so this permission is MSP-only.
  *
+ * Uses raw knex (every query already passes `tenant` explicitly) so the
+ * migration runner does not load the @alga-psa/db ESM package.
+ *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
@@ -73,16 +76,20 @@ exports.down = async function (knex) {
   if (!tenants.length) return;
 
   for (const { tenant } of tenants) {
+    const permissionIds = await knex('permissions')
+      .where('tenant', tenant)
+      .where('resource', 'job')
+      .where('action', 'delete')
+      .pluck('permission_id');
+
+    if (!permissionIds.length) {
+      continue;
+    }
+
     // Remove role assignments first (FK constraint), then the permission rows.
     await knex('role_permissions')
       .where('tenant', tenant)
-      .whereIn('permission_id', function () {
-        this.select('permission_id')
-          .from('permissions')
-          .where('tenant', tenant)
-          .where('resource', 'job')
-          .where('action', 'delete');
-      })
+      .whereIn('permission_id', permissionIds)
       .delete();
 
     await knex('permissions')

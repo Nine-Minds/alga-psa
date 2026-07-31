@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T001",
+    "description": "DB unit tests verify tenantDb root scoping, alias parsing, metadata failures, global/admin behavior, branded scoped queries, tenant joins, and unscoped reason validation.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Existing tenantScopedQuery tests continue to pass after facade additions.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Representative NinjaOne contract tests verify the app slice uses tenantDb and has no direct tenant-root predicates in migrated sections.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T004",
+    "description": "Algadev sanity confirms the ticket list loads and a ticket detail page opens after the code-bearing batch.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  }
+]

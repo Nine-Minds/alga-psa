@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
@@ -189,6 +189,20 @@ vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
 }));
 
 describe('ContractWizard resume behavior', () => {
+  // Imported once here rather than inside each test. Compiling ContractWizard
+  // and its inlined next-auth/@auth/core/next deps is expensive, and doing it
+  // in the first test charged that compile to that test's timeout budget —
+  // which is what tipped it over 20s under CI's parallel library runs.
+  let ContractWizard: typeof import('../src/components/billing-dashboard/contracts/ContractWizard')['ContractWizard'];
+
+  // 60s, not the 10s vitest hookTimeout default: this compiles the component's
+  // whole module graph (including the next-auth/@auth/core/next deps the config
+  // inlines) exactly once. The config raises testTimeout to 20s but leaves
+  // hookTimeout at its default, so a bare hook has *less* budget than a test.
+  beforeAll(async () => {
+    ({ ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard'));
+  }, 60_000);
+
   beforeEach(() => {
     document.body.removeAttribute('data-scroll-locked');
     document.body.removeAttribute('style');
@@ -196,8 +210,15 @@ describe('ContractWizard resume behavior', () => {
     vi.clearAllMocks();
   });
 
+  // Tear down immediately after each test rather than at the start of the next.
+  // A test that fails or times out otherwise leaves its tree mounted, and the
+  // following test then finds two of every testid.
+  afterEach(() => {
+    cleanup();
+    document.body.innerHTML = '';
+  });
+
   it('starts at Step 1 (Contract Basics) when opened (T033)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -226,7 +247,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('step 1 shows pre-populated client selection from draft (T034)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -253,7 +273,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('step 1 shows pre-populated contract name from draft (T035)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -280,7 +299,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('step 1 shows pre-populated dates from draft (T036)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -309,7 +327,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('step 2 (Fixed Fee) shows pre-populated services from draft (T037)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -346,7 +363,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('preserves cadence_owner from resumed drafts across fixed-fee step transitions (T113)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -391,7 +407,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('step 3 (Products) shows pre-populated products from draft (T038)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -430,7 +445,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('step 4 (Hourly) shows pre-populated hourly services from draft (T039)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -472,7 +486,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('step 5 (Usage) shows pre-populated usage services from draft (T040)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -511,7 +524,6 @@ describe('ContractWizard resume behavior', () => {
   });
 
   it('step 6 (Review) shows complete draft data for review (T041)', async () => {
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -554,7 +566,6 @@ describe('ContractWizard resume behavior', () => {
     const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
 
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -596,7 +607,6 @@ describe('ContractWizard resume behavior', () => {
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
 
     const onComplete = vi.fn();
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -668,7 +678,6 @@ describe('ContractWizard resume behavior', () => {
       fixed_services: [{ service_id: 'svc-template', quantity: 1 }],
     });
 
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(<ContractWizard open={true} onOpenChange={vi.fn()} />);
 
     await screen.findByTestId('step-contract-basics');
@@ -713,7 +722,6 @@ describe('ContractWizard resume behavior', () => {
     const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-99' });
 
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -754,7 +762,6 @@ describe('ContractWizard resume behavior', () => {
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
 
     const onComplete = vi.fn();
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -795,7 +802,6 @@ describe('ContractWizard resume behavior', () => {
     const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
 
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -844,7 +850,6 @@ describe('ContractWizard resume behavior', () => {
     const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-1' });
 
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(
       <ContractWizard
         open={true}
@@ -892,7 +897,6 @@ describe('ContractWizard resume behavior', () => {
     const { createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-new' });
 
-    const { ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard');
     render(<ContractWizard open={true} onOpenChange={vi.fn()} />);
 
     await screen.findByTestId('step-contract-basics');

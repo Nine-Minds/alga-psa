@@ -9,6 +9,17 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
 }));
 
+// The EE chat model imports ee/server/src/lib/db, which re-exports
+// @alga-psa/db/tenant (not @/lib/db) — mock it too so model queries hit the
+// test database instead of the env-configured shared connection.
+vi.mock('@alga-psa/db/tenant', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    createTenantKnex: createTenantKnexMock,
+  };
+});
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
 }));
@@ -173,7 +184,9 @@ describe('chat history search (db-backed)', () => {
         tenant: TEST_TENANT,
         chat_id: tieOldChatId,
         chat_role: 'bot',
-        content: 'Tie old latest preview',
+        // 'outage' completes the AND-semantics websearch query ('printer
+        // outage runbook') for the tie chats; titles cover the other terms.
+        content: 'Tie old outage preview',
         message_order: 1,
       },
       {
@@ -181,7 +194,7 @@ describe('chat history search (db-backed)', () => {
         tenant: TEST_TENANT,
         chat_id: tieRecentChatId,
         chat_role: 'bot',
-        content: 'Tie recent latest preview',
+        content: 'Tie recent outage preview',
         message_order: 1,
       },
       {

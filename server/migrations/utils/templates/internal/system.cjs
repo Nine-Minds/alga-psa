@@ -41,7 +41,7 @@ const TEMPLATES = [
       nl: { title: 'U bent genoemd in een opmerking', message: '{{commentAuthor}} heeft u genoemd in ticket #{{ticketNumber}}: {{commentPreview}}' },
       it: { title: 'Sei stato menzionato in un commento', message: '{{commentAuthor}} ti ha menzionato nel ticket #{{ticketNumber}}: {{commentPreview}}' },
       pl: { title: 'Wspomniano o Tobie w komentarzu', message: '{{commentAuthor}} wspomniał(a) o Tobie w zgłoszeniu #{{ticketNumber}}: {{commentPreview}}' },
-      pt: { title: 'Você foi mencionado em um comentário', message: '{{commentAuthor}} mencionou você no chamado #{{ticketNumber}}: {{commentPreview}}' },
+      pt: { title: 'Você foi mencionado em um comentário', message: '{{commentAuthor}} mencionou você no ticket #{{ticketNumber}}: {{commentPreview}}' },
     },
   },
   {

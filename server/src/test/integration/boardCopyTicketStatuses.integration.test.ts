@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { copyBoardTicketStatuses } from '../../../../packages/tickets/src/actions/board-actions/boardActions';
 
@@ -24,11 +25,25 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('boards').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'boards').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function createFixture() {
@@ -40,7 +55,7 @@ async function createFixture() {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -50,7 +65,7 @@ async function createFixture() {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `user-${tenantId.slice(0, 8)}`,
@@ -61,7 +76,7 @@ async function createFixture() {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('boards').insert([
+  await tenantTable(tenantId, 'boards').insert([
     {
       tenant: tenantId,
       board_id: sourceBoardId,
@@ -92,7 +107,7 @@ async function createFixture() {
     },
   ]);
 
-  await db('statuses').insert([
+  await tenantTable(tenantId, 'statuses').insert([
     {
       tenant: tenantId,
       status_id: sourceStatusIds[0],
@@ -139,10 +154,10 @@ describe('board ticket status copy integration', () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -171,9 +186,8 @@ describe('board ticket status copy integration', () => {
 
     expect(insertedCount).toBe(2);
 
-    const copiedStatuses = await db('statuses')
+    const copiedStatuses = await tenantTable(fixture.tenantId, 'statuses')
       .where({
-        tenant: fixture.tenantId,
         board_id: fixture.targetBoardId,
         status_type: 'ticket'
       })

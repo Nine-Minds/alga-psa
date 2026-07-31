@@ -4,18 +4,38 @@ import React, { Suspense, useState, useRef, useCallback, useEffect } from 'react
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   addTicketCommentWithCacheForCurrentUser,
+  updateTicketWithCache,
   updateTicketWithCacheForCurrentUser,
 } from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
+import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
 import { TicketLiveProvider } from './TicketLiveProvider';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
+const handleTicketActionError = (error: unknown, fallback: string) => {
+  if (isReturnedActionError(error)) {
+    toast.error(getErrorMessage(error));
+    return;
+  }
+  handleError(error, fallback);
+};
 
 interface TicketDetailsContainerProps {
   ticketData: {
@@ -64,11 +84,15 @@ interface TicketDetailsContainerProps {
   };
   surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
+  /** Server-gathered startup payload (resolved values + streamed tile promises). */
+  bootstrap?: TicketScreenBootstrap;
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
   hideSlaStatus?: boolean;
+  hideBilling?: boolean;
+  hideScheduling?: boolean;
   hideTimeEntry?: boolean;
   hideMaterials?: boolean;
   uploadTicketAttachmentAction?: (
@@ -90,11 +114,14 @@ export default function TicketDetailsContainer({
   ticketData,
   surveySummaryCard,
   associatedAssets = null,
+  bootstrap,
   renderContactDetails,
   renderCreateProjectTask,
   renderClientDetails,
   renderIntervalManagement,
   hideSlaStatus = false,
+  hideBilling = false,
+  hideScheduling = false,
   hideTimeEntry = false,
   hideMaterials = false,
   uploadTicketAttachmentAction,
@@ -108,7 +135,6 @@ export default function TicketDetailsContainer({
   const router = useRouter();
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
-  const liveTicketUpdatesFlag = useFeatureFlag('live-ticket-updates', { defaultValue: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Local comments state to avoid mutating ticketData directly
@@ -160,17 +186,28 @@ export default function TicketDetailsContainer({
 
     try {
       setIsSubmitting(true);
-      await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, { [field]: value });
+      const result = await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, { [field]: value });
+      if (isReturnedActionError(result)) {
+        throw result;
+      }
       toast.success(t('messages.ticketUpdated', 'Ticket updated successfully'));
     } catch (error) {
-      handleError(error, t('errors.updateField', 'Failed to update {{field}}', { field }));
+      handleTicketActionError(error, t('errors.updateField', 'Failed to update {{field}}', { field }));
+      // Re-throw so the optimistic caller (handleSelectChange) reverts the field
+      // to its previous value. Without this, a rejected write (e.g. a board
+      // change that the server refuses without a destination status) leaves the
+      // UI showing an unsaved value that never persisted.
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Handler for batch ticket updates (used by Save Changes button)
-  const handleBatchTicketUpdate = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
+  const handleBatchTicketUpdate = useCallback(async (
+    changes: Record<string, unknown>,
+    options?: TicketNotificationSuppressionValue
+  ): Promise<boolean> => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredUpdate', 'You must be logged in to update tickets'));
       return false;
@@ -185,7 +222,12 @@ export default function TicketDetailsContainer({
           normalizedChanges.assigned_to = value && value !== 'unassigned' ? value : null;
         }
 
-        await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, normalizedChanges);
+        const result = options?.suppressContactNotifications
+          ? await updateTicketWithCache(ticketData.ticket.ticket_id, normalizedChanges, options)
+          : await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, normalizedChanges);
+        if (isReturnedActionError(result)) {
+          throw result;
+        }
         toast.success(t('info.changesSaved', 'Changes saved successfully!'));
 
         // Refresh the page to get updated data
@@ -193,7 +235,7 @@ export default function TicketDetailsContainer({
 
         return true;
       } catch (error) {
-        handleError(error, t('errors.saveChanges', 'Failed to save changes'));
+        handleTicketActionError(error, t('errors.saveChanges', 'Failed to save changes'));
         return false;
       }
     });
@@ -219,11 +261,14 @@ export default function TicketDetailsContainer({
         isResolution,
         closesTicket
       );
+      if (isReturnedActionError(newComment)) {
+        throw newComment;
+      }
 
       setComments(prev => [...prev, newComment]);
       toast.success(t('messages.commentAdded', 'Comment added successfully'));
     } catch (error) {
-      handleError(error, t('errors.addComment', 'Failed to add comment'));
+      handleTicketActionError(error, t('errors.addComment', 'Failed to add comment'));
     } finally {
       setIsSubmitting(false);
     }
@@ -253,8 +298,6 @@ export default function TicketDetailsContainer({
     : null;
 
   const shouldEnableTicketLiveUpdates =
-    liveTicketUpdatesFlag.enabled &&
-    !liveTicketUpdatesFlag.loading &&
     Boolean(liveCurrentUser && ticketData.ticket.tenant && ticketData.ticket.ticket_id);
 
   const ticketDetailsContent = (
@@ -289,11 +332,14 @@ export default function TicketDetailsContainer({
       isSubmitting={isSubmitting}
       surveySummaryCard={surveySummaryCard}
       associatedAssets={associatedAssets}
+      bootstrap={bootstrap}
       renderContactDetails={renderContactDetails}
       renderCreateProjectTask={renderCreateProjectTask}
       renderClientDetails={renderClientDetails}
       renderIntervalManagement={renderIntervalManagement}
       hideSlaStatus={hideSlaStatus}
+      hideBilling={hideBilling}
+      hideScheduling={hideScheduling}
       hideTimeEntry={hideTimeEntry}
       hideMaterials={hideMaterials}
       uploadTicketAttachmentAction={uploadTicketAttachmentAction}

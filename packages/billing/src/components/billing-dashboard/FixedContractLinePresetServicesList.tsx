@@ -20,13 +20,22 @@ import {
   getContractLinePresetServices,
   updateContractLinePresetServices
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface FixedContractLinePresetServicesListProps {
   planId: string; // This is actually the presetId
@@ -46,6 +55,7 @@ interface SimplePresetService {
 
 const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServicesListProps> = ({ planId, onServiceAdded }) => {
   const { t } = useTranslation('msp/billing');
+  const { money } = useCurrencyFormat();
   const [presetServices, setPresetServices] = useState<SimplePresetService[]>([]);
   const [originalServices, setOriginalServices] = useState<SimplePresetService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -77,6 +87,10 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
     try {
       // Fetch preset services
       const presetServicesData = await getContractLinePresetServices(planId);
+      if (isReturnedActionError(presetServicesData)) {
+        setError(getErrorMessage(presetServicesData));
+        return;
+      }
 
       // Fetch all available services
       const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
@@ -221,7 +235,11 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
         quantity: s.quantity || 1
       }));
 
-      await updateContractLinePresetServices(planId, servicesToSave);
+      const result = await updateContractLinePresetServices(planId, servicesToSave);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await fetchData();
 
       toast.success(t('presetServices.toast.saveSuccess', {
@@ -295,7 +313,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
         </Tooltip>
       ),
       dataIndex: 'default_rate',
-      render: (value) => value !== undefined ? `$${(Number(value) / 100).toFixed(2)}` : t('common.notAvailable', { defaultValue: 'N/A' }),
+      render: (value) => value !== undefined ? money(Number(value)) : t('common.notAvailable', { defaultValue: 'N/A' }),
     },
     {
       title: t('presetServices.table.actions', { defaultValue: 'Actions' }),

@@ -13,6 +13,7 @@ import InteractionDetails from './InteractionDetails';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
@@ -20,6 +21,13 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface InteractionsFeedProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -29,6 +37,8 @@ interface InteractionsFeedProps {
   interactions: IInteraction[];
   setInteractions: React.Dispatch<React.SetStateAction<IInteraction[]>>;
 }
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 
 const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ 
@@ -48,8 +58,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const [endDate, setEndDate] = useState<string>('');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [interactionsLoadErrorMessage, setInteractionsLoadErrorMessage] = useState<string | null>(null);
+  const [typesLoadErrorMessage, setTypesLoadErrorMessage] = useState<string | null>(null);
   const openQuickAddInteraction = useCallback(() => setIsQuickAddOpen(true), []);
   usePageCreateShortcut(openQuickAddInteraction);
+  const loadErrorMessage = interactionsLoadErrorMessage ?? typesLoadErrorMessage;
 
   // UI Reflection System Integration
   const { automationIdProps: titleProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -62,7 +75,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-add-button`,
     type: 'button',
-    label: 'Add Interaction',
+    label: 'Add interaction',
     helperText: 'Opens dialog to create a new interaction'
   });
 
@@ -89,22 +102,6 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
     helperText: 'Filter interactions by their type'
   });
 
-  const { automationIdProps: startDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-start-date`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Start Date Filter',
-    helperText: 'Filter interactions from this date'
-  });
-
-  const { automationIdProps: endDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-end-date`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'End Date Filter',
-    helperText: 'Filter interactions until this date'
-  });
-
   const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-reset-button`,
     type: 'button',
@@ -125,13 +122,27 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   }, [entityId, entityType]);
 
   const fetchInteractions = async () => {
-    const fetchedInteractions = await getInteractionsForEntity(entityId, entityType);
-    setInteractions(fetchedInteractions);
+    try {
+      const fetchedInteractions = await getInteractionsForEntity(entityId, entityType);
+      if (isReturnedActionError(fetchedInteractions)) {
+        setInteractionsLoadErrorMessage(getErrorMessage(fetchedInteractions));
+        return;
+      }
+      setInteractionsLoadErrorMessage(null);
+      setInteractions(fetchedInteractions);
+    } catch (error) {
+      console.error('Error fetching interactions:', error);
+      setInteractionsLoadErrorMessage(t('interactions.feed.loadFailed', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
+    }
   };
 
   const fetchInteractionTypes = async () => {
     try {
       const types = await getAllInteractionTypes();
+      if (isReturnedActionError(types)) {
+        setTypesLoadErrorMessage(getErrorMessage(types));
+        return;
+      }
       // Sort to ensure system types appear first
       const sortedTypes = types.sort((a, b) => {
         // If both are system types or both are tenant types, sort by name
@@ -141,9 +152,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         // System types ('created_at' exists) come first
         return 'created_at' in a ? -1 : 1;
       });
+      setTypesLoadErrorMessage(null);
       setInteractionTypes(sortedTypes);
     } catch (error) {
       console.error('Error fetching interaction types:', error);
+      setTypesLoadErrorMessage(t('interactions.feed.typesLoadFailed', { defaultValue: 'Interaction types could not be loaded. Please try again.' }));
     }
   };
 
@@ -210,14 +223,16 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         try {
           // Check if interaction still exists (in case it was edited)
           const updatedInteraction = await getInteractionById(interaction.interaction_id);
+          if (isReturnedActionError(updatedInteraction)) {
+            return;
+          }
           setInteractions(prevInteractions => 
             prevInteractions.map((i): IInteraction => 
               i.interaction_id === updatedInteraction.interaction_id ? updatedInteraction : i
             )
           );
-        } catch (error) {
+        } catch {
           // If interaction doesn't exist (was deleted), don't treat it as an error
-          console.log('Interaction no longer exists (likely deleted)');
         }
       }
     );
@@ -239,7 +254,9 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Interactions Feed">
-      <Card className="w-full max-w-2xl">
+      {/* No width cap — the feed renders inside the 92vw focus drawer and
+          should spend the width on its rows, not a dead right margin. */}
+      <Card className="w-full">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 {...titleProps} className="text-2xl font-bold">
@@ -252,7 +269,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               variant="default"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {t('interactions.feed.addInteraction', { defaultValue: 'Add Interaction' })}
+              {t('interactions.feed.addInteraction', { defaultValue: 'Add interaction' })}
             </Button>
           </div>
           <div className="flex flex-wrap gap-4 mb-4">
@@ -272,11 +289,16 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               className="flex items-center gap-2"
             >
               <Filter className="h-4 w-4" />
-              {t('interactions.feed.filter', { defaultValue: 'Filter' })}
+              {t('interactions.feed.filter', { defaultValue: 'Filters' })}
             </Button>
           </div>
         </div>
         <CardContent>
+          {loadErrorMessage ? (
+            <div role="alert" className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {loadErrorMessage}
+            </div>
+          ) : null}
           <ShortcutActiveRegion id={`${id}-shortcut-region`} className="outline-none">
           <ul className="space-y-2">
             {filteredInteractions.map((interaction): React.JSX.Element => (
@@ -337,19 +359,23 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               onValueChange={setSelectedType}
               placeholder={t('interactions.feed.typePlaceholder', { defaultValue: 'Interaction Type' })}
             />
-            <Input
-              {...startDateProps}
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+            <DatePicker
+              id={`${id}-start-date`}
+              label={t('interactions.feed.startDate', { defaultValue: 'Start Date' })}
               placeholder={t('interactions.feed.startDate', { defaultValue: 'Start Date' })}
+              clearable
+              className="w-full"
+              value={dateFromString(startDate)}
+              onChange={(date) => setStartDate(dateToString(date))}
             />
-            <Input
-              {...endDateProps}
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+            <DatePicker
+              id={`${id}-end-date`}
+              label={t('interactions.feed.endDate', { defaultValue: 'End Date' })}
               placeholder={t('interactions.feed.endDate', { defaultValue: 'End Date' })}
+              clearable
+              className="w-full"
+              value={dateFromString(endDate)}
+              onChange={(date) => setEndDate(dateToString(date))}
             />
           </div>
         </DialogContent>

@@ -56,6 +56,12 @@ COPY ./shared/ ./shared/
 # Copy packages directory for webpack aliases
 COPY ./packages/ ./packages/
 
+# Appliance onboarding seeds execute in this image after Temporal creates the
+# tenant. Fail the build if the runtime exports those seeds import were not
+# included by the pre-build pipeline.
+RUN test -f /app/packages/core/dist/index.js \
+    && test -f /app/packages/db/dist/index.js
+
 # Copy pre-built Next.js artifacts (must exist locally with EE features)
 # server/dist is no longer required here; workflow-worker is built/deployed separately
 COPY ./server/.next ./server/.next
@@ -83,13 +89,9 @@ COPY ./ee/server/seeds/ /app/ee/server/seeds/
 # Copy core package.json for version info
 COPY packages/core/package.json /app/packages/core/package.json
 
-# Copy entrypoint
-COPY server/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
-# Create build timestamp for verification
-RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \
-    echo "BUILD_EPOCH=$(date +%s)" >> /app/build-info.txt
+# Copy the entrypoint with its runtime mode already set. Keeping this as image
+# metadata avoids starting a throwaway build container solely to run chmod.
+COPY --chmod=0755 server/entrypoint.sh /app/entrypoint.sh
 
 EXPOSE 3000
 ENV NODE_ENV=production

@@ -465,7 +465,7 @@ describe('recurrence storage model contracts', () => {
       "cadence_owner: newBilling.cadence_owner ?? templateLine.cadence_owner ?? 'client'",
     );
     expect(clientPortalBilling).toContain('normalizeLiveRecurringStorage');
-    expect(clientPortalBilling).toContain('return plan ? normalizeLiveRecurringStorage(plan) : null;');
+    expect(clientPortalBilling).toContain('return plan ? normalizeLiveRecurringStorage(plan as any) as IClientContractLine : null;');
   });
 
   it('T242: template-line cadence_owner schema and backfill behavior stay correct for v1 template recurrence storage', async () => {

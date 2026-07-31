@@ -129,7 +129,8 @@
     "title": "Afspraak annuleren",
     "message": "Weet u zeker dat u dit afspraakverzoek wilt annuleren? Deze actie kan niet ongedaan worden gemaakt.",
     "confirm": "Ja, annuleren",
-    "messageWithTeamsWarning": "Weet u zeker dat u dit afspraakverzoek wilt annuleren? Deze actie kan niet ongedaan worden gemaakt. De bijbehorende Microsoft Teams-vergadering wordt ook verwijderd."
+    "messageWithTeamsWarning": "Weet u zeker dat u dit afspraakverzoek wilt annuleren? Deze actie kan niet ongedaan worden gemaakt. De bijbehorende Microsoft Teams-vergadering wordt ook verwijderd.",
+    "teamsMeetingCleanupNotice": "De gekoppelde Microsoft Teams-vergadering wordt geannuleerd; deelnemers zien deze binnenkort uit hun agenda verdwijnen."
   },
   "ticketSection": {
     "title": "Afspraakverzoeken",

@@ -46,6 +46,26 @@ export async function ensureWorkflowScheduleStateTable(db: Knex): Promise<void> 
   if (!hasDayTypeFilterColumn || !hasBusinessHoursScheduleIdColumn) {
     await workflowScheduleBusinessDayMigration.up(db);
   }
+
+  // The EE create migrations above predate the workflow-v2 tenant_id→tenant
+  // colocation rename (CE migrations 20260529*). A helper-created table would
+  // otherwise miss the `tenant` column the runtime now reads and writes.
+  const hasTenantColumn = await db.schema.hasColumn('tenant_workflow_schedule', 'tenant');
+  if (!hasTenantColumn) {
+    await db.schema.alterTable('tenant_workflow_schedule', (t) => {
+      t.uuid('tenant');
+    });
+    await db.raw(
+      `UPDATE tenant_workflow_schedule SET tenant = tenant_id::uuid
+        WHERE tenant IS NULL
+          AND tenant_id ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'`
+    );
+  }
+  if (await db.schema.hasColumn('tenant_workflow_schedule', 'tenant_id')) {
+    await db.schema.alterTable('tenant_workflow_schedule', (t) => {
+      t.dropColumn('tenant_id');
+    });
+  }
 }
 
 export async function resetWorkflowRuntimeTables(db: Knex): Promise<void> {

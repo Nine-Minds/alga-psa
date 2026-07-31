@@ -1,7 +1,7 @@
 // server/src/lib/models/contractLinePresetService.ts
 import { Knex } from 'knex';
 import type { IContractLinePresetService } from '@alga-psa/types';
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 
 const ContractLinePresetService = {
   /**
@@ -14,7 +14,7 @@ const ContractLinePresetService = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      const services = await knexOrTrx<IContractLinePresetService>('contract_line_preset_services')
+      const services = await tenantDb(knexOrTrx, tenant).table<IContractLinePresetService>('contract_line_preset_services')
         .where({
           preset_id: presetId,
           tenant
@@ -42,7 +42,7 @@ const ContractLinePresetService = {
       tenant
     };
 
-    const [createdService] = await knexOrTrx<IContractLinePresetService>('contract_line_preset_services')
+    const [createdService] = await tenantDb(knexOrTrx, tenant).table<IContractLinePresetService>('contract_line_preset_services')
       .insert(serviceWithTenant)
       .returning('*');
 
@@ -59,7 +59,7 @@ const ContractLinePresetService = {
     const tenant = await requireTenantId(knexOrTrx);
 
     try {
-      await knexOrTrx('contract_line_preset_services')
+      await tenantDb(knexOrTrx, tenant).table('contract_line_preset_services')
         .where({
           preset_id: presetId,
           tenant
@@ -95,7 +95,7 @@ const ContractLinePresetService = {
         tenant
       }));
 
-      const createdServices = await knexOrTrx<IContractLinePresetService>('contract_line_preset_services')
+      const createdServices = await tenantDb(knexOrTrx, tenant).table<IContractLinePresetService>('contract_line_preset_services')
         .insert(servicesWithTenant)
         .returning('*');
 

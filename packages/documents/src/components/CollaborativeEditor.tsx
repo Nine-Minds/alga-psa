@@ -22,7 +22,13 @@ import {
 import type { EmojiSuggestionState, MentionSuggestionState, MentionSuggestionUser } from '@alga-psa/ui/editor';
 import { Card } from '@alga-psa/ui/components/Card';
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
@@ -35,6 +41,9 @@ import {
   isRawMarkdownInProsemirror,
   convertRawMarkdownProsemirror,
 } from '../lib/blockContentFormat';
+
+const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -333,7 +342,12 @@ export function CollaborativeEditor({
         let resolvedBlockData = initialContentRef.current;
         if (resolvedBlockData === undefined) {
           const content = await getBlockContent(documentId);
-          resolvedBlockData = content && !isActionPermissionError(content) ? content.block_data : null;
+          if (isDocumentActionError(content)) {
+            console.error('[CollaborativeEditor] Failed to load block content:', getErrorMessage(content));
+            resolvedBlockData = null;
+          } else {
+            resolvedBlockData = content ? content.block_data : null;
+          }
         }
 
         if (resolvedBlockData) {
@@ -342,10 +356,13 @@ export function CollaborativeEditor({
             const converted = blockNoteJsonToProsemirrorJson(resolvedBlockData);
             prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
             try {
-              await updateBlockContent(documentId, {
+              const persistResult = await updateBlockContent(documentId, {
                 block_data: JSON.stringify(converted),
                 user_id: userId,
               });
+              if (isDocumentActionError(persistResult)) {
+                throw new Error(getErrorMessage(persistResult));
+              }
             } catch (persistError) {
               console.error('[CollaborativeEditor] Failed to persist converted block content:', persistError);
             }
@@ -354,10 +371,13 @@ export function CollaborativeEditor({
             if (isRawMarkdownInProsemirror(parsed)) {
               parsed = convertRawMarkdownProsemirror(parsed);
               try {
-                await updateBlockContent(documentId, {
+                const persistResult = await updateBlockContent(documentId, {
                   block_data: JSON.stringify(parsed),
                   user_id: userId,
                 });
+                if (isDocumentActionError(persistResult)) {
+                  throw new Error(getErrorMessage(persistResult));
+                }
               } catch (persistError) {
                 console.error('[CollaborativeEditor] Failed to persist markdown conversion:', persistError);
               }

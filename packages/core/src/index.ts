@@ -31,6 +31,10 @@ export * from './lib/templateUtils';
 
 // Formatting utilities
 export * from './lib/formatters';
+export * from './lib/projectBillingStatus';
+
+// Barcode / GTIN utilities
+export * from './lib/gtin';
 
 // UUID utilities
 export { generateUUID } from './lib/uuid';
@@ -46,8 +50,3 @@ export * from './constants/currency';
 
 // Types barrel export
 export * from './types/index';
-
-// Deletion infrastructure
-export * from './config/deletion/index';
-export * from './server/deletion/deletionValidation';
-export * from './server/deletion/deletionActions';

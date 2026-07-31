@@ -39,7 +39,8 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
-  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue([])
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue([]),
+  getCurrentUserAvatarUrl: vi.fn().mockResolvedValue(null)
 }));
 
 vi.mock('../TicketSelect', () => ({
@@ -169,9 +170,14 @@ describe('PrefillFromTicketDialog', () => {
       </TicketIntegrationProvider>
     );
 
-    await waitFor(() => expect(mockCtx.getTicketsForList).toHaveBeenCalled());
+    const ticketSelect = screen.getByLabelText('ticket-select');
+    // The list call resolving is not the render: the option must exist
+    // before the change event can select it.
+    await waitFor(() => {
+      expect(ticketSelect.querySelector('option[value="ticket-1"]')).not.toBeNull();
+    });
 
-    fireEvent.change(screen.getByLabelText('ticket-select'), {
+    fireEvent.change(ticketSelect, {
       target: { value: 'ticket-1' }
     });
 
@@ -214,15 +220,20 @@ describe('PrefillFromTicketDialog', () => {
       </TicketIntegrationProvider>
     );
 
-    await waitFor(() => expect(mockCtx.getTicketsForList).toHaveBeenCalled());
+    const ticketSelect = screen.getByLabelText('ticket-select');
+    // The list call resolving is not the render: the option must exist
+    // before the change event can select it.
+    await waitFor(() => {
+      expect(ticketSelect.querySelector('option[value="ticket-2"]')).not.toBeNull();
+    });
 
-    fireEvent.change(screen.getByLabelText('ticket-select'), {
+    fireEvent.change(ticketSelect, {
       target: { value: 'ticket-2' }
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Prefill' }));
 
-    expect(mockCtx.getConsolidatedTicketData).toHaveBeenCalledWith('ticket-2');
+    await waitFor(() => expect(mockCtx.getConsolidatedTicketData).toHaveBeenCalledWith('ticket-2'));
   });
 
   it('returns mapped fields via onPrefill', async () => {
@@ -257,9 +268,12 @@ describe('PrefillFromTicketDialog', () => {
       </TicketIntegrationProvider>
     );
 
-    await waitFor(() => expect(mockCtx.getTicketsForList).toHaveBeenCalled());
+    const ticketSelect = screen.getByLabelText('ticket-select');
+    await waitFor(() => {
+      expect(ticketSelect.querySelector('option[value="ticket-3"]')).not.toBeNull();
+    });
 
-    fireEvent.change(screen.getByLabelText('ticket-select'), {
+    fireEvent.change(ticketSelect, {
       target: { value: 'ticket-3' }
     });
 

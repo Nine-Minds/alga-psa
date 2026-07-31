@@ -1,9 +1,12 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- producers consult the QBO connection state to decide whether to enqueue */
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
-import { resolveDefaultRealm } from './accountingSyncSettings';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
+import { resolveDefaultRealm } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
+import { ADAPTER_EXPORT_CAPABILITIES } from '../../adapters/accounting/registry';
+import { resolveConnectedAccountingIntegration } from './connectedAccountingIntegration';
 
 /**
  * Producers enqueue outbound sync operations from billing events. They are
@@ -11,6 +14,7 @@ import { SyncOperationsRepository } from './syncOperationsRepository';
  * action (finalize, payment, ...), so everything is caught and logged.
  */
 
+// LEVERAGE: pattern edition-gate — same local isEnterpriseEdition as exportReadiness.ts
 function isEnterpriseEdition(): boolean {
   return (
     (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
@@ -18,7 +22,25 @@ function isEnterpriseEdition(): boolean {
   );
 }
 
-const SYNC_ADAPTER_TYPE = 'quickbooks_online';
+const QBO_ADAPTER_TYPE = 'quickbooks_online';
+
+function adapterSupportsExportType(adapterType: string, exportType: string): boolean {
+  const capabilities = ADAPTER_EXPORT_CAPABILITIES as Record<string, readonly string[] | undefined>;
+  return Boolean(capabilities[adapterType]?.includes(exportType));
+}
+
+/** Normalize a date-ish column value (Date | ISO string | date string) to YYYY-MM-DD. */
+// LEVERAGE: pattern date-only-normalization — same helper as exportReadiness.ts
+function toDateOnly(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toISOString().slice(0, 10);
+}
 
 /**
  * Auto-export on finalize: enqueue the invoice for the next sync cycle when
@@ -45,23 +67,12 @@ export async function enqueueInvoiceAutoExport(
       return;
     }
 
-    if (settings.autoSyncStartDate) {
-      // Finalization happens "now"; the cutoff fences out re-finalized history.
-      const today = new Date().toISOString().slice(0, 10);
-      if (today < settings.autoSyncStartDate.slice(0, 10)) {
-        return;
-      }
-    }
-
-    const realm = await resolveDefaultRealm(knex, tenantId);
-    if (!realm) {
-      return;
-    }
-
-    // Look up invoice_type to route the operation correctly.
-    const invoiceRow = await knex('invoices')
-      .where({ invoice_id: invoiceId, tenant: tenantId })
-      .select('invoice_type')
+    // Look up invoice_type (operation routing) and invoice_date (cutoff fence).
+    // Done before resolving the connected integration so a prepayment or a
+    // pre-cutoff document short-circuits without any realm work.
+    const invoiceRow = await tenantDb(knex, tenantId).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .select('invoice_type', 'invoice_date')
       .first();
 
     const invoiceType: string | null | undefined = invoiceRow?.invoice_type;
@@ -72,18 +83,47 @@ export async function enqueueInvoiceAutoExport(
       return;
     }
 
+    if (settings.autoSyncStartDate) {
+      // Fence by the invoice's own document date, not the wall clock:
+      // finalization can happen long after the document's era (unfinalize →
+      // re-finalize), and pre-go-live documents must never auto-export into
+      // books that were reconciled before the connection existed.
+      const cutoff = settings.autoSyncStartDate.slice(0, 10);
+      const invoiceDate = toDateOnly(invoiceRow?.invoice_date) ?? new Date().toISOString().slice(0, 10);
+      if (invoiceDate < cutoff) {
+        logger.debug('[accountingSync] Skipping auto-export of pre-cutoff invoice', {
+          tenantId,
+          invoiceId,
+          invoiceDate,
+          cutoff
+        });
+        return;
+      }
+    }
+
+    const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+    if (!integration) {
+      return;
+    }
+
     const operation = invoiceType === 'credit_note' ? 'export_credit_memo' : 'export_invoice';
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: SYNC_ADAPTER_TYPE,
-      targetRealm: realm,
+      adapterType: integration.adapterType,
+      targetRealm: integration.targetRealm,
       operation,
       algaEntityType: 'invoice',
       algaEntityId: invoiceId
     });
 
-    logger.debug('[accountingSync] Queued invoice auto-export', { tenantId, invoiceId, realm, operation });
+    logger.debug('[accountingSync] Queued invoice auto-export', {
+      tenantId,
+      invoiceId,
+      adapterType: integration.adapterType,
+      targetRealm: integration.targetRealm,
+      operation
+    });
   } catch (error) {
     logger.warn('[accountingSync] Failed to queue invoice auto-export (finalize unaffected)', {
       tenantId,
@@ -91,6 +131,89 @@ export async function enqueueInvoiceAutoExport(
       error: error instanceof Error ? error.message : error
     });
   }
+}
+
+async function enqueueVendorBillExportOperation(
+  knex: Knex,
+  tenantId: string,
+  billId: string,
+  options: { requireAutoSync: boolean }
+): Promise<boolean> {
+  if (!isEnterpriseEdition()) {
+    return false;
+  }
+
+  const settings = await getAccountingSyncSettings(knex, tenantId);
+  if (options.requireAutoSync && !settings.autoSyncEnabled) {
+    return false;
+  }
+
+  if (options.requireAutoSync && settings.autoSyncStartDate) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (today < settings.autoSyncStartDate.slice(0, 10)) {
+      return false;
+    }
+  }
+
+  const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+  if (!integration) {
+    return false;
+  }
+
+  if (!adapterSupportsExportType(integration.adapterType, 'vendor_bill')) {
+    return false;
+  }
+
+  await new SyncOperationsRepository(knex).enqueue({
+    tenant: tenantId,
+    adapterType: integration.adapterType,
+    targetRealm: integration.targetRealm,
+    operation: 'export_vendor_bill',
+    algaEntityType: 'vendor_bill',
+    algaEntityId: billId
+  });
+
+  logger.debug('[accountingSync] Queued vendor bill export', {
+    tenantId,
+    billId,
+    adapterType: integration.adapterType,
+    targetRealm: integration.targetRealm,
+    requireAutoSync: options.requireAutoSync
+  });
+
+  return true;
+}
+
+/**
+ * Auto-export on vendor bill open: enqueue for the next sync cycle when the
+ * tenant has a connected accounting integration that supports vendor bills.
+ */
+export async function enqueueVendorBillAutoExport(
+  knex: Knex,
+  tenantId: string,
+  billId: string
+): Promise<void> {
+  try {
+    await enqueueVendorBillExportOperation(knex, tenantId, billId, { requireAutoSync: true });
+  } catch (error) {
+    logger.warn('[accountingSync] Failed to queue vendor bill auto-export (status change unaffected)', {
+      tenantId,
+      billId,
+      error: error instanceof Error ? error.message : error
+    });
+  }
+}
+
+/**
+ * Explicit retry from the UI. This intentionally bypasses the auto-sync toggle
+ * because the operator is making a direct retry decision.
+ */
+export async function enqueueVendorBillExportRetry(
+  knex: Knex,
+  tenantId: string,
+  billId: string
+): Promise<boolean> {
+  return enqueueVendorBillExportOperation(knex, tenantId, billId, { requireAutoSync: false });
 }
 
 /**
@@ -104,7 +227,7 @@ export async function satisfyExportOpsForManualBatch(
   invoiceIds: string[]
 ): Promise<void> {
   try {
-    if (adapterType !== SYNC_ADAPTER_TYPE || invoiceIds.length === 0) {
+    if (invoiceIds.length === 0) {
       return;
     }
     const satisfied = await new SyncOperationsRepository(knex).satisfyPending(
@@ -145,10 +268,9 @@ export async function enqueueInvoiceVoid(
     }
 
     // Only enqueue when a mapping exists (otherwise there's nothing to void in QBO)
-    const mapping = await knex('tenant_external_entity_mappings')
+    const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
-        tenant: tenantId,
-        integration_type: SYNC_ADAPTER_TYPE,
+        integration_type: QBO_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
         alga_entity_id: invoiceId
       })
@@ -160,7 +282,7 @@ export async function enqueueInvoiceVoid(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: SYNC_ADAPTER_TYPE,
+      adapterType: QBO_ADAPTER_TYPE,
       targetRealm: realm,
       operation: 'void_invoice',
       algaEntityType: 'invoice',
@@ -217,10 +339,9 @@ export async function enqueueExternalPaymentPush(
     }
 
     // Skip invoices that don't have a QBO mapping yet (pre-go-live invoices).
-    const mapping = await knex('tenant_external_entity_mappings')
+    const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
-        tenant: tenantId,
-        integration_type: SYNC_ADAPTER_TYPE,
+        integration_type: QBO_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
         alga_entity_id: params.invoiceId
       })
@@ -237,7 +358,7 @@ export async function enqueueExternalPaymentPush(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: SYNC_ADAPTER_TYPE,
+      adapterType: QBO_ADAPTER_TYPE,
       targetRealm: realm,
       operation: 'record_payment',
       algaEntityType: 'invoice_payment',
@@ -298,7 +419,7 @@ export async function enqueueCreditApplication(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: SYNC_ADAPTER_TYPE,
+      adapterType: QBO_ADAPTER_TYPE,
       targetRealm: realm,
       operation: 'apply_credit',
       algaEntityType: 'credit_allocation',

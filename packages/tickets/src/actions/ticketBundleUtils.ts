@@ -1,6 +1,7 @@
 'use server';
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -13,10 +14,18 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 async function findOpenTicketStatusId(trx: Knex.Transaction, tenant: string): Promise<string | null> {
-  const row = await trx('statuses')
+  const row = await tenantScopedTable(trx, 'statuses', tenant)
     .select('status_id')
-    .where({ tenant, is_closed: false })
+    .where({ is_closed: false })
     .andWhere(function () {
       this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
     })
@@ -32,9 +41,9 @@ export async function maybeReopenBundleMasterFromChildReply(
   childTicketId: string,
   updatedByUserId: string | null
 ): Promise<{ reopened: boolean; masterTicketId: string | null }> {
-  const child = await trx('tickets')
+  const child = await tenantScopedTable(trx, 'tickets', tenant)
     .select('ticket_id', 'master_ticket_id')
-    .where({ tenant, ticket_id: childTicketId })
+    .where({ ticket_id: childTicketId })
     .first();
 
   const masterTicketId = child?.master_ticket_id ?? null;
@@ -42,21 +51,25 @@ export async function maybeReopenBundleMasterFromChildReply(
     return { reopened: false, masterTicketId: null };
   }
 
-  const settings = await trx('ticket_bundle_settings')
+  const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
     .select('reopen_on_child_reply')
-    .where({ tenant, master_ticket_id: masterTicketId })
+    .where({ master_ticket_id: masterTicketId })
     .first();
 
   if (!settings?.reopen_on_child_reply) {
     return { reopened: false, masterTicketId };
   }
 
-  const master = await trx('tickets as t')
+  const master = await tenantDb(trx, tenant)
+    .tenantJoin(
+      tenantScopedTable(trx, 'tickets as t', tenant),
+      'statuses as s',
+      't.status_id',
+      's.status_id',
+      { type: 'left' }
+    )
     .select('t.ticket_id', 't.status_id', 's.is_closed')
-    .leftJoin('statuses as s', function () {
-      this.on('t.status_id', 's.status_id').andOn('t.tenant', 's.tenant');
-    })
-    .where({ 't.tenant': tenant, 't.ticket_id': masterTicketId })
+    .where({ 't.ticket_id': masterTicketId })
     .first();
 
   if (!master || !master.is_closed) {
@@ -76,8 +89,8 @@ export async function maybeReopenBundleMasterFromChildReply(
   // is_closed when the status transitions across the closed boundary.
   // Without this, the master row reads "closed" in list/detail surfaces
   // even though its status_id points to an open status.
-  await trx('tickets')
-    .where({ tenant, ticket_id: masterTicketId })
+  await tenantScopedTable(trx, 'tickets', tenant)
+    .where({ ticket_id: masterTicketId })
     .update({
       status_id: openStatusId,
       is_closed: false,
@@ -116,4 +129,3 @@ export async function maybeReopenBundleMasterFromChildReply(
 
   return { reopened: true, masterTicketId };
 }
-

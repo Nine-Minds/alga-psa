@@ -1,0 +1,205 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Button } from '@alga-psa/ui/components/Button';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
+import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
+import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
+import { toast } from 'react-hot-toast';
+import type { ColumnDefinition } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
+import { marginReport, type MarginReport as MarginReportData, type MarginReportRow } from '../actions';
+import { CurrencyFormatProvider, useCurrencyFormat } from './dashboard/shared';
+
+/**
+ * Margin report (F042/F043): per-service revenue, COGS, and margin from sales-driven
+ * consume movements, over an optional date window. Read-only; internal (owner) view.
+ */
+
+type InventoryTranslator = ReturnType<typeof useTranslation>['t'];
+
+const pct = (t: InventoryTranslator, value: number | null | undefined): string =>
+  value == null ? t('common.emptyValue', '—') : `${value.toFixed(1)}%`;
+
+/** "From — To", or "All time" when the window is open-ended. */
+const rangeLabel = (t: InventoryTranslator, from: string, to: string): string => {
+  if (!from && !to) return t('common.allTime', 'All time');
+  return `${from || t('common.allTime', 'All time')} — ${to || t('common.today', 'Today')}`;
+};
+
+function MarginReportBody({
+  report,
+  t,
+  rangeSubtitle,
+}: {
+  report: MarginReportData;
+  t: InventoryTranslator;
+  rangeSubtitle: string;
+}) {
+  const { money } = useCurrencyFormat();
+  const rows: MarginReportRow[] = report.rows ?? [];
+
+  const columns: ColumnDefinition<MarginReportRow>[] = [
+    {
+      title: t('margin.columns.product', 'Product'),
+      dataIndex: 'service_name',
+      render: (v: any, rec) => (
+        <div className="flex items-center gap-2">
+          <span>{v || t('common.emptyValue', '—')}</span>
+          {rec.sku ? <span className="font-mono text-xs text-gray-500">{rec.sku}</span> : null}
+        </div>
+      ),
+    },
+    { title: t('margin.columns.qtySold', 'Qty sold'), dataIndex: 'qty_sold', render: (v: any) => <span className="tabular-nums">{Number(v ?? 0)}</span> },
+    { title: t('margin.columns.revenue', 'Revenue'), dataIndex: 'revenue_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
+    { title: t('margin.columns.cogs', 'COGS'), dataIndex: 'cogs_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
+    { title: t('margin.columns.margin', 'Margin'), dataIndex: 'margin_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
+    { title: t('margin.columns.marginPct', 'Margin %'), dataIndex: 'margin_pct', render: (v: any) => <span className="tabular-nums">{pct(t, v)}</span> },
+  ];
+
+  const printColumns: PrintableTableColumn<MarginReportRow>[] = [
+    {
+      key: 'product',
+      header: t('margin.columns.product', 'Product'),
+      render: (row) => [row.service_name || t('common.emptyValue', '—'), row.sku].filter(Boolean).join(' · '),
+    },
+    { key: 'qtySold', header: t('margin.columns.qtySold', 'Qty sold'), render: (row) => Number(row.qty_sold ?? 0) },
+    { key: 'revenue', header: t('margin.columns.revenue', 'Revenue'), render: (row) => money(row.revenue_cents) },
+    { key: 'cogs', header: t('margin.columns.cogs', 'COGS'), render: (row) => money(row.cogs_cents) },
+    { key: 'margin', header: t('margin.columns.margin', 'Margin'), render: (row) => money(row.margin_cents) },
+    { key: 'marginPct', header: t('margin.columns.marginPct', 'Margin %'), render: (row) => pct(t, row.margin_pct) },
+  ];
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4" id="margin-report-totals">
+        <div className="rounded border p-3">
+          <div className="text-xs text-gray-500">{t('margin.metrics.revenue', 'Revenue')}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_revenue_cents)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-gray-500">{t('margin.metrics.cogs', 'COGS')}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_cogs_cents)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-gray-500">{t('margin.metrics.margin', 'Margin')}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_margin_cents)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-gray-500">{t('margin.metrics.marginPct', 'Margin %')}</div>
+          <div className="text-xl font-semibold tabular-nums">{pct(t, report.total_margin_pct)}</div>
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-gray-500">{t('margin.empty', 'No sales-driven margin in this window.')}</p>
+      ) : (
+        <DataTable id="margin-report-table" data={rows} columns={columns} />
+      )}
+
+      <div className="app-print-root app-print-only" id="margin-report-print">
+        <PrintableDetailHeader
+          title={t('margin.title', 'Margin Report')}
+          subtitle={t('margin.subtitle', 'Revenue, cost of goods sold, and margin per product from fulfilled sales orders.')}
+          fields={[{ label: t('common.period', 'Period'), value: rangeSubtitle }]}
+        />
+        <PrintableSummary
+          metrics={[
+            { label: t('margin.metrics.revenue', 'Revenue'), value: money(report.total_revenue_cents) },
+            { label: t('margin.metrics.cogs', 'COGS'), value: money(report.total_cogs_cents) },
+            { label: t('margin.metrics.margin', 'Margin'), value: money(report.total_margin_cents) },
+            { label: t('margin.metrics.marginPct', 'Margin %'), value: pct(t, report.total_margin_pct) },
+          ]}
+        />
+        <PrintableTable
+          rows={rows}
+          columns={printColumns}
+          getRowKey={(row) => row.service_id ?? row.sku ?? row.service_name}
+          emptyMessage={t('margin.empty', 'No sales-driven margin in this window.')}
+        />
+      </div>
+    </>
+  );
+}
+
+export function MarginReport() {
+  const { t, i18n } = useTranslation('features/inventory');
+  const [report, setReport] = useState<MarginReportData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+
+  const run = async () => {
+    setLoading(true);
+    try {
+      const result = await marginReport({ from: from || undefined, to: to || undefined });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setReport(null);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setReport(result);
+    } catch (e: any) {
+      toast.error(e?.message || t('margin.runFailed', "Couldn't run the margin report."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="p-6 space-y-5" id="margin-report-page">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold">{t('margin.title', 'Margin Report')}</h1>
+          <p className="text-sm text-gray-500">
+            {t('margin.subtitle', 'Revenue, cost of goods sold, and margin per product from fulfilled sales orders.')}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <PrintButton id="margin-report-print" variant="outline" disabled={!report || loading} />
+          <Button id="margin-report-refresh" variant="outline" onClick={run} disabled={loading}>
+            {loading ? t('common.refreshing', 'Refreshing…') : t('common.refresh', 'Refresh')}
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex items-end gap-3 flex-wrap">
+        <div>
+          <Label className="block mb-1" htmlFor="margin-report-from">{t('common.from', 'From')}</Label>
+          <DatePicker id="margin-report-from" label={t('common.from', 'From')} placeholder={t('common.from', 'From')} clearable className="w-40" value={dateFromString(from)} onChange={(date) => setFrom(dateToString(date))} />
+        </div>
+        <div>
+          <Label className="block mb-1" htmlFor="margin-report-to">{t('common.to', 'To')}</Label>
+          <DatePicker id="margin-report-to" label={t('common.to', 'To')} placeholder={t('common.to', 'To')} clearable className="w-40" value={dateFromString(to)} onChange={(date) => setTo(dateToString(date))} />
+        </div>
+        <Button id="margin-report-run" onClick={run} disabled={loading}>
+          {loading ? t('common.running', 'Running…') : t('common.runReport', 'Run report')}
+        </Button>
+      </div>
+
+      {report ? (
+        <CurrencyFormatProvider
+          currencyCode={report.currency_code || 'USD'}
+          locale={i18n.language || 'en'}
+        >
+          <MarginReportBody report={report} t={t} rangeSubtitle={rangeLabel(t, from, to)} />
+        </CurrencyFormatProvider>
+      ) : loading ? (
+        <p className="text-sm text-gray-500">{t('margin.loading', 'Loading margin…')}</p>
+      ) : (
+        <p className="text-sm text-gray-500">{t('margin.empty', 'No sales-driven margin in this window.')}</p>
+      )}
+    </div>
+  );
+}

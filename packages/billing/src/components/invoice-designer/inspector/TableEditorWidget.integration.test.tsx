@@ -177,14 +177,17 @@ describe('TableEditorWidget (schema widget integration)', () => {
   beforeEach(() => {
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
+      writable: true,
       value: () => undefined,
     });
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
       configurable: true,
+      writable: true,
       value: () => false,
     });
     Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
       configurable: true,
+      writable: true,
       value: () => undefined,
     });
     useInvoiceDesignerStore.getState().resetWorkspace();

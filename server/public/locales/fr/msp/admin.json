@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "Adresse d'expéditeur",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Laissez le nom d'utilisateur et le mot de passe vides si votre relais accepte les e-mails sans authentification.",
+      "security": {
+        "title": "Sécurité de la connexion",
+        "secure": "Utiliser le TLS implicite (SSL à la connexion, généralement le port 465)",
+        "requireTls": "Exiger la mise à niveau STARTTLS (ports 587 / 25)",
+        "verifyCert": "Vérifier le certificat du serveur",
+        "verifyCertHint": "Ne désactivez cette option que pour un relais de confiance sur votre propre réseau utilisant un certificat auto-signé."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "Impossible de charger les paramètres de messagerie",
       "saveSettings": "Impossible d'enregistrer les paramètres",
       "addDomain": "Impossible d'ajouter le domaine",
-      "verifyDomain": "Impossible de vérifier le domaine"
+      "verifyDomain": "Impossible de vérifier le domaine",
+      "testOutbound": "Échec du test de l'e-mail sortant"
+    },
+    "test": {
+      "title": "Tester l'e-mail sortant",
+      "description": "Enregistre les paramètres actuels, puis vérifie la connexion au fournisseur. Saisissez une adresse pour envoyer aussi un message de test.",
+      "recipientLabel": "Envoyer le test à (facultatif)",
+      "recipientPlaceholder": "vous@exemple.com",
+      "run": "Tester la connexion",
+      "testing": "Test en cours..."
     }
   },
   "microsoft365": {

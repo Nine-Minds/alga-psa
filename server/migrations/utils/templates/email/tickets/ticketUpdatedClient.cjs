@@ -129,20 +129,20 @@ const COPY = {
     textView: 'Zobacz zgłoszenie',
   },
 };
-SUBJECTS.pt = 'Seu chamado foi atualizado • {{ticket.title}}';
+SUBJECTS.pt = 'Seu ticket foi atualizado • {{ticket.title}}';
 COPY.pt = {
-  headerLabel: 'Chamado atualizado',
-  intro: 'Seu chamado para <strong>{{ticket.clientName}}</strong> foi atualizado. Veja abaixo um resumo das alterações.',
-  badgePrefix: 'Chamado #',
+  headerLabel: 'Ticket atualizado',
+  intro: 'Seu ticket para <strong>{{ticket.clientName}}</strong> foi atualizado. Veja abaixo um resumo das alterações.',
+  badgePrefix: 'Ticket #',
   priority: 'Prioridade',
   status: 'Status',
   assignedTo: 'Atribuído a',
   changesLabel: 'O que mudou',
-  viewButton: 'Ver chamado',
+  viewButton: 'Ver ticket',
   footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
-  textHeader: 'Seu chamado foi atualizado',
+  textHeader: 'Seu ticket foi atualizado',
   textChanges: 'O que mudou',
-  textView: 'Ver chamado',
+  textView: 'Ver ticket',
 };
 
 /* eslint-enable max-len */

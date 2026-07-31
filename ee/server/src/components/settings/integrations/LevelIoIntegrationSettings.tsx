@@ -125,7 +125,8 @@ export default function LevelIoIntegrationSettings() {
         setSummary(summaryResult.summary ?? null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.rmm.levelio.errors.loadState', { defaultValue: 'Failed to load Level integration state' }));
+      console.error('Failed to load Level integration state:', err);
+      setError(t('integrations.rmm.levelio.errors.loadState', { defaultValue: 'Failed to load Level integration state' }));
     } finally {
       if (!background) setIsLoading(false);
     }

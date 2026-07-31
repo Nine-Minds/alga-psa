@@ -36,6 +36,10 @@ Prefer radix components over other libraries
     - [Table](../packages/ui/src/components/Table.tsx)
     - [TextArea](../packages/ui/src/components/TextArea.tsx)
 
+### Design Guidelines (Typography & Density)
+
+For the product typography scale, tile/card composition patterns, and microcopy voice — derived from the ticket bento layout — see [UI Design Guidelines](ui/design_guidelines.md). New panels, tiles, and cards must follow it.
+
 ### Theme & Dark Mode
 
 For full theming guidelines, CSS variable usage, and provider architecture, see [Theming Documentation](ui/theming.md).
@@ -319,16 +323,17 @@ Lucide icons can (and should) be used from the `lucide` package.
 
 ```typescript
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export const myAction = withAuth(async (user, { tenant }, arg1: string): Promise<Result> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
 
   if (!await hasPermission(user, 'resource', 'action')) {
     throw new Error('Permission denied');
   }
 
-  return knex('table').where({ tenant }).select('*');
+  return db.table('table').select('*');
 });
 ```
 
@@ -394,30 +399,36 @@ Always use commands like "cd server && npx knex migrate:make <name> --knexfile k
 
 The knexfile is located in the /server/knexfile.cjs file and is used to configure the database connection.
 
-Use createTenantKnex() from the /server/src/lib/db/index.ts file to create a database connection and return the tenant as a string.
+Use createTenantKnex() from `@alga-psa/db` to get the connection and the tenant id, then query through the `tenantDb` facade. The facade applies the tenant predicate to query roots and joins for you; see [Tenant isolation and the tenantDb query facade](architecture/tenant-isolation.md) for the full API.
 
 **Correct Usage Pattern:**
 ```typescript
-// CORRECT: Destructure both knex and tenant
-const { knex, tenant } = await createTenantKnex();
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
-// Example query
-const documents = await knex('documents')
-  .where('tenant', tenant)
-  .select('*');
+// CORRECT: Destructure both knex and tenant, then bind the facade
+const { knex, tenant } = await createTenantKnex();
+const db = tenantDb(knex, tenant);
+
+// Example query — tenant scoping is applied by the facade
+const documents = await db.table('documents').select('*');
+
+// Tenant-safe join — adds d.tenant = a.tenant automatically
+const query = db.table('documents as d');
+db.tenantJoin(query, 'document_associations as a', 'a.document_id', 'd.document_id');
 ```
 
 **Transaction Pattern:**
 ```typescript
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, tenantDb } from '@alga-psa/db';
 
 // CORRECT: Pass knex as first parameter
-const { knex } = await createTenantKnex();
+const { knex, tenant } = await createTenantKnex();
 
 await withTransaction(knex, async (trx) => {
-  // Use trx for all operations within the transaction
-  await trx('documents').insert({...});
-  await trx('document_associations').insert({...});
+  // Bind the facade to the transaction handle
+  const db = tenantDb(trx, tenant);
+  await db.table('documents').insert({...});
+  await db.table('document_associations').insert({...});
 });
 ```
 
@@ -426,6 +437,9 @@ await withTransaction(knex, async (trx) => {
 // ❌ WRONG: Missing destructuring
 const knex = await createTenantKnex();
 
+// ❌ WRONG: Hand-written tenant predicates (legacy shape — use tenantDb)
+const documents = await knex('documents').where('tenant', tenant).select('*');
+
 // ❌ WRONG: Missing knex parameter
 await withTransaction(async (trx) => {...});
 
@@ -433,11 +447,26 @@ await withTransaction(async (trx) => {...});
 const knex = await getConnection();
 ```
 
+The facade only accepts tables registered in `packages/db/src/lib/tenantTableMetadata.ts` and throws for unknown ones. When a migration adds a table, register it in the metadata in the same change. Cross-tenant and pre-login paths must use `db.unscoped(table, reason)` with a non-empty reason string.
+
 Migrations should have a .cjs extension and should be located in the /server/migrations folder.
 
 Run migrations with the migration environment (env) flag.
 
-Every query should filter on the tenant column (including joins) to ensure compatibility with citusdb.
+Every query must be tenant-scoped, including joins. Route queries through the `tenantDb` facade so the tenant predicates are applied structurally; raw SQL (`knex.raw`) must still carry tenant predicates by hand.
+
+**Inside migration files**, get the facade from the local CJS shim, never from the workspace package:
+
+```javascript
+// ✅ CORRECT: the shim ships with the migration tree
+const { tenantDb } = require('./utils/tenantDb.cjs');
+const db = tenantDb(knex, tenantId);
+
+// ❌ WRONG: fails or resolves to a stale dist in migration runners
+const { tenantDb } = await import('@alga-psa/db');
+```
+
+Several environments that run migrations (CI Citus smoke, the integration harness, the prod migration image, the EE combined temp dir) do not load the `@alga-psa/db` ESM package, so `import('@alga-psa/db')` fails with `ERR_MODULE_NOT_FOUND` — or resolves to a stale `dist/` where the export is `undefined` (`tenantDb is not a function`). The shim at `server/migrations/utils/tenantDb.cjs` mirrors the facade's `table()` / `unscoped()` / `tenantJoin()` API and carries its own table registry; if a migration touches a table the shim doesn't know, register it in the shim's metadata in the same change.
 
 ## Local EE migrations
 - Do not physically copy EE migrations into `server/migrations/` locally.
@@ -567,9 +596,10 @@ When working with PostgreSQL JSON and JSONB columns in Knex.js, follow these gui
    ```
 
 3. **Tenant Column Requirements**
-    - Always include tenant column in WHERE clauses
-    - Include tenant in JOIN conditions
+    - Always include tenant column in WHERE clauses (in app code, `tenantDb` does this for you)
+    - Include tenant in JOIN conditions (in app code, use `db.tenantJoin`)
     - Add tenant to unique constraints and indexes
+    - Register new tables in `packages/db/src/lib/tenantTableMetadata.ts` so the facade accepts them — full checklist in [architecture/tenant-isolation.md](architecture/tenant-isolation.md)
     Example:
     ```sql
     CREATE UNIQUE INDEX my_unique_index
@@ -605,22 +635,20 @@ When working with PostgreSQL JSON and JSONB columns in Knex.js, follow these gui
     ```
 
 4. **Tenant Context in Distributed Queries**
-    - Connection-specific tenant context (`app.current_tenant`) does not propagate to all shards
-    - Queries without shard key (tenant) are broadcast to all shards
-    - Each shard connection needs its own tenant context
-    - Security policies checking `app.current_tenant` will fail on shards without context
+    - Queries without the shard key (tenant) are broadcast to all shards
+    - Connection-level settings (e.g. the old `app.current_tenant` GUC) do not propagate to shards — never rely on them for isolation. RLS policies that read that GUC were dropped entirely (`20260509120000_disable_remaining_rls_policies.cjs`); isolation is application-enforced.
     Example of potential issues:
     ```typescript
-    // This could fail if broadcast to all shards
+    // Broadcasts to all shards and returns other tenants' rows
     const results = await knex('some_table')
       .select('*')
       .where('some_column', 'value');
-    
-    // Always include tenant to avoid broadcast
-    const results = await knex('some_table')
-      .select('*')
-      .where('tenant', currentTenant)
-      .andWhere('some_column', 'value');
+
+    // Facade applies the tenant predicate, so the query routes to one shard
+    const results = await tenantDb(knex, tenant)
+      .table('some_table')
+      .where('some_column', 'value')
+      .select('*');
     ```
 
 5. **GUID Handling in CitusDB**
@@ -677,7 +705,7 @@ When working with PostgreSQL JSON and JSONB columns in Knex.js, follow these gui
 - `ON DELETE SET NULL` is not supported and should be handled at the application level.
 
 ## Tenants
-We use row level security and store the tenant in the `tenants` table.
+Tenants are stored in the `tenants` table. Isolation is application-enforced: explicit `tenant` columns, Citus distribution, and the `tenantDb` facade. There is no row-level security — RLS policies were dropped for Citus compatibility (see [architecture/tenant-isolation.md](architecture/tenant-isolation.md)); do not copy RLS blocks from old migrations.
 Most tables require the tenant to be specified in the `tenant` column when inserting.
 
 ## Dates and times in the database:
@@ -874,6 +902,16 @@ All tests should follow the conventions outlined in [docs/testing-standards.md](
 - Use `setupE2ETestEnvironment()` for E2E tests
 
 See the full [Testing Standards](./reference/testing-standards.md) document for complete guidelines, templates, and the decision tree for test placement.
+
+## Testing the QuickBooks Online sync
+
+Do not hand-mock `QboClientService` for multi-step accounting-sync tests. A
+stateful in-memory QBO simulator (SyncTokens, duplicate-name rules, balances,
+CDC replay, the auto-apply-credits race) lives at
+`packages/billing/src/services/accountingSync/testing/qboSimulator.ts` — its
+README covers wiring and the scenario pattern, and
+`qboSimulator.scenarios.test.ts` next to it shows real appliers driven
+end-to-end. Canned `vi.fn()` mocks remain fine for single-call unit tests.
 
 # Time Entry Work Item Types
 They can be:

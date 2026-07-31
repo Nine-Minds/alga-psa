@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/component
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle } from 'lucide-react';
 import type { ColumnDefinition, IQuoteDocumentTemplate, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { listQuotes, downloadQuotePdf, deleteQuote, duplicateQuote, sendQuote } from '../../../actions/quoteActions';
@@ -40,6 +41,9 @@ const SUBTAB_STATUSES: Partial<Record<QuoteSubTab, QuoteStatus[]>> = {
   sent: ['sent'],
   closed: ['accepted', 'rejected', 'expired', 'converted', 'cancelled', 'superseded', 'archived'],
 };
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface QuoteSubTabContentProps {
   quotes: IQuoteListItem[];
@@ -294,6 +298,10 @@ const QuotesTab: React.FC = () => {
   const selectedMode = searchParams?.get('mode');
   const requestedSubtab = searchParams?.get('subtab');
   const isTemplateParam = searchParams?.get('isTemplate') === 'true';
+  const opportunityId = searchParams?.get('opportunityId') ?? undefined;
+  const opportunityClientId = searchParams?.get('clientId') ?? undefined;
+  const opportunityContactId = searchParams?.get('contactId') ?? undefined;
+  const opportunityTitle = searchParams?.get('title') ?? undefined;
   const activeSubTab = requestedSubtab && QUOTE_SUBTABS.includes(requestedSubtab as QuoteSubTab)
     ? (requestedSubtab as QuoteSubTab)
     : 'active';
@@ -310,8 +318,8 @@ const QuotesTab: React.FC = () => {
         getQuoteDocumentTemplates(),
       ]);
 
-      if ('permissionError' in quotesResult) {
-        setError(quotesResult.permissionError);
+      if (isActionPermissionError(quotesResult)) {
+        setError(getErrorMessage(quotesResult));
         setQuotes([]);
       } else {
         setQuotes(quotesResult.data);
@@ -359,8 +367,8 @@ const QuotesTab: React.FC = () => {
 
   const triggerPdfDownload = async (quoteId: string) => {
     const result = await downloadQuotePdf(quoteId);
-    if (result && typeof result === 'object' && 'permissionError' in result) {
-      setError(result.permissionError);
+    if (isReturnedActionError(result)) {
+      setError(getErrorMessage(result));
       return;
     }
     const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
@@ -396,8 +404,8 @@ const QuotesTab: React.FC = () => {
         email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
         message: sendMessage.trim() || undefined,
       });
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        setError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
       } else {
         void loadData();
       }
@@ -419,8 +427,8 @@ const QuotesTab: React.FC = () => {
   const handleDuplicateQuote = async (quoteId: string) => {
     try {
       const result = await duplicateQuote(quoteId);
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        setError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
         return;
       }
       void loadData();
@@ -442,8 +450,8 @@ const QuotesTab: React.FC = () => {
     setError(null);
     try {
       const result = await deleteQuote(quoteId);
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        setError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
       } else {
         void loadData();
       }
@@ -493,10 +501,22 @@ const QuotesTab: React.FC = () => {
       <QuoteForm
         quoteId={selectedQuoteId}
         initialIsTemplate={isTemplateParam}
-        onCancel={() => isTemplateParam ? router.push('/msp/billing?tab=quote-business-templates') : router.push('/msp/billing?tab=quotes')}
+        initialContext={{
+          clientId: opportunityClientId,
+          contactId: opportunityContactId,
+          opportunityId,
+          title: opportunityTitle,
+        }}
+        onCancel={() => opportunityId
+          ? router.push(`/msp/opportunities/${opportunityId}`)
+          : isTemplateParam
+            ? router.push('/msp/billing?tab=quote-business-templates')
+            : router.push('/msp/billing?tab=quotes')}
         onSaved={() => {
           void loadData();
-          if (isTemplateParam) {
+          if (opportunityId) {
+            router.push(`/msp/opportunities/${opportunityId}`);
+          } else if (isTemplateParam) {
             router.push('/msp/billing?tab=quote-business-templates');
           } else {
             router.push('/msp/billing?tab=quotes');

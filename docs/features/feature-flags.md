@@ -68,8 +68,8 @@ Controls access to the delegated time-entry UI (editing/viewing time sheets for 
   - Time Sheet pages at `/msp/time-entry/timesheet/:id` (delegation UI + ability to edit delegated sheets)
 
 **Behavior:**
-- When disabled: The UI only allows working with the current user’s own time periods/time sheets (delegated sheets are shown as read-only if accessed directly).
-- When enabled: Authorized users can select a subject user and edit/view that user’s time sheets via the UI.
+- When disabled: The UI only allows working with the current user's own time periods/time sheets (delegated sheets are shown as read-only if accessed directly).
+- When enabled: Authorized users can select a subject user and edit/view that user's time sheets via the UI.
 
 ### 5. `email-logs`
 Controls access to email log UI surfaces for outbound email auditing/debugging.
@@ -83,18 +83,7 @@ Controls access to email log UI surfaces for outbound email auditing/debugging.
 **Behavior:**
 - When disabled: Email Logs page shows construction placeholder; navigation link and ticket section are hidden.
 
-### 6. `tactical-rmm-integration`
-Controls access to the Tactical RMM integration configuration UI.
-
-**Affected Areas:**
-- **MSP Portal:**
-  - Settings → Integrations → RMM
-
-**Behavior:**
-- When disabled (default): Tactical RMM configuration is hidden from the RMM setup screen.
-- When enabled: Tactical RMM appears as a selectable RMM provider (and its configuration UI is shown).
-
-### 7. `knowledge-base`
+### 6. `knowledge-base`
 Controls access to the Knowledge Base feature on both MSP and Client Portal.
 
 **Affected Areas:**
@@ -110,7 +99,7 @@ Controls access to the Knowledge Base feature on both MSP and Client Portal.
 **Behavior:**
 - When disabled: Navigation links are hidden; pages show construction placeholder if accessed directly.
 
-### 8. `document-folder-templates`
+### 7. `document-folder-templates`
 Controls access to new document features: client portal documents, folder structure configuration, and share links.
 
 **Affected Areas:**
@@ -127,7 +116,7 @@ Controls access to new document features: client portal documents, folder struct
 **Behavior:**
 - When disabled: Client portal documents nav link is hidden (page shows construction placeholder if accessed directly). Folder templates config and share link UI are completely hidden.
 
-### 9. `ai-assistant-activation`
+### 8. `ai-assistant-activation`
 Controls which tenants are allowed to enable the AI Assistant from Settings → Experimental Features.
 
 **Affected Areas:**
@@ -138,7 +127,7 @@ Controls which tenants are allowed to enable the AI Assistant from Settings → 
 - When disabled: The AI Assistant toggle is disabled and cannot be saved on for that tenant, even if the tenant previously had the experimental setting stored.
 - When enabled: The tenant may turn on the existing `experimentalFeatures.aiAssistant` setting, which continues to gate Quick Ask, chat sidebar access, and AI chat APIs.
 
-### 10. `quoting-enabled`
+### 9. `quoting-enabled`
 Controls access to the quoting functionality in the billing area.
 
 **Affected Areas:**
@@ -153,7 +142,7 @@ Controls access to the quoting functionality in the billing area.
 - When disabled (default): Quote-related sidebar items and billing tabs are hidden. Standalone quote pages show construction placeholder if accessed directly.
 - When enabled: Full quoting UI is accessible. Backend (models, actions, migrations) is always available regardless of flag state.
 
-### 11. `service-requests`
+### 10. `service-requests`
 Controls access to the new service request definition and client portal request-services UI.
 
 **Affected Areas:**
@@ -174,17 +163,73 @@ Controls access to the new service request definition and client portal request-
 - When enabled: The full service request UI is accessible.
 - Backend (tables, actions, provider execution, portal submission processing) remains active regardless of flag state.
 
-### 12. `mcp-server`
-Dark-release gate for the remote (governed) MCP server admin UI. Enterprise-only and off by default; used to roll the feature out per-tenant before general availability.
+### 11. `project-billing-ui`
+Temporarily controls discovery and ambient UI for project billing before release.
 
 **Affected Areas:**
 - **MSP Portal:**
-  - Settings → MCP Server tab (the IdP-provider / agent / audit admin surface). Hidden when disabled; the tab only appears when the tenant is Enterprise **and** the flag is on. Direct access via `?tab=mcp-server` falls back to the default tab.
+  - Project Billing view option, billed header, phase billing badges/toast, and project/task/time-entry payment warnings
+  - Invoicing Hub Project Billing tab and ready-count badge
+  - Project client-portal Show Billing configuration
+- **Client Portal:**
+  - Embedded project billing summary
 
 **Behavior:**
-- When disabled (default): The MCP Server settings tab is hidden. Because no flag exists in PostHog by default — and the flag resolves `false` when PostHog is unavailable — the tab is dark on every instance until explicitly enabled for a tenant.
-- When enabled: The MCP Server admin tab is shown (Enterprise builds only).
-- **UI-only gate.** The server endpoints (`POST /api/mcp`, `/.well-known/oauth-protected-resource`, and the `/api/v1/mcp/*` admin APIs) remain live regardless of flag state — they are already Enterprise-gated and harmless without agents/IdPs configured. The flag only hides the admin entry point in the UI.
+- When disabled (default): Ambient project-billing controls and signals are hidden.
+- Explicit `?view=billing` and `?tab=invoicing&subtab=project-billing` URLs remain functional.
+- A persisted Billing view preference without an explicit billing URL falls back to Kanban.
+- Backend actions, APIs, services, events, jobs, invoice behavior, database logic, and authorization are always available regardless of flag state.
+
+### 12. `entra-sync-feature`
+Temporarily controls discovery of the Microsoft Entra sync integration before release.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Identity category tab on Settings › Integrations (Settings › Integrations › Identity)
+
+**Behavior:**
+- When disabled (default): The Identity tab is absent from the category strip. Dropping
+  the Entra entry empties the category, and empty categories are already filtered out, so
+  the tab disappears rather than rendering empty.
+- The Entra console at `/msp/settings/integrations/entra` remains reachable by direct URL,
+  bookmark or history. This flag is a discovery gate, not an access control.
+- Backend actions, API routes, workflows and authorization are unaffected. Access to Entra
+  is still EE edition + the `ENTRA_SYNC` tier (Pro and above) + `system_settings` RBAC,
+  which is what the retired `entra-integration-ui` flag left in place when it was removed.
+- Off while the flag is still resolving, and off if PostHog cannot be reached: a rollout
+  control that fails open is not a rollout control. Use
+  `NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=true` for local development.
+
+**Note:** A future non-Entra identity integration would keep the Identity tab visible on
+its own; the flag gates the Entra entry, not the category.
+
+### 13. `skim-support-feature`
+Controls discovery of the SCIM user-provisioning administration UI while the feature is being rolled out.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Security Settings → User provisioning tab (hidden when disabled)
+
+**Behavior:**
+- When disabled (default): The User provisioning tab is hidden, and a direct `?tab=user-provisioning` URL falls back to the Roles tab.
+- When enabled: The SCIM user-provisioning tab is available to eligible enterprise-edition tenants; existing tier and permission checks still apply.
+- SCIM API routes, backend actions, authentication, schemas, migrations, and provisioning behavior remain active regardless of flag state.
+
+### 14. `qbo-item-import`
+Gates the QuickBooks Online Products & Services import (tenant-scoped for piloting).
+
+**Affected Areas:**
+- **MSP Portal:**
+  - "Products & Services" step in the QuickBooks Reconciliation Wizard (Settings › Integrations › QuickBooks)
+- **Server actions:** `previewQboItemImport` / `executeQboItemImport`
+
+**Behavior:**
+- When disabled: the wizard step is absent (the wizard renders its original three steps),
+  and the server actions throw a typed "not enabled" error rather than silently succeeding.
+- Ledger mappings written by a past import are never retroactively hidden — imported
+  mappings remain valid and the export adapter keeps using them.
+- Also gated by EE edition and billing/service RBAC (`billing_settings:read` for preview;
+  `billing_settings:update` + `service:create` for execute).
 
 ## Implementation Details
 

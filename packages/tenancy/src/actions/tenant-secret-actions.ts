@@ -15,6 +15,61 @@ import {
   createTenantSecretProvider,
   SECRET_PERMISSIONS
 } from '@alga-psa/workflows/secrets';
+import { z } from 'zod';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type TenantSecretActionError = ActionMessageError | ActionPermissionError;
+
+function tenantSecretActionErrorFrom(error: unknown): TenantSecretActionError | null {
+  if (error instanceof z.ZodError) {
+    const first = error.errors[0];
+    const field = first?.path.join('.');
+    return actionError(first ? `${field ? `${field}: ` : ''}${first.message}` : 'Invalid secret input.');
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.startsWith('Permission denied') || message === 'user is not logged in') {
+      return permissionError(message);
+    }
+    if (message === 'Tenant not found') {
+      return actionError('Tenant context is missing. Please refresh and try again.');
+    }
+    if (/^Secret with name ".+" already exists$/.test(message)) {
+      return actionError(message);
+    }
+    if (/^Secret with name ".+" not found$/.test(message)) {
+      return actionError('Secret not found. It may have already been deleted. Please refresh and try again.');
+    }
+    if (message === 'Invalid tenantId or secret name.' || message === 'Missing tenantId or secret name.') {
+      return actionError('Invalid tenant or secret name.');
+    }
+    if (message.includes('read-only') || message.includes('Cannot set tenant secrets') || message.includes('Cannot delete tenant secrets')) {
+      return actionError('Secret storage is read-only in this environment.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected secret records is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required secret field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected secret records no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A secret with this name already exists.');
+  }
+
+  return null;
+}
 
 /**
  * List all secrets for the current tenant.
@@ -41,29 +96,41 @@ export const listTenantSecrets = withAuth(async (user, { tenant }): Promise<Tena
  * Get metadata for a specific secret by name.
  * Returns metadata only - never includes actual secret value.
  */
-export const getSecretMetadata = withAuth(async (user, { tenant }, name: string): Promise<TenantSecretMetadata | null> => {
-  const { knex } = await createTenantKnex();
+export const getSecretMetadata = withAuth(async (user, { tenant }, name: string): Promise<TenantSecretMetadata | null | TenantSecretActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  if (!tenant) {
-    throw new Error('Tenant not found');
+    if (!tenant) {
+      return actionError('Tenant context is missing. Please refresh and try again.');
+    }
+
+    const provider = createTenantSecretProvider(knex, tenant);
+    return await provider.getMetadata(name);
+  } catch (error) {
+    const expected = tenantSecretActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  const provider = createTenantSecretProvider(knex, tenant);
-  return provider.getMetadata(name);
 });
 
 /**
  * Check if a secret exists.
  */
-export const secretExists = withAuth(async (user, { tenant }, name: string): Promise<boolean> => {
-  const { knex } = await createTenantKnex();
+export const secretExists = withAuth(async (user, { tenant }, name: string): Promise<boolean | TenantSecretActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  if (!tenant) {
-    throw new Error('Tenant not found');
+    if (!tenant) {
+      return actionError('Tenant context is missing. Please refresh and try again.');
+    }
+
+    const provider = createTenantSecretProvider(knex, tenant);
+    return await provider.exists(name);
+  } catch (error) {
+    const expected = tenantSecretActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  const provider = createTenantSecretProvider(knex, tenant);
-  return provider.exists(name);
 });
 
 /**
@@ -73,21 +140,27 @@ export const secretExists = withAuth(async (user, { tenant }, name: string): Pro
  * @param input - Secret creation input (name, value, description)
  * @returns The created secret's metadata (never includes the value)
  */
-export const createSecret = withAuth(async (user, { tenant }, input: CreateTenantSecretInput): Promise<TenantSecretMetadata> => {
-  const { knex } = await createTenantKnex();
+export const createSecret = withAuth(async (user, { tenant }, input: CreateTenantSecretInput): Promise<TenantSecretMetadata | TenantSecretActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  if (!tenant) {
-    throw new Error('Tenant not found');
+    if (!tenant) {
+      return actionError('Tenant context is missing. Please refresh and try again.');
+    }
+
+    // Check for secrets.manage permission
+    const canManage = await hasPermission(user, 'secrets', 'manage', knex);
+    if (!canManage) {
+      return permissionError('Permission denied: Cannot create secrets');
+    }
+
+    const provider = createTenantSecretProvider(knex, tenant);
+    return await provider.create(input, user.user_id);
+  } catch (error) {
+    const expected = tenantSecretActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  // Check for secrets.manage permission
-  const canManage = await hasPermission(user, 'secrets', 'manage', knex);
-  if (!canManage) {
-    throw new Error('Permission denied: Cannot create secrets');
-  }
-
-  const provider = createTenantSecretProvider(knex, tenant);
-  return provider.create(input, user.user_id);
 });
 
 /**
@@ -103,21 +176,27 @@ export const updateSecret = withAuth(async (
   { tenant },
   name: string,
   input: UpdateTenantSecretInput
-): Promise<TenantSecretMetadata> => {
-  const { knex } = await createTenantKnex();
+): Promise<TenantSecretMetadata | TenantSecretActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  if (!tenant) {
-    throw new Error('Tenant not found');
+    if (!tenant) {
+      return actionError('Tenant context is missing. Please refresh and try again.');
+    }
+
+    // Check for secrets.manage permission
+    const canManage = await hasPermission(user, 'secrets', 'manage', knex);
+    if (!canManage) {
+      return permissionError('Permission denied: Cannot update secrets');
+    }
+
+    const provider = createTenantSecretProvider(knex, tenant);
+    return await provider.update(name, input, user.user_id);
+  } catch (error) {
+    const expected = tenantSecretActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  // Check for secrets.manage permission
-  const canManage = await hasPermission(user, 'secrets', 'manage', knex);
-  if (!canManage) {
-    throw new Error('Permission denied: Cannot update secrets');
-  }
-
-  const provider = createTenantSecretProvider(knex, tenant);
-  return provider.update(name, input, user.user_id);
 });
 
 /**
@@ -126,21 +205,27 @@ export const updateSecret = withAuth(async (
  *
  * @param name - Name of the secret to delete
  */
-export const deleteSecret = withAuth(async (user, { tenant }, name: string): Promise<void> => {
-  const { knex } = await createTenantKnex();
+export const deleteSecret = withAuth(async (user, { tenant }, name: string): Promise<void | TenantSecretActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  if (!tenant) {
-    throw new Error('Tenant not found');
+    if (!tenant) {
+      return actionError('Tenant context is missing. Please refresh and try again.');
+    }
+
+    // Check for secrets.manage permission
+    const canManage = await hasPermission(user, 'secrets', 'manage', knex);
+    if (!canManage) {
+      return permissionError('Permission denied: Cannot delete secrets');
+    }
+
+    const provider = createTenantSecretProvider(knex, tenant);
+    await provider.delete(name, user.user_id);
+  } catch (error) {
+    const expected = tenantSecretActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  // Check for secrets.manage permission
-  const canManage = await hasPermission(user, 'secrets', 'manage', knex);
-  if (!canManage) {
-    throw new Error('Permission denied: Cannot delete secrets');
-  }
-
-  const provider = createTenantSecretProvider(knex, tenant);
-  await provider.delete(name, user.user_id);
 });
 
 /**
@@ -206,7 +291,10 @@ export const validateSecretName = withAuth(async (user, { tenant }, name: string
   if (errors.length === 0) {
     const { knex } = await createTenantKnex();
     if (!tenant) {
-      throw new Error('Tenant not found');
+      return {
+        valid: false,
+        errors: ['Tenant context is missing. Please refresh and try again.'],
+      };
     }
     const provider = createTenantSecretProvider(knex, tenant);
     const exists = await provider.exists(name);

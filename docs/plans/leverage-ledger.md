@@ -5,6 +5,34 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 
 ---
 
+## tenant-query-facade — friction
+
+- **What:** Tenant-scoped application queries still require each caller to
+  re-create the same root predicate shape, usually through local
+  `tenantScopedTable` wrappers over `createTenantScopedQuery`. The staged
+  migration has made many files safer, but the app layer is still responsible
+  for remembering which tables need tenant roots, which aliases qualify the
+  predicate, and where joined tables need tenant equality.
+- **Root cause (wrong layer):** `createTenantScopedQuery` brands a single query
+  root, but most application code immediately unwraps it to a raw Knex builder.
+  Tenant context and tenant SQL shape live next to each other in `@alga-psa/db`,
+  but callers still have to combine them by convention.
+- **Where:** Package-local wrappers and direct-root migrations across API
+  services, server actions, jobs, workflow helpers, notifications, documents,
+  billing, assets, projects, integrations, and EE services. The staged migration
+  tracker in `/tmp/act-migration.md` records the breadth of the current cleanup.
+- **Gate:** friction with high correctness cost. Frequency is saturated, the
+  shape is stable, and the leverage is app-wide. Continuing only file-by-file
+  cleanup preserves the wrong layer.
+- **Axis-2 (how to land):** **staged-migration.** Add a full tenant query
+  facade in `@alga-psa/db` with table metadata, tenant-aware joins, branded
+  scoped queries, and explicit unscoped escape hatches. Migrate callers
+  incrementally and add static guardrails after the facade is available.
+- **Status:** extracting. Design approved in
+  `docs/plans/2026-06-25-tenant-query-full-facade-design.md`.
+
+---
+
 ## datatable-client-paging — friction
 
 - **What:** Every client-side consumer of `@alga-psa/ui/components/DataTable` re-derives the

@@ -175,13 +175,19 @@ describe('Accounting mapping permissions', () => {
         alga_entity_id: 'svc-support',
         external_entity_id: 'SUP-NEW'
       })
-    ).rejects.toThrow('Forbidden');
+    ).resolves.toEqual({
+      permissionError: 'Permission denied: You do not have permission to manage accounting mappings.',
+    });
 
     await expect(
       updateExternalEntityMapping(mappingId, { external_entity_id: 'SUP-UPDATED' })
-    ).rejects.toThrow('Forbidden');
+    ).resolves.toEqual({
+      permissionError: 'Permission denied: You do not have permission to manage accounting mappings.',
+    });
 
-    await expect(deleteExternalEntityMapping(mappingId)).rejects.toThrow('Forbidden');
+    await expect(deleteExternalEntityMapping(mappingId)).resolves.toEqual({
+      permissionError: 'Permission denied: You do not have permission to manage accounting mappings.',
+    });
 
     const afterAttempts = await getExternalEntityMappings({
       integrationType: 'quickbooks_online',

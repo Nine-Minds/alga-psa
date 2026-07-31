@@ -17,6 +17,28 @@ export const dynamic = 'force-dynamic';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
+function platformFeatureFlagsRouteError(error: unknown): { status: number; error: string } {
+  if (!(error instanceof Error)) {
+    return { status: 500, error: 'Internal server error' };
+  }
+
+  if (error.message.includes('Access denied') || error.message.includes('Authentication')) {
+    return {
+      status: 403,
+      error: 'Permission denied: platform feature flags require master tenant access.',
+    };
+  }
+
+  if (error.message.includes('not configured')) {
+    return {
+      status: 500,
+      error: 'Platform feature flag service is not configured.',
+    };
+  }
+
+  return { status: 500, error: 'Internal server error' };
+}
+
 async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
   if (!MASTER_BILLING_TENANT_ID) {
     throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
@@ -82,16 +104,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     console.error('[platform-feature-flags] GET error:', error);
 
-    if (error instanceof Error) {
-      if (error.message.includes('Access denied') || error.message.includes('Authentication')) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 403 });
-      }
-      if (error.message.includes('not configured')) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-      }
-    }
-
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    const routeError = platformFeatureFlagsRouteError(error);
+    return NextResponse.json({ success: false, error: routeError.error }, { status: routeError.status });
   }
 }
 
@@ -127,13 +141,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     console.error('[platform-feature-flags] POST error:', error);
 
-    if (error instanceof Error) {
-      if (error.message.includes('Access denied') || error.message.includes('Authentication')) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 403 });
-      }
-    }
-
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    const routeError = platformFeatureFlagsRouteError(error);
+    return NextResponse.json({ success: false, error: routeError.error }, { status: routeError.status });
   }
 }
 

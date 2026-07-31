@@ -1,9 +1,62 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import type { IService, IServicePrice, ITicketMaterial } from '@alga-psa/types';
+import type { IService, IServicePrice, ITicketMaterial, IStockUnit } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import {
+  addMaterial,
+  deleteMaterial,
+  listMaterials,
+  MaterialValidationError,
+  queryAvailableStockUnits,
+  queryCatalogPickerItems,
+  queryServicePrices,
+} from '@alga-psa/inventory/lib';
+import { InsufficientStockError } from '@alga-psa/inventory/lib/consume';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type TicketMaterialActionError = ActionMessageError | ActionPermissionError;
+
+function ticketMaterialActionErrorFrom(error: unknown): TicketMaterialActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (
+      error instanceof MaterialValidationError ||
+      error instanceof InsufficientStockError ||
+      error.message === 'Cannot delete a billed material.'
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected material values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required material field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected ticket, client, product, or stock unit is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This material conflicts with an existing ticket material or stock assignment. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the material values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
 
 export interface CatalogPickerSearchOptions {
   search?: string;
@@ -19,7 +72,9 @@ export type CatalogPickerItem = Pick<
   'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku'
 > & {
   default_rate: number;
-};
+  cost: number | null;
+  cost_currency: string | null;
+} & import('@alga-psa/inventory/lib/integrationTypes').PickerStockFields;
 
 export const searchServiceCatalogForPicker = withAuth(async (
   _user,
@@ -27,56 +82,9 @@ export const searchServiceCatalogForPicker = withAuth(async (
   options: CatalogPickerSearchOptions = {}
 ): Promise<{ items: CatalogPickerItem[]; totalCount: number }> => {
   const { knex: db } = await createTenantKnex();
-  const page = options.page ?? 1;
-  const limit = options.limit ?? 10;
-  const offset = (page - 1) * limit;
-  const searchTerm = options.search?.trim() ? `%${options.search.trim()}%` : null;
-
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const base = trx('service_catalog as sc').where({ 'sc.tenant': tenant });
-
-    if (options.is_active !== undefined) {
-      base.andWhere('sc.is_active', options.is_active);
-    }
-
-    if (options.item_kinds?.length) {
-      base.andWhere((qb) => qb.whereIn('sc.item_kind', options.item_kinds!));
-    }
-
-    if (options.billing_methods?.length) {
-      base.andWhere((qb) => qb.whereIn('sc.billing_method', options.billing_methods!));
-    }
-
-    if (searchTerm) {
-      base.andWhere((qb) => {
-        qb.whereILike('sc.service_name', searchTerm)
-          .orWhereILike('sc.description', searchTerm)
-          .orWhereILike('sc.sku', searchTerm);
-      });
-    }
-
-    const countResult = await base.clone().count('sc.service_id as count').first();
-    const totalCount = parseInt(countResult?.count as string) || 0;
-
-    const rows = await base
-      .clone()
-      .select(
-        'sc.service_id',
-        'sc.service_name',
-        'sc.billing_method',
-        'sc.unit_of_measure',
-        'sc.item_kind',
-        'sc.sku',
-        trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
-      )
-      .orderBy('sc.service_name', 'asc')
-      .limit(limit)
-      .offset(offset);
-
-    return {
-      items: rows as CatalogPickerItem[],
-      totalCount,
-    };
+    const { items, totalCount } = await queryCatalogPickerItems(trx, tenant, options);
+    return { items: items as CatalogPickerItem[], totalCount };
   });
 });
 
@@ -86,39 +94,33 @@ export const getServicePrices = withAuth(async (
   serviceId: string
 ): Promise<IServicePrice[]> => {
   const { knex: db } = await createTenantKnex();
-
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('service_prices')
-      .where({ tenant, service_id: serviceId })
-      .select('*')
-      .orderBy('currency_code', 'asc');
-
-    return rows as IServicePrice[];
+    return queryServicePrices(trx, tenant, serviceId);
   });
 });
 
 export const listTicketMaterials = withAuth(async (
-  _user,
+  user,
   { tenant },
   ticketId: string
-): Promise<ITicketMaterial[]> => {
-  const { knex: db } = await createTenantKnex();
-
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('ticket_materials as tm')
-      .leftJoin('service_catalog as sc', function () {
-        this.on('tm.service_id', '=', 'sc.service_id').andOn('tm.tenant', '=', 'sc.tenant');
-      })
-      .where({ 'tm.tenant': tenant, 'tm.ticket_id': ticketId })
-      .select('tm.*', 'sc.service_name as service_name', 'sc.sku as sku')
-      .orderBy('tm.created_at', 'desc');
-
-    return rows as ITicketMaterial[];
-  });
+): Promise<ITicketMaterial[] | TicketMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'ticket', 'read')) {
+      throw new Error('Permission denied: ticket read required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return (await listMaterials(db, tenant, 'ticket', ticketId)) as ITicketMaterial[];
+  } catch (error) {
+    const expected = ticketMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 export const addTicketMaterial = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: {
     ticket_id: string;
@@ -128,52 +130,58 @@ export const addTicketMaterial = withAuth(async (
     rate: number;
     currency_code: string;
     description?: string | null;
+    unit_id?: string | null; // serialized: the picked stock unit to deliver
   }
-): Promise<ITicketMaterial> => {
+): Promise<ITicketMaterial | TicketMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'ticket', 'update')) {
+      throw new Error('Permission denied: ticket update required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return (await addMaterial(
+      db,
+      tenant,
+      { ...input, parent_type: 'ticket', parent_id: input.ticket_id },
+      (user as any)?.user_id ?? null,
+    )) as ITicketMaterial;
+  } catch (error) {
+    const expected = ticketMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
+/** In-stock serialized units available to pick when adding a serialized product as a material. */
+export const listAvailableStockUnitsForMaterial = withAuth(async (
+  user,
+  { tenant },
+  serviceId: string
+): Promise<IStockUnit[]> => {
+  if (!(await hasPermission(user, 'inventory', 'read'))) return [];
   const { knex: db } = await createTenantKnex();
-
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const [row] = await trx('ticket_materials')
-      .insert({
-        tenant,
-        ticket_id: input.ticket_id,
-        client_id: input.client_id,
-        service_id: input.service_id,
-        quantity: Math.max(1, Math.floor(input.quantity || 1)),
-        rate: Math.max(0, Math.round(input.rate || 0)),
-        currency_code: input.currency_code || 'USD',
-        description: input.description ?? null,
-        is_billed: false,
-      })
-      .returning('*');
-
-    return row as ITicketMaterial;
+    return queryAvailableStockUnits(trx, tenant, serviceId);
   });
 });
 
 export const deleteTicketMaterial = withAuth(async (
-  _user,
+  user,
   { tenant },
   ticketMaterialId: string
-): Promise<void> => {
-  const { knex: db } = await createTenantKnex();
-
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const row = await trx('ticket_materials')
-      .where({ tenant, ticket_material_id: ticketMaterialId })
-      .select('is_billed')
-      .first();
-
-    if (!row) {
-      return;
+): Promise<void | TicketMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'ticket', 'update')) {
+      throw new Error('Permission denied: ticket update required');
     }
-
-    if (row.is_billed) {
-      throw new Error('Cannot delete a billed material.');
+    const { knex: db } = await createTenantKnex();
+    await deleteMaterial(db, tenant, 'ticket', ticketMaterialId, (user as any)?.user_id ?? null);
+  } catch (error) {
+    const expected = ticketMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    await trx('ticket_materials')
-      .where({ tenant, ticket_material_id: ticketMaterialId })
-      .delete();
-  });
+    throw error;
+  }
 });

@@ -35,6 +35,17 @@ describe('Teams integration meeting settings contracts', () => {
     expect(uiSource).toContain('integrations.teams.settings.meetings.exposeRecordingsInPortal.label');
   });
 
+  it('persists the send-meeting-invites toggle with default-on semantics from Teams settings', () => {
+    const actionsSource = readRepoFile('ee/packages/microsoft-teams/src/lib/actions/integrations/teamsActions.ts');
+    const uiSource = readRepoFile('packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.tsx');
+
+    expect(actionsSource).toContain('sendMeetingInvites: row.send_meeting_invites !== false');
+    expect(actionsSource).toContain('send_meeting_invites: sendMeetingInvites');
+    expect(uiSource).toContain('id="send-meeting-invites-switch"');
+    expect(uiSource).toContain('integrations.teams.settings.meetings.sendMeetingInvites.label');
+    expect(uiSource).toContain('integrations.teams.settings.meetings.sendMeetingInvites.description');
+  });
+
   it('T072: keeps organizer controls out of Availability Settings after the UI move', () => {
     const availabilitySource = readRepoFile('packages/scheduling/src/components/schedule/AvailabilitySettings.tsx');
 

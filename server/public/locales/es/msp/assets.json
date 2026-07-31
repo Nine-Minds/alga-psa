@@ -122,7 +122,9 @@
       "agent": "Agente",
       "client": "Cliente",
       "location": "Ubicación",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "patching": "Parches",
+      "coverage": "Cobertura"
     },
     "metrics": {
       "totalAssets": {
@@ -420,7 +422,7 @@
       "maintenance": "Mantenimiento",
       "relatedAssets": "Activos relacionados",
       "documentsPasswords": "Documentos y contraseñas",
-      "auditLog": "Registro de auditoría"
+      "timeline": "Cronología"
     }
   },
   "assetDetailView": {
@@ -1000,11 +1002,12 @@
     }
   },
   "assetNotesPanel": {
-    "title": "Notas e información rápida",
+    "title": "Notas",
     "description": "Panel de notas de texto enriquecido para notas específicas de activos y contexto operativo rápido",
     "errors": {
       "loadTitle": "No se pudieron cargar las notas",
-      "unknown": "Error desconocido"
+      "unknown": "Error desconocido",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Última actualización: {{value}}"
   },
@@ -1112,17 +1115,6 @@
   "utilizationBar": {
     "title": "Barra de utilización",
     "description": "Componente de barra de progreso compartido para utilización y métricas de activos basadas en porcentajes"
-  },
-  "auditLogTab": {
-    "title": "Registro de auditoría",
-    "description": "Pestaña de historial de auditoría de activos para eventos de cronograma y cambios de registros",
-    "changedBy": "Cambiado por {{name}}",
-    "userFallback": "usuario {{id}}",
-    "empty": "No hay historial de auditoría disponible.",
-    "changeTypes": {
-      "created": "Creado",
-      "updated": "Actualizado"
-    }
   },
   "createMaintenanceScheduleDialog": {
     "title": "Crear programa de mantenimiento",
@@ -1368,6 +1360,135 @@
     "values": {
       "yes": "Sí",
       "no": "No"
+    }
+  },
+  "assetBento": {
+    "health": "Estado de salud",
+    "security": "Seguridad",
+    "openTickets": "Tickets abiertos",
+    "warranty": "Garantía",
+    "identity": "Identidad",
+    "tag": "Etiqueta",
+    "serial": "Número de serie",
+    "status": "Estado",
+    "location": "Ubicación",
+    "purchased": "Comprado",
+    "warrantyEnds": "La garantía finaliza",
+    "hardware": "Hardware",
+    "os": "Sistema operativo",
+    "cpu": "CPU",
+    "cores": "Núcleos",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "No hay detalles de hardware registrados.",
+    "notes": "Notas",
+    "liveVitals": "Métricas en vivo",
+    "checkedIn": "Último registro",
+    "neverCheckedIn": "Nunca se ha registrado",
+    "memory": "Memoria",
+    "disk": "Disco",
+    "uptime": "Tiempo activo",
+    "signedIn": "Sesión iniciada",
+    "securityTitle": "Seguridad",
+    "antivirus": "Antivirus",
+    "pendingPatches": "Parches pendientes",
+    "failedPatches": "Parches fallidos",
+    "lastScan": "Último análisis",
+    "agentVersion": "Agente",
+    "noRelated": "No está vinculado a ningún otro activo.",
+    "manage": "Gestionar",
+    "reportedFacts": "Datos reportados",
+    "more": "Todo lo demás",
+    "views": "Vistas del activo",
+    "editAsset": "Editar activo",
+    "viewAll": "Ver todo",
+    "open": "Abrir",
+    "close": "Cerrar",
+    "packagesReported": "{{count}} paquetes reportados",
+    "noSoftware": "No se ha reportado inventario de software.",
+    "noService": "Ningún ticket hace referencia a este activo.",
+    "activeSchedules": "Programaciones activas",
+    "compliance": "Cumplimiento",
+    "lastDone": "Última realizada",
+    "noMaintenance": "Nada programado.",
+    "docsHint": "Adjuntos y credenciales de este activo."
+  },
+  "assetTimeline": {
+    "title": "Cronología",
+    "empty": "Todavía no hay nada registrado para este activo.",
+    "emptyLane": "No hay eventos de {{lane}} registrados.",
+    "moreEvents": "Mostrando {{shown}} de {{total}} eventos.",
+    "lanes": {
+      "all": "Todo",
+      "service": "Servicio",
+      "changes": "Cambios",
+      "maintenance": "Mantenimiento",
+      "system": "Sistema"
+    },
+    "events": {
+      "maintenancePerformed": "Mantenimiento realizado",
+      "lastReboot": "Último reinicio",
+      "patchScan": "Análisis de parches",
+      "patchScanDetail": "{{pending}} pendientes, {{failed}} fallidos",
+      "purchased": "Comprado"
+    },
+    "changeTypes": {
+      "created": "Creado",
+      "updated": "Actualizado",
+      "status_change": "Estado modificado",
+      "location_change": "Ubicación modificada",
+      "rmm_linked": "RMM vinculado",
+      "hardware_upgrade": "Hardware mejorado",
+      "warranty_updated": "Garantía actualizada"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "quedan {{count}} d",
+      "expiresToday": "vence hoy",
+      "expiredAgo": "venció hace {{count}} d"
+    },
+    "duration": {
+      "dayHour": "{{days}} d {{hours}} h",
+      "hourMinute": "{{hours}} h {{minutes}} min",
+      "minute": "{{minutes}} min"
+    },
+    "age": {
+      "justNow": "ahora mismo",
+      "minutesAgo": "hace {{count}} min",
+      "hoursAgo": "hace {{count}} h",
+      "daysAgo": "hace {{count}} d"
+    },
+    "patching": {
+      "failed": "{{count}} fallidos",
+      "pending": "{{count}} pendientes",
+      "upToDate": "al día"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "sin gestionar",
+      "noAgent": "sin agente RMM",
+      "seen": "visto {{age}}",
+      "neverSeen": "nunca visto"
+    },
+    "agentStatus": {
+      "online": "en línea",
+      "offline": "desconectado",
+      "overdue": "atrasado",
+      "unknown": "desconocido"
+    },
+    "patching": {
+      "scanned": "analizado {{age}}",
+      "neverScanned": "nunca analizado"
+    },
+    "coverage": {
+      "noWarrantyDate": "sin fecha de garantía"
+    },
+    "status": {
+      "active": "activo",
+      "inactive": "inactivo",
+      "maintenance": "mantenimiento"
     }
   }
 }

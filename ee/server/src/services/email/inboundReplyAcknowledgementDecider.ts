@@ -1,6 +1,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { ADD_ONS, tenantHasAddOn, type AddOnKey } from '@alga-psa/types';
 
+import { toAiCreditsError } from '../../lib/aiGateway/errors';
 import { resolveChatProvider } from '../chatProviderResolver';
 
 type InboundReplyAckDecision = 'ACK' | 'NOT_ACK';
@@ -140,7 +141,7 @@ const eeDecider: InboundReplyAcknowledgementDecider = {
     }
 
     try {
-      const provider = await resolveChatProvider();
+      const provider = await resolveChatProvider(input.tenantId, 'email-reply-ack');
       const completion = await provider.client.chat.completions.create({
         model: provider.model,
         messages: [
@@ -179,6 +180,11 @@ const eeDecider: InboundReplyAcknowledgementDecider = {
         error: null,
       };
     } catch (error) {
+      const creditsError = toAiCreditsError(error);
+      if (creditsError) {
+        const { notifyAiCreditsUnavailable } = await import('../../lib/aiGateway/notifications');
+        await notifyAiCreditsUnavailable(input.tenantId, 'email-reply-ack', creditsError);
+      }
       return {
         decision: 'NOT_ACK',
         source: 'ee_ai',

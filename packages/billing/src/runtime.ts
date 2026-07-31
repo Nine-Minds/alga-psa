@@ -6,6 +6,7 @@ import type { CreateExportBatchInput } from './repositories/accountingExportRepo
 import type { InvoiceSelectionFilters } from './services/accountingExportInvoiceSelector';
 import { AccountingExportInvoiceSelector } from './services/accountingExportInvoiceSelector';
 import { AccountingExportService } from './services/accountingExportService';
+export { enqueueVendorBillAutoExport } from './services/accountingSync/syncProducers';
 
 /**
  * Runtime-safe billing exports for worker/shared execution contexts.

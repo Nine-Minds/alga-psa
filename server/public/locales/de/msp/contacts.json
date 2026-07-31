@@ -266,6 +266,47 @@
       "message": "{{count}} Kontakte existieren bereits. Möchten Sie sie mit den neuen Daten aktualisieren?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "E-Mail-Adressen",
+    "description": "Fügen Sie eine oder mehrere E-Mail-Adressen hinzu und wählen Sie genau eine Standardadresse.",
+    "actions": {
+      "addEmail": "E-Mail hinzufügen"
+    },
+    "emailTypes": {
+      "work": "Geschäftlich",
+      "personal": "Privat",
+      "billing": "Abrechnung",
+      "other": "Sonstiges",
+      "custom": "Benutzerdefiniert"
+    },
+    "primary": {
+      "title": "Primäre E-Mail",
+      "description": "Diese bleibt die Standardadresse im Kontaktdatensatz"
+    },
+    "row": {
+      "title": "Zusätzliche E-Mail {{number}}",
+      "secondaryDescription": "Als nicht standardmäßige E-Mail-Adresse gespeichert",
+      "defaultLabel": "Standard",
+      "noEmailYet": "Noch keine E-Mail eingegeben",
+      "editLabel": "Bearbeiten",
+      "edit": "Zusätzliche E-Mail {{number}} bearbeiten",
+      "doneLabel": "Fertig",
+      "done": "Bearbeitung der zusätzlichen E-Mail {{number}} abschließen",
+      "moveUp": "Zusätzliche E-Mail {{number}} nach oben verschieben",
+      "moveDown": "Zusätzliche E-Mail {{number}} nach unten verschieben",
+      "remove": "Zusätzliche E-Mail {{number}} entfernen"
+    },
+    "fields": {
+      "emailAddress": "E-Mail-Adresse",
+      "emailPlaceholder": "name@beispiel.de",
+      "emailLabel": "E-Mail-Typ",
+      "customEmailLabel": "Benutzerdefinierter E-Mail-Typ",
+      "customTypePlaceholder": "Benutzerdefinierten E-Mail-Typ auswählen oder eingeben",
+      "customTypeSearchPlaceholder": "Benutzerdefinierten E-Mail-Typ suchen oder eingeben...",
+      "customTypeEmpty": "Keine passenden benutzerdefinierten E-Mail-Typen.",
+      "customTypeUseValue": "\"{{value}}\" verwenden"
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Telefonnummern",
     "description": "Telefonnummern-Editor mit Typverwaltung, Validierung, Standardwerten und Erweiterungsunterstützung",
@@ -324,6 +365,9 @@
     "noAccess": {
       "title": "Kein Portalzugriff",
       "description": "Dieser Kontakt hat noch keinen Zugriff auf das Kundenportal"
+    },
+    "noClient": {
+      "description": "Weisen Sie diesem Kontakt einen Kunden zu, um den Portalzugriff zu verwalten."
     },
     "portalAdmin": {
       "label": "Portaladministrator",
@@ -406,7 +450,8 @@
         "noLocationEmail": "Der Standort des Standard-Clients muss eine Kontakt-E-Mail-Adresse konfiguriert haben.",
         "noBaseUrl": "Die Basis-URL ist nicht für Portaleinladungen konfiguriert.",
         "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet."
-      }
+      },
+      "userNotFound": "Client user not found"
     }
   },
   "quickAddContact": {
@@ -571,13 +616,15 @@
       "name": "Name",
       "email": "E-Mail",
       "phoneNumber": "Telefonnummer",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "role": "Rolle"
     },
     "filter": {
       "show": "Anzeigen:",
       "active": "Aktive Kontakte",
       "inactive": "Inaktive Kontakte",
-      "all": "Alle Kontakte"
+      "all": "Alle Kontakte",
+      "searchPlaceholder": "Kontakte suchen..."
     },
     "actions": {
       "openMenu": "Menü öffnen",
@@ -603,7 +650,7 @@
     "description": "Upload-Bereich für Profilbilder von Kontakten"
   },
   "contactNotesPanel": {
-    "title": "Notizen & Kurzinformationen",
+    "title": "Notizen",
     "description": "Bereich für Rich-Text-Notizen mit Anzeige der alten Notiz sowie Speichern-/Erneut-versuchen-Aktionen",
     "legacy": {
       "initialNote": "Erste Notiz"
@@ -649,6 +696,13 @@
         "openTicketFailed": "Ticket konnte nicht geöffnet werden",
         "userNotAuthenticated": "Benutzer nicht authentifiziert"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Kontakt aktualisiert",
+      "saveFailed": "Kontakt konnte nicht aktualisiert werden",
+      "saveFailedDescription": "The contact could not be updated. Please try again."
     }
   }
 }

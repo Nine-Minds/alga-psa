@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote, truncateForIndex } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -48,19 +49,13 @@ function toSearchDoc(tenant: string, row: InteractionSearchRow): SearchDoc {
 }
 
 function baseInteractionQuery(knex: Knex, tenant: string) {
-  return knex<InteractionSearchRow>('interactions as i')
-    .leftJoin('interaction_types as it', function() {
-      this.on('it.tenant', 'i.tenant').andOn('it.type_id', 'i.type_id');
-    })
-    .leftJoin('clients as c', function() {
-      this.on('c.tenant', 'i.tenant').andOn('c.client_id', 'i.client_id');
-    })
-    .leftJoin('contacts as cn', function() {
-      this.on('cn.tenant', 'i.tenant').andOn('cn.contact_name_id', 'i.contact_name_id');
-    })
-    .leftJoin('tickets as t', function() {
-      this.on('t.tenant', 'i.tenant').andOn('t.ticket_id', 'i.ticket_id');
-    })
+  const query = createTenantScopedIndexerQuery<InteractionSearchRow>(knex, 'interactions as i', 'i', tenant);
+  tenantJoinIndexerTable(knex, tenant, query, 'interaction_types as it', 'it.type_id', 'i.type_id', { type: 'left' });
+  tenantJoinIndexerTable(knex, tenant, query, 'clients as c', 'c.client_id', 'i.client_id', { type: 'left' });
+  tenantJoinIndexerTable(knex, tenant, query, 'contacts as cn', 'cn.contact_name_id', 'i.contact_name_id', { type: 'left' });
+  tenantJoinIndexerTable(knex, tenant, query, 'tickets as t', 't.ticket_id', 'i.ticket_id', { type: 'left' });
+
+  return query
     .select(
       'i.interaction_id',
       'i.title',
@@ -71,8 +66,7 @@ function baseInteractionQuery(knex: Knex, tenant: string) {
       'cn.full_name as contact_name',
       't.ticket_number',
       't.title as ticket_title',
-    )
-    .where('i.tenant', tenant);
+    );
 }
 
 export const interactionIndexer: EntityIndexer = {

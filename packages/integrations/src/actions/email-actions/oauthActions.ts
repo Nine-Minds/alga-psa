@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '../../utils/email/oauthHelpers';
 import { resolveMicrosoftConsumerProfileConfig } from '../../lib/microsoftConsumerProfileResolution';
 
@@ -30,8 +30,8 @@ export const initiateEmailOAuth = withAuth(async (
     // If providerId is specified, ensure it belongs to the caller's tenant
     if (params.providerId) {
       const { knex } = await createTenantKnex();
-      const exists = await knex('email_providers')
-        .where({ id: params.providerId, tenant })
+      const exists = await tenantDb(knex, tenant).table('email_providers')
+        .where({ id: params.providerId })
         .first();
       if (!exists) {
         return { success: false, error: 'Invalid providerId for tenant' };
@@ -93,6 +93,11 @@ export const initiateEmailOAuth = withAuth(async (
 
     return { success: true, authUrl, state: Buffer.from(JSON.stringify(state)).toString('base64') };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to initiate OAuth' };
+    console.error('[EmailOAuthActions] Failed to initiate OAuth', {
+      provider: params.provider,
+      providerId: params.providerId,
+      error: err,
+    });
+    return { success: false, error: 'Failed to initiate OAuth' };
   }
 });

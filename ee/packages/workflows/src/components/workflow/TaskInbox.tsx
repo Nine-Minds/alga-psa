@@ -2,7 +2,10 @@ import { TaskList } from './TaskList';
 import { TaskDetailsComponent } from './TaskDetails';
 import { TaskHistory } from './TaskHistory';
 import { EmbeddedTaskInbox } from './EmbeddedTaskInbox';
-import { WorkflowTaskStatus } from '@alga-psa/workflows/persistence';
+// Import the enum from its client-safe module, not the '@alga-psa/workflows/persistence'
+// barrel: that barrel re-exports server-only persistence models (which import
+// @alga-psa/db -> knex/secrets) and would pull the server chain into this client bundle.
+import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskStatus';
 import { useState } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';

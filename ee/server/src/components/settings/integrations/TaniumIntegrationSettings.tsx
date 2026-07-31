@@ -97,7 +97,8 @@ export default function TaniumIntegrationSettings() {
         setMappings((mappingResult.mappings || []) as MappingRow[]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('integrations.rmm.tanium.errors.loadState'));
+      console.error('Failed to load Tanium integration state:', err);
+      setError(t('integrations.rmm.tanium.errors.loadState'));
     } finally {
       setIsLoading(false);
     }

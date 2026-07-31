@@ -41,7 +41,12 @@ import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IStatus } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface TicketDetailsProps {
   ticketId: string;
@@ -54,6 +59,11 @@ interface TicketDetailsProps {
   initialStatusOptions: IStatus[];
   productCode?: ProductCode;
 }
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function TicketDetails({
   ticketId,
@@ -91,6 +101,12 @@ export function TicketDetails({
     error: string | null;
     fallbackName: string;
   } | null>(null);
+  const handleReturnedActionError = useCallback((result: unknown) => {
+    const message = getErrorMessage(result);
+    setError(message);
+    handleError(result, message);
+    return message;
+  }, []);
   const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{ 
     type: "paragraph",
     props: {
@@ -122,11 +138,15 @@ export function TicketDetails({
     if (!ticketId) return;
     try {
       const docs = await getClientTicketDocuments(ticketId);
+      if (isReturnedActionError(docs)) {
+        handleReturnedActionError(docs);
+        return;
+      }
       setDocuments(docs || []);
     } catch (error) {
       console.error('Failed to refresh ticket documents after clipboard upload:', error);
     }
-  }, [ticketId]);
+  }, [ticketId, handleReturnedActionError]);
   // No component-level pending state needed; we'll keep optimistic data within the save handler scope
 
   // State for appointment requests
@@ -268,12 +288,17 @@ export function TicketDetails({
     }
 
     try {
-      await addClientTicketComment(
+      const commentResult = await addClientTicketComment(
         ticketId,
         JSON.stringify(newCommentContent),
         isInternal,
         isResolution
       );
+      if (isReturnedActionError(commentResult)) {
+        handleReturnedActionError(commentResult);
+        return false;
+      }
+
       // Reset editor
       setEditorKey(prev => prev + 1);
       setNewCommentContent([{
@@ -291,6 +316,10 @@ export function TicketDetails({
       }]);
       // Refresh ticket details to get new comment
       const details = await getClientTicketDetails(ticketId);
+      if (isReturnedActionError(details)) {
+        handleReturnedActionError(details);
+        return false;
+      }
       setTicket(details);
       return true;
     } catch (error) {
@@ -335,7 +364,11 @@ export function TicketDetails({
         hasNote: !!updates.note,
         noteLen: updates.note ? updates.note.length : 0,
       });
-      await updateClientTicketComment(currentComment.comment_id, updates);
+      const updateResult = await updateClientTicketComment(currentComment.comment_id, updates);
+      if (isReturnedActionError(updateResult)) {
+        handleReturnedActionError(updateResult);
+        return;
+      }
       if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Save succeeded');
 
       // Prepare an optimistic version of the updated comment for immediate UI update and later merge
@@ -379,6 +412,10 @@ export function TicketDetails({
       // Refresh ticket details to get the authoritative updated comment
       if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetching ticket details');
       const details = await getClientTicketDetails(ticketId);
+      if (isReturnedActionError(details)) {
+        handleReturnedActionError(details);
+        return;
+      }
       const detailsWithExtras = details as ITicketWithDetails;
       const fetchedConv = (detailsWithExtras.conversations || []).find(c => c.comment_id === optimisticCommentId);
       if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetch result for edited comment', {
@@ -445,9 +482,17 @@ export function TicketDetails({
         return;
       }
       
-      await deleteClientTicketComment(comment.comment_id);
+      const deleteResult = await deleteClientTicketComment(comment.comment_id);
+      if (isReturnedActionError(deleteResult)) {
+        handleReturnedActionError(deleteResult);
+        return;
+      }
       // Refresh ticket details to remove deleted comment
       const details = await getClientTicketDetails(ticketId);
+      if (isReturnedActionError(details)) {
+        handleReturnedActionError(details);
+        return;
+      }
       setTicket(details);
       toast.success(t('messages.commentDeleteSuccess', 'Comment deleted successfully'));
     } catch (error) {
@@ -471,7 +516,11 @@ export function TicketDetails({
     const { ticketId, newStatusId, newStatusName } = ticketToUpdateStatus;
 
     try {
-      await updateTicketStatus(ticketId, newStatusId);
+      const result = await updateTicketStatus(ticketId, newStatusId);
+      if (isReturnedActionError(result)) {
+        handleReturnedActionError(result);
+        return;
+      }
       toast.success(t('messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusName }));
 
       setTicket(prevTicket => ({ ...prevTicket, status_id: newStatusId, status_name: newStatusName }));
@@ -667,6 +716,15 @@ export function TicketDetails({
                 setLinkedAssetPreview({ asset: null, loading: true, error: null, fallbackName });
                 try {
                   const asset = await getClientAssetById(assetId);
+                  if (isReturnedActionError(asset)) {
+                    setLinkedAssetPreview({
+                      asset: null,
+                      loading: false,
+                      error: getErrorMessage(asset),
+                      fallbackName,
+                    });
+                    return;
+                  }
                   setLinkedAssetPreview({
                     asset,
                     loading: false,
@@ -818,6 +876,10 @@ export function TicketDetails({
                   onDocumentCreated={async () => {
                     // Refresh documents after creation
                     const docs = await getClientTicketDocuments(ticketId);
+                    if (isReturnedActionError(docs)) {
+                      handleReturnedActionError(docs);
+                      return;
+                    }
                     setDocuments(docs);
                   }}
                   getFoldersFn={getClientFolders}

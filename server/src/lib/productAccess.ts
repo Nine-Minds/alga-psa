@@ -1,4 +1,5 @@
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { NextResponse } from 'next/server';
 import {
@@ -68,8 +69,7 @@ function resolveProductOrThrow(rawProductCode: string | null | undefined, capabi
 
 export async function getTenantProduct(tenantId: string): Promise<ProductCode> {
   const knex = await getAdminConnection();
-  const row = await knex('tenants')
-    .where({ tenant: tenantId })
+  const row = await tenantDb(knex, tenantId).table('tenants')
     .select('product_code')
     .first();
 

@@ -146,6 +146,9 @@ async function main() {
     // SaaS provisioning path does, so without this the OnboardingProvider redirect
     // (which requires onboarding_completed=false AND onboarding_skipped=false)
     // never fires. Idempotent + best-effort so it never blocks tenant creation.
+    // Plain knex (not the @alga-psa/db tenantDb facade): that package resolves to
+    // dist/ output absent from the --omit=dev production image, and importing it
+    // crashes this script at load (ERR_MODULE_NOT_FOUND) during appliance install.
     try {
       const now = new Date();
       await db('tenant_settings')

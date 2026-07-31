@@ -1,5 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import axios from 'axios';
 import type {
@@ -8,6 +9,7 @@ import type {
   UnifiedInboundEmailQueueJob,
 } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import {
   processInboundEmailInApp,
   type ProcessInboundEmailInAppDiagnostics,
@@ -246,8 +248,8 @@ async function refreshImapAccessToken(params: {
     Date.now() + (Number.isFinite(expiresInSeconds) ? expiresInSeconds : 3600) * 1000
   ).toISOString();
 
-  await db('imap_email_provider_config')
-    .where({ email_provider_id: provider.id, tenant: provider.tenant })
+  await tenantDb(db, provider.tenant).table('imap_email_provider_config')
+    .where({ email_provider_id: provider.id })
     .update({
       access_token: accessToken,
       token_expires_at: expiresAt,
@@ -268,13 +270,14 @@ async function refreshImapAccessToken(params: {
 
 async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<EmailProviderConfig> {
   const db = await getAdminConnection();
-  const row = await db('microsoft_email_provider_config as mc')
-    .join('email_providers as ep', function () {
-      this.on('mc.email_provider_id', '=', 'ep.id').andOn('mc.tenant', '=', 'ep.tenant');
-    })
+  const tenantScopedDb = tenantDb(db, job.tenantId);
+  const query = tenantScopedDb.table('microsoft_email_provider_config as mc');
+  tenantScopedDb.tenantJoin(query, 'email_providers as ep', 'mc.email_provider_id', 'ep.id');
+  const row = (await query
     .where('ep.id', job.providerId)
-    .andWhere('ep.tenant', job.tenantId)
     .andWhere('ep.provider_type', 'microsoft')
+    .andWhere('ep.is_active', true)
+    .whereNull('ep.inbound_paused_at')
     .first(
       'ep.*',
       db.raw('mc.client_id as mc_client_id'),
@@ -286,7 +289,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       db.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
       db.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
       db.raw('mc.folder_filters as mc_folder_filters')
-    );
+    )) as any;
 
   if (!row) {
     throw new SourceMessageUnavailableError('microsoft_provider_not_found');
@@ -306,7 +309,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
         }
       })();
 
-  return {
+  return buildMicrosoftEmailProviderConfig({
     id: row.id,
     tenant: row.tenant,
     name: row.provider_name || row.mailbox,
@@ -328,7 +331,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       refresh_token: (row as any).mc_refresh_token,
       token_expires_at: (row as any).mc_token_expires_at,
     },
-  } as any;
+  } as any);
 }
 
 async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<{
@@ -337,15 +340,18 @@ async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Prom
   config: EmailProviderConfig;
 }> {
   const db = await getAdminConnection();
-  const provider = await db('email_providers')
-    .where({ id: job.providerId, tenant: job.tenantId, provider_type: 'google' })
+  const tenantScopedDb = tenantDb(db, job.tenantId);
+  const provider = await tenantScopedDb.table('email_providers')
+    .where({ id: job.providerId, provider_type: 'google' })
+    .andWhere('is_active', true)
+    .whereNull('inbound_paused_at')
     .first();
   if (!provider) {
     throw new SourceMessageUnavailableError('google_provider_not_found');
   }
 
-  const googleConfig = await db('google_email_provider_config')
-    .where({ email_provider_id: provider.id, tenant: provider.tenant })
+  const googleConfig = await tenantScopedDb.table('google_email_provider_config')
+    .where({ email_provider_id: provider.id })
     .first();
   if (!googleConfig) {
     throw new SourceMessageUnavailableError('google_provider_config_not_found');
@@ -524,13 +530,14 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
   }
 
   const db = await getAdminConnection();
-  const provider = await db('imap_email_provider_config as ic')
-    .join('email_providers as ep', function () {
-      this.on('ic.email_provider_id', '=', 'ep.id').andOn('ic.tenant', '=', 'ep.tenant');
-    })
+  const tenantScopedDb = tenantDb(db, job.tenantId);
+  const query = tenantScopedDb.table('imap_email_provider_config as ic');
+  tenantScopedDb.tenantJoin(query, 'email_providers as ep', 'ic.email_provider_id', 'ep.id');
+  const provider = (await query
     .where('ep.id', job.providerId)
-    .andWhere('ep.tenant', job.tenantId)
     .andWhere('ep.provider_type', 'imap')
+    .andWhere('ep.is_active', true)
+    .whereNull('ep.inbound_paused_at')
     .first(
       'ep.id',
       'ep.tenant',
@@ -548,7 +555,7 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
       'ic.oauth_client_secret',
       'ic.refresh_token',
       'ic.token_expires_at'
-    );
+    )) as any;
   if (!provider) {
     throw new SourceMessageUnavailableError('imap_provider_not_found');
   }
@@ -755,11 +762,21 @@ async function persistGoogleHistoryCursor(job: UnifiedInboundEmailQueueJob): Pro
   if (!historyId) return;
 
   const db = await getAdminConnection();
-  await db('google_email_provider_config')
-    .where({ tenant: job.tenantId, email_provider_id: job.providerId })
+  await tenantDb(db, job.tenantId).table('google_email_provider_config')
+    .where({ email_provider_id: job.providerId })
     .update({
       history_id: historyId,
       updated_at: db.fn.now(),
+    });
+}
+
+async function recordSuccessfulProviderSync(job: UnifiedInboundEmailQueueJob): Promise<void> {
+  const db = await getAdminConnection();
+  await tenantDb(db, job.tenantId).table('email_providers')
+    .where({ id: job.providerId })
+    .update({
+      last_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     });
 }
 
@@ -771,7 +788,7 @@ async function insertProcessingRecord(params: {
 }): Promise<boolean> {
   const db = await getAdminConnection();
   try {
-    await db('email_processed_messages').insert({
+    await tenantDb(db, params.job.tenantId).table('email_processed_messages').insert({
       message_id: params.externalIdentity,
       provider_id: params.job.providerId,
       tenant: params.job.tenantId,
@@ -808,11 +825,10 @@ async function updateProcessingRecord(params: {
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   const db = await getAdminConnection();
-  await db('email_processed_messages')
+  await tenantDb(db, params.job.tenantId).table('email_processed_messages')
     .where({
       message_id: params.externalIdentity,
       provider_id: params.job.providerId,
-      tenant: params.job.tenantId,
     })
     .update({
       processing_status: params.status,
@@ -859,9 +875,42 @@ function buildProcessingMetadata(params: {
   };
 }
 
+async function getInboundProviderGateReason(
+  job: UnifiedInboundEmailQueueJob
+): Promise<'inactive' | 'paused' | null> {
+  const db = await getAdminConnection();
+  const provider = await tenantDb(db, job.tenantId)
+    .table('email_providers')
+    .where({ id: job.providerId, provider_type: job.provider })
+    .first('is_active', 'inbound_paused_at');
+
+  if (!provider) return null;
+  if (!provider.is_active) return 'inactive';
+  if (provider.inbound_paused_at) return 'paused';
+  return null;
+}
+
 export async function processUnifiedInboundEmailQueueJob(
   job: UnifiedInboundEmailQueueJob
 ): Promise<UnifiedInboundEmailQueueProcessResult> {
+  const gateReason = await getInboundProviderGateReason(job);
+  if (gateReason) {
+    console.info('[UnifiedInboundEmailQueueJobProcessor] skipped gated provider job', {
+      event: 'inbound_email_provider_gated',
+      tenantId: job.tenantId,
+      providerId: job.providerId,
+      provider: job.provider,
+      reason: gateReason,
+    });
+    return {
+      outcome: 'skipped',
+      processedCount: 0,
+      dedupedCount: 0,
+      skippedCount: 1,
+      reason: `provider_${gateReason}`,
+    };
+  }
+
   let payloads: EmailMessageDetails[];
   try {
     payloads = await fetchEmailPayloadsForJob(job);
@@ -1000,6 +1049,7 @@ export async function processUnifiedInboundEmailQueueJob(
 
   if (payloads.length > 0) {
     await persistGoogleHistoryCursor(job);
+    await recordSuccessfulProviderSync(job);
   }
 
   return {

@@ -43,7 +43,26 @@ const mockKnexFactory = () => {
 };
 
 const createTenantKnex = vi.fn();
-vi.mock('@alga-psa/db', () => ({ createTenantKnex: (...args: any[]) => createTenantKnex(...args) }));
+// tenantDb.table applies the root tenant predicate on the table's alias (the
+// real facade scopes `contracts as co` by `co.tenant`); tenantJoin maps to the
+// underlying join so the recorded query chain matches what production builds.
+const qualifiedTenantColumn = (tableExpression: string): string => {
+  const parts = tableExpression.trim().split(/\s+as\s+/i);
+  const alias = (parts[1] ?? parts[0]).trim();
+  return `${alias}.tenant`;
+};
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: (...args: any[]) => createTenantKnex(...args),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (tableExpression: string) =>
+      conn(tableExpression).where({ [qualifiedTenantColumn(tableExpression)]: tenant }),
+    unscoped: (tableExpression: string) => conn(tableExpression),
+    tenantJoin: (builder: any, tableExpression: string, left: string, right: string, options: any = {}) =>
+      options.type === 'left'
+        ? builder.leftJoin(tableExpression, left, right)
+        : builder.join(tableExpression, left, right),
+  }),
+}));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:

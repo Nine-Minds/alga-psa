@@ -11,7 +11,8 @@
       "resyncing": "Risincronizzazione {{providerName}} in corso...",
       "resyncError": "Impossibile risincronizzare il provider IMAP",
       "resyncStarted": "La risincronizzazione è iniziata per {{providerName}}.",
-      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Enterprise Edition."
+      "enterpriseOnly": "La posta elettronica in entrata di Microsoft 365 è disponibile solo in Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "Modifica provider di posta elettronica",
@@ -143,6 +144,7 @@
     },
     "badges": {
       "disabled": "Disabilitato",
+      "paused": "In pausa",
       "connected": "Collegato",
       "disconnected": "Disconnesso",
       "error": "Errore",
@@ -166,15 +168,29 @@
       "reconnectOauth": "Riconnetti OAuth",
       "resyncing": "Risincronizzazione in corso...",
       "resyncMailbox": "Risincronizza casella di posta",
+      "pause": "Sospendi email in arrivo",
+      "resume": "Riprendi email in arrivo",
       "delete": "Elimina fornitore"
     },
+    "feedback": {
+      "paused": "Email in arrivo sospese.",
+      "resumed": "Email in arrivo riprese.",
+      "pauseError": "Impossibile modificare lo stato di pausa delle email in arrivo."
+    },
+    "pausedHelp": "I messaggi ricevuti mentre questa casella è in pausa non vengono importati retroattivamente.",
     "fields": {
       "status": "Stato",
       "lastSync": "Ultima sincronizzazione",
+      "lastIngested": "Ultima acquisizione",
+      "delivery": "Consegna",
       "created": "Creato",
       "subscription": "Sottoscrizione",
       "defaults": "Impostazioni predefinite dei ticket",
       "error": "Errore:"
+    },
+    "delivery": {
+      "polling": "Polling ogni 3 minuti",
+      "webhook": "Consegna in tempo reale: attiva"
     },
     "values": {
       "active": "Attivo",
@@ -293,7 +309,8 @@
         "popupBlocked": "Impossibile aprire il popup OAuth. Si prega di consentire i popup per questo sito.",
         "closedEarly": "La finestra di autorizzazione è stata chiusa prima del completamento.",
         "authorizationFailed": "Autorizzazione fallita",
-        "popupFailed": "Il popup OAuth non è riuscito"
+        "popupFailed": "Il popup OAuth non è riuscito",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Fornitore salvato ma configurazione incompleta: {{error}}",
@@ -707,7 +724,8 @@
       "refreshStatusFailed": "Impossibile aggiornare lo stato del dominio",
       "domainRemovalScheduled": "Rimozione del dominio pianificata",
       "domainRemovalScheduledWithClear": "Rimozione del dominio pianificata e indirizzo mittente per ticketing cancellato",
-      "removeDomainFailed": "Impossibile rimuovere il dominio"
+      "removeDomainFailed": "Impossibile rimuovere il dominio",
+      "testOutboundFailed": "Test dell'e-mail in uscita non riuscito"
     },
     "tabs": {
       "inboundEmail": "Email in entrata",
@@ -741,11 +759,27 @@
         "usernamePlaceholder": "la-tua-email@esempio.it",
         "passwordLabel": "Password",
         "passwordPlaceholder": "Inserisci la password",
+        "authHint": "Lascia vuoti nome utente e password se il tuo relay accetta la posta senza autenticazione.",
         "fromLabel": "Indirizzo mittente",
         "fromPlaceholder": "noreply@esempio.it",
         "fromHelp": "Indirizzo mittente predefinito per le email in uscita.",
+        "security": {
+          "title": "Sicurezza della connessione",
+          "secure": "Usa TLS implicito (SSL alla connessione, in genere porta 465)",
+          "requireTls": "Richiedi l'aggiornamento STARTTLS (porte 587 / 25)",
+          "verifyCert": "Verifica il certificato del server",
+          "verifyCertHint": "Disattiva questa opzione solo per un relay attendibile sulla tua rete che utilizza un certificato autofirmato."
+        },
         "savingButton": "Salvataggio…",
-        "saveButton": "Salva impostazioni SMTP"
+        "saveButton": "Salva impostazioni SMTP",
+        "test": {
+          "title": "Prova e-mail in uscita",
+          "description": "Salva le impostazioni attuali, quindi verifica la connessione al provider. Inserisci un indirizzo per inviare anche un messaggio di prova.",
+          "recipientLabel": "Invia prova a (facoltativo)",
+          "recipientPlaceholder": "tu@esempio.com",
+          "testingButton": "Prova in corso...",
+          "runButton": "Prova connessione"
+        }
       },
       "ticketingFrom": {
         "title": "Indirizzo mittente per ticketing",
@@ -764,6 +798,9 @@
         "customPlaceholder": "supporto@{{domain}}",
         "customSmtpHelp": "Usa un dominio da cui il tuo server SMTP è autorizzato a inviare. Un dominio non corrispondente può causare errori di consegna o filtraggio antispam.",
         "customManagedHelp": "Deve corrispondere a {{domain}}. Se non è una delle tue caselle di posta in entrata, l'elaborazione dei ticket in entrata potrebbe non funzionare.",
+        "nameLabel": "Nome visualizzato del mittente",
+        "namePlaceholder": "Supporto",
+        "nameHelp": "Mostrato come nome del mittente nelle notifiche dei ticket. Lascia vuoto per usare il nome configurato della casella postale o il nome della bacheca.",
         "warningTitle": "Attenzione",
         "errorTitle": "Correggi l'indirizzo mittente",
         "clearButton": "Cancella indirizzo mittente",

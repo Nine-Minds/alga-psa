@@ -6,9 +6,14 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
+
+function tenantTable(db: ReturnType<typeof createTestDbConnection>, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 test.describe('Tenant Onboarding Database Tests', () => {
   test('should create tenant with admin user successfully', async () => {
@@ -24,20 +29,20 @@ test.describe('Tenant Onboarding Database Tests', () => {
       expect(tenantData.adminUser.temporaryPassword).toBeDefined();
       
       // Verify tenant exists in database
-      const tenant = await db('tenants')
+      const tenant = await tenantTable(db, tenantData.tenant.tenantId, 'tenants')
         .where('tenant', tenantData.tenant.tenantId)
         .first() as { tenant: string; tenant_name: string } | undefined;
       expect(tenant).toBeDefined();
       
       // Verify admin user exists
-      const user = await db('users')
+      const user = await tenantTable(db, tenantData.tenant.tenantId, 'users')
         .where('user_id', tenantData.adminUser.userId)
         .first() as { user_id: string; tenant: string; email: string } | undefined;
       expect(user).toBeDefined();
       expect(user?.tenant).toBe(tenantData.tenant.tenantId);
       
       // Verify user role assignment
-      const userRole = await db('user_roles')
+      const userRole = await tenantTable(db, tenantData.tenant.tenantId, 'user_roles')
         .where('user_id', tenantData.adminUser.userId)
         .where('tenant', tenantData.tenant.tenantId)
         .first() as { user_id: string; role_id: string; tenant: string } | undefined;
@@ -47,7 +52,7 @@ test.describe('Tenant Onboarding Database Tests', () => {
       await rollbackTenant(db, tenantData.tenant.tenantId);
       
       // Verify cleanup worked
-      const cleanedTenant = await db('tenants')
+      const cleanedTenant = await tenantTable(db, tenantData.tenant.tenantId, 'tenants')
         .where('tenant', tenantData.tenant.tenantId)
         .first() as { tenant: string } | undefined;
       expect(cleanedTenant).toBeUndefined();
@@ -108,10 +113,10 @@ test.describe('Tenant Onboarding Database Tests', () => {
       });
       
       // Verify tenant 1 user can't see tenant 2 data
-      const tenant1Users = await db('users')
+      const tenant1Users = await tenantTable(db, tenant1.tenant.tenantId, 'users')
         .where('tenant', tenant1.tenant.tenantId) as Array<{ user_id: string; tenant: string; email: string }>;
       
-      const tenant2Users = await db('users')
+      const tenant2Users = await tenantTable(db, tenant2.tenant.tenantId, 'users')
         .where('tenant', tenant2.tenant.tenantId) as Array<{ user_id: string; tenant: string; email: string }>;
       
       expect(tenant1Users.length).toBe(1);
@@ -119,10 +124,10 @@ test.describe('Tenant Onboarding Database Tests', () => {
       expect(tenant1Users[0].user_id).not.toBe(tenant2Users[0].user_id);
       
       // Verify clients are separate
-      const tenant1Clients = await db('clients')
+      const tenant1Clients = await tenantTable(db, tenant1.tenant.tenantId, 'clients')
         .where('tenant', tenant1.tenant.tenantId) as Array<{ client_id: string; tenant: string; client_name: string }>;
         
-      const tenant2Clients = await db('clients')
+      const tenant2Clients = await tenantTable(db, tenant2.tenant.tenantId, 'clients')
         .where('tenant', tenant2.tenant.tenantId) as Array<{ client_id: string; tenant: string; client_name: string }>;
       
       expect(tenant1Clients.length).toBe(1);

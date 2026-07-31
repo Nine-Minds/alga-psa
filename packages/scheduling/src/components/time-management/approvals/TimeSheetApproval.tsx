@@ -21,6 +21,20 @@ import {
   TimeEntryChangeRequestIndicator,
   TimeEntryChangeRequestPanel,
 } from '../time-entry/time-sheet/TimeEntryChangeRequestFeedback';
+import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const showReturnedActionError = (result: unknown): boolean => {
+  if (isActionMessageError(result) || isActionPermissionError(result)) {
+    toast.error(getErrorMessage(result));
+    return true;
+  }
+  return false;
+};
 
 interface TimeSheetApprovalProps {
   timeSheet: ITimeSheetApprovalView;
@@ -242,11 +256,14 @@ export function TimeSheetApproval({
         throw new Error('Time entry not found');
       }
 
-      await updateTimeEntryApprovalStatus({
+      const result = await updateTimeEntryApprovalStatus({
         entryId,
         approvalStatus: status,
         changeRequestComment,
       });
+      if (showReturnedActionError(result)) {
+        return;
+      }
 
       if (status === 'CHANGES_REQUESTED' && timeSheet.approval_status !== 'CHANGES_REQUESTED') {
         setTimeSheet(prevTimeSheet => ({
@@ -305,6 +322,9 @@ export function TimeSheetApproval({
   useEffect(() => {
     async function fetchWorkItems() {
       const fetchedWorkItems = await fetchWorkItemsForTimeSheet(timeSheet.id);
+      if (showReturnedActionError(fetchedWorkItems)) {
+        return;
+      }
 
       // Combine time entries with work items
       const combinedEntries = timeEntries.map((entry):ITimeEntryWithWorkItem => {
@@ -344,15 +364,21 @@ export function TimeSheetApproval({
     if (newComment.trim() && !isAddingComment) {
       setIsAddingComment(true);
       try {
-        await addCommentToTimeSheet(
+        const addedComment = await addCommentToTimeSheet(
           timeSheet.id,
           currentUser.user_id,
           newComment,
           true
         );
+        if (showReturnedActionError(addedComment)) {
+          return;
+        }
 
         // Fetch updated comments
         const updatedComments = await fetchTimeSheetComments(timeSheet.id);
+        if (showReturnedActionError(updatedComments)) {
+          return;
+        }
         
         setTimeSheet(prevTimeSheet => ({
           ...prevTimeSheet,

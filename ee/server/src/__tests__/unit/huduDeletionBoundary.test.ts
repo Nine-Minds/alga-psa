@@ -4,8 +4,9 @@
  * hudu_integrations is EE-only: every read/write/delete must live under ee/.
  * CE runtime (server/src), CE migrations (server/migrations) and shared
  * packages (packages/, including the packages/ee stubs) must never name the
- * table. Mapping cleanup is exempt because mappings live in the shared CE
- * table `tenant_external_entity_mappings`.
+ * table, except for the shared tenant facade metadata registry. Mapping cleanup
+ * is exempt because mappings live in the shared CE table
+ * `tenant_external_entity_mappings`.
  *
  * Static sweep over the repo source — no DB.
  */
@@ -17,6 +18,9 @@ import path from 'node:path';
 const repoRoot = path.resolve(process.cwd(), '..', '..');
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.cjs', '.mjs']);
+const SHARED_PACKAGE_HUDU_METADATA_ALLOWLIST = [
+  path.join('packages', 'db', 'src', 'lib', 'tenantTableMetadata.ts'),
+];
 const SKIP_DIRS = new Set([
   'node_modules',
   'dist',
@@ -68,7 +72,9 @@ describe('T027: hudu_integrations is referenced by EE code only', () => {
   });
 
   it('shared packages (including the packages/ee stubs) never reference hudu_integrations', () => {
-    expect(findReferences(path.join(repoRoot, 'packages'), 'hudu_integrations')).toEqual([]);
+    expect(findReferences(path.join(repoRoot, 'packages'), 'hudu_integrations')).toEqual(
+      SHARED_PACKAGE_HUDU_METADATA_ALLOWLIST
+    );
   });
 
   it('EE owns the table: the EE migration and EE repository reference it', () => {

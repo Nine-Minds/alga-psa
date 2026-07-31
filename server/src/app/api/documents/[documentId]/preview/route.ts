@@ -3,7 +3,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { StorageError, StorageProviderFactory } from '@alga-psa/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
 
 /**
@@ -55,8 +55,8 @@ export async function GET(
       return new NextResponse('Preview not available', { status: 404 });
     }
 
-    const fileRecord = await knex('external_files')
-      .where({ file_id: document.preview_file_id, tenant, is_deleted: false })
+    const fileRecord = await tenantDb(knex, tenant).table('external_files')
+      .where({ file_id: document.preview_file_id, is_deleted: false })
       .first();
 
     if (!fileRecord) {

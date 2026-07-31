@@ -21,6 +21,12 @@ const TEST_ASSET_ID = 'asset-123';
 // expose getTenantContext/runWithTenant in addition to createTenantKnex.
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => {
+      const alias = table.match(/\s+as\s+([^\s]+)$/i)?.[1] ?? table.split(/\s+/).pop() ?? table;
+      return conn(table).where(`${alias}.tenant`, tenant);
+    },
+  }),
   getTenantContext: vi.fn(() => TEST_TENANT),
   runWithTenant: vi.fn((_tenant: string, cb: () => unknown) => cb()),
   withTransaction: vi.fn(async (knex: unknown, cb: (trx: unknown) => unknown) => cb(knex)),

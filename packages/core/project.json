@@ -14,7 +14,7 @@
         "{projectRoot}/dist"
       ],
       "options": {
-        "command": "tsc -b",
+        "command": "npm run build",
         "cwd": "packages/core"
       }
     },

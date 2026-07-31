@@ -47,7 +47,10 @@ export default function ConnectedClientsCard() {
     setLoading(true);
     api<{ data: Connection[] }>('/api/v1/mcp/connections')
       .then((r) => setConnections(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load connections.'))
+      .catch((e) => {
+        console.error('Failed to load MCP connections:', e);
+        setError('Failed to load connections.');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -63,7 +66,8 @@ export default function ConnectedClientsCard() {
       setRemoveTarget(null);
       reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to disconnect.');
+      console.error('Failed to disconnect MCP client:', e);
+      setError('Failed to disconnect.');
     } finally {
       setBusy(false);
     }

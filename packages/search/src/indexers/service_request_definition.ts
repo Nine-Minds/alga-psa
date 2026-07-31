@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface ServiceRequestDefinitionSearchRow {
@@ -39,9 +40,8 @@ export const serviceRequestDefinitionIndexer: EntityIndexer = {
   ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<ServiceRequestDefinitionSearchRow>('service_request_definitions')
+    const row = await createTenantScopedIndexerQuery<ServiceRequestDefinitionSearchRow>(knex, 'service_request_definitions', 'service_request_definitions', tenant)
       .select('definition_id', 'name', 'description', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .andWhere('definition_id', id)
       .first();
 
@@ -54,9 +54,8 @@ export const serviceRequestDefinitionIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<ServiceRequestDefinitionSearchRow>('service_request_definitions')
+    const query = createTenantScopedIndexerQuery<ServiceRequestDefinitionSearchRow>(knex, 'service_request_definitions', 'service_request_definitions', tenant)
       .select('definition_id', 'name', 'description', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .orderBy('definition_id', 'asc')
       .limit(limit);
 

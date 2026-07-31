@@ -11,10 +11,25 @@ import {
   getContactsByClient as getContactsByClientModel,
 } from '@alga-psa/shared/ticketClients/contacts';
 import { getClientLocations as getClientLocationsModel } from '@alga-psa/shared/ticketClients/locations';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
-export const getAllClients = withAuth(async (_user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
+// MSP-only lookups: these actions back internal ticket UIs and expose
+// tenant-wide client/contact data, so client-portal callers (user_type
+// 'client') are rejected and the caller must hold the matching read
+// permission.
+async function assertInternalReadAccess(user: IUserWithRoles, resource: 'client' | 'contact'): Promise<void> {
+  if (user.user_type !== 'internal') {
+    throw new Error('Permission denied: client lookup actions are internal-only');
+  }
+  if (!await hasPermission(user, resource, 'read')) {
+    throw new Error(`Permission denied: cannot read ${resource}`);
+  }
+}
+
+export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
+  await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -22,7 +37,8 @@ export const getAllClients = withAuth(async (_user, { tenant }, includeInactive:
   });
 });
 
-export const getClientById = withAuth(async (_user, { tenant }, clientId: string): Promise<IClient | null> => {
+export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClient | null> => {
+  await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -40,13 +56,14 @@ export const getClientById = withAuth(async (_user, { tenant }, clientId: string
 });
 
 export const getContactsByClient = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   status: ContactFilterStatus = 'active',
   sortBy: 'full_name' | 'created_at' | 'email' | 'phone_number' = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> => {
+  await assertInternalReadAccess(user, 'contact');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -54,7 +71,8 @@ export const getContactsByClient = withAuth(async (
   });
 });
 
-export const getContactByContactNameId = withAuth(async (_user, { tenant }, contactNameId: string): Promise<IContact | null> => {
+export const getContactByContactNameId = withAuth(async (user, { tenant }, contactNameId: string): Promise<IContact | null> => {
+  await assertInternalReadAccess(user, 'contact');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -63,10 +81,11 @@ export const getContactByContactNameId = withAuth(async (_user, { tenant }, cont
 });
 
 export const getAllActiveContacts = withAuth(async (
-  _user,
+  user,
   { tenant },
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> => {
+  await assertInternalReadAccess(user, 'contact');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -74,7 +93,8 @@ export const getAllActiveContacts = withAuth(async (
   });
 });
 
-export const getClientLocations = withAuth(async (_user, { tenant }, clientId: string): Promise<IClientLocation[]> => {
+export const getClientLocations = withAuth(async (user, { tenant }, clientId: string): Promise<IClientLocation[]> => {
+  await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {

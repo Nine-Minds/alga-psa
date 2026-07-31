@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 export interface ClientLicenseContractSummary {
@@ -26,26 +26,21 @@ export interface ClientLicenseContractSummary {
 export const getClientLicenses = withAuth(
   async (user: IUserWithRoles): Promise<ClientLicenseContractSummary[]> => {
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) return [];
+
+    const scopedDb = tenantDb(knex, tenant);
 
     // Resolve the portal user's client_id from their contact (the user object
     // does not carry client_id directly).
     if (!user.contact_id) return [];
-    const contact = await knex('contacts')
-      .where({ tenant, contact_name_id: user.contact_id })
+    const contact = await scopedDb.table('contacts')
+      .where({ contact_name_id: user.contact_id })
       .first('client_id');
     const clientId = contact?.client_id as string | undefined;
     if (!clientId) return [];
 
-    const rows = await knex('client_contracts as cc')
-      .join('contracts as c', function () {
-        this.on('cc.contract_id', 'c.contract_id').andOn('cc.tenant', 'c.tenant');
-      })
-      .leftJoin('document_associations as da', function () {
-        this.on('da.entity_id', 'c.contract_id')
-          .andOnVal('da.entity_type', 'contract')
-          .andOn('da.tenant', 'c.tenant');
-      })
-      .where({ 'cc.client_id': clientId, 'cc.tenant': tenant })
+    const rowsQuery = scopedDb.table('client_contracts as cc')
+      .where({ 'cc.client_id': clientId })
       .whereRaw("c.contract_description LIKE '%stripe_sub:%'")
       .select(
         'cc.client_contract_id as clientContractId',
@@ -59,6 +54,14 @@ export const getClientLicenses = withAuth(
         'da.document_id as licenseDocumentId'
       )
       .orderBy('cc.start_date', 'desc');
+    scopedDb.tenantJoin(rowsQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+    scopedDb.tenantJoin(rowsQuery, 'document_associations as da', 'da.entity_id', 'c.contract_id', {
+      type: 'left',
+      on(join) {
+        join.andOnVal('da.entity_type', 'contract');
+      },
+    });
+    const rows = await rowsQuery;
 
     return rows.map((row: any) => {
       const desc: string = row.contractDescription ?? '';

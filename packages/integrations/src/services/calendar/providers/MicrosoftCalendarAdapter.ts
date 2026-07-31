@@ -4,7 +4,7 @@ import axios, { AxiosInstance } from 'axios';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getAdminConnection } from '@alga-psa/db';
+import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import { CalendarProviderService } from '../CalendarProviderService';
 import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
 
@@ -386,7 +386,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`);
 
       return this.mapMicrosoftEventToExternal(response.data);
-    } catch (error: any) {
+    } catch {
       // Handle 404 quietly - this is expected when events are deleted
       const status = error?.response?.status;
       const code = error?.response?.data?.error?.code;
@@ -503,9 +503,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
 
       // Persist webhook details
       const db = await getAdminConnection();
-      await db('microsoft_calendar_provider_config')
+      await tenantDb(db, this.config.tenant).table('microsoft_calendar_provider_config')
         .where('calendar_provider_id', this.config.id)
-        .andWhere('tenant', this.config.tenant)
         .update({
           webhook_subscription_id: subscriptionId,
           webhook_expires_at: expiresAt,
@@ -559,9 +558,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
 
       // Update stored expiration
       const db = await getAdminConnection();
-      await db('microsoft_calendar_provider_config')
+      await tenantDb(db, this.config.tenant).table('microsoft_calendar_provider_config')
         .where('calendar_provider_id', this.config.id)
-        .andWhere('tenant', this.config.tenant)
         .update({
           webhook_expires_at: expiresAt,
           updated_at: db.fn.now()
@@ -682,7 +680,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Failed to connect to Microsoft Calendar'
+        error: 'Microsoft calendar connection test failed. Check calendar permissions and OAuth credentials.'
       };
     }
   }

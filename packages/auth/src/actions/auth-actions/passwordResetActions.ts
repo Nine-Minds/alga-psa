@@ -1,12 +1,14 @@
 'use server'
 
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { PasswordResetService } from '@alga-psa/auth';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { isValidEmail } from '@alga-psa/validation';
 
 import { getAuthEmailRegistry } from '../../lib/emailRegistry';
+
+const PASSWORD_RESET_TENANT_DISCOVERY = 'tenant-discovery';
 
 export interface RequestResetResult {
   success: boolean;
@@ -65,7 +67,8 @@ export async function requestPasswordReset(
     
     // Find user across all tenants (this is a special case for password reset)
     console.log('[PasswordReset] Searching for user with email:', normalizedEmail, 'and type:', userType);
-    const userInfo = await adminKnex('users')
+    const userInfo = await tenantDb(adminKnex, PASSWORD_RESET_TENANT_DISCOVERY)
+      .unscoped('users', 'tenant discovery for public password reset email lookup')
       .where({
         email: normalizedEmail,
         user_type: userType,
@@ -147,15 +150,15 @@ export async function requestPasswordReset(
         }
 
         // Get the tenant's default client for email branding
-        const tenantDefaultClient = await trx('tenant_companies')
-          .join('clients', function() {
-            this.on('clients.client_id', '=', 'tenant_companies.client_id')
-                .andOn('clients.tenant', '=', 'tenant_companies.tenant');
-          })
-          .where({ 
-            'tenant_companies.tenant': tenant,
-            'tenant_companies.is_default': true 
-          })
+        const tenantDbForReset = tenantDb(trx, tenant);
+        const tenantDefaultClientQuery = tenantDbForReset.table('tenant_companies')
+          .where({ is_default: true });
+        const tenantDefaultClient = await tenantDbForReset.tenantJoin(
+          tenantDefaultClientQuery,
+          'clients',
+          'clients.client_id',
+          'tenant_companies.client_id'
+        )
           .select('clients.*')
           .first();
         
@@ -164,9 +167,8 @@ export async function requestPasswordReset(
         // Get support email from default location if available
         let supportEmail = 'support@example.com';
         if (tenantDefaultClient) {
-          const defaultLocation = await trx('client_locations')
+          const defaultLocation = await tenantDbForReset.table('client_locations')
             .where({ 
-              tenant, 
               client_id: tenantDefaultClient.client_id,
               is_default: true,
               is_active: true
@@ -300,9 +302,8 @@ export async function completePasswordReset(
         const hashedPassword = await hashPassword(newPassword);
 
         // Update user's password
-        await knex('users')
+        await tenantDb(knex, tenant).table('users')
           .where({ 
-            tenant,
             user_id: user.user_id 
           })
           .update({ 
@@ -342,7 +343,7 @@ export async function completePasswordReset(
 
         // Log security event
         try {
-          await knex('audit_logs').insert({
+          await tenantDb(knex, tenant).table('audit_logs').insert({
             audit_id: knex.raw('gen_random_uuid()'),
             tenant: tenant,
             table_name: 'users',

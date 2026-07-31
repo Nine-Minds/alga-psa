@@ -9,15 +9,22 @@ import {
   listTenantSecrets,
   deleteSecret,
   getSecretUsage
-} from '@alga-psa/tenancy/actions';
+} from '@alga-psa/tenancy/actions/tenant-secret-actions';
 import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Edit, Key, AlertTriangle, Search } from 'lucide-react';
 import SecretDialog from './SecretDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export default function SecretsManagement() {
   const { t } = useTranslation('msp/settings');
@@ -95,7 +102,11 @@ export default function SecretsManagement() {
 
     try {
       setDeleting(true);
-      await deleteSecret(secretToDelete.name);
+      const result = await deleteSecret(secretToDelete.name);
+      if (isReturnedActionError(result)) {
+        handleError(result, t('secrets.messages.error.deleteFailed'));
+        return;
+      }
       toast.success(t('secrets.messages.success.deleted', { name: secretToDelete.name }));
       setDeleteDialogOpen(false);
       setSecretToDelete(null);

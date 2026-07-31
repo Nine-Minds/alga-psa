@@ -6,6 +6,7 @@
 import { EmailProviderService } from './EmailProviderService';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
@@ -102,7 +103,7 @@ export class EmailProviderAutoWiring {
       // Step 3: Test connection
       this.addStep('test_connection', 'Test connection to Microsoft Graph API', 'in_progress');
       
-      const adapter = new MicrosoftGraphAdapter(provider);
+      const adapter = new MicrosoftGraphAdapter(await buildMicrosoftEmailProviderConfig(provider));
       const testResult = await adapter.testConnection();
       
       if (!testResult.success) {

@@ -1,24 +1,34 @@
 import type { IDocument } from '@alga-psa/types';
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
+
+type DocumentAssociationLookupRow = {
+    document_id: string;
+    tenant: string;
+};
+
+type DocumentUserSummaryRow = {
+    user_id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+};
 
 const Document = {
     getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<IDocument[]> => {
         try {
-            const tenant = await requireTenantId();
+            const tenant = await requireTenantId(knexOrTrx);
 
-            return await knexOrTrx<IDocument>('documents')
+            const db = tenantDb(knexOrTrx, tenant);
+            const query = db.table<IDocument>('documents')
                 .select(
                     'documents.*',
                     'users.first_name',
                     'users.last_name',
                     knexOrTrx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                )
-                .leftJoin('users', function() {
-                    this.on('documents.created_by', '=', 'users.user_id')
-                        .andOn('users.tenant', '=', knexOrTrx.raw('?', [tenant]));
-                })
-                .where({ 'documents.tenant': tenant });
+                );
+            db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+
+            return await query;
         } catch (error) {
             console.error('Error getting all documents:', error);
             throw error;
@@ -27,9 +37,10 @@ const Document = {
 
     get: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<IDocument | undefined> => {
         try {
-            const tenant = await requireTenantId();
+            const tenant = await requireTenantId(knexOrTrx);
 
-            return await knexOrTrx<IDocument>('documents')
+            const db = tenantDb(knexOrTrx, tenant);
+            const query = db.table<IDocument>('documents')
                     .select(
                         'documents.*',
                         'users.first_name as created_by_first_name',
@@ -37,18 +48,13 @@ const Document = {
                         knexOrTrx.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
                         knexOrTrx.raw("COALESCE(dt.type_name, sdt.type_name) as type_name"),
                         knexOrTrx.raw("COALESCE(dt.icon, sdt.icon) as type_icon")
-                    )
-                    .leftJoin('users', function() {
-                        this.on('documents.created_by', '=', 'users.user_id')
-                            .andOn('users.tenant', '=', 'documents.tenant');
-                    })
-                    .leftJoin('document_types as dt', function() {
-                        this.on('documents.type_id', '=', 'dt.type_id')
-                            .andOn('documents.tenant', '=', 'dt.tenant');
-                    })
+                    );
+            db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', { type: 'left' });
+            db.tenantJoin(query, 'document_types as dt', 'documents.type_id', 'dt.type_id', { type: 'left' });
+
+            return await query
                     .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
                     .where('documents.document_id', document_id)
-                    .andWhere('documents.tenant', tenant)
                     .first();
         } catch (error) {
             console.error(`Error getting document with id ${document_id}:`, error);
@@ -58,8 +64,9 @@ const Document = {
 
     insert: async (knexOrTrx: Knex | Knex.Transaction, document: IDocument): Promise<Pick<IDocument, "document_id">> => {
         try {
-            const [document_id] = await knexOrTrx<IDocument>('documents')
-                .insert(document)
+            const tenant = document.tenant || await requireTenantId(knexOrTrx);
+            const [document_id] = await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+                .insert({ ...document, tenant })
                 .returning('document_id');
             return document_id;
         } catch (error) {
@@ -70,11 +77,10 @@ const Document = {
 
     update: async (knexOrTrx: Knex | Knex.Transaction, document_id: string, document: Partial<IDocument>): Promise<void> => {
         try {
-            const tenant = await requireTenantId();
+            const tenant = await requireTenantId(knexOrTrx);
             const { tenant: _, ...updateData } = document;
-            await knexOrTrx<IDocument>('documents')
+            await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
                 .where('document_id', document_id)
-                .andWhere('tenant', tenant)
                 .update(updateData);
         } catch (error) {
             console.error(`Error updating document with id ${document_id}:`, error);
@@ -84,10 +90,9 @@ const Document = {
 
     delete: async (knexOrTrx: Knex | Knex.Transaction, document_id: string): Promise<void> => {
         try {
-            const tenant = await requireTenantId();
-            await knexOrTrx<IDocument>('documents')
+            const tenant = await requireTenantId(knexOrTrx);
+            await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
                 .where('document_id', document_id)
-                .andWhere('tenant', tenant)
                 .del();
         } catch (error) {
             console.error(`Error deleting document with id ${document_id}:`, error);
@@ -97,13 +102,13 @@ const Document = {
 
     getByTicketId: async (knexOrTrx: Knex | Knex.Transaction, ticket_id: string): Promise<IDocument[]> => {
         try {
+            const tenant = await requireTenantId(knexOrTrx);
+
             // First, get document IDs from associations
-            const associations = await knexOrTrx('document_associations')
+            const associations = await tenantDb(knexOrTrx, tenant).table<DocumentAssociationLookupRow>('document_associations')
                 .select('document_id', 'tenant')
-                .where({
-                    entity_id: ticket_id,
-                    entity_type: 'ticket'
-                });
+                .where('entity_id', ticket_id)
+                .andWhere('entity_type', 'ticket') as DocumentAssociationLookupRow[];
 
             if (associations.length === 0) {
                 return [];
@@ -111,23 +116,20 @@ const Document = {
 
             // Extract document IDs and tenant
             const documentIds = associations.map(a => a.document_id);
-            const tenant = associations[0].tenant;
 
             // Get documents
-            const documents = await knexOrTrx<IDocument>('documents')
-                .select('documents.*')
-                .whereIn('document_id', documentIds)
-                .andWhere({ tenant });
+            const documents = await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+                .select('*')
+                .whereIn('document_id', documentIds);
 
             // Get user information separately
             const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await knexOrTrx('users')
+                const users = await tenantDb(knexOrTrx, tenant).table<DocumentUserSummaryRow>('users')
                     .select('user_id', 'first_name', 'last_name')
-                    .whereIn('user_id', userIds)
-                    .andWhere({ tenant });
+                    .whereIn('user_id', userIds) as DocumentUserSummaryRow[];
                 
                 usersMap = users.reduce((acc, user) => {
                     acc[user.user_id] = user;
@@ -142,7 +144,7 @@ const Document = {
                     ...doc,
                     first_name: user?.first_name,
                     last_name: user?.last_name,
-                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : null
+                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : undefined
                 };
             });
         } catch (error) {
@@ -153,13 +155,13 @@ const Document = {
 
     getByClientId: async (knexOrTrx: Knex | Knex.Transaction, client_id: string): Promise<IDocument[]> => {
         try {
+            const tenant = await requireTenantId(knexOrTrx);
+
             // First, get document IDs from associations
-            const associations = await knexOrTrx('document_associations')
+            const associations = await tenantDb(knexOrTrx, tenant).table<DocumentAssociationLookupRow>('document_associations')
                 .select('document_id', 'tenant')
-                .where({
-                    entity_id: client_id,
-                    entity_type: 'client'
-                });
+                .where('entity_id', client_id)
+                .andWhere('entity_type', 'client') as DocumentAssociationLookupRow[];
 
             if (associations.length === 0) {
                 return [];
@@ -167,23 +169,20 @@ const Document = {
 
             // Extract document IDs and tenant
             const documentIds = associations.map(a => a.document_id);
-            const tenant = associations[0].tenant;
 
             // Get documents
-            const documents = await knexOrTrx<IDocument>('documents')
-                .select('documents.*')
-                .whereIn('document_id', documentIds)
-                .andWhere({ tenant });
+            const documents = await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+                .select('*')
+                .whereIn('document_id', documentIds);
 
             // Get user information separately
             const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await knexOrTrx('users')
+                const users = await tenantDb(knexOrTrx, tenant).table<DocumentUserSummaryRow>('users')
                     .select('user_id', 'first_name', 'last_name')
-                    .whereIn('user_id', userIds)
-                    .andWhere({ tenant });
+                    .whereIn('user_id', userIds) as DocumentUserSummaryRow[];
                 
                 usersMap = users.reduce((acc, user) => {
                     acc[user.user_id] = user;
@@ -198,7 +197,7 @@ const Document = {
                     ...doc,
                     first_name: user?.first_name,
                     last_name: user?.last_name,
-                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : null
+                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : undefined
                 };
             });
         } catch (error) {
@@ -209,13 +208,13 @@ const Document = {
 
     getByContactNameId: async (knexOrTrx: Knex | Knex.Transaction, contact_name_id: string): Promise<IDocument[]> => {
         try {
+            const tenant = await requireTenantId(knexOrTrx);
+
             // First, get document IDs from associations
-            const associations = await knexOrTrx('document_associations')
+            const associations = await tenantDb(knexOrTrx, tenant).table<DocumentAssociationLookupRow>('document_associations')
                 .select('document_id', 'tenant')
-                .where({
-                    entity_id: contact_name_id,
-                    entity_type: 'contact'
-                });
+                .where('entity_id', contact_name_id)
+                .andWhere('entity_type', 'contact') as DocumentAssociationLookupRow[];
 
             if (associations.length === 0) {
                 return [];
@@ -223,23 +222,20 @@ const Document = {
 
             // Extract document IDs and tenant
             const documentIds = associations.map(a => a.document_id);
-            const tenant = associations[0].tenant;
 
             // Get documents
-            const documents = await knexOrTrx<IDocument>('documents')
-                .select('documents.*')
-                .whereIn('document_id', documentIds)
-                .andWhere({ tenant });
+            const documents = await tenantDb(knexOrTrx, tenant).table<IDocument>('documents')
+                .select('*')
+                .whereIn('document_id', documentIds);
 
             // Get user information separately
             const userIds = [...new Set(documents.map(d => d.created_by).filter(Boolean))];
             let usersMap: Record<string, any> = {};
             
             if (userIds.length > 0) {
-                const users = await knexOrTrx('users')
+                const users = await tenantDb(knexOrTrx, tenant).table<DocumentUserSummaryRow>('users')
                     .select('user_id', 'first_name', 'last_name')
-                    .whereIn('user_id', userIds)
-                    .andWhere({ tenant });
+                    .whereIn('user_id', userIds) as DocumentUserSummaryRow[];
                 
                 usersMap = users.reduce((acc, user) => {
                     acc[user.user_id] = user;
@@ -254,7 +250,7 @@ const Document = {
                     ...doc,
                     first_name: user?.first_name,
                     last_name: user?.last_name,
-                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : null
+                    created_by_full_name: user ? `${user.first_name} ${user.last_name}` : undefined
                 };
             });
         } catch (error) {

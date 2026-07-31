@@ -7,6 +7,7 @@
  */
 
 import { Temporal } from '@js-temporal/polyfill'
+import { tenantDb } from '@alga-psa/db'
 import type { Knex } from 'knex'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -62,7 +63,7 @@ export interface InstallContext {
 }
 
 async function resolveAttributionUserId(trx: Knex.Transaction, tenantId: string): Promise<string> {
-  const user = await trx('users').where({ tenant: tenantId }).first<{ user_id: string }>('user_id')
+  const user = await tenantDb(trx, tenantId).table<{ user_id: string }>('users').first('user_id')
   if (!user?.user_id) {
     throw new Error('No user found for tenant (required for invoice attribution)')
   }
@@ -90,12 +91,13 @@ export async function createManualInvoice(
     const invoiceNumber = await numberingService.getNextNumber('INVOICE')
 
     const result = await knex.transaction(async (trx) => {
+      const db = tenantDb(trx, ctx.tenantId)
       const createdByUserId = await resolveAttributionUserId(trx, ctx.tenantId)
       const sessionLike = { user: { id: createdByUserId } } as any
 
       const client = await getClientDetails(trx, ctx.tenantId, input.clientId)
 
-      await trx('invoices').insert({
+      await db.table('invoices').insert({
         invoice_id: invoiceId,
         tenant: ctx.tenantId,
         client_id: input.clientId,
@@ -137,8 +139,8 @@ export async function createManualInvoice(
         description: `Generated manual invoice ${invoiceNumber} (extension install ${ctx.installId})`,
       })
 
-      const invoiceRow = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant: ctx.tenantId })
+      const invoiceRow = await db.table('invoices')
+        .where({ invoice_id: invoiceId })
         .first(['invoice_id', 'invoice_number', 'status', 'subtotal', 'tax', 'total_amount'])
 
       if (!invoiceRow) {
@@ -170,4 +172,3 @@ export async function createManualInvoice(
     return { success: false, error: message }
   }
 }
-

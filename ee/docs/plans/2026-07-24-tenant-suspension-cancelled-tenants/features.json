@@ -1,0 +1,311 @@
+[
+  {
+    "id": "F001",
+    "description": "CE migration adds nullable tenants.suspended_at (timestamptz) and tenants.suspended_reason (text) with CHECK (both null, or suspended_at set with reason IN ('tenant_cancelled')); hasColumn-guarded like other tenants alters",
+    "implemented": true,
+    "commitGroup": "suspension-schema",
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Shared helper module in @alga-psa/shared exposes isTenantSuspended(knex, tenantId) as a single tenants PK lookup",
+    "implemented": true,
+    "commitGroup": "suspension-schema",
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "isTenantSuspended fails open: any flag-read error logs a warning and returns false (never blocks active tenants)",
+    "implemented": true,
+    "commitGroup": "suspension-schema",
+    "prdRefs": [
+      "5.1",
+      "6"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Shared helper suspendTenant(knex, tenantId, reason) stamps suspended_at/suspended_reason only when currently null (idempotent) and returns whether it suspended",
+    "implemented": true,
+    "commitGroup": "suspension-schema",
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Shared helper resumeTenant(knex, tenantId, reason) clears suspended_at/suspended_reason only where the stored reason matches (preserves future manual suspensions)",
+    "implemented": true,
+    "commitGroup": "suspension-schema",
+    "prdRefs": [
+      "5.1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "New Temporal activity suspendTenantBackgroundActivity(tenantId) stamps the flag via suspendTenant with reason 'tenant_cancelled'; idempotent; errors contained (never strands deletion)",
+    "implemented": true,
+    "commitGroup": "workflow-suspend-step",
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "tenantDeletionWorkflow invokes suspendTenantBackgroundActivity immediately after suspendTenantEmailIngestion, guarded by patched('tenant-deletion-suspend-tenant-v1'), with new step marker 'suspending_tenant_activity'",
+    "implemented": true,
+    "commitGroup": "workflow-suspend-step",
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "New Temporal activity resumeTenantBackgroundActivity(tenantId) clears the flag via resumeTenant('tenant_cancelled'); query failures propagate so Temporal retries",
+    "implemented": true,
+    "commitGroup": "workflow-suspend-step",
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "handleRollback invokes resumeTenantBackgroundActivity after resumeTenantEmailIngestion, guarded by patched('tenant-deletion-resume-tenant-v1'), wrapped so rollback never fails on it",
+    "implemented": true,
+    "commitGroup": "workflow-suspend-step",
+    "prdRefs": [
+      "5.3"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "JobHandlerRegistry.execute skips execution when data.tenantId belongs to a suspended tenant: logs the skip and completes successfully (no retry, no DLQ); jobs without tenantId are unaffected",
+    "implemented": true,
+    "commitGroup": "job-dispatch-gate",
+    "prdRefs": [
+      "5.2#1"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "maintenanceJobFanout tenants enumeration excludes suspended tenants",
+    "implemented": true,
+    "commitGroup": "fanout-gates",
+    "prdRefs": [
+      "5.2#2"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "listMarketingTenantIds excludes suspended tenants (stops sequence sends, post flips, target expiry for suspended tenants)",
+    "implemented": true,
+    "commitGroup": "fanout-gates",
+    "prdRefs": [
+      "5.2#2"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "CE initializeScheduledJobs tenant enumeration excludes suspended tenants at registration time",
+    "implemented": true,
+    "commitGroup": "fanout-gates",
+    "prdRefs": [
+      "5.2#2"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Entra schedule-config loader excludes suspended tenants; Entra sync activity re-checks suspension per run",
+    "implemented": true,
+    "commitGroup": "fanout-gates",
+    "prdRefs": [
+      "5.2#2"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Nightly time-period chain skips creation for suspended tenants but keeps rescheduling (resumes automatically after rollback)",
+    "implemented": true,
+    "commitGroup": "job-dispatch-gate",
+    "prdRefs": [
+      "5.2#3"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Billing-cycle creation excludes suspended tenants each run without terminating its schedule",
+    "implemented": true,
+    "commitGroup": "job-dispatch-gate",
+    "prdRefs": [
+      "5.2#3"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Accounting sync cycle skips suspended tenants per run and keeps its reschedule chain alive",
+    "implemented": true,
+    "commitGroup": "job-dispatch-gate",
+    "prdRefs": [
+      "5.2#3"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "RMM polling reconciler excludes integrations of suspended tenants when enumerating rmm_integrations (cancels/never creates per-integration recurring polls)",
+    "implemented": true,
+    "commitGroup": "rmm-gates",
+    "prdRefs": [
+      "5.2#4"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Tactical RMM webhook acks 2xx and drops alerts for suspended tenants (debug log, no pipeline run, no event published)",
+    "implemented": true,
+    "commitGroup": "rmm-gates",
+    "prdRefs": [
+      "5.2#4"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "NinjaOne webhook acks 2xx and drops alerts for suspended tenants after integration resolution",
+    "implemented": true,
+    "commitGroup": "rmm-gates",
+    "prdRefs": [
+      "5.2#4"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "LevelIO webhook acks 2xx and drops alerts for suspended tenants",
+    "implemented": true,
+    "commitGroup": "rmm-gates",
+    "prdRefs": [
+      "5.2#4"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "WorkflowRuntimeV2EventStreamWorker.processEvent acks and skips events for suspended tenants before creating any workflow run (debug log)",
+    "implemented": true,
+    "commitGroup": "event-worker-gate",
+    "prdRefs": [
+      "5.2#5"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Event-worker suspension check fails open on flag-read errors (event processing proceeds)",
+    "implemented": true,
+    "commitGroup": "event-worker-gate",
+    "prdRefs": [
+      "5.2#5",
+      "6"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "ApiKeyService.validateApiKey rejects keys whose owning user is inactive",
+    "implemented": true,
+    "commitGroup": "api-key-gate",
+    "prdRefs": [
+      "5.2#6"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "ApiKeyService.validateApiKey rejects keys whose tenant is suspended",
+    "implemented": true,
+    "commitGroup": "api-key-gate",
+    "prdRefs": [
+      "5.2#6"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Server-side validateApiKeyForTenant and validateApiKeyAnyTenant apply the same owner-inactive and tenant-suspended checks",
+    "implemented": true,
+    "commitGroup": "api-key-gate",
+    "prdRefs": [
+      "5.2#6"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "/api/auth/validate-api-key reports gated keys as invalid",
+    "implemented": true,
+    "commitGroup": "api-key-gate",
+    "prdRefs": [
+      "5.2#6"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Anonymous appointment-request route returns a neutral 'temporarily unavailable' error for suspended tenants before persisting or emailing",
+    "implemented": true,
+    "commitGroup": "public-endpoint-gates",
+    "prdRefs": [
+      "5.2#7"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Marketing capture route returns a neutral 'temporarily unavailable' error for suspended tenants; no prospect/contact/opportunity rows created",
+    "implemented": true,
+    "commitGroup": "public-endpoint-gates",
+    "prdRefs": [
+      "5.2#7"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Google and Microsoft calendar webhooks ack-and-drop notifications for suspended tenants",
+    "implemented": true,
+    "commitGroup": "public-endpoint-gates",
+    "prdRefs": [
+      "5.2#7"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Tenant-scoped outbound email send seam drops sends for suspended tenants with a log line; SystemEmailService paths untouched",
+    "implemented": true,
+    "commitGroup": "outbound-email-gate",
+    "prdRefs": [
+      "5.2#8"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "One-off operator backfill (kept out of the repo) stamps suspended_at for tenants in pending_tenant_deletions statuses pending/awaiting_confirmation/confirmed/failed that are not yet suspended; rerunnable with per-tenant error containment",
+    "implemented": true,
+    "commitGroup": "backfill",
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Operator backfill reports summary counts and signals failure so it can be safely rerun (validated before being moved to the private runbook)",
+    "implemented": true,
+    "commitGroup": "backfill",
+    "prdRefs": [
+      "5.4"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Every gate passes non-suspended tenants through unchanged (cross-cutting regression: dispatch, fan-outs, RMM, event worker, API keys, public endpoints, outbound email)",
+    "implemented": true,
+    "commitGroup": "regression",
+    "prdRefs": [
+      "6",
+      "7"
+    ]
+  }
+]

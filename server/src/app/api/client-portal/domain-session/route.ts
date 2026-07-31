@@ -8,6 +8,7 @@ import { analytics } from 'server/src/lib/analytics/posthog';
 import { buildSessionCookie, encodePortalSessionToken } from '@alga-psa/auth';
 import { consumePortalDomainOtt } from '@alga-psa/auth';
 import { getPortalDomainByHostname, normalizeHostname } from 'server/src/models/PortalDomainModel';
+import { resolveRequestProto } from '@/lib/deployment/requestHost';
 
 function sanitizeReturnPath(returnPath: unknown, fallback: string): string {
   if (typeof returnPath !== 'string' || returnPath.length === 0) {
@@ -229,9 +230,8 @@ export async function POST(request: Request): Promise<Response> {
     const userSnapshot = ottRecord.metadata.userSnapshot;
     const sessionToken = await encodePortalSessionToken(userSnapshot);
     const sessionCookie = buildSessionCookie(sessionToken);
-    const forwardedProto = request.headers.get('x-forwarded-proto');
     const requestUrl = new URL(request.url);
-    const requestScheme = forwardedProto?.split(',')[0]?.trim().toLowerCase() ?? requestUrl.protocol.replace(/:$/, '');
+    const requestScheme = resolveRequestProto(request) ?? requestUrl.protocol.replace(/:$/, '');
     const redirectTo = sanitizeReturnPath(
       requestedReturnPath ?? ottRecord.metadata.returnPath,
       '/client-portal/dashboard',

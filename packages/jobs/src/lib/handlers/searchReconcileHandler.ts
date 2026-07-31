@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, getConnection } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, getConnection } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 import { allIndexers, getIndexer } from '@alga-psa/search';
@@ -8,6 +8,8 @@ import type { EntityIndexer } from '@alga-psa/types';
 
 export const SEARCH_RECONCILE_JOB_NAME = 'search:reconcile';
 const RECONCILE_BATCH_SIZE = 500;
+const SEARCH_RECONCILE_TENANT_ENUMERATION = '__search_reconcile_tenant_enumeration__';
+const SEARCH_RECONCILE_TENANT_ENUMERATION_REASON = 'Search reconcile job enumerates tenants when no specific tenant is requested';
 
 export interface SearchReconcileJobData extends Record<string, unknown> {
   tenantId?: string;
@@ -26,13 +28,17 @@ interface IndexedObjectRow {
   object_id: string;
 }
 
+const searchIndexQuery = (knex: Knex, tenant: string) =>
+  tenantDb(knex, tenant).table('app_search_index');
+
 async function resolveReconcileTenants(data: SearchReconcileJobData): Promise<string[]> {
   if (data.tenantId) {
     return [data.tenantId];
   }
 
   const knex = await getConnection(null);
-  const rows = await knex<TenantRecord>('tenants')
+  const rows = await tenantDb(knex, SEARCH_RECONCILE_TENANT_ENUMERATION)
+    .unscoped<TenantRecord>('tenants', SEARCH_RECONCILE_TENANT_ENUMERATION_REASON)
     .select('tenant')
     .orderBy('tenant', 'asc');
 
@@ -60,17 +66,12 @@ async function getIndexedWatermark(
   tenant: string,
   indexer: EntityIndexer,
 ): Promise<Date | null> {
-  const result = await knex.raw<{ rows: WatermarkRow[] }>(
-    `
-      SELECT max(source_updated_at) AS max_source_updated_at
-      FROM app_search_index
-      WHERE tenant = ?::uuid
-        AND object_type = ?
-    `,
-    [tenant, indexer.objectType],
-  );
+  const row = await searchIndexQuery(knex, tenant)
+    .where({ object_type: indexer.objectType })
+    .max({ max_source_updated_at: 'source_updated_at' })
+    .first() as WatermarkRow | undefined;
 
-  const value = result.rows[0]?.max_source_updated_at;
+  const value = row?.max_source_updated_at;
   return value ? new Date(value) : null;
 }
 
@@ -127,9 +128,8 @@ export async function deleteRowsMissingFromSource(
   let deleted = 0;
 
   while (true) {
-    const query = knex<IndexedObjectRow>('app_search_index')
+    const query = searchIndexQuery(knex, tenant)
       .select('object_id')
-      .where('tenant', tenant)
       .andWhere('object_type', indexer.objectType)
       .orderBy('object_id', 'asc')
       .limit(RECONCILE_BATCH_SIZE);
@@ -138,7 +138,7 @@ export async function deleteRowsMissingFromSource(
       query.andWhere('object_id', '>', cursor);
     }
 
-    const rows = await query;
+    const rows = await query as IndexedObjectRow[];
     if (rows.length === 0) {
       break;
     }
@@ -177,11 +177,10 @@ export async function insertRowsMissingFromIndex(
     }
 
     const objectIds = docs.map((doc) => doc.objectId);
-    const existingRows = await knex<IndexedObjectRow>('app_search_index')
+    const existingRows = await searchIndexQuery(knex, tenant)
       .select('object_id')
-      .where('tenant', tenant)
       .andWhere('object_type', indexer.objectType)
-      .whereIn('object_id', objectIds);
+      .whereIn('object_id', objectIds) as IndexedObjectRow[];
     const existingIds = new Set(existingRows.map((row) => row.object_id));
 
     for (const doc of docs) {

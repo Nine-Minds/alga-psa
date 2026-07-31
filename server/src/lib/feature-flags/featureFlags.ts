@@ -7,15 +7,15 @@ import {
 } from '@alga-psa/core/server';
 import { analytics } from '../analytics/posthog';
 import { createTenantKnex } from '../db';
+import { tenantDb } from '@alga-psa/db';
 async function enrichProperties(context: FeatureFlagContext): Promise<Record<string, unknown>> {
   if (!context.tenantId) {
     return {};
   }
 
   try {
-    const { knex } = await createTenantKnex();
-    const tenantInfo = await knex('tenants')
-      .where({ tenant: context.tenantId })
+    const { knex } = await createTenantKnex(context.tenantId);
+    const tenantInfo = await tenantDb(knex, context.tenantId).table('tenants')
       .first();
 
     if (!tenantInfo) {

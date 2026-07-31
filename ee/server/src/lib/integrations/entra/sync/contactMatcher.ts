@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { EntraSyncUser } from './types';
 
 export interface EntraContactMatchCandidate {
@@ -43,9 +44,8 @@ export async function findContactMatchesByEmail(
 
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const rows = await knex('contacts')
+    const rows = await tenantDb(knex, tenantId).table('contacts')
       .where({
-        tenant: tenantId,
         client_id: clientId,
       })
       .andWhereRaw('lower(email) = ?', [normalizedEmail])

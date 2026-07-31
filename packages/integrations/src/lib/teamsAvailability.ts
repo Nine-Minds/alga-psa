@@ -21,10 +21,10 @@ export type {
 } from './teamsAvailabilityCore';
 
 async function tenantHasTeamsAddOn(tenantId: string): Promise<boolean> {
-  const { createTenantKnex } = await import('@alga-psa/db');
+  const { createTenantKnex, tenantDb } = await import('@alga-psa/db');
   const { knex } = await createTenantKnex(tenantId);
-  const row = await knex('tenant_addons')
-    .where({ tenant: tenantId, addon_key: ADD_ONS.TEAMS })
+  const row = await tenantDb(knex, tenantId).table('tenant_addons')
+    .where({ addon_key: ADD_ONS.TEAMS })
     .andWhere((builder: any) => {
       builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
     })

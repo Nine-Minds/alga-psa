@@ -3,8 +3,16 @@
 import { useEffect, useState } from 'react';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import BulkChangeStatusDialog from '@alga-psa/tickets/components/BulkChangeStatusDialog';
-import { bulkUpdateTicketStatus } from '@alga-psa/tickets/actions/ticketActions';
+import {
+  bulkUpdateTicketStatus,
+  type TicketNotificationSuppressionOptions,
+} from '@alga-psa/tickets/actions/ticketActions';
 import { getBoardTicketStatuses } from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTicketsRouteState } from '@alga-psa/tickets/components/TicketsRouteProvider';
 import {
   type TicketBulkCloseMode,
@@ -47,6 +55,11 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
     getBoardTicketStatuses(selectedTicketsSharedBoardId)
       .then((rows) => {
         if (cancelled) return;
+        if (isActionMessageError(rows) || isActionPermissionError(rows)) {
+          handleError(rows, getErrorMessage(rows));
+          setStatuses([]);
+          return;
+        }
         setStatuses(rows.map((status: { status_id: string; name: string }) => ({
           value: status.status_id,
           label: status.name,
@@ -64,16 +77,18 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
     return () => {
       cancelled = true;
     };
-  }, [isResolvingSelectedBoards, selectedTicketsSharedBoardId]);
+  }, [handleError, isResolvingSelectedBoards, selectedTicketsSharedBoardId]);
 
-  const handleConfirm = async (statusId: string) => {
+  const handleConfirm = async (statusId: string, options?: TicketNotificationSuppressionOptions) => {
     if (selectedTicketIdsArray.length === 0) return;
 
     setIsSubmitting(true);
     setFailed([]);
 
     try {
-      const result = await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
+      const result = options
+        ? await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)
+        : await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
 
       if (result.updatedIds.length > 0) {
         refreshList();

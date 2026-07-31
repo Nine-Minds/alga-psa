@@ -3,7 +3,7 @@
  * T243/T245 — registration gating for the Documents page "Hudu" tab
  * (global-docs group), mirroring huduClientTabGate.test.tsx:
  * useHuduDocumentsTab (packages/documents) resolves visible ONLY when EE
- * edition + `hudu-integration` flag AND the edition-swapped probe
+ * edition AND the edition-swapped probe
  * (getHuduConnectionStatus — the existing settings status action, reused as
  * the connected-only probe) reports Hudu connected. DocumentsPage renders the
  * CustomTabs switcher only when `visible` is true, so hidden here = no trace
@@ -19,14 +19,9 @@ import documentsPageSource from '@alga-psa/documents/components/DocumentsPage.ts
 // @ts-expect-error Vite raw import (source-wiring assertion).
 import ceWrapperSource from '@alga-psa/documents/components/HuduDocumentsTab.tsx?raw';
 
-const { useFeatureFlagMock, isEnterpriseRef, getHuduConnectionStatusMock } = vi.hoisted(() => ({
-  useFeatureFlagMock: vi.fn(),
+const { isEnterpriseRef, getHuduConnectionStatusMock } = vi.hoisted(() => ({
   isEnterpriseRef: { value: true },
   getHuduConnectionStatusMock: vi.fn(),
-}));
-
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: useFeatureFlagMock,
 }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -76,25 +71,13 @@ async function renderGate() {
 }
 
 beforeEach(() => {
-  useFeatureFlagMock.mockReset();
   getHuduConnectionStatusMock.mockReset();
   isEnterpriseRef.value = true;
-  useFeatureFlagMock.mockReturnValue({ enabled: true, loading: false, error: null });
   getHuduConnectionStatusMock.mockResolvedValue(connectedStatus(true));
 });
 
 describe('T243: useHuduDocumentsTab registration gate', () => {
-  it('is hidden and never probes when the feature flag is off', async () => {
-    useFeatureFlagMock.mockReturnValue({ enabled: false, loading: false, error: null });
-
-    const gate = await renderGate();
-
-    expect(gate.getAttribute('data-visible')).toBe('false');
-    expect(getHuduConnectionStatusMock).not.toHaveBeenCalled();
-    expect(useFeatureFlagMock).toHaveBeenCalledWith('hudu-integration', { defaultValue: false });
-  });
-
-  it('is hidden and never probes in Community Edition even with the flag on', async () => {
+  it('is hidden and never probes in Community Edition', async () => {
     isEnterpriseRef.value = false;
 
     const gate = await renderGate();
@@ -128,7 +111,7 @@ describe('T243: useHuduDocumentsTab registration gate', () => {
     expect(gate.getAttribute('data-visible')).toBe('false');
   });
 
-  it('is visible when EE + flag + connected all hold', async () => {
+  it('is visible when EE + connected all hold', async () => {
     const gate = await renderGate();
 
     await waitFor(() => {

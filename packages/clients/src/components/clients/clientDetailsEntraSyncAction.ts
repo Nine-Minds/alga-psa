@@ -1,10 +1,24 @@
+/**
+ * Whether to render the per-client "Sync Entra Now" action.
+ *
+ * `canManage` is the permission the server actually enforces
+ * (system_settings:update). Without it the button rendered for every user who
+ * could open the client and answered with a Forbidden toast — a control that
+ * exists only to refuse is worse than no control.
+ */
 export const shouldShowEntraSyncAction = (
   edition: string | undefined,
   isClientSyncFlagEnabled: boolean,
-  client?: { entra_tenant_id?: string | null } | null
+  client?: { entra_tenant_id?: string | null } | null,
+  canManage: boolean = true
 ): boolean => {
   const mappedTenantId = String(client?.entra_tenant_id || '').trim();
-  return edition === 'enterprise' && isClientSyncFlagEnabled && mappedTenantId.length > 0;
+  return (
+    edition === 'enterprise'
+    && isClientSyncFlagEnabled
+    && canManage
+    && mappedTenantId.length > 0
+  );
 };
 
 const terminalEntraSyncStatuses = new Set(['completed', 'failed', 'partial']);

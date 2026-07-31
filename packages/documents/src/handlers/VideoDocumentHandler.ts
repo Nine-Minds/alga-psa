@@ -1,9 +1,11 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
+import { documentPreviewErrorMessage } from './previewErrors';
 import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import { StorageProviderFactory } from '@alga-psa/storage';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { existsSync, promises as fs } from 'fs';
 import { createRequire } from 'module';
 import process from 'process';
@@ -257,7 +259,7 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
       console.error(`[VideoDocumentHandler] Error generating preview for document ${document.document_id}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate video preview'
+        error: documentPreviewErrorMessage(error, 'Failed to generate video preview')
       };
     }
   }
@@ -340,9 +342,9 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
     }
 
     try {
-      const fileRecord = await knex('external_files')
+      const fileRecord = await tenantDb(knex, tenant).table('external_files')
         .select('storage_path', 'mime_type')
-        .where({ tenant, file_id: document.file_id, is_deleted: false })
+        .where({ file_id: document.file_id, is_deleted: false })
         .first();
 
       if (!fileRecord) {

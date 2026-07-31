@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from './tenantDb';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AuditLogParams {
@@ -16,9 +17,10 @@ export async function auditLog(
 ) {
   try {
     // If the current request hasn't established the tenant GUC, skip logging to avoid aborting the transaction.
+    let tenantValue: string | null = null;
     try {
       const tenantCheck = await knex.raw("select current_setting('app.current_tenant', true) as tenant");
-      const tenantValue = Array.isArray(tenantCheck?.rows)
+      tenantValue = Array.isArray(tenantCheck?.rows)
         ? tenantCheck.rows[0]?.tenant
         : (tenantCheck as any)?.[0]?.tenant;
 
@@ -31,7 +33,7 @@ export async function auditLog(
       return;
     }
 
-    await knex('audit_logs').insert({
+    await tenantDb(knex, tenantValue).table('audit_logs').insert({
       audit_id: uuidv4(),
       user_id: params.userId,
       operation: params.operation,

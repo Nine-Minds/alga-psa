@@ -13,7 +13,7 @@
     "users": "Usuários",
     "teams": "Teams",
     "language": "Linguagem",
-    "ticketing": "Chamados",
+    "ticketing": "Tickets",
     "projects": "Projetos",
     "interactions": "Interações",
     "notifications": "Notificações",
@@ -24,8 +24,8 @@
     "email": "E-mail",
     "integrations": "Integrações",
     "extensions": "Extensões",
-    "ticketingSettings": "Configurações de chamados",
-    "loadingTicketing": "Carregando configuração de chamado...",
+    "ticketingSettings": "Configurações de tickets",
+    "loadingTicketing": "Carregando configuração de ticket...",
     "teamManagement": "Gestão de Equipe",
     "loadingTeam": "Carregando configuração da equipe...",
     "loadingExperimental": "Carregando configuração de recurso experimental...",
@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Configurações Gerais",
-    "description": "Gerencie o nome da sua organização e o cliente padrão. O cliente padrão é usado para fins de configuração e representa seu MSP.",
+    "description": "Gerencie o nome da sua organização e escolha qual registro de cliente representa sua própria empresa. Os dados desse cliente aparecem em faturas, orçamentos e comunicações com clientes.",
     "fields": {
       "organizationName": {
         "label": "Nome da organização"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Salvar fuso horário padrão"
     },
     "clients": {
-      "title": "Clientes",
+      "title": "Sua empresa",
+      "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes.",
+      "currentDefault": "Atualmente, sua empresa é {{name}}.",
+      "yourCompanyBadge": "Sua empresa",
       "table": {
         "name": "Nome",
-        "default": "Padrão",
+        "default": "Sua empresa (padrão)",
         "actions": "Ações"
       },
       "placeholder": "Selecione um cliente para adicionar",
-      "addClient": "Adicionar cliente"
+      "addClient": "Adicionar cliente",
+      "confirmDialog": {
+        "title": "Alterar sua empresa?",
+        "message": "Isso alterará sua empresa de {{current}} para {{next}}. {{next}} passará a representar sua própria organização em faturas, orçamentos e em e-mails e convites enviados a clientes.",
+        "messageInitial": "Isso definirá {{next}} como sua empresa. {{next}} passará a representar sua própria organização em faturas, orçamentos e em e-mails e convites enviados a clientes.",
+        "confirm": "Alterar empresa",
+        "cancel": "Cancelar"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Falha ao atualizar o fuso horário",
         "selectClient": "Selecione um cliente",
         "clientNotFound": "Cliente não encontrado",
+        "clientAlreadyAdded": "Esse cliente já está na lista",
         "addClient": "Falha ao adicionar cliente",
         "removeClient": "Falha ao remover cliente",
         "setDefaultClient": "Falha ao definir o cliente padrão",
@@ -150,6 +161,7 @@
       "copying": "Copiando...",
       "createUser": "Criar usuário",
       "sendInvitation": "Enviar convite do portal",
+      "sendTeamInvitation": "Enviar convite",
       "cancel": "Cancelar"
     },
     "form": {
@@ -183,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "Definir uma senha criará o usuário imediatamente. Eles podem fazer login imediatamente.",
-        "withoutPassword": "Não é necessária senha — enviaremos um convite do portal para o usuário configurá-la."
+        "withoutPassword": "Não é necessária senha — enviaremos um convite do portal para o usuário configurá-la.",
+        "withoutPasswordMsp": "Não é necessária senha — enviaremos um convite por e-mail para que a pessoa a defina."
       },
       "requirePasswordChange": "Exigir alteração de senha no primeiro login"
     },
@@ -208,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Convite do portal enviado com sucesso!",
+        "teamInvitationSent": "Convite enviado com sucesso!",
         "clientPortalUserCreated": "Usuário do portal do cliente criado com sucesso!",
         "copiedVanityLink": "Link de login do portal personalizado copiado para a área de transferência",
-        "copiedCanonicalLink": "Link de login do portal canônico copiado para a área de transferência"
+        "copiedCanonicalLink": "Link de login do portal canônico copiado para a área de transferência",
+        "invitationRevoked": "Convite revogado"
       },
       "error": {
         "fetchUsers": "Falha ao buscar usuários",
@@ -237,6 +252,7 @@
         "contactNotFound": "Contato não encontrado.",
         "contactMissingEmailGeneric": "O contato não possui um endereço de e-mail. Adicione um endereço de e-mail ao contato antes de enviar um convite.",
         "contactInvalidEmail": "O contato tem um endereço de e-mail inválido. Atualize o contato com um endereço de e-mail válido antes de enviar um convite.",
+        "invalidEmail": "Por favor, insira um endereço de e-mail válido",
         "noDefaultClient": "Nenhum cliente padrão configurado para este locatário. Defina um cliente padrão nas Configurações Gerais.",
         "noDefaultLocation": "O cliente padrão deve ter um local padrão configurado para enviar convites do portal.",
         "noLocationEmail": "A localização padrão do cliente deve ter um email de contato configurado.",
@@ -245,8 +261,17 @@
         "roleRequired": "A função é obrigatória",
         "invalidRole": "A função selecionada é inválida",
         "licenseLimitReached": "Você atingiu o limite de licença de usuário MSP.",
-        "soloPlanLimit": "O plano Solo é limitado a 1 usuário. Atualize para o Pro para adicionar mais usuários."
+        "soloPlanLimit": "O plano Solo é limitado a 1 usuário. Atualize para o Pro para adicionar mais usuários.",
+        "revokeInvitation": "Falha ao revogar o convite",
+        "invitationNotFound": "Convite não encontrado ou já utilizado"
       }
+    },
+    "invitations": {
+      "title": "Convites pendentes",
+      "description": "Membros da equipe convidados que ainda não configuraram sua conta.",
+      "expiresPrefix": "Expira:",
+      "revoke": "Revogar",
+      "revoking": "Revogando..."
     }
   },
   "userDetails": {
@@ -267,6 +292,27 @@
       "reportsTo": {
         "label": "Relatórios para",
         "placeholder": "Selecione o gerente"
+      },
+      "workSchedule": {
+        "label": "Horário de trabalho",
+        "help": "Quando esta pessoa está de serviço. Usado nos relatórios de utilização. Não é a disponibilidade de agendamento para clientes.",
+        "setHours": "Definir horário de trabalho",
+        "clear": "Limpar",
+        "weeklyTotal": "{{hours}} h por semana",
+        "days": {
+          "0": "Domingo",
+          "1": "Segunda-feira",
+          "2": "Terça-feira",
+          "3": "Quarta-feira",
+          "4": "Quinta-feira",
+          "5": "Sexta-feira",
+          "6": "Sábado"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Capacidade semanal (horas)",
+        "placeholder": "ex.: 40",
+        "help": "Usado apenas quando nenhum horário de trabalho é definido acima."
       },
       "lastLogin": "Último login",
       "roles": "Funções",
@@ -312,7 +358,9 @@
         "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
         "passwordChangeFailed": "Falha ao alterar a senha",
         "passwordChangeError": "Ocorreu um erro ao alterar a senha",
-        "permissionDenied": "Você não tem permissão para alterar funções de usuário."
+        "permissionDenied": "Você não tem permissão para alterar funções de usuário.",
+        "invalidCapacity": "A capacidade semanal deve ser um número positivo.",
+        "invalidWorkSchedule": "O horário de trabalho deve ser um intervalo válido que termine depois de começar."
       }
     },
     "loading": "Carregando detalhes do usuário..."
@@ -379,10 +427,10 @@
     }
   },
   "ticketing": {
-    "title": "Configurações de chamado",
+    "title": "Configurações de ticket",
     "tabs": {
       "display": "Mostrar",
-      "ticketNumbering": "Numeração de chamados",
+      "ticketNumbering": "Numeração de tickets",
       "boards": "Quadros",
       "priorities": "Prioridades",
       "categories": "Categorias",
@@ -393,9 +441,9 @@
       "description": "Defina o prefixo, preenchimento de dígitos e sequência atual",
       "fields": {
         "prefix": {
-          "label": "Prefixo do número do chamado",
+          "label": "Prefixo do número do ticket",
           "placeholder": "TK-",
-          "help": "Prefixo opcional para números de chamados. Deixe em branco para não ter prefixo ou insira um prefixo personalizado (por exemplo, 'TK-')"
+          "help": "Prefixo opcional para números de tickets. Deixe em branco para não ter prefixo ou insira um prefixo personalizado (por exemplo, 'TK-')"
         },
         "minimumDigits": {
           "label": "Dígitos Mínimos",
@@ -411,8 +459,8 @@
           "help": "O último número atribuído. O próximo número será um valor maior que este valor."
         },
         "nextPreview": {
-          "label": "Visualização do próximo número do chamado",
-          "help": "Este é o número que será atribuído ao próximo chamado"
+          "label": "Visualização do próximo número do ticket",
+          "help": "Este é o número que será atribuído ao próximo ticket"
         }
       },
       "actions": {
@@ -420,28 +468,28 @@
         "cancel": "Cancelar"
       },
       "dialog": {
-        "title": "Atualizar configurações de número de chamado",
-        "message": "A alteração dessas configurações afetará a forma como os novos números de chamados serão gerados. Esta alteração não afetará os chamados existentes. Tem certeza de que deseja prosseguir?",
+        "title": "Atualizar configurações de número de ticket",
+        "message": "A alteração dessas configurações afetará a forma como os novos números de tickets serão gerados. Esta alteração não afetará os tickets existentes. Tem certeza de que deseja prosseguir?",
         "confirm": "Atualizar configurações"
       },
       "loading": "Carregando...",
       "messages": {
         "error": {
-          "noSettings": "Nenhuma configuração de numeração de chamado encontrada. Entre em contato com seu administrador.",
-          "loadFailed": "Falha ao carregar as configurações de numeração de chamados",
+          "noSettings": "Nenhuma configuração de numeração de ticket encontrada. Entre em contato com seu administrador.",
+          "loadFailed": "Falha ao carregar as configurações de numeração de tickets",
           "updateFailed": "Falha ao atualizar as configurações",
           "updatePaddingFailed": "Falha ao atualizar o comprimento do preenchimento",
           "updateLastNumberFailed": "Falha ao atualizar o último número",
           "updateInitialValueFailed": "Falha ao atualizar o valor inicial"
         },
         "success": {
-          "updated": "Configurações de numeração de chamados atualizadas com sucesso"
+          "updated": "Configurações de numeração de tickets atualizadas com sucesso"
         }
       }
     },
     "statuses": {
-      "title": "Status dos chamados",
-      "alert": "Status padrão: quando os clientes criam chamados por meio do portal do cliente, eles receberão automaticamente o status marcado como padrão. Somente um status pode ser definido como padrão por vez.",
+      "title": "Status dos tickets",
+      "alert": "Status padrão: quando os clientes criam tickets por meio do portal do cliente, eles receberão automaticamente o status marcado como padrão. Somente um status pode ser definido como padrão por vez.",
       "table": {
         "name": "Nome",
         "status": "Status",
@@ -452,9 +500,9 @@
       "statusLabels": {
         "closed": "Fechado",
         "open": "Abrir",
-        "closedHelp": "Chamados com esse status serão marcados como fechados",
-        "openHelp": "Os chamados com este status permanecerão abertos",
-        "defaultHelp": "Status padrão para novos chamados do portal do cliente"
+        "closedHelp": "Tickets com esse status serão marcados como fechados",
+        "openHelp": "Os tickets com este status permanecerão abertos",
+        "defaultHelp": "Status padrão para novos tickets do portal do cliente"
       },
       "actions": {
         "addStatus": "Adicionar status",
@@ -462,7 +510,7 @@
         "edit": "Editar",
         "delete": "Excluir"
       },
-      "retiredAlert": "Os status dos chamados agora são gerenciados dentro de cada quadro. Use a guia Quadros para editar os ciclos de vida dos chamados de um quadro específico.",
+      "retiredAlert": "Os status dos tickets agora são gerenciados dentro de cada quadro. Use a guia Quadros para editar os ciclos de vida dos tickets de um quadro específico.",
       "messages": {
         "success": {
           "deleted": "Status excluído com sucesso",
@@ -477,7 +525,7 @@
     },
     "boards": {
       "title": "Quadros",
-      "alert": "Os quadros organizam os chamados em grupos lógicos. Cada conselho pode ter seu próprio agente padrão, prioridade e política de SLA.",
+      "alert": "Os quadros organizam os tickets em grupos lógicos. Cada conselho pode ter seu próprio agente padrão, prioridade e política de SLA.",
       "table": {
         "name": "Nome",
         "description": "Descrição",
@@ -537,50 +585,50 @@
         "defaultAssignedAgent": {
           "label": "Agente atribuído padrão",
           "placeholder": "Selecione o agente padrão",
-          "help": "Novos chamados neste quadro serão atribuídos a este agente por padrão"
+          "help": "Novos tickets neste quadro serão atribuídos a este agente por padrão"
         },
         "defaultPriority": {
           "label": "Prioridade padrão",
           "placeholder": "Selecione a prioridade padrão",
-          "help": "Novos chamados neste quadro usarão esta prioridade por padrão",
+          "help": "Novos tickets neste quadro usarão esta prioridade por padrão",
           "none": "Nenhum"
         },
         "slaPolicy": {
           "label": "Política de SLA",
           "placeholder": "Selecione a política de SLA",
-          "help": "A política de SLA a ser aplicada aos chamados neste quadro",
+          "help": "A política de SLA a ser aplicada aos tickets neste quadro",
           "none": "Nenhum"
         },
         "ticketStatusSetup": {
-          "label": "Configuração do status do chamado",
+          "label": "Configuração do status do ticket",
           "help": "Escolha se este quadro começa a partir de um ciclo de vida existente ou de uma nova lista de status embutida.",
           "copyExisting": "Copiar do quadro existente",
           "createInline": "Crie status in-line"
         },
         "copyTicketStatuses": {
-          "label": "Copiar status de chamados de",
-          "help": "Novos quadros clonam o ciclo de vida de seus chamados a partir de um quadro existente.",
+          "label": "Copiar status de tickets de",
+          "help": "Novos quadros clonam o ciclo de vida de seus tickets a partir de um quadro existente.",
           "selectSource": "Selecione um quadro de origem",
           "noSourceAvailable": "Nenhum quadro de origem disponível",
           "unnamedBoard": "Quadro sem nome"
         },
         "ticketStatuses": {
-          "labelEditing": "Status dos chamados de embarque",
-          "labelCopied": "Status de chamados copiados",
-          "labelInline": "Status de chamados in-line",
-          "helpEditing": "Edite o ciclo de vida do chamado apenas para este quadro.",
+          "labelEditing": "Status dos tickets de embarque",
+          "labelCopied": "Status de tickets copiados",
+          "labelInline": "Status de tickets in-line",
+          "helpEditing": "Edite o ciclo de vida do ticket apenas para este quadro.",
           "helpCopied": "Revise e ajuste o ciclo de vida copiado antes de salvar o novo quadro.",
-          "helpInline": "Crie o ciclo de vida inicial do chamado do quadro antes de salvá-lo.",
-          "loading": "Carregando status de chamados de bordo…",
+          "helpInline": "Crie o ciclo de vida inicial do ticket do quadro antes de salvá-lo.",
+          "loading": "Carregando status de tickets de bordo…",
           "statusName": "Nome do status",
           "closed": "Fechado",
           "default": "Padrão"
         },
         "inboundReplyReopen": {
-          "enabledLabel": "Reabrir chamados fechados em respostas recebidas",
-          "enabledHelp": "Aplica-se a respostas encadeadas correspondentes a chamados já fechados neste quadro.",
+          "enabledLabel": "Reabrir tickets fechados em respostas recebidas",
+          "enabledHelp": "Aplica-se a respostas encadeadas correspondentes a tickets já fechados neste quadro.",
           "cutoffHoursLabel": "Reabertura de corte (horas)",
-          "cutoffHoursHelp": "As respostas recebidas após esta janela criam novos chamados em vez de reabrir os antigos.",
+          "cutoffHoursHelp": "As respostas recebidas após esta janela criam novos tickets em vez de reabrir os antigos.",
           "statusLabel": "Status de reabertura (opcional)",
           "statusPlaceholder": "Selecione o status de reabertura",
           "statusUseDefault": "Usar o status aberto padrão do quadro",
@@ -588,8 +636,8 @@
           "suppressAiHelp": "Somente complemento Enterprise IA Assistant. Se não estiver disponível, as respostas reabrem normalmente."
         },
         "liveTimer": {
-          "label": "Ativar cronômetro de chamado ao vivo",
-          "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos chamados neste quadro. A entrada manual de hora permanece disponível."
+          "label": "Ativar cronômetro de ticket ao vivo",
+          "help": "Mostra o cronômetro ao vivo e os intervalos rastreados nos tickets neste quadro. A entrada manual de hora permanece disponível."
         },
         "defaultBoard": {
           "label": "Quadro padrão para tickets do portal do cliente",
@@ -676,12 +724,12 @@
           "nameRequired": "O nome do conselho é obrigatório",
           "saveFailed": "Falha ao salvar o quadro",
           "lastDefault": "Não é possível remover o último quadro padrão",
-          "statusRequired": "Adicione pelo menos um status de chamado antes de salvar o quadro.",
-          "duplicateStatusName": "Os nomes de status dos chamados devem ser exclusivos em um quadro.",
-          "invalidOpenDefault": "Selecione exatamente um status de chamado padrão aberto antes de salvar o quadro.",
+          "statusRequired": "Adicione pelo menos um status de ticket antes de salvar o quadro.",
+          "duplicateStatusName": "Os nomes de status dos tickets devem ser exclusivos em um quadro.",
+          "invalidOpenDefault": "Selecione exatamente um status de ticket padrão aberto antes de salvar o quadro.",
           "nameAlreadyExists": "Já existe um quadro com este nome.",
-          "selectBoardToCopy": "Selecione um quadro existente para copiar o status dos chamados.",
-          "fetchStatusesFailed": "Falha ao carregar os status dos chamados do quadro.",
+          "selectBoardToCopy": "Selecione um quadro existente para copiar o status dos tickets.",
+          "fetchStatusesFailed": "Falha ao carregar os status dos tickets do quadro.",
           "deleteFailed": "Falha ao excluir o quadro",
           "importFailed": "Falha ao importar quadros",
           "updateStatusFailed": "Falha ao atualizar o status do quadro",
@@ -690,21 +738,21 @@
       },
       "closeRules": {
         "enabledLabel": "Fechar regras",
-        "enabledHelp": "Exigir que as condições sejam atendidas antes que os chamados deste quadro possam ser fechados.",
+        "enabledHelp": "Exigir que as condições sejam atendidas antes que os tickets deste quadro possam ser fechados.",
         "requireResolutionCommentLabel": "Exigir um comentário de resolução",
-        "requireResolutionCommentHelp": "Um comentário de resolução deve existir antes que o chamado possa ser fechado.",
+        "requireResolutionCommentHelp": "Um comentário de resolução deve existir antes que o ticket possa ser fechado.",
         "requireTimeEntryLabel": "Exigir uma entrada de tempo",
-        "requireTimeEntryHelp": "Pelo menos uma entrada de horário deve ser registrada antes que o chamado possa ser fechado.",
+        "requireTimeEntryHelp": "Pelo menos uma entrada de horário deve ser registrada antes que o ticket possa ser fechado.",
         "requireChecklistCompleteLabel": "Exigir o preenchimento da lista de verificação",
-        "requireChecklistCompleteHelp": "Todos os itens obrigatórios da lista de verificação devem ser verificados antes que o chamado possa ser fechado.",
-        "requireNoOpenChildrenLabel": "Exigir chamados agrupados fechados",
-        "requireNoOpenChildrenHelp": "Um pacote mestre não pode ser fechado enquanto os chamados secundários do pacote ainda estiverem abertos.",
+        "requireChecklistCompleteHelp": "Todos os itens obrigatórios da lista de verificação devem ser verificados antes que o ticket possa ser fechado.",
+        "requireNoOpenChildrenLabel": "Exigir tickets agrupados fechados",
+        "requireNoOpenChildrenHelp": "Um pacote mestre não pode ser fechado enquanto os tickets secundários do pacote ainda estiverem abertos.",
         "requiredFieldsLabel": "Campos obrigatórios no fechamento",
-        "requiredFieldsHelp": "Esses campos do chamado devem ser preenchidos antes que o chamado possa ser fechado.",
+        "requiredFieldsHelp": "Esses campos do ticket devem ser preenchidos antes que o ticket possa ser fechado.",
         "autoCloseLabel": "Regras de fechamento automático",
-        "autoCloseHelp": "Fecha automaticamente chamados que estão em status sem atividade. Um e-mail de aviso opcional vai para o contato antes de fechar.",
+        "autoCloseHelp": "Fecha automaticamente tickets que estão em status sem atividade. Um e-mail de aviso opcional vai para o contato antes de fechar.",
         "addAutoCloseRule": "Adicionar regra",
-        "triggerStatusLabel": "Quando o chamado está em status",
+        "triggerStatusLabel": "Quando o ticket está em status",
         "triggerStatusPlaceholder": "Selecione o status",
         "targetStatusLabel": "Perto do status",
         "targetStatusPlaceholder": "Selecione o status fechado",
@@ -717,8 +765,12 @@
           "fetchFailed": "Falha ao carregar regras de fechamento para este quadro",
           "autoCloseStatusRequired": "Cada regra de fechamento automático precisa de um status de gatilho e um status de destino fechado",
           "autoCloseDaysInvalid": "Os dias de inatividade com fechamento automático precisam ser um número inteiro positivo",
-          "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade"
-        }
+          "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade",
+          "autoCloseSuppressionInvalid": "As notificações de agentes e observadores só podem ser ignoradas quando as notificações do cliente forem ignoradas."
+        },
+        "suppressContactNotificationsLabel": "Não notificar o cliente",
+        "suppressContactNotificationsHelp": "Ignora o e-mail de aviso, o e-mail de fechamento, o convite de pesquisa e a notificação do portal do cliente.",
+        "suppressInternalNotificationsLabel": "Também não notificar agentes e observadores"
       },
       "editor": {
         "sections": {
@@ -750,7 +802,7 @@
     },
     "priorities": {
       "title": {
-        "ticket": "Prioridades de chamados",
+        "ticket": "Prioridades de tickets",
         "projectTask": "Prioridades das tarefas do projeto"
       },
       "alert": {
@@ -769,7 +821,7 @@
         "itilProtected": "Protegido"
       },
       "itemTypes": {
-        "ticket": "Chamado",
+        "ticket": "Ticket",
         "projectTask": "Tarefa do Projeto"
       },
       "actions": {
@@ -805,7 +857,7 @@
       "import": {
         "title": "Importar prioridades padrão",
         "submit": "Importar ({{count}})",
-        "allImportedTicket": "Todas as prioridades padrão já foram importadas para chamados.",
+        "allImportedTicket": "Todas as prioridades padrão já foram importadas para tickets.",
         "allImportedProjectTask": "Todas as prioridades padrão já foram importadas para tarefas do projeto.",
         "instructions": "Selecione as prioridades padrão que deseja importar. Eles serão copiados para as prioridades da sua organização."
       },
@@ -830,7 +882,7 @@
     },
     "checklistTemplates": {
       "title": "Modelos de lista de verificação",
-      "alert": "Os modelos de lista de verificação definem listas de verificação reutilizáveis ​​para chamados. Os itens do modelo são copiados nos chamados quando aplicados, portanto, a edição de um modelo nunca altera as listas de verificação já existentes nos chamados.",
+      "alert": "Os modelos de lista de verificação definem listas de verificação reutilizáveis ​​para tickets. Os itens do modelo são copiados nos tickets quando aplicados, portanto, a edição de um modelo nunca altera as listas de verificação já existentes nos tickets.",
       "table": {
         "name": "Nome",
         "description": "Descrição",
@@ -868,7 +920,7 @@
         "active": "Ativo",
         "items": {
           "label": "Itens da lista de verificação",
-          "help": "Os itens são adicionados aos chamados nesta ordem quando o modelo é aplicado.",
+          "help": "Os itens são adicionados aos tickets nesta ordem quando o modelo é aplicado.",
           "itemName": "Nome do item",
           "required": "Obrigatório",
           "newItemLabel": "Novo item",
@@ -876,8 +928,8 @@
         },
         "rules": {
           "label": "Regras de aplicação automática",
-          "help": "O modelo é aplicado automaticamente a novos chamados que correspondam a qualquer uma dessas regras. Deixe um campo como \"Qualquer\" para corresponder a todos os valores.",
-          "empty": "Sem regras de aplicação automática. Este modelo ainda pode ser aplicado aos chamados manualmente.",
+          "help": "O modelo é aplicado automaticamente a novos tickets que correspondam a qualquer uma dessas regras. Deixe um campo como \"Qualquer\" para corresponder a todos os valores.",
+          "empty": "Sem regras de aplicação automática. Este modelo ainda pode ser aplicado aos tickets manualmente.",
           "board": "Quadro",
           "category": "Categoria",
           "subcategory": "Subcategoria",
@@ -890,7 +942,7 @@
         "editTemplate": "Editar modelo de lista de verificação",
         "createFirstHelp": "Crie o modelo primeiro e, em seguida, adicione itens da lista de verificação e aplique regras automaticamente.",
         "deleteTitle": "Excluir modelo de lista de verificação",
-        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos chamados não serão afetadas."
+        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos tickets não serão afetadas."
       },
       "messages": {
         "success": {
@@ -1007,7 +1059,7 @@
       "fields": {
         "name": {
           "label": "Nome do tipo de interação:",
-          "placeholder": "por exemplo, 'Chamada de integração do cliente', 'Demonstração de vendas', 'Revisão do projeto'"
+          "placeholder": "por exemplo, 'Chamada de onboarding do cliente', 'Demonstração de vendas', 'Revisão do projeto'"
         },
         "displayOrder": {
           "label": "Ordem de exibição:",
@@ -1038,6 +1090,15 @@
     "openMenu": "Abrir menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funcionalidades do portal",
+      "description": "Escolha as funcionalidades de autoatendimento a que os clientes podem aceder.",
+      "appointmentsLabel": "Agendamentos",
+      "appointmentsHelp": "Permita que os clientes vejam e solicitem agendamentos no portal do cliente.",
+      "appointmentsEnabled": "Os agendamentos estão agora disponíveis no portal do cliente",
+      "appointmentsDisabled": "Os agendamentos estão agora ocultos no portal do cliente",
+      "updateFailed": "Não foi possível atualizar as funcionalidades do portal do cliente"
+    },
     "branding": {
       "title": "Marca e aparência",
       "description": "Personalize a aparência do portal do seu cliente com a marca da sua empresa.",
@@ -1048,7 +1109,8 @@
         "primaryColor": "Cor Primária",
         "secondaryColor": "Cor Secundária",
         "supportEmail": "E-mail de suporte",
-        "supportPhone": "Telefone de suporte"
+        "supportPhone": "Telefone de suporte",
+        "heroGradient": "Gradiente do cabeçalho do painel"
       },
       "help": {
         "companyName": "Isso será exibido no cabeçalho do portal do cliente",
@@ -1056,7 +1118,12 @@
         "primaryColor": "Usado para botões, links e destaques",
         "secondaryColor": "Usado para acentos e ações secundárias",
         "supportEmail": "Mostrado aos clientes em confirmações de compromissos e outros e-mails enviados como o endereço de contato para obter ajuda.",
-        "supportPhone": "Opcional. Exibido ao lado do e-mail de suporte em e-mails direcionados ao cliente."
+        "supportPhone": "Opcional. Exibido ao lado do e-mail de suporte em e-mails direcionados ao cliente.",
+        "heroGradient": "Controla o gradiente do banner de boas-vindas no painel do cliente."
+      },
+      "heroGradient": {
+        "primaryShades": "Cor primária para tom primário",
+        "primarySecondary": "Cor primária para cor secundária"
       },
       "preview": "Visualização",
       "previewDarkMode": "Visualizar modo escuro",
@@ -1073,19 +1140,19 @@
       "title": "Seu Portal do Cliente",
       "welcome": "Bem vindo de volta!",
       "subtitle": "Esta é uma visão geral da atividade da sua conta",
-      "openTickets": "Chamados abertos",
+      "openTickets": "Tickets abertos",
       "activeProjects": "Projetos Ativos",
       "invoices": "Faturas",
       "urgent": "{{count}} urgente",
       "nearDeadline": "{{count}} perto do prazo",
       "dueThisMonth": "Vencimento este mês",
       "recentActivity": "Atividade recente",
-      "ticketUpdated": "O chamado nº 1234 foi atualizado",
+      "ticketUpdated": "O ticket nº 1234 foi atualizado",
       "hoursAgo": "{{count}} horas atrás",
       "newInvoice": "Nova fatura gerada",
-      "milestoneCompleted": "Marco do projeto concluído",
+      "milestoneCompleted": "Meta do projeto concluída",
       "dayAgo": "1 dia atrás",
-      "createTicket": "Criar chamado",
+      "createTicket": "Criar ticket",
       "viewProjects": "Ver projetos",
       "activeDevices": "Dispositivos ativos",
       "basicSupport": "Suporte Básico",
@@ -1096,7 +1163,7 @@
       "navDevices": "Meus dispositivos",
       "navProjects": "Projetos",
       "navServiceRequests": "Solicitações de serviço",
-      "navTickets": "Chamados",
+      "navTickets": "Tickets",
       "serviceRequests": "Solicitações de serviço",
       "upcomingShort": "Por vir",
       "upcomingVisits": "Próximas visitas",
@@ -1106,18 +1173,18 @@
     "signInPreview": {
       "portalTitle": "Portal do cliente",
       "welcome": "Bem-vindo ao seu portal do cliente",
-      "subtitle": "Gerencie seus chamados de suporte e fique conectado",
+      "subtitle": "Gerencie seus tickets de suporte e fique conectado",
       "features": {
         "submitTickets": {
-          "title": "Enviar chamados de suporte",
+          "title": "Enviar tickets de suporte",
           "description": "Crie e gerencie suas solicitações de suporte"
         },
         "trackStatus": {
-          "title": "Rastrear status do chamado",
+          "title": "Rastrear status do ticket",
           "description": "Monitore o progresso em tempo real"
         },
         "ticketHistory": {
-          "title": "Histórico de chamados",
+          "title": "Histórico de tickets",
           "description": "Acesse seu histórico completo de suporte"
         },
         "documentation": {
@@ -1170,6 +1237,17 @@
         "step2": "Clique em \"Salvar domínio\" para acionar a verificação de DNS e o provisionamento de certificados.",
         "step3": "Use o botão Atualizar para pesquisar o progresso do provisionamento. Enviaremos um e-mail aos seus administradores se o provisionamento falhar.",
         "canonicalHostFallback": "hospedeiro canônico"
+      },
+      "appliance": {
+        "helpText": "Aponte este nome de host para o seu appliance e faça com que o seu proxy reverso encaminhe o cabeçalho Host original antes de salvar.",
+        "checklistTitle": "Configuração do proxy reverso",
+        "step1Prefix": "Aponte ",
+        "step1Suffix": " para este appliance (um registro A para o seu endereço ou um CNAME para o seu host de appliance).",
+        "step2": "No seu proxy reverso, termine o TLS para o domínio e encaminhe para este appliance na porta 3000, preservando o cabeçalho Host original (ex. proxy_set_header Host $host) e enviando X-Forwarded-Proto: https.",
+        "step3": "Obtenha e mantenha o certificado TLS para o domínio no seu proxy.",
+        "step4": "Salve o domínio aqui — ele é ativado imediatamente. Configure primeiro o DNS e o seu proxy, pois os links do portal mudam para este domínio imediatamente.",
+        "docLinkText": "Guia de configuração e solução de problemas do proxy reverso",
+        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original."
       },
       "badges": {
         "pending_dns": "DNS pendente",
@@ -1680,7 +1758,7 @@
     "tabs": {
       "roles": "Funções",
       "sessions": "Sessões",
-      "sso": "Logon único",
+      "sso": "Login único",
       "permissions": "Permissões",
       "userRoles": "Funções de usuário",
       "policies": "Políticas",
@@ -1778,8 +1856,14 @@
   },
   "ssoBulk": {
     "loading": {
-      "title": "Logon único",
+      "title": "Login único",
       "description": "Carregando ferramentas de atribuição em massa de SSO..."
+    },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
     },
     "autoLink": {
       "title": "Configure automaticamente o SSO para novos usuários internos",
@@ -1789,7 +1873,7 @@
       "disabledInfo": "Ative esta alternância para permitir que funcionários novos e existentes ignorem o fluxo “Conectar SSO” quando seus e-mails já corresponderem a um provedor configurado. Ainda registraremos todos os links automáticos."
     },
     "bulk": {
-      "title": "Atribuição de logon único em massa",
+      "title": "Atribuição de login único em massa",
       "description": "Selecione usuários internos na lista abaixo e vincule-os a um provedor Google ou Microsoft configurado. Use a visualização para verificar o impacto antes de executar.",
       "noProviders": "Nenhum provedor de SSO está configurado ainda. Adicione credenciais OAuth para continuar com atribuições em massa."
     },
@@ -1882,7 +1966,7 @@
     "tabs": {
       "profile": "Perfil",
       "security": "Segurança",
-      "sso": "Logon único",
+      "sso": "Login único",
       "apiKeys": "Chaves de API",
       "notifications": "Notificações",
       "calendar": "Calendário"
@@ -1977,7 +2061,7 @@
       },
       "communication": {
         "label": "Comunicação",
-        "description": "Conecte caixas de entrada e superfícies de colaboração para processamento de chamados, fluxos de trabalho de operadores e acesso ao Microsoft Teams."
+        "description": "Conecte caixas de entrada e superfícies de colaboração para processamento de tickets, fluxos de trabalho de operadores e acesso ao Microsoft Teams."
       },
       "calendar": {
         "label": "Calendário",
@@ -2014,9 +2098,9 @@
       },
       "email": {
         "name": "E-mail de entrada",
-        "description": "Processe e-mails recebidos em chamados",
+        "description": "Processe e-mails recebidos em tickets",
         "cardTitle": "Integração de e-mail de entrada",
-        "cardDescription": "Configure provedores de e-mail para processar automaticamente e-mails recebidos em chamados"
+        "cardDescription": "Configure provedores de e-mail para processar automaticamente e-mails recebidos em tickets"
       },
       "teams": {
         "name": "Equipes da Microsoft",

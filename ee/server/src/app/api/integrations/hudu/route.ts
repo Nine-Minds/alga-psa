@@ -8,7 +8,7 @@ export { dynamic, runtime };
 /**
  * GET /api/integrations/hudu — Hudu connection status (EE-only).
  *
- * Gates on EE + `hudu-integration` flag + `system_settings` read, then returns
+ * Gates on EE + `system_settings` read, then returns
  * the tenant's hudu_integrations connection state. SECURITY: the payload never
  * contains the api key — connection metadata only.
  */

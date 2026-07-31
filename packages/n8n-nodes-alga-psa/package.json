@@ -28,7 +28,7 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "n8n-workflow": "^1.90.0"
+    "n8n-workflow": "1.120.9"
   },
   "devDependencies": {
     "@types/node": "^20.19.24",

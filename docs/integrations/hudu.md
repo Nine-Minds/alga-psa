@@ -41,6 +41,43 @@ multi-source guard keeps a connected RMM as the authority for an asset's name an
 serial number. The asset-import field mapping is documented in
 [Custom Asset Types](../features/custom_asset_types.md).
 
+## Bulk import and daily auto-sync
+
+Once companies and asset layouts are mapped, a **Sync & automation** card at the
+bottom of the Hudu settings page lets you run a tenant-wide import or sync and
+optionally schedule one every day.
+
+### Manual operations
+
+- **Import all mapped clients** — imports every unmatched Hudu asset across all
+  mapped clients in one pass, using your asset-layout mappings. A summary toast
+  shows the counts of assets created, updated, skipped, and failed when the run
+  completes. Requires the `asset:create` permission.
+- **Sync all** — refreshes the name, serial number, and Hudu custom-field values
+  for every asset already linked in AlgaPSA, across all mapped clients. It does
+  not create new assets. Requires the `asset:update` permission.
+
+Both buttons are disabled while any sync is in progress.
+
+### Daily auto-sync
+
+Toggle **Daily auto-sync** to have AlgaPSA automatically import new assets and
+refresh all existing ones for every mapped client at **02:00 UTC each day**.
+Flipping the toggle immediately starts or cancels the recurring background job —
+no server restart needed. Requires the `system_settings` permission.
+
+### Sync status
+
+The card shows the live state of the most recent tenant-wide run:
+
+- **Status badge** (Idle / Syncing / Completed / Error) — updates every few
+  seconds while a run is in progress.
+- **Last-run summary** — timestamp and counts of assets created, updated,
+  skipped, and failed. Displays "No tenant-wide run yet." until the first run
+  completes.
+- **Error details** — when the last run ended in an error, the card shows the
+  error text so you can diagnose the problem without checking server logs.
+
 ## View documentation and credentials
 
 Once a client is connected, its record gains Hudu surfaces:

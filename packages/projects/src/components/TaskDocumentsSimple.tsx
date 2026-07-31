@@ -12,7 +12,14 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageErrorShape,
+  type ActionPermissionErrorShape,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +37,9 @@ const DEFAULT_BLOCKS: PartialBlock[] = [{
     styles: {}
   }]
 }];
+
+const isDocumentActionError = (value: unknown): value is ActionMessageErrorShape | ActionPermissionErrorShape =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 // Pending document for create mode (before task is saved)
 export interface PendingTaskDocument {
@@ -298,8 +308,8 @@ export default function TaskDocumentsSimple({
         folder_path: selectedFolderPath
       });
 
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isDocumentActionError(result)) {
+        handleError(result, getErrorMessage(result));
         return;
       }
 

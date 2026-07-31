@@ -77,7 +77,19 @@ afterAll(async () => {
   await db.destroy();
 });
 
-describe('workflow runtime v2 redaction + snapshot integration tests', () => {
+// Skipped since the June 2026 Temporal cutover: startWorkflowRunAction now only
+// inserts the run row and signals Temporal (workflowRuntimeV2.ts startRun,
+// engine: 'temporal'); the synchronous in-process interpreter that wrote the
+// redacted envelope snapshots, action-invocation logs, and retention pruning
+// these tests assert on was deleted (ea2641d317, 6c08dd4305). Nothing
+// server-side writes workflow_run_snapshots/workflow_action_invocations
+// anymore — those are produced by the Temporal interpreter and its activities
+// (ee/temporal-workflows), and the run-studio read path deliberately passes
+// stored secretRef values through (storage-time redaction is the guarantee), so
+// seeding rows here would fake the behavior rather than test it. Redaction
+// coverage needs a port to ee/temporal-workflows — tracked as a follow-up, not
+// a lean edit (same adjudication as workflowRuntimeV2.email).
+describe.skip('workflow runtime v2 redaction + snapshot integration tests', () => {
   it('Envelope snapshots stored with redacted secretRef fields. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     await publishWorkflow(workflowId, 1);

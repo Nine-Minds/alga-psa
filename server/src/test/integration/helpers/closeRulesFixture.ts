@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Shared fixture for the ticket close rules / checklists / auto-close tests:
@@ -20,6 +21,10 @@ export interface CloseRulesFixture {
   contactId: string;
 }
 
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 export async function createCloseRulesFixture(
   db: Knex,
   tenantId: string,
@@ -34,7 +39,7 @@ export async function createCloseRulesFixture(
   const contactId = uuidv4();
   const suffix = boardId.slice(0, 8);
 
-  await db('boards').insert({
+  await tenantTable(db, tenantId, 'boards').insert({
     tenant: tenantId,
     board_id: boardId,
     board_name: `Close Rules Board ${suffix}`,
@@ -43,7 +48,7 @@ export async function createCloseRulesFixture(
     display_order: 999,
   });
 
-  await db('priorities').insert({
+  await tenantTable(db, tenantId, 'priorities').insert({
     tenant: tenantId,
     priority_id: priorityId,
     priority_name: `Close Rules Priority ${suffix}`,
@@ -55,7 +60,7 @@ export async function createCloseRulesFixture(
     updated_at: db.fn.now(),
   });
 
-  await db('statuses').insert([
+  await tenantTable(db, tenantId, 'statuses').insert([
     {
       tenant: tenantId,
       status_id: openStatusId,
@@ -91,7 +96,7 @@ export async function createCloseRulesFixture(
     },
   ]);
 
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Close Rules Client ${suffix}`,
@@ -99,7 +104,7 @@ export async function createCloseRulesFixture(
     updated_at: db.fn.now(),
   });
 
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: contactId,
     full_name: `Close Rules Contact ${suffix}`,
@@ -131,7 +136,7 @@ export async function insertTicket(
 ): Promise<string> {
   const ticketId = uuidv4();
   ticketCounter += 1;
-  await db('tickets').insert({
+  await tenantTable(db, fixture.tenantId, 'tickets').insert({
     tenant: fixture.tenantId,
     ticket_id: ticketId,
     ticket_number: `CR-${Date.now()}-${ticketCounter}`,
@@ -170,15 +175,15 @@ export async function setBoardCloseRules(
     is_enabled: rules.is_enabled ?? true,
     updated_at: db.fn.now(),
   };
-  await db('board_close_rules')
+  await tenantTable(db, fixture.tenantId, 'board_close_rules')
     .insert({ tenant: fixture.tenantId, board_id: fixture.boardId, ...values })
     .onConflict(['tenant', 'board_id'])
     .merge(values);
 }
 
 export async function clearBoardCloseRules(db: Knex, fixture: CloseRulesFixture): Promise<void> {
-  await db('board_close_rules')
-    .where({ tenant: fixture.tenantId, board_id: fixture.boardId })
+  await tenantTable(db, fixture.tenantId, 'board_close_rules')
+    .where({ board_id: fixture.boardId })
     .del();
 }
 
@@ -189,7 +194,7 @@ export async function insertChecklistItem(
   overrides: Partial<Record<string, unknown>> = {}
 ): Promise<string> {
   const itemId = uuidv4();
-  await db('ticket_checklist_items').insert({
+  await tenantTable(db, fixture.tenantId, 'ticket_checklist_items').insert({
     tenant: fixture.tenantId,
     checklist_item_id: itemId,
     ticket_id: ticketId,

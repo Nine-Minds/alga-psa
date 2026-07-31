@@ -20,7 +20,12 @@ import { getAllUsers } from '@alga-psa/user-composition/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Save, RefreshCw, Info } from 'lucide-react';
 
 interface PendingChange {
@@ -29,6 +34,9 @@ interface PendingChange {
   userId: string | null;
   notifyVia: SlaNotificationChannel[];
 }
+
+const isReturnedActionError = (value: unknown): value is { actionError: string } | { permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export const EscalationManagerSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
@@ -47,6 +55,14 @@ export const EscalationManagerSettings: React.FC = () => {
         getBoardEscalationConfigs(),
         getAllUsers(false, 'internal')
       ]);
+      if (isReturnedActionError(configsData)) {
+        const message = getErrorMessage(configsData);
+        handleError(configsData, message);
+        setError(message);
+        setConfigs([]);
+        setUsers([]);
+        return;
+      }
       setConfigs(configsData);
       setUsers(usersData);
       setPendingChanges(new Map());
@@ -102,12 +118,18 @@ export const EscalationManagerSettings: React.FC = () => {
 
       // Save all pending changes
       for (const change of pendingChanges.values()) {
-        await setEscalationManager({
+        const result = await setEscalationManager({
           board_id: change.boardId,
           escalation_level: change.level,
           manager_user_id: change.userId,
           notify_via: change.notifyVia
         });
+        if (isReturnedActionError(result)) {
+          const message = getErrorMessage(result);
+          handleError(result, message);
+          setError(message);
+          return;
+        }
       }
 
       toast.success('Escalation managers updated successfully');

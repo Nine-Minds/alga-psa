@@ -9,6 +9,14 @@ import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContractOverviewProps {
   contractId: string;
@@ -159,6 +167,11 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
     setError(null);
     try {
       const data = await getContractOverview(contractId);
+      if (isReturnedActionError(data)) {
+        setError(getErrorMessage(data));
+        setOverview(null);
+        return;
+      }
       setOverview(data);
       // Auto-expand all lines if there are 3 or fewer
       if (data.contractLines.length <= 3) {

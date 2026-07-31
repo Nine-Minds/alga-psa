@@ -8,7 +8,9 @@ import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generate
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
-import { creditReconciliationHandler, CreditReconciliationJobData } from '@alga-psa/jobs/handlers/creditReconciliationHandler';
+import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
+import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
+import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
@@ -16,6 +18,12 @@ import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from '
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
+import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
+import {
+  PROJECT_DATE_READINESS_JOB,
+  projectDateReadinessHandler,
+  ProjectDateReadinessJobData,
+} from './handlers/projectDateReadinessHandler';
 import { cleanupTemporaryFormsJob } from '@alga-psa/jobs/handlers/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from '@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler';
@@ -31,7 +39,23 @@ import {
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
+import {
+  teamsMeetingCleanupHandler,
+  TeamsMeetingCleanupJobData,
+  TEAMS_MEETING_CLEANUP_JOB,
+} from '@alga-psa/jobs/handlers/teamsMeetingCleanupHandler';
+import {
+  teamsMeetingSweepHandler,
+  TeamsMeetingSweepJobData,
+  TEAMS_MEETING_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/teamsMeetingSweepHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
+import {
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  MarketingJobData,
+} from './handlers/marketingJobs';
 import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
@@ -48,7 +72,7 @@ import {
 } from '@alga-psa/jobs/handlers/searchReconcileHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
-import { StorageService } from '../../lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import logger from '@alga-psa/core/logger';
 import type { IRecurringRunExecutionWindowIdentity } from '@alga-psa/types';
 import type { IRecurringDueSelectionInput } from '@alga-psa/types';
@@ -67,6 +91,7 @@ const isEnterpriseWorkflowEdition = (): boolean =>
 
 export * from './interfaces';
 export { JobRunnerFactory, getJobRunner } from './JobRunnerFactory';
+import { getJobRunner as getJobRunnerInstance } from './JobRunnerFactory';
 export { PgBossJobRunner } from './runners/PgBossJobRunner';
 export {
   initializeJobRunner,
@@ -120,16 +145,32 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<ExpiringCreditsNotificationJobData>('expiring-credits-notification', async (job: Job<ExpiringCreditsNotificationJobData>) => {
       await expiringCreditsNotificationHandler(job.data);
     });
+
+    // Register per-location low-stock alert handler (inventory F037/F038)
+    jobScheduler.registerJobHandler<LowStockNotificationJobData>('inventory-low-stock-notification', async (job: Job<LowStockNotificationJobData>) => {
+      await lowStockNotificationHandler(job.data);
+    });
+
+    jobScheduler.registerJobHandler<ProjectDateReadinessJobData>(PROJECT_DATE_READINESS_JOB, async (job: Job<ProjectDateReadinessJobData>) => {
+      await projectDateReadinessHandler(job.data);
+    });
     
     jobScheduler.registerJobHandler<ExpireQuotesJobData>('expire-quotes', async (job: Job<ExpireQuotesJobData>) => {
       await expireQuotesHandler(job.data);
     });
 
-    // Register credit reconciliation handler
-    jobScheduler.registerJobHandler<CreditReconciliationJobData>('credit-reconciliation', async (job: Job<CreditReconciliationJobData>) => {
-      await creditReconciliationHandler(job.data);
+    jobScheduler.registerJobHandler<OpportunityDisciplineJobData>('opportunity-discipline', async (job: Job<OpportunityDisciplineJobData>) => {
+      await opportunityDisciplineHandler(job.data);
     });
-    
+
+    jobScheduler.registerJobHandler<OpportunityWeeklyDigestJobData>('opportunity-weekly-digest', async (job: Job<OpportunityWeeklyDigestJobData>) => {
+      await opportunityWeeklyDigestHandler(job.data);
+    });
+
+    jobScheduler.registerJobHandler<OpportunityGeneratorsJobData>('opportunity-generators', async (job: Job<OpportunityGeneratorsJobData>) => {
+      await opportunityGeneratorsHandler(job.data);
+    });
+
     // Register invoice handlers if storageService is provided
     if (storageService && jobService) {
       const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
@@ -218,6 +259,20 @@ export const initializeScheduler = async (storageService?: StorageService) => {
           await processTeamsMeetingArtifactNotification(job.data);
         }
       );
+
+      jobScheduler.registerJobHandler<TeamsMeetingCleanupJobData>(
+        TEAMS_MEETING_CLEANUP_JOB,
+        async (job: Job<TeamsMeetingCleanupJobData>) => {
+          await teamsMeetingCleanupHandler(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TeamsMeetingSweepJobData>(
+        TEAMS_MEETING_SWEEP_JOB,
+        async (job: Job<TeamsMeetingSweepJobData>) => {
+          await teamsMeetingSweepHandler(job.data);
+        }
+      );
     }
 
     // Register SLA timer handler (CE only — EE uses Temporal workflows)
@@ -271,7 +326,6 @@ export type {
   GenerateInvoiceData,
   ExpiredCreditsJobData,
   ExpiringCreditsNotificationJobData,
-  CreditReconciliationJobData,
   ReconcileBucketUsageJobData,
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
@@ -414,6 +468,22 @@ export const scheduleExpiringCreditsNotificationJob = async (
   );
 };
 
+/**
+ * Schedule the daily per-location low-stock alert job (inventory F037/F038).
+ * Each location's alert goes to that location's manager only.
+ */
+export const scheduleLowStockNotificationJob = async (
+  tenantId: string,
+  cronExpression: string = '30 7 * * *' // Default: daily at 7:30 AM
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<LowStockNotificationJobData>(
+    'inventory-low-stock-notification',
+    cronExpression,
+    { tenantId }
+  );
+};
+
 export const scheduleQuoteAutoExpirationJob = async (
   tenantId: string,
   cronExpression: string = '0 6 * * *'
@@ -424,6 +494,109 @@ export const scheduleQuoteAutoExpirationJob = async (
     cronExpression,
     { tenantId }
   );
+};
+
+export const scheduleOpportunityDisciplineJob = async (
+  tenantId: string,
+  cronExpression: string = '0 7 * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<OpportunityDisciplineJobData>(
+    'opportunity-discipline',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `opportunity-discipline:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleOpportunityWeeklyDigestJob = async (
+  tenantId: string,
+  cronExpression: string = '0 8 * * 1'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<OpportunityWeeklyDigestJobData>(
+    'opportunity-weekly-digest',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `opportunity-weekly-digest:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleOpportunityGeneratorsJob = async (
+  tenantId: string,
+  cronExpression: string = '0 6 * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<OpportunityGeneratorsJobData>(
+    'opportunity-generators',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `opportunity-generators:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleProjectDateReadinessJob = async (
+  tenantId: string,
+  cronExpression: string = '15 0 * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<ProjectDateReadinessJobData>(
+    PROJECT_DATE_READINESS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${PROJECT_DATE_READINESS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+/**
+ * Marketing module recurring jobs (F027/F049). Every handler self-gates on the
+ * `marketing-module` feature flag, so these are scheduled for all tenants and
+ * no-op where the module is off.
+ */
+export const scheduleMarketingFlipDuePostsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/5 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_FLIP_DUE_POSTS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_FLIP_DUE_POSTS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleMarketingExpireStaleTargetsJob = async (
+  tenantId: string,
+  cronExpression: string = '11 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_EXPIRE_STALE_TARGETS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_EXPIRE_STALE_TARGETS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleMarketingSendSequenceStepsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/5 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_SEND_SEQUENCE_STEPS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_SEND_SEQUENCE_STEPS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
 };
 
 /**
@@ -495,16 +668,58 @@ export const scheduleTeamsMeetingArtifactSubscriptionRenewalJob = async (
   tenantId: string,
   cronExpression: string = '*/30 * * * *'
 ): Promise<string | null> => {
-  // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow).
-  if (isEnterpriseWorkflowEdition()) {
+  // Runner-agnostic (F027): on a Temporal-backed runner the global maintenance
+  // fan-out schedule covers renewal, so no per-tenant schedule is needed. On a
+  // pg-boss-backed runner — including EE deployments configured without
+  // Temporal — the per-tenant schedule is registered through the IJobRunner
+  // abstraction so the renewal cron is never silently absent.
+  try {
+    const runner = await getJobRunnerInstance();
+    if (runner.getRunnerType() === 'temporal') {
+      return null;
+    }
+    const result = await runner.scheduleRecurringJob<TeamsMeetingArtifactSubscriptionRenewalJobData & { tenantId: string }>(
+      'renew-teams-meeting-artifact-subscriptions',
+      { tenantId },
+      cronExpression,
+      { singletonKey: `renew-teams-meeting-artifact-subscriptions:${tenantId}` }
+    );
+    return result.jobId;
+  } catch (error) {
+    logger.error('Failed to schedule Teams meeting artifact subscription renewal job', {
+      tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
-  const scheduler = await initializeScheduler();
-  return await scheduler.scheduleRecurringJob<TeamsMeetingArtifactSubscriptionRenewalJobData>(
-    'renew-teams-meeting-artifact-subscriptions',
-    cronExpression,
-    { tenantId }
-  );
+};
+
+export const scheduleTeamsMeetingSweepJob = async (
+  tenantId: string,
+  cronExpression: string = '*/10 * * * *'
+): Promise<string | null> => {
+  // Runner-agnostic like the renewal schedule above: Temporal deployments get
+  // the sweep from the global maintenance fan-out; pg-boss-backed runners get
+  // a per-tenant recurring schedule via IJobRunner.
+  try {
+    const runner = await getJobRunnerInstance();
+    if (runner.getRunnerType() === 'temporal') {
+      return null;
+    }
+    const result = await runner.scheduleRecurringJob<TeamsMeetingSweepJobData & { tenantId: string }>(
+      TEAMS_MEETING_SWEEP_JOB,
+      { tenantId },
+      cronExpression,
+      { singletonKey: `${TEAMS_MEETING_SWEEP_JOB}:${tenantId}` }
+    );
+    return result.jobId;
+  } catch (error) {
+    logger.error('Failed to schedule Teams meeting sweep job', {
+      tenantId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
 };
 
 export const scheduleGoogleGmailWatchRenewalJob = async (
@@ -537,31 +752,6 @@ export const scheduleCleanupAiSessionKeysJob = async (
     'cleanup-ai-session-keys',
     cronExpression,
     { tenantId: 'system', trigger: 'cron' }
-  );
-};
-
-/**
- * Schedule a recurring job to run credit reconciliation
- * This job validates credit balances and creates reconciliation reports for any discrepancies
- *
- * @param tenantId The tenant ID
- * @param clientId Optional client ID to limit processing to a specific client
- * @param cronExpression Cron expression for job scheduling (e.g., '0 2 * * *' for daily at 2:00 AM)
- * @returns Job ID if successful, null otherwise
- */
-export const scheduleCreditReconciliationJob = async (
-  tenantId: string,
-  clientId?: string,
-  cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
-): Promise<string | null> => {
-  if (isEnterpriseWorkflowEdition()) {
-    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
-  }
-  const scheduler = await initializeScheduler();
-  return await scheduler.scheduleRecurringJob<CreditReconciliationJobData>(
-    'credit-reconciliation',
-    cronExpression,
-    { tenantId, clientId }
   );
 };
 

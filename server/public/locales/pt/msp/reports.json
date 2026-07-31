@@ -53,10 +53,11 @@
     },
     "empty": {
       "noData": "Não há dados para este relatório.",
-      "noOpenTicketsInRange": "Não há chamados abertos nesta faixa.",
+      "noOpenTicketsInRange": "Não há tickets abertos nesta faixa.",
       "noDate": "Sem data",
       "notAvailable": "n / D",
-      "noEmailChannels": "Nenhum canal de e-mail está configurado."
+      "noEmailChannels": "Nenhum canal de e-mail está configurado.",
+      "noCapacity": "n/d — sem capacidade definida"
     },
     "fallbackTitle": "Relatório",
     "dateRange": {
@@ -79,10 +80,10 @@
       "healthyChannels": "Canais saudáveis",
       "problemChannels": "Canais problemáticos",
       "emailsProcessed": "E-mails processados",
-      "ticketsFromEmail": "Chamados por e-mail",
+      "ticketsFromEmail": "Tickets por e-mail",
       "failedEmails": "E-mails com falha",
       "avgProcessingTime": "Média tempo de processamento",
-      "avgTicketCreationTime": "Média tempo de e-mail para chamado",
+      "avgTicketCreationTime": "Média tempo de e-mail para ticket",
       "totalHours": "Total de horas",
       "billableHours": "Horas faturáveis",
       "nonBillableHours": "Horas não faturáveis",
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Excedente do intervalo",
       "openAssigned": "Aberto atribuído",
       "activeAssignees": "Responsáveis ​​ativos",
-      "avgResolutionTime": "Média tempo de resolução"
+      "avgResolutionTime": "Média tempo de resolução",
+      "workedHours": "Horas trabalhadas",
+      "capacityHours": "Horas de capacidade",
+      "utilization": "Utilização",
+      "usersWithoutCapacity": "Capacidade ausente",
+      "activeUsers": "Usuários ativos"
     },
     "sections": {
       "openByStatus": "Aberto por status",
@@ -103,7 +109,7 @@
       "openByAssignee": "Aberto pelo responsável",
       "ageDistribution": "Distribuição etária",
       "responseOwnership": "Propriedade da resposta",
-      "oldestOpenTickets": "Chamados abertos mais antigos",
+      "oldestOpenTickets": "Tickets abertos mais antigos",
       "emailProcessingStatus": "Status de processamento",
       "emailChannels": "Canais de e-mail",
       "timeByUser": "Tempo por usuário",
@@ -113,20 +119,21 @@
       "upcomingRenewals": "Próximas renovações",
       "bucketUsage": "Uso de balde",
       "performanceByAssignee": "Desempenho por responsável",
-      "closedByAssignee": "Fechado pelo responsável"
+      "closedByAssignee": "Fechado pelo responsável",
+      "utilizationByUser": "Utilização por usuário"
     },
     "reportCatalog": {
       "ticketWorkload": {
-        "title": "Carga de trabalho de chamados",
-        "description": "Chamados criados, fechados e atualmente abertos agrupados por status, prioridade e responsável."
+        "title": "Carga de trabalho de tickets",
+        "description": "Tickets criados, fechados e atualmente abertos agrupados por status, prioridade e responsável."
       },
       "ticketAging": {
-        "title": "Envelhecimento do chamado",
-        "description": "Intervalos de idade de chamados abertos, propriedade de respostas e chamados ativos mais antigos."
+        "title": "Envelhecimento do ticket",
+        "description": "Intervalos de idade de tickets abertos, propriedade de respostas e tickets ativos mais antigos."
       },
       "emailChannelHealth": {
         "title": "Integridade do canal de e-mail",
-        "description": "Volume de entrada de e-mail, velocidade de criação de chamados e integridade da conexão da caixa de correio."
+        "description": "Volume de entrada de e-mail, velocidade de criação de tickets e integridade da conexão da caixa de correio."
       },
       "timeUtilization": {
         "title": "Utilização do tempo",
@@ -136,17 +143,21 @@
         "title": "Desempenho da equipe",
         "description": "Taxa de transferência e propriedade de resposta em nível de equipe para espaços de trabalho multiusuários."
       },
+      "employeeUtilization": {
+        "title": "Utilização de funcionários",
+        "description": "Horas trabalhadas em relação à capacidade semanal de cada membro da equipe."
+      },
       "contractReports": {
         "title": "Relatórios de contrato",
-        "description": "Receita de contrato, renovações, utilização de bucket e lucratividade simples."
+        "description": "Receita de contrato, renovações, utilização de bucket e rentabilidade."
       }
     },
     "table": {
       "channel": "Canal",
       "status": "Status",
       "processed": "Processado",
-      "tickets": "Chamados",
-      "avgEmailToTicket": "Média de email para chamado",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Média de email para ticket",
       "assignee": "Responsável",
       "created": "Criado",
       "closed": "Fechado",
@@ -156,9 +167,13 @@
       "totalHours": "Total de horas",
       "billableHours": "Horas faturáveis",
       "entries": "Entradas",
-      "ticket": "Chamado",
+      "ticket": "Ticket",
       "entered": "Entrou",
-      "age": "Idade"
+      "age": "Idade",
+      "workedHours": "Horas trabalhadas",
+      "capacityHours": "Horas de capacidade",
+      "utilization": "Utilização",
+      "capacityEstimated": "Estimado a partir da capacidade semanal; sem horário de trabalho definido."
     },
     "statusValues": {
       "connected": "Conectado",
@@ -220,8 +235,8 @@
         "empty": "Nenhum contrato baseado em bucket encontrado"
       },
       "profitability": {
-        "title": "Relatório de rentabilidade simples",
-        "description": "Margens de lucro básicas e análise de receitas versus custos por contrato",
+        "title": "Relatório de rentabilidade",
+        "description": "Margem por cliente, contrato e ticket com base nas taxas de custo internas configuradas.",
         "empty": "Não há dados de rentabilidade disponíveis"
       }
     },
@@ -250,6 +265,108 @@
       "upcoming": "Por vir",
       "yes": "Sim",
       "no": "Não"
+    },
+    "profitability": {
+      "formats": {
+        "percent": "{{value}}%",
+        "hours": "{{value}} h",
+        "hourlyRate": "{{value}}/h",
+        "ticketWithNumber": "#{{number}} {{title}}",
+        "billableHours": "{{value}} h faturáveis",
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (sem custo definido)",
+        "unassignedLine": "{{line}} (não atribuído)"
+      },
+      "errors": {
+        "load": "Falha ao carregar dados de rentabilidade",
+        "title": "Erro ao carregar rentabilidade"
+      },
+      "table": {
+        "revenue": "Receita",
+        "laborCost": "Custo de mão de obra",
+        "materialCost": "Custo de material",
+        "margin": "Margem",
+        "marginPct": "Margem %",
+        "hours": "Horas",
+        "ehr": "EHR",
+        "client": "Cliente",
+        "agreement": "Contrato",
+        "ticket": "Ticket",
+        "attribution": "Atribuição",
+        "contractLine": "Linha",
+        "cost": "Custo"
+      },
+      "actions": {
+        "toggleLines": "Alternar linhas",
+        "apply": "Aplicar",
+        "configureCostRates": "Configurar taxas de custo",
+        "clearClient": "Todos os clientes",
+        "clearAgreement": "Todos os contratos"
+      },
+      "rowTypes": {
+        "adHoc": "Avulso",
+        "unattributed": "Sem atribuição",
+        "unassigned": "Não atribuído"
+      },
+      "attribution": {
+        "exact": "Exata",
+        "allocated": "Alocada",
+        "none": "Nenhuma"
+      },
+      "status": {
+        "uncosted": "Sem custo definido"
+      },
+      "filters": {
+        "startDate": "Data de início",
+        "endDate": "Data de término"
+      },
+      "timingTooltip": "A receita é filtrada pela data da fatura. O custo de mão de obra é filtrado pela data do trabalho. O custo de material faturado segue a data da fatura; o custo de material não faturado segue a data de criação.",
+      "empty": {
+        "costRates": "As taxas de custo não estão configuradas. As horas de mão de obra são exibidas sem custo definido até que exista uma taxa padrão do locatário ou por usuário.",
+        "clients": "Não há dados de rentabilidade por cliente disponíveis para este período.",
+        "lines": "Não há detalhes no nível de linha para este item.",
+        "tickets": "Não há dados de rentabilidade por ticket disponíveis para esta seleção.",
+        "agreements": "Não há dados de rentabilidade por contrato disponíveis para esta seleção."
+      },
+      "warnings": {
+        "title": "Avisos do relatório",
+        "uncostedMinutes": "{{hours}} horas sem custo definido",
+        "unattributedMinutes": "{{hours}} horas não atribuídas",
+        "unapprovedMinutes": "{{hours}} horas não aprovadas incluídas",
+        "zeroDuration": "{{count}} entradas com duração zero",
+        "uncostedMaterials": "{{count}} materiais sem custo definido",
+        "unconvertedRevenue": "{{count}} linhas de receita não convertidas",
+        "materialCurrencyMismatch": "{{count}} divergências de moeda em materiais"
+      },
+      "summary": {
+        "revenue": "Receita",
+        "laborCost": "Custo de mão de obra",
+        "materialCost": "Custo de material",
+        "margin": "Margem",
+        "marginPct": "Margem %",
+        "ehr": "Taxa horária efetiva"
+      },
+      "sections": {
+        "clients": "Clientes",
+        "clientsDescription": "Selecione um cliente para detalhar contratos e tickets.",
+        "agreements": "Contratos de {{client}}",
+        "agreementsDescription": "Linhas avulsas e sem atribuição são incluídas para que os totais sejam conciliados.",
+        "linesForAgreement": "Linhas de contrato de {{agreement}}",
+        "tickets": "Tickets",
+        "ticketsForAgreement": "Custo e receita de tickets para {{agreement}}.",
+        "ticketsDescription": "Mão de obra, custo de material, receita atribuída e margem no nível de ticket."
+      },
+      "fallbacks": {
+        "untitledTicket": "Ticket sem título"
+      },
+      "print": {
+        "dateRange": "{{start}} a {{end}}",
+        "client": "Cliente",
+        "allClients": "Todos os clientes",
+        "agreement": "Contrato",
+        "allAgreements": "Todos os contratos",
+        "currency": "Moeda"
+      }
     }
   },
   "contractPerformance": {

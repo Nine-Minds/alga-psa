@@ -7,9 +7,14 @@ import { billingOverviewReport } from '../definitions/billing/overview';
 import {
   contractRevenueReport,
   contractExpirationReport,
-  contractBucketUsageReport,
-  contractProfitabilityReport
+  contractBucketUsageReport
 } from '../definitions/contracts';
+import {
+  opportunityAssessmentConversionReport,
+  opportunityGeneratorYieldReport,
+  opportunityPipelineByStageReport,
+  opportunityWinLossReport,
+} from '../definitions/opportunities';
 
 export class ReportRegistry {
   private static registry: IReportRegistry = {};
@@ -30,7 +35,11 @@ export class ReportRegistry {
     this.register(contractRevenueReport);
     this.register(contractExpirationReport);
     this.register(contractBucketUsageReport);
-    this.register(contractProfitabilityReport);
+
+    this.register(opportunityPipelineByStageReport);
+    this.register(opportunityWinLossReport);
+    this.register(opportunityAssessmentConversionReport);
+    this.register(opportunityGeneratorYieldReport);
 
     // TODO: Register other report categories as they're implemented
     // this.register(operationsReports);

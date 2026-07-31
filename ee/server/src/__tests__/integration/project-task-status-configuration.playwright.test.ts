@@ -12,6 +12,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 import { E2ETestContext } from '../utils/test-context-e2e';
@@ -30,6 +31,10 @@ const TEST_CONFIG = {
 
 test.describe('Project Task Status Configuration', () => {
   let context: E2ETestContext;
+
+  function tenantTable(tenantId: string, table: string) {
+    return tenantDb(context.db, tenantId).table(table);
+  }
 
   test.beforeAll(async () => {
     context = new E2ETestContext({
@@ -201,7 +206,7 @@ test.describe('Project Task Status Configuration', () => {
     await page.waitForTimeout(500);
 
     // Get available statuses from database to verify
-    const availableStatuses = await context.db('statuses')
+    const availableStatuses = await tenantTable(tenantId, 'statuses')
       .where({ tenant: tenantId, item_type: 'project_task' })
       .orderBy('order_number');
 
@@ -460,7 +465,7 @@ test.describe('Project Task Status Configuration', () => {
     await page.waitForTimeout(500);
 
     // Get the available statuses from the database to know what we're working with
-    const availableStatuses = await context.db('statuses')
+    const availableStatuses = await tenantTable(tenantId, 'statuses')
       .where({ tenant: tenantId, item_type: 'project_task' })
       .orderBy('order_number')
       .limit(5);
@@ -492,7 +497,7 @@ test.describe('Project Task Status Configuration', () => {
     await page.waitForTimeout(2000);
 
     // Verify project was created in database
-    const dbProject = await context.db('projects')
+    const dbProject = await tenantTable(tenantId, 'projects')
       .where({ tenant: tenantId, project_name: projectName })
       .first();
 
@@ -500,7 +505,7 @@ test.describe('Project Task Status Configuration', () => {
     console.log('[Test] ✓ Project created in database:', dbProject.project_id);
 
     // Verify project status mappings were created
-    const statusMappings = await context.db('project_status_mappings')
+    const statusMappings = await tenantTable(tenantId, 'project_status_mappings')
       .where({ tenant: tenantId, project_id: dbProject.project_id })
       .orderBy('display_order');
 
@@ -545,7 +550,7 @@ async function setupTestStatuses(context: E2ETestContext): Promise<void> {
   const tenantId = context.tenantData.tenant.tenantId;
 
   // Check if statuses already exist
-  const existingStatuses = await context.db('statuses')
+  const existingStatuses = await tenantDb(context.db, tenantId).table('statuses')
     .where({ tenant: tenantId, item_type: 'project_task' });
 
   if (existingStatuses.length > 0) {
@@ -563,7 +568,7 @@ async function setupTestStatuses(context: E2ETestContext): Promise<void> {
   ];
 
   for (const status of testStatuses) {
-    await context.db('statuses').insert({
+    await tenantDb(context.db, tenantId).table('statuses').insert({
       status_id: uuidv4(),
       tenant: tenantId,
       item_type: 'project_task',
@@ -585,7 +590,7 @@ async function setupTestClient(context: E2ETestContext): Promise<any> {
   const tenantId = context.tenantData.tenant.tenantId;
 
   // Check if test client exists
-  const existingClient = await context.db('companies')
+  const existingClient = await tenantDb(context.db, tenantId).table('companies')
     .where({ tenant: tenantId })
     .first();
 
@@ -598,7 +603,7 @@ async function setupTestClient(context: E2ETestContext): Promise<any> {
   const clientId = uuidv4();
   const clientName = `Test Client ${Date.now()}`;
 
-  await context.db('companies').insert({
+  await tenantDb(context.db, tenantId).table('companies').insert({
     company_id: clientId,
     tenant: tenantId,
     company_name: clientName,
@@ -607,7 +612,7 @@ async function setupTestClient(context: E2ETestContext): Promise<any> {
     updated_at: new Date(),
   });
 
-  const newClient = await context.db('companies')
+  const newClient = await tenantDb(context.db, tenantId).table('companies')
     .where({ company_id: clientId, tenant: tenantId })
     .first();
 

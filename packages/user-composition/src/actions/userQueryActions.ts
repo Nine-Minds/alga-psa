@@ -2,16 +2,43 @@
 
 import User from '@alga-psa/db/models/user';
 import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '../lib/avatarUtils';
-import { hasPermission, throwPermissionError } from '../lib/permissions';
+import { hasPermission } from '../lib/permissions';
 import logger from '@alga-psa/core/logger';
 import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
 
 export { getCurrentUser };
+
+function isPermissionDeniedError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('Permission denied:');
+}
+
+function isInvalidUserQueryReference(error: unknown): boolean {
+  const dbError = error as { code?: string };
+  return dbError?.code === '22P02' || dbError?.code === '23503';
+}
+
+function isExpectedUserQueryError(error: unknown): boolean {
+  return isPermissionDeniedError(error) || isInvalidUserQueryReference(error);
+}
+
+/**
+ * These query actions return full `users` rows (select '*', including
+ * hashed_password/two_factor_secret). Client-portal roles hold a
+ * client-flagged `user:read` permission, so the RBAC check alone does not
+ * keep portal callers out. No client-portal surface legitimately calls these
+ * actions (the portal uses dedicated actions like getClientUserById /
+ * getClientUsersForClient), so they are restricted to non-client callers.
+ */
+function assertNotClientPortalCaller(currentUser: { user_type?: string }, action: string): void {
+  if (currentUser.user_type === 'client') {
+    throw new Error(`Permission denied: Cannot ${action}`);
+  }
+}
 
 export const findUserById = withAuth(async (
   currentUser,
@@ -25,13 +52,17 @@ export const findUserById = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read user');
       }
+      assertNotClientPortalCaller(currentUser, 'read user');
 
       const user = await User.getUserWithRoles(trx, id);
       return user || null;
     });
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
-    throw new Error('Failed to find user');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -52,6 +83,7 @@ export const getAllUsersBasic = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
+      assertNotClientPortalCaller(currentUser, 'read users');
 
       const users = await User.getAll(trx, includeInactive);
 
@@ -63,7 +95,10 @@ export const getAllUsersBasic = withAuth(async (
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
-    throw new Error('Failed to fetch users');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -80,6 +115,7 @@ export const getAllUsers = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
+      assertNotClientPortalCaller(currentUser, 'read users');
 
       const users = await User.getAll(trx, includeInactive);
 
@@ -100,7 +136,10 @@ export const getAllUsers = withAuth(async (
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
-    throw new Error('Failed to fetch users');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -118,22 +157,26 @@ export const getReportsToSubordinates = withAuth(async (
       if (targetManagerId !== currentUser.user_id && !canReadUsers) {
         throw new Error('Permission denied: Cannot read other users reporting chains');
       }
+      assertNotClientPortalCaller(currentUser, 'read user reporting chains');
 
       const subordinateIds = await User.getReportsToSubordinateIds(trx, targetManagerId);
       if (subordinateIds.length === 0) {
         return [] as IUser[];
       }
 
-      const rows = await trx('users')
+      const rows = await tenantDb(trx, tenant)
+        .table('users')
         .whereIn('user_id', subordinateIds)
-        .where({ tenant })
         .select('*');
 
       return rows as IUser[];
     });
   } catch (error) {
     logger.error('Failed to fetch reports_to subordinates:', error);
-    throw new Error('Failed to fetch reports_to subordinates');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -147,7 +190,10 @@ export const getUserRoles = withAuth(async (
     return await User.getUserRoles(knex, userId);
   } catch (error) {
     logger.error(`Failed to fetch roles for user with id ${userId}:`, error);
-    throw new Error('Failed to fetch user roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -155,14 +201,17 @@ export const getAllRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> 
   try {
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const roles = await trx('roles')
-        .where({ tenant: tenant || undefined })
+      const roles = await tenantDb(trx, tenant)
+        .table<IRole>('roles')
         .select('*');
       return roles;
     });
   } catch (error) {
     logger.error('Failed to fetch all roles:', error);
-    throw new Error('Failed to fetch all roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -173,9 +222,9 @@ export const getMSPRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> 
   try {
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const roles = await trx('roles')
+      const roles = await tenantDb(trx, tenant)
+        .table<IRole>('roles')
         .where({
-          tenant,
           msp: true
         })
         .select('*');
@@ -183,7 +232,10 @@ export const getMSPRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> 
     });
   } catch (error) {
     logger.error('Failed to fetch MSP roles:', error);
-    throw new Error('Failed to fetch MSP roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -194,9 +246,9 @@ export const getClientPortalRoles = withAuth(async (_user, { tenant }): Promise<
   try {
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const roles = await trx('roles')
+      const roles = await tenantDb(trx, tenant)
+        .table<IRole>('roles')
         .where({
-          tenant,
           client: true
         })
         .select('*');
@@ -204,7 +256,10 @@ export const getClientPortalRoles = withAuth(async (_user, { tenant }): Promise<
     });
   } catch (error) {
     logger.error('Failed to fetch client portal roles:', error);
-    throw new Error('Failed to fetch client portal roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -239,7 +294,10 @@ export const getUserRolesWithPermissions = withAuth(async (
     }
   } catch (error) {
     logger.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
-    throw new Error('Failed to fetch user roles with permissions');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -292,13 +350,17 @@ export const getUserWithRoles = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read user with roles');
       }
+      assertNotClientPortalCaller(currentUser, 'read user with roles');
 
       const user = await User.getUserWithRoles(trx, userId);
       return user || null;
     });
   } catch (error) {
     logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
-    throw new Error('Failed to fetch user with roles');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -314,13 +376,17 @@ export const getMultipleUsersWithRoles = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read multiple users with roles');
       }
+      assertNotClientPortalCaller(currentUser, 'read multiple users with roles');
 
       const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
       return users.filter((user): user is IUserWithRoles => user !== undefined);
     });
   } catch (error) {
     logger.error('Failed to fetch multiple users with roles:', error);
-    throw new Error('Failed to fetch multiple users with roles');
+    if (isExpectedUserQueryError(error)) {
+      return [];
+    }
+    throw error;
   }
 });
 
@@ -345,7 +411,10 @@ export const getUserPreference = withAuth(async (
     }
   } catch (error) {
     logger.error('Failed to get user preference:', error);
-    throw new Error('Failed to get user preference');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -374,7 +443,10 @@ export const getUserPreferencesBatch = withAuth(async (
     return result;
   } catch (error) {
     logger.error('Failed to get user preferences batch:', error);
-    throw new Error('Failed to get user preferences batch');
+    if (isExpectedUserQueryError(error)) {
+      return {};
+    }
+    throw error;
   }
 });
 
@@ -398,7 +470,7 @@ export const setUserPreference = withAuth(async (
     });
   } catch (error) {
     logger.error('Failed to set user preference:', error);
-    throw new Error('Failed to set user preference');
+    throw error;
   }
 });
 
@@ -422,10 +494,10 @@ export const getUserClientId = withAuth(async (
 
       // First try to get client ID from contact if user is contact-based
       if (user.contact_id) {
-        const contact = await trx('contacts')
+        const contact = await tenantDb(trx, tenant)
+          .table('contacts')
           .where({
             contact_name_id: user.contact_id,
-            tenant: tenant
           })
           .select('client_id')
           .first();
@@ -440,7 +512,10 @@ export const getUserClientId = withAuth(async (
     });
   } catch (error) {
     logger.error('Error getting user client ID:', error);
-    throw new Error('Failed to get user client ID');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -462,10 +537,10 @@ export const getUserContactId = withAuth(async (
         throw new Error('Permission denied: Cannot read user contact ID');
       }
 
-      const user = await trx('users')
+      const user = await tenantDb(trx, tenant)
+        .table('users')
         .where({
           user_id: userId,
-          tenant: tenant
         })
         .select('contact_id')
         .first();
@@ -474,7 +549,10 @@ export const getUserContactId = withAuth(async (
     });
   } catch (error) {
     logger.error('Error getting user contact ID:', error);
-    throw new Error('Failed to get user contact ID');
+    if (isExpectedUserQueryError(error)) {
+      return null;
+    }
+    throw error;
   }
 });
 
@@ -492,19 +570,49 @@ export const getClientUsersForClient = withAuth(async (
         throw new Error('Permission denied: Cannot read client users for client');
       }
 
-      const users = await trx('users')
-        .join('contacts', function() {
-          this.on('users.contact_id', '=', 'contacts.contact_name_id')
-              .andOn('contacts.tenant', '=', trx.raw('?', [tenant]));
-        })
-        .where({
-          'contacts.client_id': clientId,
-          'users.tenant': tenant,
-          'users.user_type': 'client'
-        })
-        .select('users.*');
+      const db = tenantDb(trx, tenant);
+      const usersQuery = db.table<IUser>('users');
+      db.tenantJoin(usersQuery, 'contacts', 'users.contact_id', 'contacts.contact_name_id');
 
-      return users;
+      let query = usersQuery
+        .where('contacts.client_id', clientId)
+        .where('users.user_type', 'client');
+
+      if (currentUser.user_type === 'client') {
+        // Client-portal callers (the portal user-management screen) may only
+        // list users of their own company, and must never receive credential
+        // columns — the base query would otherwise return `users.*`,
+        // including hashed_password and two_factor_secret.
+        if (!currentUser.contact_id) {
+          throw new Error('Permission denied: Cannot read client users for client');
+        }
+        const actorContact = await db.table('contacts')
+          .where({ contact_name_id: currentUser.contact_id })
+          .select('client_id')
+          .first();
+        if (!actorContact?.client_id || actorContact.client_id !== clientId) {
+          throw new Error('Permission denied: Cannot read client users for another client');
+        }
+        query = query.select<IUser[]>(
+          'users.user_id',
+          'users.tenant',
+          'users.username',
+          'users.email',
+          'users.first_name',
+          'users.last_name',
+          'users.contact_id',
+          'users.user_type',
+          'users.is_inactive',
+          'users.last_login_at',
+          'users.last_login_method',
+          'users.created_at',
+          'users.updated_at'
+        );
+      } else {
+        query = query.select<IUser[]>('users.*');
+      }
+
+      return await query;
     });
   } catch (error) {
     logger.error('Error getting client users:', error);

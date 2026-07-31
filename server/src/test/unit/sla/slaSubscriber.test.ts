@@ -23,6 +23,9 @@ vi.mock('@alga-psa/db', () => ({
     tenantId: string,
     callback: (trx: unknown) => Promise<unknown>
   ) => withTenantTransactionRetryReadOnlyMock(tenantId, callback),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  }),
 }));
 
 vi.mock('@alga-psa/sla', () => ({

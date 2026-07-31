@@ -1,11 +1,12 @@
 import { cookies } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
-import { getTenantSettings } from "@alga-psa/tenancy/actions";
-import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
+import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
-import { registerSlaIntegration } from "@alga-psa/msp-composition/tickets/registerSlaIntegration";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
+import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
 import type { Metadata } from 'next';
 
@@ -50,33 +51,35 @@ export default async function MspLayout({
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';
   let needsOnboarding = false;
+  let onboardingResolvedServerSide = false;
   try {
     const tenantSettings = await getTenantSettings();
     if (tenantSettings) {
       needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+      onboardingResolvedServerSide = true;
     }
   } catch (error) {
     console.error('Failed to load tenant settings for onboarding check:', error);
   }
 
   const locale = await getHierarchicalLocaleAction();
+  const preloadedLocaleResources = await preloadLocaleResources(locale).catch(() => undefined);
   const productCode = await getCurrentTenantProduct();
   // Only self-host installs carry a license_state row; gate the trial/expiry
   // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
   const selfHostLicensing = await isSelfHostLicensing();
-
-  if (productCode === 'psa') {
-    // Keep PSA-only integrations out of AlgaDesk composition.
-    registerSlaIntegration();
-  }
+  const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
 
   return (
     <MspLayoutClient
       session={session}
+      currencyCode={currencyCode}
       productCode={productCode}
       needsOnboarding={needsOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}
       initialLocale={locale}
+      preloadedLocaleResources={preloadedLocaleResources}
+      onboardingResolvedServerSide={onboardingResolvedServerSide}
       selfHostLicensing={selfHostLicensing}
     >
       {children}

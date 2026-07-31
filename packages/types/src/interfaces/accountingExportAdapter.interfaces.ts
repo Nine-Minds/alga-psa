@@ -2,6 +2,7 @@ import type { AccountingExportBatch, AccountingExportLine } from './accountingEx
 
 export interface AccountingExportAdapterCapabilities {
   deliveryMode: 'api' | 'file';
+  supportedExportTypes: readonly string[];
   supportsPartialRetry: boolean;
   supportsInvoiceUpdates: boolean;
   /** Whether this adapter supports external tax calculation (tax delegation) */

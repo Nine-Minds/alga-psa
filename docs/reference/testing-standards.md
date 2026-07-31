@@ -364,6 +364,8 @@ Notes:
   budget when you fix skips; raising it requires editing the budget file in your PR.
 - New workflows start as non-required checks; they are promoted to required in
   branch protection after a green shakeout period.
+- Main-branch and nightly runs append pass/coverage numbers to a shared Google
+  Sheet so trends are visible over time — see [test-metrics.md](test-metrics.md).
 
 ## Coverage Roadmap (priority order)
 

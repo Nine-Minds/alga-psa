@@ -96,6 +96,18 @@ export function TicketSectionFiltersDialog({
     }));
   };
 
+  // Created ("date entered") range. Unlike due date, both bounds are open-ended (no
+  // "default from = now" fallback), since creation dates always live in the past.
+  const handleCreatedDateChange = (range: { from: string; to: string }) => {
+    const startDate = range.from ? new Date(range.from + 'T00:00:00Z') : undefined;
+    const endDate = range.to ? new Date(range.to + 'T23:59:59Z') : undefined;
+    setLocalFilters((prev) => ({
+      ...prev,
+      createdAtStart: startDate?.toISOString() as ISO8601String | undefined,
+      createdAtEnd: endDate?.toISOString() as ISO8601String | undefined,
+    }));
+  };
+
   const handleApply = () => {
     // Construct the final filters object, converting single selects back to arrays
     const filtersToApply: Partial<ActivityFilters> = {
@@ -118,6 +130,8 @@ export function TicketSectionFiltersDialog({
       isClosed: undefined,
       dueDateStart: undefined,
       dueDateEnd: undefined,
+      createdAtStart: undefined,
+      createdAtEnd: undefined,
       clientId: undefined,
       contactId: undefined,
       search: undefined,
@@ -235,8 +249,21 @@ export function TicketSectionFiltersDialog({
           </div>
 
           {/* Due Date Range */}
+          {/* LEVERAGE: pattern activity-dialog-date-range — this labeled + per-range-clearable date-range→two-ISO-keys block is now duplicated across the Ticket/Project/Workflow section dialogs (and mirrored in the table filter bar); a shared FilterDateRangeField would collapse ~4 copies. */}
           <div className="space-y-1">
-             <Label htmlFor="ticket-due-date-range" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.dueDateRange', { defaultValue: 'Due Date Range' })}</Label>
+             <div className="flex items-center justify-between">
+               <Label htmlFor="ticket-due-date-range" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.dueDateRange', { defaultValue: 'Due Date Range' })}</Label>
+               {(localFilters.dueDateStart || localFilters.dueDateEnd) && (
+                 <Button
+                   id="ticket-due-date-clear"
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => setLocalFilters(prev => ({ ...prev, dueDateStart: undefined, dueDateEnd: undefined }))}
+                 >
+                   {t('sections.tickets.filterDialog.actions.clearDates', { defaultValue: 'Clear' })}
+                 </Button>
+               )}
+             </div>
              <StringDateRangePicker
                 id="ticket-due-date-range"
                 value={{
@@ -244,6 +271,31 @@ export function TicketSectionFiltersDialog({
                     to: localFilters.dueDateEnd ? localFilters.dueDateEnd.split('T')[0] : '',
                 }}
                 onChange={handleDateChange}
+             />
+          </div>
+
+          {/* Created Date Range */}
+          <div className="space-y-1">
+             <div className="flex items-center justify-between">
+               <Label htmlFor="ticket-created-date-range" className="text-base font-semibold">{t('sections.tickets.filterDialog.fields.createdDateRange', { defaultValue: 'Created Date Range' })}</Label>
+               {(localFilters.createdAtStart || localFilters.createdAtEnd) && (
+                 <Button
+                   id="ticket-created-date-clear"
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => setLocalFilters(prev => ({ ...prev, createdAtStart: undefined, createdAtEnd: undefined }))}
+                 >
+                   {t('sections.tickets.filterDialog.actions.clearDates', { defaultValue: 'Clear' })}
+                 </Button>
+               )}
+             </div>
+             <StringDateRangePicker
+                id="ticket-created-date-range"
+                value={{
+                    from: localFilters.createdAtStart ? localFilters.createdAtStart.split('T')[0] : '',
+                    to: localFilters.createdAtEnd ? localFilters.createdAtEnd.split('T')[0] : '',
+                }}
+                onChange={handleCreatedDateChange}
              />
           </div>
 

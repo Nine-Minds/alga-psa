@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import knex, { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { encode } from '@auth/core/jwt';
@@ -29,6 +30,10 @@ export function createTestDbConnection(): Knex {
     password: `[${config.connection.password?.length || 0} chars]`,
   });
   return knex(config);
+}
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
 }
 
 // Environment setup
@@ -72,14 +77,14 @@ export async function createTestTenant(
   const companyName = options.companyName || `Test Company ${uuidv4().slice(0, 6)}`;
 
   // Create tenant
-  await db('tenants').insert({
+  await tenantTable(db, tenantId, 'tenants').insert({
     tenant: tenantId,
     client_name: companyName,
     email: `admin-${tenantId.slice(0, 8)}@test.com`,
   });
 
   // Create user
-  await db('users').insert({
+  await tenantTable(db, tenantId, 'users').insert({
     user_id: userId,
     tenant: tenantId,
     username: `admin-${tenantId.slice(0, 8)}`,
@@ -93,7 +98,7 @@ export async function createTestTenant(
 
   // Create admin role with full permissions
   const roleId = uuidv4();
-  await db('roles').insert({
+  await tenantTable(db, tenantId, 'roles').insert({
     role_id: roleId,
     tenant: tenantId,
     role_name: 'Test Admin',
@@ -109,7 +114,7 @@ export async function createTestTenant(
   for (const action of ticketPermissions) {
     const permissionId = uuidv4();
     permissionIds.push(permissionId);
-    await db('permissions').insert({
+    await tenantTable(db, tenantId, 'permissions').insert({
       permission_id: permissionId,
       tenant: tenantId,
       resource: 'ticket',
@@ -129,7 +134,7 @@ export async function createTestTenant(
     for (const action of actions) {
       const permissionId = uuidv4();
       permissionIds.push(permissionId);
-      await db('permissions').insert({
+      await tenantTable(db, tenantId, 'permissions').insert({
         permission_id: permissionId,
         tenant: tenantId,
         resource,
@@ -142,7 +147,7 @@ export async function createTestTenant(
 
   // Assign permissions to role
   for (const permissionId of permissionIds) {
-    await db('role_permissions').insert({
+    await tenantTable(db, tenantId, 'role_permissions').insert({
       tenant: tenantId,
       role_id: roleId,
       permission_id: permissionId,
@@ -150,14 +155,14 @@ export async function createTestTenant(
   }
 
   // Assign role to user
-  await db('user_roles').insert({
+  await tenantTable(db, tenantId, 'user_roles').insert({
     tenant: tenantId,
     user_id: userId,
     role_id: roleId,
   });
 
   // Create client
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     client_id: clientId,
     tenant: tenantId,
     client_name: companyName,
@@ -166,7 +171,7 @@ export async function createTestTenant(
   });
 
   // Create tenant settings
-  await db('tenant_settings').insert({
+  await tenantTable(db, tenantId, 'tenant_settings').insert({
     tenant: tenantId,
     onboarding_completed: true,
     onboarding_completed_at: new Date(),
@@ -176,7 +181,7 @@ export async function createTestTenant(
   // The tenant_email_settings table now uses 'tenant' (uuid) column
 
   // Link tenant to client
-  await db('tenant_companies').insert({
+  await tenantTable(db, tenantId, 'tenant_companies').insert({
     tenant: tenantId,
     client_id: clientId,
     is_default: true,
@@ -202,13 +207,28 @@ export async function createTestTenant(
 export async function setupAuthSession(
   page: Page,
   tenantData: TenantTestData,
-  baseUrl: string
+  baseUrl: string,
+  db: Knex,
 ): Promise<void> {
   const secret = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
   // Align with app runtime cookie naming (includes dev port suffix).
   const cookieName = getSessionCookieName();
   const maxAge = 60 * 60 * 24; // 24 hours
   const now = Math.floor(Date.now() / 1000);
+  const sessionId = uuidv4();
+  const expiresAt = new Date((now + maxAge) * 1000);
+
+  await tenantTable(db, tenantData.tenant.tenantId, 'sessions').insert({
+    tenant: tenantData.tenant.tenantId,
+    session_id: sessionId,
+    user_id: tenantData.adminUser.userId,
+    token: '',
+    login_method: 'credentials',
+    last_activity_at: new Date(),
+    expires_at: expiresAt,
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
 
   const payload = {
     sub: tenantData.adminUser.userId,
@@ -218,6 +238,8 @@ export async function setupAuthSession(
     user_type: 'internal',
     name: 'Test Admin',
     proToken: 'playwright-mock-token',
+    session_id: sessionId,
+    login_method: 'credentials',
     iat: now,
     exp: now + maxAge,
   };
@@ -275,7 +297,7 @@ export async function createTenantAndLogin(
   } = {}
 ): Promise<TenantTestData> {
   const tenantData = await createTestTenant(db, { companyName: options.companyName });
-  await setupAuthSession(page, tenantData, options.baseUrl || getBaseUrl());
+  await setupAuthSession(page, tenantData, options.baseUrl || getBaseUrl(), db);
   return tenantData;
 }
 
@@ -359,7 +381,7 @@ export async function createClientUser(
   const email = `client-${tenantId.slice(0, 8)}@test.com`;
 
   // Create contact first (user_id is in users table, not contacts)
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     contact_name_id: contactId,
     tenant: tenantId,
     full_name: 'Test Client Contact',
@@ -371,7 +393,7 @@ export async function createClientUser(
   });
 
   // Create user with contact_id referencing the contact
-  await db('users').insert({
+  await tenantTable(db, tenantId, 'users').insert({
     user_id: userId,
     tenant: tenantId,
     username: `client-${tenantId.slice(0, 8)}`,
@@ -386,7 +408,7 @@ export async function createClientUser(
 
   // Create client role with appropriate permissions
   const roleId = uuidv4();
-  await db('roles').insert({
+  await tenantTable(db, tenantId, 'roles').insert({
     role_id: roleId,
     tenant: tenantId,
     role_name: 'Client User',
@@ -397,7 +419,7 @@ export async function createClientUser(
 
   // Create ticket read permission for clients
   const permissionId = uuidv4();
-  await db('permissions').insert({
+  await tenantTable(db, tenantId, 'permissions').insert({
     permission_id: permissionId,
     tenant: tenantId,
     resource: 'ticket',
@@ -407,14 +429,14 @@ export async function createClientUser(
   });
 
   // Assign permission to role
-  await db('role_permissions').insert({
+  await tenantTable(db, tenantId, 'role_permissions').insert({
     tenant: tenantId,
     role_id: roleId,
     permission_id: permissionId,
   });
 
   // Assign role to user
-  await db('user_roles').insert({
+  await tenantTable(db, tenantId, 'user_roles').insert({
     tenant: tenantId,
     user_id: userId,
     role_id: roleId,

@@ -194,7 +194,7 @@ describe('search backfill script', () => {
   it('T172 backfills a sampled searchable row for every registered entity type', async () => {
     const knex = vi.fn();
     const indexers = allIndexers();
-    expect(indexers).toHaveLength(28);
+    expect(indexers).toHaveLength(31);
 
     for (const indexer of indexers) {
       vi.spyOn(indexer, 'loadBatch').mockImplementation(
@@ -217,7 +217,7 @@ describe('search backfill script', () => {
     await runSearchBackfill({ tenant: 'tenant-1' }, knex as never);
 
     const upsertedDocs = mocks.upsertSearchDoc.mock.calls.map((call) => call[1] as SearchDoc);
-    expect(upsertedDocs).toHaveLength(28);
+    expect(upsertedDocs).toHaveLength(31);
     expect(new Set(upsertedDocs.map((doc) => doc.objectType))).toEqual(
       new Set(indexers.map((indexer) => indexer.objectType)),
     );

@@ -13,6 +13,9 @@ type ManageStatus = {
     version: string;
     channel: "stable" | "nightly";
     updateAvailable: boolean;
+    availableVersion?: string | null;
+    pinnedReleaseDigest?: string | null;
+    resolvedReleaseDigest?: string | null;
     update: { status: "idle" | "running" | "complete" | "blocked"; message: string | null };
   };
   controlPlane: {
@@ -27,6 +30,8 @@ type ManageStatus = {
     expiresAt: string | null;
     perpetual: boolean;
     status: "active" | "expired" | "unknown";
+    source?: "live" | "seed-fallback";
+    lastCheckinAt?: string | null;
   };
   appUrl: {
     url: string | null;
@@ -34,9 +39,13 @@ type ManageStatus = {
     dnsMode: "system" | "custom";
     dnsServers: string[];
   };
+  adminPasswordReset: {
+    available: boolean;
+    email: string | null;
+  };
 };
 
-type ManageTab = "updates" | "control-plane" | "license" | "settings";
+type ManageTab = "updates" | "control-plane" | "license" | "admin-recovery" | "settings";
 
 function apiPath(
   path: string,
@@ -125,6 +134,11 @@ function UpdatesTab({
   return (
     <div className={styles.manageSection}>
       <h2>App updates</h2>
+      <p className={styles.helpText}>
+        The appliance checks the {app.channel} release channel for newer
+        versions but never applies them automatically — updates run only when
+        you start them here.
+      </p>
       <dl className={styles.kv}>
         <div>
           <dt>Current version</dt>
@@ -136,7 +150,11 @@ function UpdatesTab({
         </div>
         <div>
           <dt>Update available</dt>
-          <dd>{app.updateAvailable ? "Yes" : "No"}</dd>
+          <dd>
+            {app.updateAvailable
+              ? `Yes${app.availableVersion ? ` — ${app.availableVersion}` : ""}`
+              : "No"}
+          </dd>
         </div>
         {(updateRunning || updateDone || updateBlocked || app.update.message) ? (
           <div>
@@ -160,11 +178,14 @@ function UpdatesTab({
       {error ? <div className={styles.alert}>{error}</div> : null}
       {result ? <p className={styles.manageResult}>{result}</p> : null}
 
-      {!app.updateAvailable && !updateRunning ? (
+      {!app.updateAvailable && !updateRunning && !updateBlocked ? (
         <p className={styles.muted}>No update is available on the {app.channel} channel.</p>
       ) : null}
 
-      {app.updateAvailable || updateRunning ? (
+      {/* A blocked status stays retryable even when no new version is available —
+          otherwise an operator whose update blocked (e.g. a transient reconcile)
+          has no way to re-run it from here once updateAvailable flips back to No. */}
+      {app.updateAvailable || updateRunning || updateBlocked ? (
         <div className={styles.toolbar}>
           <button
             type="button"
@@ -178,7 +199,9 @@ function UpdatesTab({
             {busy || updateRunning
               ? "Updating…"
               : confirm
-              ? "Confirm update"
+              ? (updateBlocked ? "Confirm retry" : "Confirm update")
+              : updateBlocked
+              ? "Retry update"
               : "Run update"}
           </button>
           {confirm && !busy && !updateRunning ? (
@@ -258,7 +281,21 @@ function ControlPlaneTab({
       });
       if (response.status === 401) { window.location.reload(); return; }
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Failed to start upgrade.");
+      if (!response.ok) {
+        // Older installs ship a host-agent that predates the in-place upgrade
+        // route (/v1/control-plane/upgrade), so this POST comes back as a relayed
+        // 404 {"error":"not found"}. The host-agent is a host systemd service
+        // baked at install — it is NOT delivered via the OCI release channel, so a
+        // channel/control-plane bump can't add the route. A reboot applies the
+        // channel's current control-plane image via the boot bootstrap, which
+        // doesn't go through the host-agent.
+        if (response.status === 404 && String(data.error || "").toLowerCase() === "not found") {
+          throw new Error(
+            "This appliance's host agent predates in-place control-plane upgrade, so the upgrade button can't apply it. Reboot the appliance to apply the latest control plane — the boot process pulls it directly (no host agent needed).",
+          );
+        }
+        throw new Error(data.error || "Failed to start upgrade.");
+      }
       setReconnecting(true);
       pollStartRef.current = Date.now();
       // Poll every 3 s, tolerating fetch failures while the pod restarts.
@@ -387,6 +424,7 @@ function LicenseTab({
   onRefresh: () => Promise<void>;
 }) {
   const [licenseKey, setLicenseKey] = useState("");
+  const [claimCode, setClaimCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -418,17 +456,31 @@ function LicenseTab({
       if (response.status === 401) { window.location.reload(); return; }
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Failed to apply license.");
-      setResult("License applied. The app is restarting to apply the change.");
+      setResult("License applied. The change is active immediately.");
       setLicenseKey("");
-      // Poll to pick up the refreshed license status after restart.
-      pollRef.current = setInterval(async () => {
-        try { await onRefresh(); } catch { /* tolerate restart gap */ }
-      }, 3000);
-      setTimeout(() => { stopPoll(); setBusy(false); }, 30000);
+      await onRefresh();
+      setBusy(false);
     } catch (err) {
       setBusy(false);
       setError(err instanceof Error ? err.message : String(err));
     }
+  }
+
+  async function redeemClaimCode() {
+    setBusy(true); setResult(null); setError(null);
+    try {
+      const normalized = claimCode.trim().toUpperCase().replace(/[\s-]/g, "");
+      const response = await fetch(apiPath("/api/license/redeem"), {
+        method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ claimCode: normalized }), cache: "no-store",
+      });
+      if (response.status === 401) { window.location.reload(); return; }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Failed to activate license.");
+      setResult(`License activated${data.result?.edition ? `: ${data.result.edition}` : ""}.`);
+      setClaimCode(""); await onRefresh();
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
   }
 
   const lic = status.license;
@@ -470,12 +522,29 @@ function LicenseTab({
           </dd>
         </div>
       </dl>
+      {lic.source === "seed-fallback" ? (
+        <p className={styles.helpText}>As of last activation — live status unavailable.</p>
+      ) : null}
 
       <div className={styles.manageSeparator} />
 
-      <h3 className={styles.manageSubheading}>Apply a new license key</h3>
+      <h3 className={styles.manageSubheading}>Activate with claim code</h3>
+      <p className={styles.helpText}>Enter the activation code from your Nine Minds email.</p>
+      <div className={styles.field} style={{ marginTop: "var(--space-md)" }}>
+        <label htmlFor="manage-license-claim-code">Claim code</label>
+        <input id="manage-license-claim-code" value={claimCode} onChange={(event) => setClaimCode(event.target.value)} disabled={busy} />
+      </div>
+      <div className={styles.toolbar} style={{ marginTop: "var(--space-md)" }}>
+        <button id="manage-license-activate" type="button" className={styles.actionButton} disabled={busy || !claimCode.trim()} onClick={redeemClaimCode}>
+          {busy ? "Activating…" : "Activate"}
+        </button>
+      </div>
+
+      <div className={styles.manageSeparator} />
+
+      <h3 className={styles.manageSubheading}>Air-gapped: paste a signed license key</h3>
       <p className={styles.helpText}>
-        Paste the signed JWS license key from Nine Minds. The app will restart to apply it.
+        Paste the signed JWS license key from Nine Minds. Changes apply immediately.
       </p>
 
       <div className={styles.field} style={{ marginTop: "var(--space-md)" }}>
@@ -659,6 +728,146 @@ function SettingsTab({
   );
 }
 
+function passwordValidationError(value: string): string | null {
+  if (value.length < 8) return "Use at least 8 characters.";
+  if (!/[a-z]/.test(value)) return "Include a lowercase letter.";
+  if (!/[A-Z]/.test(value)) return "Include an uppercase letter.";
+  if (!/\d/.test(value)) return "Include a number.";
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) return "Include a special character.";
+  return null;
+}
+
+function AdminRecoveryTab({ status }: { status: ManageStatus }) {
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function clearFeedback() {
+    setConfirm(false);
+    setResult(null);
+    setError(null);
+  }
+
+  async function resetAdminPassword() {
+    const policyError = passwordValidationError(password);
+    if (policyError) { setError(policyError); return; }
+    if (password !== passwordConfirm) { setError("Passwords do not match."); return; }
+
+    setConfirm(false);
+    setBusy(true);
+    setResult(null);
+    setError(null);
+    try {
+      const response = await fetch(apiPath("/api/admin-password-reset"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password, passwordConfirm }),
+        cache: "no-store",
+      });
+      if (response.status === 401) { window.location.reload(); return; }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "The password reset failed.");
+      setPassword("");
+      setPasswordConfirm("");
+      setResult("Password reset complete. You can now sign in to Alga with the new password.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const recovery = status.adminPasswordReset;
+  return (
+    <div className={styles.manageSection}>
+      <h2>Alga admin recovery</h2>
+      <p className={styles.helpText}>
+        Reset the application password for the original administrator created during
+        appliance setup. This does not change the password used to access this management page.
+      </p>
+
+      <dl className={styles.kv}>
+        <div>
+          <dt>Account</dt>
+          <dd>{recovery?.email || "Original setup administrator unavailable"}</dd>
+        </div>
+        <div>
+          <dt>Reset method</dt>
+          <dd>Local one-time recovery job</dd>
+        </div>
+      </dl>
+
+      {!recovery?.available ? (
+        <div className={styles.alert}>
+          The original administrator identity is unavailable. Contact support before changing credentials directly.
+        </div>
+      ) : (
+        <>
+          <div className={styles.formGrid}>
+            <div className={styles.field}>
+              <label htmlFor="manage-admin-new-password">New Alga password</label>
+              <input
+                id="manage-admin-new-password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => { setPassword(event.target.value); clearFeedback(); }}
+                disabled={busy}
+              />
+              <span className={styles.helpText}>
+                At least 8 characters with upper and lowercase letters, a number, and a special character.
+              </span>
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="manage-admin-confirm-password">Confirm new password</label>
+              <input
+                id="manage-admin-confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={passwordConfirm}
+                onChange={(event) => { setPasswordConfirm(event.target.value); clearFeedback(); }}
+                disabled={busy}
+              />
+            </div>
+          </div>
+
+          {error ? <div className={styles.alert} role="alert">{error}</div> : null}
+          {result ? <p className={styles.manageResult} role="status">{result}</p> : null}
+
+          <div className={styles.toolbar}>
+            <button
+              type="button"
+              className={styles.actionButton}
+              disabled={busy || !password || !passwordConfirm}
+              onClick={() => {
+                const policyError = passwordValidationError(password);
+                if (policyError) { setError(policyError); return; }
+                if (password !== passwordConfirm) { setError("Passwords do not match."); return; }
+                if (!confirm) setConfirm(true);
+                else resetAdminPassword();
+              }}
+            >
+              {busy ? "Resetting…" : confirm ? "Confirm password reset" : "Reset Alga admin password"}
+            </button>
+            {confirm && !busy ? (
+              <button type="button" onClick={() => setConfirm(false)}>Cancel</button>
+            ) : null}
+          </div>
+          {busy ? (
+            <p className={styles.helpText} role="status">
+              A short-lived recovery job is updating the credential. Keep this page open until it completes.
+            </p>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main ManageView
 // ---------------------------------------------------------------------------
@@ -667,6 +876,7 @@ const manageTabs: Array<{ value: ManageTab; label: string }> = [
   { value: "updates", label: "Updates" },
   { value: "control-plane", label: "Control-plane" },
   { value: "license", label: "License" },
+  { value: "admin-recovery", label: "Admin recovery" },
   { value: "settings", label: "Settings" },
 ];
 
@@ -675,6 +885,10 @@ export function ManageView() {
   const [manageStatus, setManageStatus] = useState<ManageStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Latest poll failed but we still have a prior snapshot to keep showing.
+  const [reconnecting, setReconnecting] = useState(false);
+  // Mirror of manageStatus, readable inside the (stable) loader closure.
+  const manageStatusRef = useRef<ManageStatus | null>(null);
 
   const loadManageStatus = useCallback(async () => {
     try {
@@ -687,10 +901,27 @@ export function ManageView() {
         return;
       }
       if (!response.ok) throw new Error("Manage status unavailable.");
-      setManageStatus(await response.json());
+      const data = (await response.json()) as ManageStatus;
+      manageStatusRef.current = data;
+      setManageStatus(data);
       setError(null);
+      setReconnecting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      // Flux/Helm churn — and the control-plane pod restarting during its own
+      // upgrade — make individual status polls fail transiently. Once we have a
+      // snapshot, ride the blip out: keep the last-good view and show a quiet
+      // "reconnecting" strip instead of replacing the whole Manage UI (and the
+      // tabs' own progress banners) with a fatal error. A fatal error is only for
+      // the initial load, when there is nothing to show yet.
+      // LEVERAGE: pattern appliance-resilient-status-poll — the status page
+      // (app/page.tsx) hand-rolls this same "keep last-good snapshot across
+      // transient poll failures" behavior separately; a shared usePolledResource
+      // hook would unify both surfaces.
+      if (manageStatusRef.current) {
+        setReconnecting(true);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -704,20 +935,35 @@ export function ManageView() {
     <div className={styles.manageView}>
       {/* Sub-tab strip */}
       <div className={styles.manageTabStrip} role="tablist" aria-label="Manage sections">
-        {manageTabs.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            id={`manage-tab-${value}`}
-            aria-selected={activeTab === value}
-            aria-controls={`manage-panel-${value}`}
-            className={`${styles.manageTabButton} ${activeTab === value ? styles.manageTabActive : ""}`}
-            onClick={() => setActiveTab(value)}
-          >
-            {label}
-          </button>
-        ))}
+        {manageTabs.map(({ value, label }) => {
+          // Dot the tab that has something to apply, so "update available" is
+          // visible from any Manage sub-tab without opening each one.
+          const hasUpdate =
+            (value === "updates" && Boolean(manageStatus?.app.updateAvailable)) ||
+            (value === "control-plane" &&
+              Boolean(manageStatus?.controlPlane.upgradeAvailable));
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              id={`manage-tab-${value}`}
+              aria-selected={activeTab === value}
+              aria-controls={`manage-panel-${value}`}
+              className={`${styles.manageTabButton} ${activeTab === value ? styles.manageTabActive : ""}`}
+              onClick={() => setActiveTab(value)}
+            >
+              {label}
+              {hasUpdate ? (
+                <span
+                  className={styles.updateDot}
+                  title="Update available"
+                  aria-label="Update available"
+                />
+              ) : null}
+            </button>
+          );
+        })}
         <button
           type="button"
           className={styles.manageRefreshButton}
@@ -738,10 +984,16 @@ export function ManageView() {
             ))}
           </div>
         </div>
-      ) : error ? (
+      ) : error && !manageStatus ? (
         <div className={styles.alert}>{error}</div>
       ) : manageStatus ? (
         <>
+          {reconnecting ? (
+            <div className={`${styles.alert} ${styles.alertInfo}`}>
+              Reconnecting to the appliance… showing the last known status. This is
+              expected while services reconcile or the control plane restarts.
+            </div>
+          ) : null}
           {activeTab === "updates" ? (
             <div
               id="manage-panel-updates"
@@ -767,6 +1019,15 @@ export function ManageView() {
               aria-labelledby="manage-tab-license"
             >
               <LicenseTab status={manageStatus} onRefresh={loadManageStatus} />
+            </div>
+          ) : null}
+          {activeTab === "admin-recovery" ? (
+            <div
+              id="manage-panel-admin-recovery"
+              role="tabpanel"
+              aria-labelledby="manage-tab-admin-recovery"
+            >
+              <AdminRecoveryTab status={manageStatus} />
             </div>
           ) : null}
           {activeTab === "settings" ? (

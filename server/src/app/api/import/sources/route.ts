@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getImportSources } from '@/lib/imports/importActions';
+import { importErrorResponse } from '../importRouteErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,9 +11,6 @@ export async function GET() {
     return NextResponse.json(sources);
   } catch (error) {
     console.error('[API] /import/sources', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to load import sources' },
-      { status: 500 }
-    );
+    return importErrorResponse(error, 'Failed to load import sources');
   }
 }

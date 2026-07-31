@@ -21,11 +21,11 @@ import {
   getHuduCompanyArticles,
   getHuduCompanyAssets,
 } from '../../../lib/actions/integrations/huduDataActions';
+import type { HuduClientContext } from '../../../lib/actions/integrations/huduDataActions';
 import type {
-  HuduClientContext,
   HuduCompanyDataResult,
   HuduLinkedItem,
-} from '../../../lib/actions/integrations/huduDataActions';
+} from '../../../lib/integrations/hudu/huduDataTypes';
 import type { HuduArticle, HuduAsset } from '../../../lib/integrations/hudu/contracts';
 
 export interface HuduClientTabProps {

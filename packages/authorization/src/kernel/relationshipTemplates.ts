@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import type { TenantScopedQuery } from '@alga-psa/db';
 import type {
   AuthorizationEvaluationInput,
   AuthorizationSubject,
@@ -317,4 +318,24 @@ export function compileResourceReadAuthorizationSql(
     params.action,
     params.ctx
   );
+}
+
+/**
+ * Preferred staged-migration entry point for SQL read authorization.
+ *
+ * The legacy compiler accepts any Knex builder, which makes tenant scoping a
+ * caller convention. This wrapper requires a query created by the DB tenant
+ * query helper and verifies it matches the subject before mutating it.
+ */
+export function compileTenantScopedResourceReadAuthorizationSql(
+  query: TenantScopedQuery,
+  params: ResourceReadAuthorizationSqlParams
+): RelationshipSqlCompileResult {
+  if (query.tenant !== params.ctx.subject.tenant) {
+    throw new Error(
+      `Tenant-scoped authorization query tenant ${query.tenant} does not match subject tenant ${params.ctx.subject.tenant}`
+    );
+  }
+
+  return compileResourceReadAuthorizationSql(query.builder, params);
 }

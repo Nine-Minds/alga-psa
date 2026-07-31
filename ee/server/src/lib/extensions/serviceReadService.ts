@@ -1,4 +1,4 @@
-import { getConnection } from '@alga-psa/db'
+import { getConnection, tenantDb } from '@alga-psa/db'
 import type { Knex } from 'knex'
 
 export type ServiceItemKind = 'service' | 'product'
@@ -80,6 +80,7 @@ export const __testOnly = {
 
 export async function listServiceSummaries(tenantId: string, input: ServicesListInput): Promise<PaginatedServicesResult> {
   const knex = await getConnection(tenantId)
+  const db = tenantDb(knex, tenantId)
   const page = input.page ?? 1
   const pageSize = input.pageSize ?? 25
   const offset = (page - 1) * pageSize
@@ -91,32 +92,28 @@ export async function listServiceSummaries(tenantId: string, input: ServicesList
     billingMethod: input.billingMethod,
   }
 
-  const baseQuery = knex('service_catalog as sc').where({ 'sc.tenant': tenantId })
+  const baseQuery = db.table('service_catalog as sc')
   applyServiceFilters(baseQuery, normalized)
 
   const countRow = await baseQuery.clone().count<{ count: string }[]>({ count: '*' }).first()
   const totalCount = Number(countRow?.count ?? 0)
 
-  const rows = await applyServiceFilters(
-    knex('service_catalog as sc')
-      .leftJoin('service_types as st', function () {
-        this.on('st.id', '=', 'sc.custom_service_type_id').andOn('st.tenant', '=', 'sc.tenant')
-      })
-      .where({ 'sc.tenant': tenantId })
-      .select([
-        'sc.service_id',
-        'sc.service_name',
-        'sc.item_kind',
-        'sc.billing_method',
-        'sc.custom_service_type_id',
-        'sc.default_rate',
-        'sc.unit_of_measure',
-        'sc.is_active',
-        'sc.sku',
-        'st.name as service_type_name',
-      ]),
-    normalized,
-  )
+  const listQuery = db.table('service_catalog as sc')
+    .select([
+      'sc.service_id',
+      'sc.service_name',
+      'sc.item_kind',
+      'sc.billing_method',
+      'sc.custom_service_type_id',
+      'sc.default_rate',
+      'sc.unit_of_measure',
+      'sc.is_active',
+      'sc.sku',
+      'st.name as service_type_name',
+    ])
+  db.tenantJoin(listQuery, 'service_types as st', 'st.id', 'sc.custom_service_type_id', { type: 'left' })
+
+  const rows = await applyServiceFilters(listQuery, normalized)
     .orderBy('sc.service_name', 'asc')
     .limit(pageSize)
     .offset(offset)
@@ -131,12 +128,9 @@ export async function listServiceSummaries(tenantId: string, input: ServicesList
 
 export async function getServiceSummaryById(tenantId: string, serviceId: string): Promise<ServiceSummary | null> {
   const knex = await getConnection(tenantId)
+  const db = tenantDb(knex, tenantId)
 
-  const row = await knex('service_catalog as sc')
-    .leftJoin('service_types as st', function () {
-      this.on('st.id', '=', 'sc.custom_service_type_id').andOn('st.tenant', '=', 'sc.tenant')
-    })
-    .where({ 'sc.tenant': tenantId, 'sc.service_id': serviceId })
+  const query = db.table('service_catalog as sc')
     .first([
       'sc.service_id',
       'sc.service_name',
@@ -149,6 +143,9 @@ export async function getServiceSummaryById(tenantId: string, serviceId: string)
       'sc.sku',
       'st.name as service_type_name',
     ])
+  db.tenantJoin(query, 'service_types as st', 'st.id', 'sc.custom_service_type_id', { type: 'left' })
+
+  const row = await query.where({ 'sc.service_id': serviceId })
 
   if (!row) {
     return null

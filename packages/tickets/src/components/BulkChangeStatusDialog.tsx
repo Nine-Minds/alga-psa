@@ -6,6 +6,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from 'react-i18next';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './ticket/TicketNotificationSuppressionControl';
 
 interface BulkChangeStatusDialogProps {
   isOpen: boolean;
@@ -15,7 +18,7 @@ interface BulkChangeStatusDialogProps {
   isLoadingStatuses: boolean;
   failed: Array<{ ticketId: string; message: string; label?: string }>;
   isSubmitting: boolean;
-  onConfirm: (statusId: string) => Promise<void>;
+  onConfirm: (statusId: string, options?: TicketNotificationSuppressionValue) => Promise<void>;
   idPrefix?: string;
 }
 
@@ -32,16 +35,27 @@ export default function BulkChangeStatusDialog({
 }: BulkChangeStatusDialogProps) {
   const { t } = useTranslation(['features/tickets', 'common']);
   const [selectedStatusId, setSelectedStatusId] = useState<string>('');
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+  });
 
   useEffect(() => {
-    if (isOpen) setSelectedStatusId('');
+    if (isOpen) {
+      setSelectedStatusId('');
+      setNotificationSuppression({
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      });
+    }
   }, [isOpen]);
 
   const canConfirm = !!selectedStatusId && !isLoadingStatuses;
 
   const handleConfirm = async () => {
     if (!selectedStatusId) return;
-    await onConfirm(selectedStatusId);
+    const options = notificationSuppression.suppressContactNotifications ? notificationSuppression : undefined;
+    await (options ? onConfirm(selectedStatusId, options) : onConfirm(selectedStatusId));
   };
 
   return (
@@ -84,6 +98,14 @@ export default function BulkChangeStatusDialog({
                 : t('bulk.status.placeholder', 'Select a status')
             }
             disabled={isLoadingStatuses || isSubmitting}
+          />
+        </div>
+        <div className="mb-4">
+          <TicketNotificationSuppressionControl
+            idPrefix={`${idPrefix}-notification-suppression`}
+            value={notificationSuppression}
+            onChange={setNotificationSuppression}
+            disabled={isSubmitting}
           />
         </div>
         <div className="flex justify-end space-x-2">

@@ -28,8 +28,17 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { getContractLinePresetServices, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContractLinePresetServiceWithName extends IContractLinePresetService {
   service_name?: string;
@@ -61,6 +70,7 @@ export function ContractDialog({
   initialClientId,
 }: ContractDialogProps) {
   const { t } = useTranslation('msp/contracts');
+  const { money, symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const contractLineTypeOptions = useContractLineTypeOptions();
   const renewalModeOptions = [
@@ -144,6 +154,11 @@ export function ContractDialog({
   const loadClients = async () => {
     try {
       const fetchedClients = await getAllClientsForBilling();
+      if (isReturnedActionError(fetchedClients)) {
+        setValidationErrors([getErrorMessage(fetchedClients)]);
+        setClients([]);
+        return;
+      }
       setClients(fetchedClients);
     } catch (error) {
       console.error('Error loading clients:', error);
@@ -156,6 +171,10 @@ export function ContractDialog({
     setIsLoadingContractLinePresets(true);
     try {
       const presets = await getContractLinePresets();
+      if (isReturnedActionError(presets)) {
+        setValidationErrors([getErrorMessage(presets)]);
+        return;
+      }
       setAvailableContractLinePresets(presets);
 
       // Load service counts for each preset
@@ -165,6 +184,10 @@ export function ContractDialog({
           if (preset.preset_id) {
             try {
               const services = await getContractLinePresetServices(preset.preset_id);
+              if (isReturnedActionError(services)) {
+                counts[preset.preset_id] = 0;
+                return;
+              }
               counts[preset.preset_id] = services.length;
             } catch (error) {
               console.error(`Error loading service count for preset ${preset.preset_id}:`, error);
@@ -220,6 +243,10 @@ export function ContractDialog({
       try {
         // Load services
         const services = await getContractLinePresetServices(presetId);
+        if (isReturnedActionError(services)) {
+          setValidationErrors([getErrorMessage(services)]);
+          return;
+        }
 
         // Load all service details to get names and rates
         const allServices = await getServices(1, 999, { item_kind: 'any' });
@@ -270,6 +297,10 @@ export function ContractDialog({
 
         if (preset?.contract_line_type === 'Fixed') {
           const fixedConfig = await getContractLinePresetFixedConfig(presetId);
+          if (isReturnedActionError(fixedConfig)) {
+            setValidationErrors([getErrorMessage(fixedConfig)]);
+            return;
+          }
           setContractLinePresetFixedConfigs(prev => ({
             ...prev,
             [presetId]: fixedConfig
@@ -401,10 +432,14 @@ export function ContractDialog({
       } else {
         contract = await createContract(contractData);
       }
+      if (isReturnedActionError(contract)) {
+        setValidationErrors([getErrorMessage(contract)]);
+        return;
+      }
 
       // Add selected contract line presets to the contract (copy them into actual contract lines)
       if (contract && selectedContractLinePresetIds.size > 0) {
-        await Promise.all(
+        const copyResults = await Promise.all(
           Array.from(selectedContractLinePresetIds).map(presetId => {
             const overrides: {
               base_rate?: number | null;
@@ -444,11 +479,16 @@ export function ContractDialog({
             return copyPresetToContractLine(contract!.contract_id, presetId, Object.keys(overrides).length > 0 ? overrides : undefined);
           })
         );
+        const expectedCopyError = copyResults.find(isReturnedActionError);
+        if (expectedCopyError) {
+          setValidationErrors([getErrorMessage(expectedCopyError)]);
+          return;
+        }
       }
 
       // Then create the client contract assignment with PO fields
       if (contract && clientId && startDate) {
-        await createClientContractForBilling({
+        const assignmentResult = await createClientContractForBilling({
           client_id: clientId,
           contract_id: contract.contract_id,
           start_date: startDate.toISOString().split('T')[0],
@@ -464,6 +504,10 @@ export function ContractDialog({
           po_number: poRequired ? poNumber : null,
           po_amount: poRequired ? poAmount : null,
         });
+        if (isReturnedActionError(assignmentResult)) {
+          setValidationErrors([getErrorMessage(assignmentResult)]);
+          return;
+        }
       }
 
       resetForm();
@@ -998,7 +1042,7 @@ export function ContractDialog({
                                         </span>
                                         <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
                                           {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
-                                            ? `$${(fixedConfig.base_rate / 100).toFixed(2)}`
+                                            ? money(Number(fixedConfig.base_rate))
                                             : t('contractDialog.presetDetails.notSet', {
                                               defaultValue: 'Not set',
                                             })}
@@ -1011,7 +1055,7 @@ export function ContractDialog({
                                           })}
                                         </Label>
                                         <div className="relative mt-1.5">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                           <Input
                                             id={`rate-override-${preset.preset_id}`}
                                             type="text"
@@ -1240,7 +1284,7 @@ export function ContractDialog({
                                                     })}
                                                   </Label>
                                                   <div className="relative mt-1">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                                     <Input
                                                       id={`hourly-rate-${preset.preset_id}-${service.service_id}`}
                                                       type="text"
@@ -1378,7 +1422,7 @@ export function ContractDialog({
                                                   })}
                                                 </Label>
                                                 <div className="relative mt-1">
-                                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                                   <Input
                                                     id={`rate-${preset.preset_id}-${service.service_id}`}
                                                     type="text"
@@ -1555,7 +1599,7 @@ export function ContractDialog({
                       {t('contractDialog.po.amountLabel', { defaultValue: 'PO Amount (Optional)' })}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                       <Input
                         id="po_amount"
                         type="text"

@@ -12,6 +12,7 @@ import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { ColumnDefinition, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getQuoteApprovalSettings, listQuotes, updateQuoteApprovalSettings } from '../../../actions/quoteActions';
 import QuoteDetail from './QuoteDetail';
 import QuoteStatusBadge from './QuoteStatusBadge';
@@ -19,6 +20,9 @@ import QuoteStatusBadge from './QuoteStatusBadge';
 interface QuoteApprovalDashboardProps {
   embedded?: boolean;
 }
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedded = false }) => {
   const { t } = useTranslation('msp/quotes');
@@ -49,8 +53,8 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
         sortOrder: 'desc',
       });
 
-      if ('permissionError' in result) {
-        setError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
         setQuotes([]);
         return;
       }
@@ -69,7 +73,7 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
 
   const loadSettings = async () => {
     const result = await getQuoteApprovalSettings();
-    if (!('permissionError' in result)) {
+    if (!isReturnedActionError(result)) {
       setApprovalRequired(result.approvalRequired === true);
     }
   };
@@ -78,8 +82,8 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     try {
       setIsSavingSettings(true);
       const result = await updateQuoteApprovalSettings(checked);
-      if ('permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
       setApprovalRequired(result.approvalRequired);
     } catch (settingsError) {

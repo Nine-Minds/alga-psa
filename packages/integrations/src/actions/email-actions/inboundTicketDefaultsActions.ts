@@ -1,8 +1,25 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { InboundTicketDefaults } from '@alga-psa/types';
+import {
+  actionError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type InboundTicketDefaultsActionError = ActionMessageError;
+
+class ExpectedInboundTicketDefaultsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ExpectedInboundTicketDefaultsError';
+  }
+}
+
+function expectedInboundTicketDefaultsError(message: string): never {
+  throw new ExpectedInboundTicketDefaultsError(message);
+}
 
 const assertTicketStatusBelongsToBoard = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
@@ -10,9 +27,8 @@ const assertTicketStatusBelongsToBoard = async (
   boardId: string,
   statusId: string
 ): Promise<void> => {
-  const matchingStatus = await knex('statuses')
+  const matchingStatus = await tenantDb(knex, tenant).table('statuses')
     .where({
-      tenant,
       board_id: boardId,
       status_id: statusId,
       status_type: 'ticket',
@@ -20,19 +36,18 @@ const assertTicketStatusBelongsToBoard = async (
     .first('status_id');
 
   if (!matchingStatus) {
-    throw new Error('Selected status is not valid for the selected board');
+    expectedInboundTicketDefaultsError('Selected status is not valid for the selected board');
   }
 };
 
 export const getInboundTicketDefaults = withAuth(async (
   _user,
   { tenant }
-): Promise<{ defaults: InboundTicketDefaults[] }> => {
+): Promise<{ defaults: InboundTicketDefaults[]; error?: string }> => {
   const { knex } = await createTenantKnex();
   
   try {
-    const defaults = await knex('inbound_ticket_defaults')
-      .where({ tenant })
+    const defaults = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
       .orderBy('created_at', 'desc')
       .select(
         'id',
@@ -56,7 +71,10 @@ export const getInboundTicketDefaults = withAuth(async (
     return { defaults };
   } catch (error) {
     console.error('Failed to load inbound ticket defaults:', error);
-    return { defaults: [] };
+    return {
+      defaults: [],
+      error: 'Failed to load inbound ticket defaults. Please try again.'
+    };
   }
 });
 
@@ -77,7 +95,7 @@ export const createInboundTicketDefaults = withAuth(async (
     location_id?: string;
     is_active?: boolean;
   }
-): Promise<{ defaults: InboundTicketDefaults }> => {
+): Promise<{ defaults: InboundTicketDefaults } | InboundTicketDefaultsActionError> => {
   const { knex } = await createTenantKnex();
   
   try {
@@ -86,12 +104,12 @@ export const createInboundTicketDefaults = withAuth(async (
 
     // Validate required defaults fields
     if (!data.board_id || !data.status_id || !data.priority_id) {
-      throw new Error('Board, status, and priority are required');
+      expectedInboundTicketDefaultsError('Board, status, and priority are required');
     }
 
     await assertTicketStatusBelongsToBoard(knex, tenant, data.board_id, data.status_id);
 
-    const [defaults] = await knex('inbound_ticket_defaults')
+    const [defaults] = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
       .insert({
         id: knex.raw('gen_random_uuid()'),
         tenant,
@@ -131,11 +149,14 @@ export const createInboundTicketDefaults = withAuth(async (
 
     return { defaults };
   } catch (error) {
-    console.error('Failed to create inbound ticket defaults:', error);
-    if (error instanceof Error && error.message.includes('unique')) {
-      throw new Error('A configuration with this short name already exists');
+    if (error instanceof ExpectedInboundTicketDefaultsError) {
+      return actionError(error.message);
     }
-    throw new Error('Failed to create inbound ticket defaults');
+    if (error instanceof Error && error.message.includes('unique')) {
+      return actionError('A configuration with this short name already exists');
+    }
+    console.error('Unexpected failure while creating inbound ticket defaults:', error);
+    return actionError('Failed to create inbound ticket defaults. Please try again.');
   }
 });
 
@@ -157,7 +178,7 @@ export const updateInboundTicketDefaults = withAuth(async (
     location_id?: string;
     is_active?: boolean;
   }
-): Promise<{ defaults: InboundTicketDefaults }> => {
+): Promise<{ defaults: InboundTicketDefaults } | InboundTicketDefaultsActionError> => {
   const { knex } = await createTenantKnex();
   
   try {
@@ -165,17 +186,21 @@ export const updateInboundTicketDefaults = withAuth(async (
     // If updating defaults, validate required fields
     if (data.board_id !== undefined || data.status_id !== undefined || data.priority_id !== undefined) {
       // Get current values to check if all required fields will be present after update
-      const current = await knex('inbound_ticket_defaults')
-        .where({ id, tenant })
+      const current = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
+        .where({ id })
         .select('board_id', 'status_id', 'priority_id')
         .first();
+
+      if (!current) {
+        return actionError('Defaults configuration not found');
+      }
       
       const finalBoardId = data.board_id !== undefined ? data.board_id : current?.board_id;
       const finalStatusId = data.status_id !== undefined ? data.status_id : current?.status_id;
       const finalPriorityId = data.priority_id !== undefined ? data.priority_id : current?.priority_id;
       
       if (!finalBoardId || !finalStatusId || !finalPriorityId) {
-        throw new Error('Board, status, and priority are required');
+        expectedInboundTicketDefaultsError('Board, status, and priority are required');
       }
 
       await assertTicketStatusBelongsToBoard(knex, tenant, finalBoardId, finalStatusId);
@@ -198,8 +223,8 @@ export const updateInboundTicketDefaults = withAuth(async (
     if (data.location_id !== undefined) updateData.location_id = data.location_id;
     if (data.is_active !== undefined) updateData.is_active = data.is_active;
 
-    const [defaults] = await knex('inbound_ticket_defaults')
-      .where({ id, tenant })
+    const [defaults] = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
+      .where({ id })
       .update(updateData)
       .returning([
         'id',
@@ -221,16 +246,19 @@ export const updateInboundTicketDefaults = withAuth(async (
       ]);
 
     if (!defaults) {
-      throw new Error('Defaults configuration not found');
+      return actionError('Defaults configuration not found');
     }
 
     return { defaults };
   } catch (error) {
-    console.error('Failed to update inbound ticket defaults:', error);
-    if (error instanceof Error && error.message.includes('unique')) {
-      throw new Error('A configuration with this short name already exists');
+    if (error instanceof ExpectedInboundTicketDefaultsError) {
+      return actionError(error.message);
     }
-    throw new Error('Failed to update inbound ticket defaults');
+    if (error instanceof Error && error.message.includes('unique')) {
+      return actionError('A configuration with this short name already exists');
+    }
+    console.error('Unexpected failure while updating inbound ticket defaults:', error);
+    return actionError('Failed to update inbound ticket defaults. Please try again.');
   }
 });
 
@@ -238,60 +266,57 @@ export const deleteInboundTicketDefaults = withAuth(async (
   _user,
   { tenant },
   id: string
-): Promise<void> => {
+): Promise<{ success: true } | InboundTicketDefaultsActionError> => {
   const { knex } = await createTenantKnex();
   
-  try {
-    const deletedCount = await knex.transaction<number>(async (trx) => {
-      // Clear all known references before deleting the defaults row.
-      // This keeps delete behavior consistent with nullable destination references.
-      await trx('email_providers')
-        .where({ tenant, inbound_ticket_defaults_id: id })
-        .update({
-          inbound_ticket_defaults_id: null,
-          updated_at: trx.fn.now(),
-        });
+  const deletedCount = await knex.transaction<number>(async (trx) => {
+    // Clear all known references before deleting the defaults row.
+    // This keeps delete behavior consistent with nullable destination references.
+    await tenantDb(trx, tenant).table('email_providers')
+      .where({ inbound_ticket_defaults_id: id })
+      .update({
+        inbound_ticket_defaults_id: null,
+        updated_at: trx.fn.now(),
+      });
 
-      await trx('clients')
-        .where({ tenant, inbound_ticket_defaults_id: id })
-        .update({
-          inbound_ticket_defaults_id: null,
-          updated_at: trx.fn.now(),
-        });
+    await tenantDb(trx, tenant).table('clients')
+      .where({ inbound_ticket_defaults_id: id })
+      .update({
+        inbound_ticket_defaults_id: null,
+        updated_at: trx.fn.now(),
+      });
 
-      await trx('contacts')
-        .where({ tenant, inbound_ticket_defaults_id: id })
-        .update({
-          inbound_ticket_defaults_id: null,
-          updated_at: trx.fn.now(),
-        });
+    await tenantDb(trx, tenant).table('contacts')
+      .where({ inbound_ticket_defaults_id: id })
+      .update({
+        inbound_ticket_defaults_id: null,
+        updated_at: trx.fn.now(),
+      });
 
-      const rowsDeleted = await trx('inbound_ticket_defaults')
-        .where({ id, tenant })
-        .delete();
+    const rowsDeleted = await tenantDb(trx, tenant).table('inbound_ticket_defaults')
+      .where({ id })
+      .delete();
 
-      return Number(rowsDeleted);
-    });
+    return Number(rowsDeleted);
+  });
 
-    if (deletedCount === 0) {
-      throw new Error('Defaults configuration not found');
-    }
-  } catch (error) {
-    console.error('Failed to delete inbound ticket defaults:', error);
-    throw new Error(error instanceof Error ? error.message : 'Failed to delete inbound ticket defaults');
+  if (deletedCount === 0) {
+    return actionError('Defaults configuration not found');
   }
+
+  return { success: true };
 });
 
 export const getInboundTicketDefaultsById = withAuth(async (
   _user,
   { tenant },
   id: string
-): Promise<{ defaults: InboundTicketDefaults | null }> => {
+): Promise<{ defaults: InboundTicketDefaults | null; error?: string }> => {
   const { knex } = await createTenantKnex();
   
   try {
-    const defaults = await knex('inbound_ticket_defaults')
-      .where({ id, tenant })
+    const defaults = await tenantDb(knex, tenant).table('inbound_ticket_defaults')
+      .where({ id })
       .select(
         'id',
         'tenant',
@@ -308,6 +333,9 @@ export const getInboundTicketDefaultsById = withAuth(async (
     return { defaults: defaults || null };
   } catch (error) {
     console.error('Failed to load inbound ticket defaults:', error);
-    return { defaults: null };
+    return {
+      defaults: null,
+      error: 'Failed to load inbound ticket defaults. Please try again.'
+    };
   }
 });

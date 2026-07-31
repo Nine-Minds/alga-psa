@@ -47,7 +47,7 @@ const TEMPLATES = [
       },
       pt: {
         title: 'Aviso de SLA: {{thresholdPercent}}% do tempo decorrido',
-        message: 'O chamado #{{ticketNumber}} "{{ticketTitle}}" está em {{thresholdPercent}}% do SLA {{slaType}}. Tempo restante: {{remainingTime}}.',
+        message: 'O ticket #{{ticketNumber}} "{{ticketTitle}}" está em {{thresholdPercent}}% do SLA {{slaType}}. Tempo restante: {{remainingTime}}.',
       },
     },
   },
@@ -87,7 +87,7 @@ const TEMPLATES = [
       },
       pt: {
         title: 'SLA violado',
-        message: 'VIOLAÇÃO DE SLA: o chamado #{{ticketNumber}} "{{ticketTitle}}" excedeu a meta de SLA {{slaType}}. Política: {{policyName}}. Cliente: {{clientName}}.',
+        message: 'VIOLAÇÃO DE SLA: o ticket #{{ticketNumber}} "{{ticketTitle}}" excedeu a meta de SLA {{slaType}}. Política: {{policyName}}. Cliente: {{clientName}}.',
       },
     },
   },
@@ -127,7 +127,7 @@ const TEMPLATES = [
       },
       pt: {
         title: 'SLA de resposta cumprido',
-        message: 'O SLA de resposta do chamado #{{ticketNumber}} "{{ticketTitle}}" foi cumprido. A primeira resposta foi fornecida dentro do prazo previsto.',
+        message: 'O SLA de resposta do ticket #{{ticketNumber}} "{{ticketTitle}}" foi cumprido. A primeira resposta foi fornecida dentro do prazo previsto.',
       },
     },
   },
@@ -167,7 +167,7 @@ const TEMPLATES = [
       },
       pt: {
         title: 'SLA de resolução cumprido',
-        message: 'O chamado #{{ticketNumber}} "{{ticketTitle}}" foi resolvido dentro da meta de SLA. Ótimo trabalho!',
+        message: 'O ticket #{{ticketNumber}} "{{ticketTitle}}" foi resolvido dentro da meta de SLA. Ótimo trabalho!',
       },
     },
   },
@@ -206,8 +206,8 @@ const TEMPLATES = [
         message: 'Zg\u0142oszenie #{{ticketNumber}} "{{ticketTitle}}" zosta\u0142o eskalowane do poziomu {{escalationLevel}} z powodu SLA. Zosta\u0142e\u015b(a\u015b) dodany(a) jako mened\u017cer eskalacji.',
       },
       pt: {
-        title: 'Chamado escalonado (SLA)',
-        message: 'O chamado #{{ticketNumber}} "{{ticketTitle}}" foi escalonado para o nível {{escalationLevel}} devido ao SLA. Você foi adicionado como gerente de escalonamento.',
+        title: 'Ticket escalonado (SLA)',
+        message: 'O ticket #{{ticketNumber}} "{{ticketTitle}}" foi escalonado para o nível {{escalationLevel}} devido ao SLA. Você foi adicionado como gerente de escalonamento.',
       },
     },
   },

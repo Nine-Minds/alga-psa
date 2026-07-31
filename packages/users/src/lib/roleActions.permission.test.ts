@@ -15,6 +15,11 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  // The trx builders here supply their own `.where(...)`, so the tenant facade
+  // just passes the table through to the mocked connection.
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -79,7 +84,9 @@ describe('roleActions authorization', () => {
 
       const { assignRoleToUser } = await import('./roleActions');
 
-      await expect(assignRoleToUser('target-1', 'role-admin')).rejects.toThrow('Permission denied');
+      await expect(assignRoleToUser('target-1', 'role-admin')).resolves.toEqual({
+        permissionError: 'Permission denied: You do not have permission to change user roles.',
+      });
       expect(insertSpy).not.toHaveBeenCalled();
     });
 
@@ -120,7 +127,9 @@ describe('roleActions authorization', () => {
 
       const { removeRoleFromUser } = await import('./roleActions');
 
-      await expect(removeRoleFromUser('target-1', 'role-admin')).rejects.toThrow('Permission denied');
+      await expect(removeRoleFromUser('target-1', 'role-admin')).resolves.toEqual({
+        permissionError: 'Permission denied: You do not have permission to change user roles.',
+      });
       expect(delSpy).not.toHaveBeenCalled();
     });
 

@@ -1,16 +1,24 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle, Info, Calendar, CalendarDays } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import GenericDialog from '@alga-psa/ui/components/GenericDialog';
@@ -31,7 +39,7 @@ import {
   createTaxHoliday,
   updateTaxHoliday,
   deleteTaxHoliday,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 // Zod schema for form validation
 const taxHolidaySchema = z.object({
@@ -51,6 +59,11 @@ const taxHolidaySchema = z.object({
 );
 
 type TaxHolidayFormData = z.infer<typeof taxHolidaySchema>;
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type HolidayStatus = 'active' | 'upcoming' | 'expired';
 
@@ -93,6 +106,11 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
     setIsLoading(true);
     try {
       const fetchedHolidays = await getTaxHolidaysByTaxRate(taxRateId);
+      if (isReturnedActionError(fetchedHolidays)) {
+        setHolidays([]);
+        handleError(fetchedHolidays, t('tax.holidays.errors.load', { defaultValue: 'Failed to load tax holidays.' }));
+        return;
+      }
       setHolidays(fetchedHolidays);
     } catch (error) {
       handleError(error, t('tax.holidays.errors.load', { defaultValue: 'Failed to load tax holidays.' }));
@@ -180,19 +198,21 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
       : t('tax.holidays.errors.create', { defaultValue: 'Failed to create tax holiday.' });
 
     try {
-      if (isEditing) {
-        await updateTaxHoliday(editingHoliday.tax_holiday_id, {
-          start_date: data.start_date,
-          end_date: data.end_date,
-          description: data.description || undefined,
-        });
-      } else {
-        await createTaxHoliday({
-          tax_rate_id: taxRateId,
-          start_date: data.start_date,
-          end_date: data.end_date,
-          description: data.description || undefined,
-        });
+      const result = editingHoliday
+        ? await updateTaxHoliday(editingHoliday.tax_holiday_id, {
+            start_date: data.start_date,
+            end_date: data.end_date,
+            description: data.description || undefined,
+          })
+        : await createTaxHoliday({
+            tax_rate_id: taxRateId,
+            start_date: data.start_date,
+            end_date: data.end_date,
+            description: data.description || undefined,
+          });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
       }
       toast.success(successMessage);
       await fetchHolidays();
@@ -209,7 +229,11 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
     setIsSubmitting(true);
 
     try {
-      await deleteTaxHoliday(holidayToDelete.tax_holiday_id);
+      const result = await deleteTaxHoliday(holidayToDelete.tax_holiday_id);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       toast.success(t('tax.holidays.toast.deleted', { defaultValue: 'Tax holiday deleted successfully.' }));
       await fetchHolidays();
       handleCloseDeleteDialog();
@@ -413,12 +437,21 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
               <Label htmlFor="tax-holiday-start-date-field">
                 {t('tax.holidays.fields.startDate.label', { defaultValue: 'Start Date *' })}
               </Label>
-              <Input
-                id="tax-holiday-start-date-field"
-                type="date"
-                {...form.register('start_date')}
-                disabled={isSubmitting}
-                aria-invalid={form.formState.errors.start_date ? "true" : "false"}
+              <Controller
+                control={form.control}
+                name="start_date"
+                render={({ field }) => (
+                  <DatePicker
+                    id="tax-holiday-start-date-field"
+                    label={t('tax.holidays.fields.startDate.label', { defaultValue: 'Start Date *' })}
+                    placeholder={t('tax.holidays.fields.startDate.label', { defaultValue: 'Start Date *' })}
+                    clearable
+                    className="w-full"
+                    disabled={isSubmitting}
+                    value={dateFromString(field.value)}
+                    onChange={(date) => field.onChange(dateToString(date))}
+                  />
+                )}
               />
               {form.formState.errors.start_date && (
                 <p className="text-sm text-red-600" role="alert">
@@ -431,12 +464,21 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
               <Label htmlFor="tax-holiday-end-date-field">
                 {t('tax.holidays.fields.endDate.label', { defaultValue: 'End Date *' })}
               </Label>
-              <Input
-                id="tax-holiday-end-date-field"
-                type="date"
-                {...form.register('end_date')}
-                disabled={isSubmitting}
-                aria-invalid={form.formState.errors.end_date ? "true" : "false"}
+              <Controller
+                control={form.control}
+                name="end_date"
+                render={({ field }) => (
+                  <DatePicker
+                    id="tax-holiday-end-date-field"
+                    label={t('tax.holidays.fields.endDate.label', { defaultValue: 'End Date *' })}
+                    placeholder={t('tax.holidays.fields.endDate.label', { defaultValue: 'End Date *' })}
+                    clearable
+                    className="w-full"
+                    disabled={isSubmitting}
+                    value={dateFromString(field.value)}
+                    onChange={(date) => field.onChange(dateToString(date))}
+                  />
+                )}
               />
               {form.formState.errors.end_date && (
                 <p className="text-sm text-red-600" role="alert">

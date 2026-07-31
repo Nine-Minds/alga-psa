@@ -9,10 +9,12 @@ const revenueSource = source.split('/**\n * Get contract expiration report data'
 
 describe('contractReportActions revenue wiring', () => {
   it('uses client assignments as the live fact source for revenue rows', () => {
-    expect(revenueSource).toContain("const data = await knex('client_contracts as cc')");
-    expect(revenueSource).toContain(".where({ 'cc.tenant': tenant })");
+    expect(revenueSource).toContain("const dataQuery = db.table('client_contracts as cc')");
+    expect(revenueSource).toContain("db.tenantJoin(dataQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');");
     expect(revenueSource).toContain(".whereNotNull('c.owner_client_id')");
     expect(revenueSource).toContain('deriveClientContractStatus({');
+    expect(revenueSource).toContain("'c.status as contract_status',");
+    expect(revenueSource).toContain('contractStatus: row.contract_status ?? undefined,');
     expect(revenueSource).toContain('const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);');
     expect(revenueSource).not.toContain("const data = await knex('contracts as c')");
     expect(revenueSource).not.toContain("row.is_active ? 'active' : 'expired'");

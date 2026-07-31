@@ -129,7 +129,8 @@
     "title": "Anuluj wizytę",
     "message": "Czy na pewno chcesz anulować wniosek o wizytę? Tej operacji nie można cofnąć.",
     "confirm": "Tak, anuluj",
-    "messageWithTeamsWarning": "Czy na pewno chcesz anulować tę prośbę o wizytę? Tej akcji nie można cofnąć. Powiązane spotkanie Microsoft Teams również zostanie usunięte."
+    "messageWithTeamsWarning": "Czy na pewno chcesz anulować tę prośbę o wizytę? Tej akcji nie można cofnąć. Powiązane spotkanie Microsoft Teams również zostanie usunięte.",
+    "teamsMeetingCleanupNotice": "Połączone spotkanie Microsoft Teams jest anulowane; uczestnicy wkrótce zobaczą jego usunięcie ze swoich kalendarzy."
   },
   "ticketSection": {
     "title": "Wnioski o wizytę",

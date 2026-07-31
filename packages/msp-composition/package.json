@@ -89,6 +89,10 @@
     "./user-activities": {
       "import": "./src/user-activities/index.ts",
       "types": "./src/user-activities/index.ts"
+    },
+    "./user-activities/ActivityDrawerProvider": {
+      "import": "./src/user-activities/ActivityDrawerProvider.ts",
+      "types": "./src/user-activities/ActivityDrawerProvider.ts"
     }
   },
   "dependencies": {
@@ -100,6 +104,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/opportunities": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/reporting": "*",
     "@alga-psa/scheduling": "*",

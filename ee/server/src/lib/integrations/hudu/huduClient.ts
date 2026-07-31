@@ -450,6 +450,17 @@ function isBlockedHostname(hostname: string): boolean {
   return false;
 }
 
+/**
+ * Opt-in escape hatch for local development against a self-hosted Hudu over
+ * plain HTTP (e.g. http://hudu.localtest.me, http://host.docker.internal).
+ * Relaxes the HTTPS requirement and the localhost/private-network SSRF guard.
+ * Never set this in production.
+ */
+function allowInsecureHuduUrl(): boolean {
+  const flag = process.env.HUDU_ALLOW_INSECURE_URL?.trim().toLowerCase();
+  return flag === 'true' || flag === '1' || flag === 'yes';
+}
+
 /** Normalize a base URL to `<instance>/api/v1` (idempotent). */
 export function buildHuduApiBaseUrl(baseUrl: string): string {
   const normalized = baseUrl
@@ -458,10 +469,11 @@ export function buildHuduApiBaseUrl(baseUrl: string): string {
     .replace(/\/api(?:\/v1)?$/, '')
     .concat('/api/v1');
   const parsed = new URL(normalized);
-  if (parsed.protocol !== 'https:') {
+  const insecureAllowed = allowInsecureHuduUrl();
+  if (parsed.protocol !== 'https:' && !(insecureAllowed && parsed.protocol === 'http:')) {
     throw new Error('Hudu base URL must use HTTPS.');
   }
-  if (isBlockedHostname(parsed.hostname)) {
+  if (isBlockedHostname(parsed.hostname) && !insecureAllowed) {
     throw new Error('Hudu base URL must not target localhost or private network addresses.');
   }
   return normalized;

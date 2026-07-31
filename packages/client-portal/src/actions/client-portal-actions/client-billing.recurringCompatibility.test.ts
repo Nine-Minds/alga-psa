@@ -8,6 +8,6 @@ describe('client portal contract-line recurrence compatibility wiring', () => {
     const source = readFileSync(resolve(__dirname, './client-billing.ts'), 'utf8');
 
     expect(source).toContain("import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';");
-    expect(source).toContain('return plan ? normalizeLiveRecurringStorage(plan) : null;');
+    expect(source).toContain('return plan ? normalizeLiveRecurringStorage(plan as any) as IClientContractLine : null;');
   });
 });

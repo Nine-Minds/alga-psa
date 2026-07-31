@@ -4,6 +4,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatDuration } from './utils';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { useContentCardVariant } from '@alga-psa/ui/components';
 
 interface IntervalItemProps {
   interval: TicketInterval;
@@ -20,6 +21,8 @@ export function IntervalItem({
   onSelect
 }: IntervalItemProps) {
   const { t } = useTranslation('msp/time-entry');
+  // Compact typography when rendered inside a Grid-layout bento tile.
+  const isBento = useContentCardVariant() === 'bento';
   // Calculate duration if not provided
   const duration = interval.duration ?? (
     interval.endTime
@@ -34,29 +37,50 @@ export function IntervalItem({
     : t('intervalItem.now', { defaultValue: 'Now' });
   const startDate = new Date(interval.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
   
+  const timeRange = `${startTime} - ${endTime}`;
+
   return (
-    <div 
-      className={`border rounded p-2 flex items-center ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}`}
+    <div
+      className={`${
+        isBento ? 'rounded-md border border-[rgb(var(--color-border-200))] p-2' : 'border rounded p-2'
+      } flex items-center ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}`}
       id={`interval-item-${interval.id}`}
     >
       <Checkbox
         checked={isSelected}
         onChange={onSelect}
-        className="mr-3"
+        className={isBento ? 'mr-2' : 'mr-3'}
         id={`interval-select-${interval.id}`}
       />
-      
-      <div className="flex-1">
-        <div className="flex justify-between">
-          <span className="font-medium">
-            {startTime} - {endTime}
+
+      <div className="flex-1 min-w-0">
+        <div className={isBento ? 'flex items-baseline gap-2' : 'flex justify-between'}>
+          <span
+            className={
+              isBento
+                ? 'text-sm font-medium text-[rgb(var(--color-text-800))] min-w-0 truncate whitespace-nowrap'
+                : 'font-medium'
+            }
+            title={isBento ? timeRange : undefined}
+          >
+            {timeRange}
           </span>
-          <span className="text-sm font-mono">
+          <span
+            className={
+              isBento
+                ? 'ml-auto flex-shrink-0 text-xs font-mono text-[rgb(var(--color-text-500))]'
+                : 'text-sm font-mono'
+            }
+          >
             {formatDuration(duration)}
           </span>
         </div>
-        
-        <div className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-400))] flex items-center">
+
+        <div
+          className={`${
+            isBento ? 'text-xs' : 'text-sm'
+          } text-gray-500 dark:text-[rgb(var(--color-text-400))] flex items-center`}
+        >
           <span>{startDate}</span>
           {interval.autoClosed && (
             <Badge variant="warning" size="sm" className="ml-2">

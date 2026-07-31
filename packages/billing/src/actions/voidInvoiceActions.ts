@@ -1,11 +1,12 @@
 // @ts-nocheck
 'use server'
 
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 
 // Exported for testing
@@ -16,8 +17,8 @@ export async function reverseCreditApplicationsForInvoice(
   userId: string
 ): Promise<void> {
   // Find all credit_application transactions for this invoice
-  const creditAppTxns = await trx('transactions')
-    .where({ invoice_id: invoiceId, type: 'credit_application', tenant })
+  const creditAppTxns = await tenantDb(trx, tenant).table('transactions')
+    .where({ invoice_id: invoiceId, type: 'credit_application' })
     .select('*');
 
   for (const txn of creditAppTxns) {
@@ -28,8 +29,8 @@ export async function reverseCreditApplicationsForInvoice(
 
     for (const applied of appliedCredits) {
       // Restore the credit tracking pool
-      await trx('credit_tracking')
-        .where({ credit_id: applied.creditId, tenant })
+      await tenantDb(trx, tenant).table('credit_tracking')
+        .where({ credit_id: applied.creditId })
         .increment('remaining_amount', applied.amount)
         .update({ updated_at: new Date().toISOString() });
 
@@ -37,13 +38,11 @@ export async function reverseCreditApplicationsForInvoice(
     }
 
     if (totalRestored > 0) {
-      // Restore client credit balance
-      await trx('clients')
-        .where({ client_id: txn.client_id, tenant })
-        .increment('credit_balance', totalRestored);
+      // The restored remaining_amounts above put the credit back in the
+      // derived balance; only the reversing transaction is left to write.
 
       // Write reversing transaction
-      await trx('transactions').insert({
+      await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: uuidv4(),
         client_id: txn.client_id,
         invoice_id: invoiceId,
@@ -64,50 +63,63 @@ export async function reverseCreditApplicationsForInvoice(
 
   // Zero out credit_applied on the invoice
   if (creditAppTxns.length > 0) {
-    await trx('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
       .update({ credit_applied: 0, updated_at: new Date().toISOString() });
   }
 }
+
+export type VoidInvoiceResult =
+  | { success: true }
+  | { success: false; error: string };
 
 export const voidInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
   reason: string
-) => {
+): Promise<VoidInvoiceResult> => {
+  // Voiding reverses credits and pushes voids to accounting integrations —
+  // internal MSP users with invoice update permission only.
+  if (user.user_type === 'client') {
+    return { success: false, error: 'Permission denied: operation not available in client portal' };
+  }
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    return { success: false, error: 'Permission denied: invoice update required' };
+  }
+
   const trimmedReason = reason?.trim();
   if (!trimmedReason) {
-    throw new Error('A reason is required to void an invoice.');
+    return { success: false, error: 'A reason is required to void an invoice.' };
   }
 
   const { knex } = await createTenantKnex();
   const now = new Date().toISOString();
 
   // Load invoice
-  const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  const invoice = await tenantDb(knex, tenant).table('invoices')
+    .where({ invoice_id: invoiceId })
     .first();
 
   if (!invoice) {
-    throw new Error('Invoice not found.');
+    return { success: false, error: 'Invoice not found.' };
   }
 
   // Guard: drafts must be deleted, not voided
   if (!invoice.finalized_at) {
-    throw new Error('Drafts must be deleted, not voided.');
+    return { success: false, error: 'Drafts must be deleted, not voided.' };
   }
 
   // Guard: already cancelled
   if (invoice.status === 'cancelled') {
-    throw new Error('Invoice is already voided.');
+    return { success: false, error: 'Invoice is already voided.' };
   }
 
   // Guard: payments exist
   let paymentSum = 0;
   try {
-    const paymentRow = await knex('invoice_payments')
-      .where({ invoice_id: invoiceId, tenant })
+    const paymentRow = await tenantDb(knex, tenant).table('invoice_payments')
+      .where({ invoice_id: invoiceId })
       .sum('amount as total')
       .first();
     paymentSum = Number(paymentRow?.total ?? 0);
@@ -115,7 +127,7 @@ export const voidInvoice = withAuth(async (
     paymentSum = 0;
   }
   if (paymentSum > 0) {
-    throw new Error('Unwind payments before voiding.');
+    return { success: false, error: 'Unwind payments before voiding.' };
   }
 
   // Guard: consumed credit notes (for credit note invoices)
@@ -130,21 +142,20 @@ export const voidInvoice = withAuth(async (
     // Credit notes finalized from negative invoices write
     // 'credit_issuance_from_negative_invoice'; prepayment credits write
     // 'credit_issuance' — cover both so neither slips through the guard.
-    const creditIssuanceTxns = await knex('transactions')
-      .where({ invoice_id: invoiceId, tenant })
+    const creditIssuanceTxns = await tenantDb(knex, tenant).table('transactions')
+      .where({ invoice_id: invoiceId })
       .whereIn('type', ['credit_issuance', 'credit_issuance_from_negative_invoice'])
       .select('transaction_id');
     const txnIds = creditIssuanceTxns.map((t: any) => t.transaction_id);
 
     if (txnIds.length > 0) {
-      const consumedCredit = await knex('credit_tracking')
+      const consumedCredit = await tenantDb(knex, tenant).table('credit_tracking')
         .whereIn('transaction_id', txnIds)
         .where(knex.raw('remaining_amount < amount'))
-        .where({ tenant })
         .first('credit_id');
 
       if (consumedCredit) {
-        throw new Error('This credit note has applied credit. Unapply the credit before voiding.');
+        return { success: false, error: 'This credit note has applied credit. Unapply the credit before voiding.' };
       }
     }
   }
@@ -155,31 +166,26 @@ export const voidInvoice = withAuth(async (
       // remove the credit it put into the pool, or the customer keeps
       // spendable phantom credit that no longer exists in the accounting
       // system. Matches both issuance transaction types (see guard above).
-      const creditIssuanceTxns = await trx('transactions')
-        .where({ invoice_id: invoiceId, tenant })
+      const creditIssuanceTxns = await tenantDb(trx, tenant).table('transactions')
+        .where({ invoice_id: invoiceId })
         .whereIn('type', ['credit_issuance', 'credit_issuance_from_negative_invoice'])
         .select('transaction_id', 'client_id', 'amount');
 
       for (const txn of creditIssuanceTxns) {
-        const creditRow = await trx('credit_tracking')
-          .where({ transaction_id: txn.transaction_id, tenant })
+        const creditRow = await tenantDb(trx, tenant).table('credit_tracking')
+          .where({ transaction_id: txn.transaction_id })
           .first('credit_id', 'remaining_amount');
 
         if (creditRow && Number(creditRow.remaining_amount) > 0) {
           const clawedBack = Number(creditRow.remaining_amount);
 
-          // Decrement client.credit_balance by remaining amount
-          await trx('clients')
-            .where({ client_id: txn.client_id, tenant })
-            .decrement('credit_balance', clawedBack);
-
-          // Zero out the credit tracking entry
-          await trx('credit_tracking')
-            .where({ credit_id: creditRow.credit_id, tenant })
+          // Zero out the credit tracking entry (removes it from the derived balance)
+          await tenantDb(trx, tenant).table('credit_tracking')
+            .where({ credit_id: creditRow.credit_id })
             .update({ remaining_amount: 0, updated_at: now });
 
           // Audit trail for the balance change
-          await trx('transactions').insert({
+          await tenantDb(trx, tenant).table('transactions').insert({
             transaction_id: uuidv4(),
             client_id: txn.client_id,
             invoice_id: invoiceId,
@@ -207,12 +213,12 @@ export const voidInvoice = withAuth(async (
     }
 
     // Update invoice status to cancelled
-    await trx('invoices')
-      .where({ invoice_id: invoiceId, tenant })
+    await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
       .update({ status: 'cancelled', updated_at: now });
 
     // Write invoice_cancelled transaction
-    await trx('transactions').insert({
+    await tenantDb(trx, tenant).table('transactions').insert({
       transaction_id: uuidv4(),
       client_id: invoice.client_id,
       invoice_id: invoiceId,
@@ -233,4 +239,6 @@ export const voidInvoice = withAuth(async (
   // Fire-and-forget: enqueue void_invoice op if accounting mapping exists
   const { knex: syncKnex } = await createTenantKnex();
   void enqueueInvoiceVoid(syncKnex, tenant, invoiceId);
+
+  return { success: true };
 });

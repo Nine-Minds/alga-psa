@@ -1,5 +1,6 @@
 import { SERVICE_REQUEST_EXECUTION_MODES } from '../../domain';
 import type { ServiceRequestExecutionProvider } from '../contracts';
+import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '@shared/models/ticketModel';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 
@@ -119,6 +120,7 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
   async execute(context) {
     try {
       return await context.knex.transaction(async (trx) => {
+        const db = tenantDb(trx, context.tenant);
         const configuredBoardId = getStringConfig(context.config, 'boardId');
         const configuredStatusId = getStringConfig(context.config, 'statusId');
         const configuredPriorityId = getStringConfig(context.config, 'priorityId');
@@ -131,8 +133,8 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
         const boardId =
           configuredBoardId ??
           (
-            await trx('boards')
-              .where({ tenant: context.tenant, is_default: true })
+            await db.table('boards')
+              .where({ is_default: true })
               .first<{ board_id: string }>('board_id')
           )?.board_id;
         if (!boardId) {
@@ -156,16 +158,14 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
         let priorityId =
           configuredPriorityId ??
           (
-            await trx('priorities')
-              .where({ tenant: context.tenant })
+            await db.table('priorities')
               .orderBy('order_number', 'asc')
               .first<{ priority_id: string }>('priority_id')
           )?.priority_id;
 
         if (configuredItilImpact && configuredItilUrgency) {
           const priorityLevel = calculateItilPriority(configuredItilImpact, configuredItilUrgency);
-          const itilPriorityRecord = await trx('priorities')
-            .where('tenant', context.tenant)
+          const itilPriorityRecord = await db.table('priorities')
             .where('is_from_itil_standard', true)
             .where('priority_name', 'like', `P${priorityLevel} -%`)
             .where('item_type', 'ticket')

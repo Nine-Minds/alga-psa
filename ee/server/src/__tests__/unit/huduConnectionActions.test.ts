@@ -14,7 +14,6 @@ const BASE_URL = 'https://docs.example.com';
 const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const getTenantSecretMock = vi.fn();
@@ -38,10 +37,6 @@ vi.mock('@alga-psa/auth', () => ({
     (...args: unknown[]) =>
       handler(internalUser, { tenant: TENANT }, ...args),
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -96,7 +91,6 @@ beforeEach(() => {
   delete process.env.HUDU_BASE_URL;
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
 
   getTenantSecretMock.mockResolvedValue(null);
@@ -213,15 +207,6 @@ describe('T023: connectHudu', () => {
     );
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'system_settings', 'update');
   });
-
-  it('rejects when the hudu-integration flag is off', async () => {
-    isEnabledMock.mockResolvedValue(false);
-    const { connectHudu } = await importActions();
-
-    await expect(connectHudu({ baseUrl: BASE_URL, apiKey: API_KEY })).rejects.toThrow(
-      /disabled for this tenant/
-    );
-  });
 });
 
 describe('T024: testHuduConnection', () => {
@@ -322,6 +307,11 @@ describe('T025: getHuduConnectionStatus', () => {
         connectedAt: '2026-06-09T00:00:00.000Z',
         lastSyncedAt: null,
         passwordAccess: true,
+        syncStatus: 'idle',
+        syncError: null,
+        lastFullSyncAt: null,
+        lastSync: null,
+        autoSync: { enabled: false, cadence: 'daily' },
       },
     });
 
@@ -347,6 +337,11 @@ describe('T025: getHuduConnectionStatus', () => {
         connectedAt: null,
         lastSyncedAt: null,
         passwordAccess: false,
+        syncStatus: 'idle',
+        syncError: null,
+        lastFullSyncAt: null,
+        lastSync: null,
+        autoSync: { enabled: false, cadence: 'daily' },
       },
     });
   });

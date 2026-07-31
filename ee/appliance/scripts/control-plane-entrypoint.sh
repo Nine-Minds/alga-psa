@@ -37,4 +37,17 @@ EOF
   export ALGA_APPLIANCE_KUBECONFIG="$KUBECONFIG_PATH"
 fi
 
+# A control-plane channel update can repair storage without replacing the
+# ISO-baked host scripts. Reconcile in the background only when the historical
+# k3s controller is still present or the appliance controller is unavailable;
+# the setup/update workflows run the same locked installer synchronously before
+# asking Flux to create or converge PVC-backed workloads.
+(
+  sleep "${ALGA_APPLIANCE_STORAGE_REPAIR_DELAY_SECONDS:-5}"
+  if kubectl --kubeconfig "$KUBECONFIG_PATH" -n kube-system get deployment local-path-provisioner >/dev/null 2>&1 \
+    || ! kubectl --kubeconfig "$KUBECONFIG_PATH" -n local-path-storage rollout status deployment/local-path-provisioner --timeout=5s >/dev/null 2>&1; then
+    /opt/alga-appliance/scripts/install-storage.sh --kubeconfig "$KUBECONFIG_PATH"
+  fi
+) >> /var/lib/alga-appliance/storage-reconcile.log 2>&1 &
+
 exec node /opt/alga-appliance/host-service/server.mjs

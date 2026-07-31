@@ -61,6 +61,6 @@ describe('client-contract-line post-drop hygiene', () => {
     expect(contractTemplateWizardCurrencyIntegration).toContain("safeDelete('client_contracts'");
     expect(multiCurrencyGapsIntegration).not.toContain("client_contract_lines as ccl");
     expect(multiCurrencyGapsIntegration).not.toContain("safeDeleteIn('client_contract_lines'");
-    expect(multiCurrencyGapsIntegration).toContain("await db('client_contracts as cc')");
+    expect(multiCurrencyGapsIntegration).toContain("tenantTable(db, tenantId, 'client_contracts as cc')");
   });
 });

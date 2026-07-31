@@ -155,11 +155,11 @@
     }
   },
   "serviceSelection": {
-    "title": "Adicionar serviços e produtos ao plano",
+    "title": "Adicionar serviços e produtos à linha do contrato",
     "searchPlaceholder": "Pesquisar serviços/produtos...",
     "errors": {
       "load": "Falha ao carregar serviços",
-      "add": "Falha ao adicionar serviços ao plano"
+      "add": "Falha ao adicionar serviços à linha do contrato"
     },
     "states": {
       "loading": "Carregando serviços...",

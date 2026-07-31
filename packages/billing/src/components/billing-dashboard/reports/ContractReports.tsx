@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -20,25 +21,52 @@ import {
   getContractRevenueReport,
   getContractExpirationReport,
   getBucketUsageReport,
-  getProfitabilityReport,
   getContractReportSummary,
   ContractRevenue,
   ContractExpiration,
   BucketUsage,
-  Profitability,
   ContractReportSummary
 } from '@alga-psa/billing/actions/contractReportActions';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
+import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
+import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import ProfitabilityReport from './ProfitabilityReport';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
+type Translator = ReturnType<typeof useTranslation>['t'];
+
+const statusLabel = (value: string, t: Translator): string => (
+  value === 'active'
+    ? t('contractReports.statusValues.active', { defaultValue: 'Active' })
+    : value === 'upcoming'
+      ? t('contractReports.statusValues.upcoming', { defaultValue: 'Upcoming' })
+      : value.charAt(0).toUpperCase() + value.slice(1)
+);
+
+const yesNoLabel = (value: boolean, t: Translator): string => (
+  value
+    ? t('contractReports.statusValues.yes', { defaultValue: 'Yes' })
+    : t('contractReports.statusValues.no', { defaultValue: 'No' })
+);
 
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
   const { formatCurrency, formatDate } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [activeReport, setActiveReport] = useState('revenue');
   const [revenueData, setRevenueData] = useState<ContractRevenue[]>([]);
   const [expirationData, setExpirationData] = useState<ContractExpiration[]>([]);
   const [bucketUsageData, setBucketUsageData] = useState<BucketUsage[]>([]);
-  const [profitabilityData, setProfitabilityData] = useState<Profitability[]>([]);
   const [summary, setSummary] = useState<ContractReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,18 +88,21 @@ const ContractReports: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
-        const [revenue, expiration, bucketUsage, profitability, summaryData] = await Promise.all([
+        const [revenue, expiration, bucketUsage, summaryData] = await Promise.all([
           getContractRevenueReport(),
           getContractExpirationReport(),
           getBucketUsageReport(),
-          getProfitabilityReport(),
           getContractReportSummary()
         ]);
+        const expectedLoadError = [revenue, expiration, bucketUsage, summaryData].find(isReturnedActionError);
+        if (expectedLoadError) {
+          setError(getErrorMessage(expectedLoadError));
+          return;
+        }
 
         setRevenueData(revenue);
         setExpirationData(expiration);
         setBucketUsageData(bucketUsage);
-        setProfitabilityData(profitability);
         setSummary(summaryData);
       } catch (err) {
         console.error('Error loading report data:', err);
@@ -90,7 +121,7 @@ const ContractReports: React.FC = () => {
 
   // Format currency
   const formatCents = (cents: number): string => {
-    return formatCurrency(cents / 100, 'USD');
+    return formatCurrency(cents / 100, tenantCurrency);
   };
 
   // Revenue Report Columns
@@ -126,11 +157,7 @@ const ContractReports: React.FC = () => {
             'default-muted'
           }
         >
-          {value === 'active'
-            ? t('contractReports.statusValues.active', { defaultValue: 'Active' })
-            : value === 'upcoming'
-              ? t('contractReports.statusValues.upcoming', { defaultValue: 'Upcoming' })
-              : value.charAt(0).toUpperCase() + value.slice(1)}
+          {statusLabel(value, t)}
         </Badge>
       )
     }
@@ -172,9 +199,7 @@ const ContractReports: React.FC = () => {
       dataIndex: 'auto_renew',
       render: (value: boolean) => (
         <Badge variant="secondary" className={value ? 'border-green-300 text-green-800' : 'border-[rgb(var(--color-border-300))] text-muted-foreground'}>
-          {value
-            ? t('contractReports.statusValues.yes', { defaultValue: 'Yes' })
-            : t('contractReports.statusValues.no', { defaultValue: 'No' })}
+          {yesNoLabel(value, t)}
         </Badge>
       )
     }
@@ -241,47 +266,60 @@ const ContractReports: React.FC = () => {
     }
   ];
 
-  // Profitability Columns
-  const profitabilityColumns: ColumnDefinition<Profitability>[] = [
-    {
-      title: t('contractReports.table.contract', { defaultValue: 'Contract' }),
-      dataIndex: 'contract_name',
-      render: (value: string) => <span className="font-medium">{value}</span>
-    },
-    {
-      title: t('contractReports.table.client', { defaultValue: 'Client' }),
-      dataIndex: 'client_name',
-      render: (value) => <ClientNameCell clientName={value as string | null | undefined} />
-    },
-    {
-      title: t('contractReports.table.revenueYtd', { defaultValue: 'Revenue (YTD)' }),
-      dataIndex: 'revenue',
-      render: (value: number) => formatCents(value)
-    },
-    {
-      title: t('contractReports.table.costYtd', { defaultValue: 'Cost (YTD)' }),
-      dataIndex: 'cost',
-      render: (value: number) => formatCents(value)
-    },
-    {
-      title: t('contractReports.table.profit', { defaultValue: 'Profit' }),
-      dataIndex: 'profit',
-      render: (value: number) => (
-        <span className="font-semibold text-green-600">{formatCents(value)}</span>
-      )
-    },
-    {
-      title: t('contractReports.table.margin', { defaultValue: 'Margin' }),
-      dataIndex: 'margin_percentage',
-      render: (value: number) => (
-        <Badge
-          variant={value >= 40 ? 'success' : 'warning'}
-        >
-          {value}{t('units.percent', { defaultValue: '%' })}
-        </Badge>
-      )
-    }
+  // Print columns mirror the on-screen tables but drop badges/bars and render every
+  // row — the screen tables paginate.
+  const revenuePrintColumns: PrintableTableColumn<ContractRevenue>[] = [
+    { key: 'contract', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name },
+    { key: 'client', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
+    { key: 'mrr', header: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }), render: (row) => formatCents(row.monthly_recurring) },
+    { key: 'ytd', header: t('contractReports.table.totalBilledYtd', { defaultValue: 'Total Billed (YTD)' }), render: (row) => formatCents(row.total_billed_ytd) },
+    { key: 'status', header: t('contractReports.table.status', { defaultValue: 'Status' }), render: (row) => statusLabel(row.status, t) },
   ];
+
+  const expirationPrintColumns: PrintableTableColumn<ContractExpiration>[] = [
+    { key: 'contract', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name },
+    { key: 'client', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
+    { key: 'endDate', header: t('contractReports.table.endDate', { defaultValue: 'End Date' }), render: (row) => formatDate(row.end_date) },
+    {
+      key: 'daysUntil',
+      header: t('contractReports.table.daysUntilExpiration', { defaultValue: 'Days Until Expiration' }),
+      render: (row) => `${row.days_until_expiration} ${t('units.days', { defaultValue: 'days' })}`,
+    },
+    { key: 'monthlyValue', header: t('contractReports.table.monthlyValue', { defaultValue: 'Monthly Value' }), render: (row) => formatCents(row.monthly_value) },
+    { key: 'autoRenew', header: t('contractReports.table.autoRenew', { defaultValue: 'Auto-Renew' }), render: (row) => yesNoLabel(row.auto_renew, t) },
+  ];
+
+  const bucketUsagePrintColumns: PrintableTableColumn<BucketUsage>[] = [
+    { key: 'contract', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name },
+    { key: 'client', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
+    { key: 'totalHours', header: t('contractReports.table.totalHours', { defaultValue: 'Total Hours' }), render: (row) => `${row.total_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'usedHours', header: t('contractReports.table.usedHours', { defaultValue: 'Used Hours' }), render: (row) => `${row.used_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'remaining', header: t('contractReports.table.remaining', { defaultValue: 'Remaining' }), render: (row) => `${row.remaining_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}` },
+    { key: 'utilization', header: t('contractReports.table.utilization', { defaultValue: 'Utilization' }), render: (row) => `${row.utilization_percentage}${t('units.percent', { defaultValue: '%' })}` },
+    {
+      key: 'overage',
+      header: t('contractReports.table.overage', { defaultValue: 'Overage' }),
+      render: (row) => (row.overage_hours > 0
+        ? `+${row.overage_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
+        : t('units.dash', { defaultValue: '—' })),
+    },
+  ];
+
+  const printSummaryMetrics = [
+    { label: t('contractReports.summary.totalMRR.title', { defaultValue: 'Total MRR' }), value: formatCents(summary?.totalMRR ?? 0) },
+    { label: t('contractReports.summary.ytdRevenue.title', { defaultValue: 'YTD Revenue' }), value: formatCents(summary?.totalYTD ?? 0) },
+    { label: t('contractReports.summary.activeContracts.title', { defaultValue: 'Active Contracts' }), value: summary?.activeContractCount ?? 0 },
+    { label: t('contractReports.summary.renewalDecisions.title', { defaultValue: 'Renewal Decisions Due' }), value: summary?.atRiskDecisionCount ?? 0 },
+  ];
+
+  // Plain function, not a component: keeps the print markup out of the render tree's identity.
+  const printRoot = (id: string, title: string, subtitle: string, table: React.ReactNode) => (
+    <div className="app-print-root app-print-only" id={id}>
+      <PrintableDetailHeader title={title} subtitle={subtitle} />
+      <PrintableSummary metrics={printSummaryMetrics} />
+      {table}
+    </div>
+  );
 
   // Show loading state
   if (isLoading) {
@@ -359,15 +397,21 @@ const ContractReports: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">
-          {t('contractReports.title', { defaultValue: 'Contract Reports' })}
-        </h2>
-        <p className="text-muted-foreground text-sm">
-          {t('contractReports.description', {
-            defaultValue: 'Analyze contract performance, revenue, and utilization metrics',
-          })}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">
+            {t('contractReports.title', { defaultValue: 'Contract Reports' })}
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {t('contractReports.description', {
+              defaultValue: 'Analyze contract performance, revenue, and utilization metrics',
+            })}
+          </p>
+        </div>
+        {/* Profitability carries its own print button — it owns its date filters and load state. */}
+        {activeReport !== 'profitability' && (
+          <PrintButton id="contract-reports-print" size="sm" variant="outline" />
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -464,6 +508,19 @@ const ContractReports: React.FC = () => {
               />
             )}
           </Card>
+          {printRoot(
+            'contract-revenue-print',
+            t('contractReports.sections.revenue.title', { defaultValue: 'Contract Revenue Report' }),
+            t('contractReports.sections.revenue.description', {
+              defaultValue: 'Overview of monthly recurring revenue and year-to-date billed service periods by contract.',
+            }),
+            <PrintableTable
+              rows={revenueData}
+              columns={revenuePrintColumns}
+              getRowKey={(row) => `${row.contract_name}-${row.client_id ?? ''}`}
+              emptyMessage={t('contractReports.sections.revenue.empty', { defaultValue: 'No contract revenue data available' })}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="expiration" className="mt-4">
@@ -500,6 +557,21 @@ const ContractReports: React.FC = () => {
               />
             )}
           </Card>
+          {printRoot(
+            'contract-expiration-print',
+            t('contractReports.sections.expiration.title', { defaultValue: 'Contract Expiration and Renewal Decisions' }),
+            t('contractReports.sections.expiration.description', {
+              defaultValue: 'Track upcoming contract expirations and renewal decision due dates.',
+            }),
+            <PrintableTable
+              rows={expirationData}
+              columns={expirationPrintColumns}
+              getRowKey={(row) => `${row.contract_name}-${row.client_id ?? ''}-${row.end_date}`}
+              emptyMessage={t('contractReports.sections.expiration.empty', {
+                defaultValue: 'No upcoming contract expirations or renewal decisions in the near term',
+              })}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="bucket-usage" className="mt-4">
@@ -532,38 +604,23 @@ const ContractReports: React.FC = () => {
               />
             )}
           </Card>
+          {printRoot(
+            'bucket-usage-print',
+            t('contractReports.sections.bucketUsage.title', { defaultValue: 'Bucket Hours Utilization' }),
+            t('contractReports.sections.bucketUsage.description', {
+              defaultValue: 'Monitor bucket hours usage and identify overage situations',
+            }),
+            <PrintableTable
+              rows={bucketUsageData}
+              columns={bucketUsagePrintColumns}
+              getRowKey={(row) => `${row.contract_name}-${row.client_id ?? ''}`}
+              emptyMessage={t('contractReports.sections.bucketUsage.empty', { defaultValue: 'No bucket-based contracts found' })}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="profitability" className="mt-4">
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold">
-                {t('contractReports.sections.profitability.title', { defaultValue: 'Simple Profitability Report' })}
-              </h3>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t('contractReports.sections.profitability.description', {
-                defaultValue: 'Basic profit margins and revenue vs. cost analysis by contract',
-              })}
-            </p>
-            {profitabilityData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                {t('contractReports.sections.profitability.empty', { defaultValue: 'No profitability data available' })}
-              </p>
-            ) : (
-              <DataTable
-                id="profitability-table"
-                data={profitabilityData}
-                columns={profitabilityColumns}
-                pagination={true}
-                currentPage={currentPage}
-                onPageChange={setCurrentPage}
-                pageSize={pageSize}
-                onItemsPerPageChange={handlePageSizeChange}
-              />
-            )}
-          </Card>
+          <ProfitabilityReport />
         </TabsContent>
       </Tabs>
     </div>

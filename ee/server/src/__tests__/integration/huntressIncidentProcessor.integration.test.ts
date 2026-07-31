@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
@@ -85,12 +86,16 @@ async function hasColumn(table: string, column: string): Promise<boolean> {
   return db.schema.hasColumn(table, column);
 }
 
+function tenantTable(table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 beforeAll(async () => {
   process.env.DB_PORT = process.env.DB_PORT || '5432';
   process.env.APP_ENV = process.env.APP_ENV || 'test';
   db = await createTestDbConnection();
 
-  await db('tenants').insert({
+  await tenantTable('tenants').insert({
     tenant: tenantId,
     ...((await hasColumn('tenants', 'company_name'))
       ? { company_name: 'Huntress Test Tenant' }
@@ -100,7 +105,7 @@ beforeAll(async () => {
     updated_at: db.fn.now(),
   });
 
-  await db('users').insert({
+  await tenantTable('users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `huntress-${tenantId.slice(0, 8)}`,
@@ -110,7 +115,7 @@ beforeAll(async () => {
     updated_at: db.fn.now(),
   });
 
-  await db('clients').insert([
+  await tenantTable('clients').insert([
     {
       tenant: tenantId,
       client_id: clientId,
@@ -132,7 +137,7 @@ beforeAll(async () => {
   ]);
 
   const contactClientColumn = (await hasColumn('contacts', 'client_id')) ? 'client_id' : 'company_id';
-  await db('contacts').insert([
+  await tenantTable('contacts').insert([
     {
       tenant: tenantId,
       contact_name_id: primaryContactId,
@@ -156,7 +161,7 @@ beforeAll(async () => {
   ]);
 
   // boards has no created_at/updated_at columns in the live schema.
-  await db('boards').insert([
+  await tenantTable('boards').insert([
     {
       tenant: tenantId,
       board_id: securityBoardId,
@@ -176,7 +181,7 @@ beforeAll(async () => {
     ...((await hasColumn('statuses', 'item_type')) ? { item_type: 'ticket' } : {}),
     ...((await hasColumn('statuses', 'status_type')) ? { status_type: 'ticket' } : {}),
   };
-  await db('statuses').insert([
+  await tenantTable('statuses').insert([
     {
       tenant: tenantId,
       status_id: statusOpenId,
@@ -199,7 +204,7 @@ beforeAll(async () => {
     },
   ]);
 
-  await db('priorities').insert(
+  await tenantTable('priorities').insert(
     [
       { id: pCritId, name: 'Critical', order: 1 },
       { id: pHighId, name: 'High', order: 2 },
@@ -217,7 +222,7 @@ beforeAll(async () => {
     }))
   );
 
-  await db('rmm_integrations').insert({
+  await tenantTable('rmm_integrations').insert({
     tenant: tenantId,
     integration_id: integrationId,
     provider: 'huntress',
@@ -228,7 +233,7 @@ beforeAll(async () => {
   });
 
   // Org 500 is mapped to Acme; org 600 has no mapping row at all.
-  await db('rmm_organization_mappings').insert({
+  await tenantTable('rmm_organization_mappings').insert({
     tenant: tenantId,
     mapping_id: uuidv4(),
     integration_id: integrationId,
@@ -240,7 +245,7 @@ beforeAll(async () => {
     auto_create_tickets: true,
   });
 
-  await db('assets').insert({
+  await tenantTable('assets').insert({
     tenant: tenantId,
     asset_id: assetId,
     asset_type: 'workstation',
@@ -277,7 +282,7 @@ afterAll(async () => {
   ]) {
     // Every table here, including tenant_external_entity_mappings, uses a
     // `tenant` column in the live schema.
-    await db(table)
+    await tenantTable(table)
       .where({ tenant: tenantId })
       .del()
       .catch(() => undefined);
@@ -301,7 +306,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
         defaultContactId: mappingDefaultContactId,
       }),
     );
-    const mappingRow = await db('tickets')
+    const mappingRow = await tenantTable('tickets')
       .where({ tenant: tenantId, ticket_id: mappingTicket.ticket_id })
       .first();
     expect(mappingRow.contact_name_id).toBe(mappingDefaultContactId);
@@ -316,7 +321,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
         sourceReference: 'direct-primary-contact',
       }),
     );
-    const fallbackRow = await db('tickets')
+    const fallbackRow = await tenantTable('tickets')
       .where({ tenant: tenantId, ticket_id: fallbackTicket.ticket_id })
       .first();
     expect(fallbackRow.contact_name_id).toBe(primaryContactId);
@@ -327,7 +332,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
     expect(result.ok).toBe(true);
     expect(result.action).toBe('create_ticket');
 
-    const alert = await db('rmm_alerts')
+    const alert = await tenantTable('rmm_alerts')
       .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: '1000' })
       .first();
     expect(alert).toBeTruthy();
@@ -335,7 +340,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
     expect(alert.severity).toBe('high');
     expect(alert.asset_id).toBe(assetId);
 
-    const ticket = await db('tickets')
+    const ticket = await tenantTable('tickets')
       .where({ tenant: tenantId, ticket_id: alert.ticket_id })
       .first();
     expect(ticket.client_id).toBe(clientId);
@@ -353,36 +358,36 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
       'https://acme.huntress.io/incident_reports/1000'
     );
 
-    const association = await db('asset_associations')
+    const association = await tenantTable('asset_associations')
       .where({ tenant: tenantId, asset_id: assetId, entity_id: alert.ticket_id })
       .first();
     expect(association).toBeTruthy();
 
-    const note = await db('comments')
+    const note = await tenantTable('comments')
       .where({ tenant: tenantId, ticket_id: alert.ticket_id })
       .first();
     expect(note).toBeTruthy();
 
-    const entityMapping = await db('tenant_external_entity_mappings')
+    const entityMapping = await tenantTable('tenant_external_entity_mappings')
       .where({ tenant: tenantId, integration_type: 'huntress', external_entity_id: '7' })
       .first();
     expect(entityMapping?.alga_entity_id).toBe(assetId);
   });
 
   it('is idempotent — reprocessing the unchanged incident creates nothing new', async () => {
-    const before = await db('tickets').where({ tenant: tenantId }).count('* as n').first();
+    const before = await tenantTable('tickets').where({ tenant: tenantId }).count('* as n').first();
     const result = await processIncident(db, tenantId, integration, incident(), deps);
     expect(result.ok).toBe(true);
     expect(result.action).toBe('skip');
-    const after = await db('tickets').where({ tenant: tenantId }).count('* as n').first();
+    const after = await tenantTable('tickets').where({ tenant: tenantId }).count('* as n').first();
     expect(Number(after?.n)).toBe(Number(before?.n));
   });
 
   it('appends a note and auto-closes when the incident closes', async () => {
-    const alert = await db('rmm_alerts')
+    const alert = await tenantTable('rmm_alerts')
       .where({ tenant: tenantId, external_alert_id: '1000' })
       .first();
-    const notesBefore = await db('comments')
+    const notesBefore = await tenantTable('comments')
       .where({ tenant: tenantId, ticket_id: alert.ticket_id })
       .count('* as n')
       .first();
@@ -397,13 +402,13 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
     expect(result.ok).toBe(true);
     expect(result.action).toBe('append_note');
 
-    const notesAfter = await db('comments')
+    const notesAfter = await tenantTable('comments')
       .where({ tenant: tenantId, ticket_id: alert.ticket_id })
       .count('* as n')
       .first();
     expect(Number(notesAfter?.n)).toBe(Number(notesBefore?.n) + 1);
 
-    const ticket = await db('tickets')
+    const ticket = await tenantTable('tickets')
       .where({ tenant: tenantId, ticket_id: alert.ticket_id })
       .first();
     expect(ticket.status_id).toBe(statusClosedId);
@@ -420,10 +425,10 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
     expect(result.ok).toBe(true);
     expect(result.action).toBe('create_ticket');
 
-    const alert = await db('rmm_alerts')
+    const alert = await tenantTable('rmm_alerts')
       .where({ tenant: tenantId, external_alert_id: '2000' })
       .first();
-    const ticket = await db('tickets')
+    const ticket = await tenantTable('tickets')
       .where({ tenant: tenantId, ticket_id: alert.ticket_id })
       .first();
     expect(ticket.client_id).toBe(fallbackClientId);
@@ -431,7 +436,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
     expect(ticket.board_id).toBe(triageBoardId);
     expect(ticket.title).toContain('[Unmapped Org]');
 
-    const discovered = await db('rmm_organization_mappings')
+    const discovered = await tenantTable('rmm_organization_mappings')
       .where({ tenant: tenantId, integration_id: integrationId, external_organization_id: '600' })
       .first();
     expect(discovered).toBeTruthy();
@@ -440,7 +445,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
   });
 
   it('records without a ticket when the mapping row opted out', async () => {
-    await db('rmm_organization_mappings')
+    await tenantTable('rmm_organization_mappings')
       .where({ tenant: tenantId, integration_id: integrationId, external_organization_id: '600' })
       .update({ auto_create_tickets: false });
 
@@ -454,7 +459,7 @@ describe('processIncident (DB integration)', { shuffle: false }, () => {
     expect(result.ok).toBe(true);
     expect(result.action).toBe('record_only');
 
-    const alert = await db('rmm_alerts')
+    const alert = await tenantTable('rmm_alerts')
       .where({ tenant: tenantId, external_alert_id: '3000' })
       .first();
     expect(alert).toBeTruthy();

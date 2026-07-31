@@ -6,6 +6,10 @@ const createTenantKnex = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   withTransaction: async (_knex: unknown, fn: any) => fn(_knex),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -832,7 +836,9 @@ describe('getDraftContractForResume action', () => {
     createTenantKnex.mockResolvedValue({ knex });
 
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
-    await expect(getDraftContractForResume('contract-1')).rejects.toThrow('Contract is not a draft');
+    await expect(getDraftContractForResume('contract-1')).resolves.toEqual({
+      actionError: 'Contract is not a draft',
+    });
   });
 
   it('user without contract create permission cannot resume drafts (T063)', async () => {

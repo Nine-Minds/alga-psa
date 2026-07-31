@@ -26,18 +26,34 @@ export * from './contractLineServiceConfigurationActions';
 export * from './contractPricingScheduleActions';
 export * from './contractReportActions';
 export * from './contractWizardActions';
+export * from './costRateActions';
 export * from './creditActions';
 export * from './creditExpirationSettingsActions';
-export * from './creditReconciliationActions';
-export * from './creditReconciliationFixActions';
 export * from './externalTaxImportActions';
 export * from './invoiceModification';
+export * from './invoiceCogsActions';
 export * from './invoiceQueries';
 export * from './invoiceJobActions';
+export {
+  createSeparateProjectProductInvoices,
+  getSeparateProjectProductInvoiceReview,
+  type SeparateProjectProductInvoiceReview,
+  type SeparateProjectProductInvoiceReviewRow,
+} from './invoiceGeneration';
 export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
+export * from './salesOrderInvoicingActions';
+export * from './rmaChargeActions';
+export * from './restockingFeeActions';
+export * from './salesOrderDocumentActions';
+export * from '../lib/salesOrderDocumentError';
+export * from './documentTemplateActions';
 export * from './materialActions';
 export * from './paymentActions';
+export * from './profitabilityReportActions';
+export * from './projectBillingConfigActions';
+export * from './projectBillingScheduleActions';
+export * from './projectBillingWarningActions';
 export * from './quoteActions';
 export * from './renewalsQueueActions';
 export * from './serviceActions';
@@ -45,6 +61,7 @@ export * from './serviceRateTierActions';
 export * from './taxSettingsActions';
 export * from './taxSourceActions';
 export * from './usageActions';
+export * from './vendorBillExportActions';
 export * from './voidInvoiceActions';
 
 // Export contract actions explicitly to avoid conflicts with contractLineMappingActions
@@ -100,6 +117,12 @@ export {
   completeOnboardingWizard,
   type HistMatch,
 } from './qboOnboardingActions';
+
+// QBO products & services import (EE only, flag-gated)
+export {
+  previewQboItemImport,
+  executeQboItemImport,
+} from './qboItemImportActions';
 
 // Accounting sync actions (EE only)
 export {

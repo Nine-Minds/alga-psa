@@ -10,9 +10,9 @@ describe('search indexer registry', () => {
     const indexers = allIndexers();
     const objectTypes = registeredObjectTypes();
 
-    expect(indexers).toHaveLength(28);
-    expect(new Set(indexers.map((indexer) => indexer.objectType)).size).toBe(28);
-    expect(objectTypes).toHaveLength(28);
+    expect(indexers).toHaveLength(31);
+    expect(new Set(indexers.map((indexer) => indexer.objectType)).size).toBe(31);
+    expect(objectTypes).toHaveLength(31);
     expect(objectTypes).toContain('client');
     expect(getIndexer('client')?.objectType).toBe('client');
   });
@@ -20,7 +20,7 @@ describe('search indexer registry', () => {
   it('T200 resolves the CE eeIndexers stub to an empty array', () => {
     expect(eeIndexers).toEqual([]);
     expect(allIndexers()).toHaveLength(ceIndexers.length);
-    expect(ceIndexers).toHaveLength(28);
+    expect(ceIndexers).toHaveLength(31);
   });
 
   it('T201 reflects a synthetic indexer added to the CE indexer array', () => {

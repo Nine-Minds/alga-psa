@@ -3,6 +3,7 @@
 import { IProject, IProjectTask } from 'server/src/interfaces/project.interfaces';
 import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 export interface ProjectCompletionMetrics {
   taskCompletionPercentage: number;
@@ -21,13 +22,15 @@ export interface ProjectCompletionMetrics {
  */
 export async function calculateProjectCompletion(projectId: string): Promise<ProjectCompletionMetrics> {
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant context not found');
+  }
+
+  const scopedDb = tenantDb(db, tenant);
 
   // Get project details
-  const project = await db('projects')
-    .where({
-      project_id: projectId,
-      tenant
-    })
+  const project = await scopedDb.table<IProject>('projects')
+    .where('project_id', projectId)
     .first() as IProject | undefined;
 
   if (!project) {
@@ -35,23 +38,24 @@ export async function calculateProjectCompletion(projectId: string): Promise<Pro
   }
 
   // Get all tasks for the project
-  const tasks = await db<IProjectTask>('project_tasks')
-    .join('project_phases', function() {
-      this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-          .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-    })
-    .leftJoin('project_status_mappings', function() {
-      this.on('project_tasks.project_status_mapping_id', '=', 'project_status_mappings.project_status_mapping_id')
-          .andOn('project_tasks.tenant', '=', 'project_status_mappings.tenant');
-    })
-    .leftJoin('statuses', function() {
-      this.on('project_status_mappings.status_id', '=', 'statuses.status_id')
-          .andOn('project_status_mappings.tenant', '=', 'statuses.tenant');
-    })
-    .where({
-      'project_phases.project_id': projectId,
-      'project_tasks.tenant': tenant
-    })
+  const tasksQuery = scopedDb.table<IProjectTask>('project_tasks');
+  scopedDb.tenantJoin(tasksQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+  scopedDb.tenantJoin(
+    tasksQuery,
+    'project_status_mappings',
+    'project_tasks.project_status_mapping_id',
+    'project_status_mappings.project_status_mapping_id',
+    { type: 'left' }
+  );
+  scopedDb.tenantJoin(
+    tasksQuery,
+    'statuses',
+    'project_status_mappings.status_id',
+    'statuses.status_id',
+    { type: 'left' }
+  );
+  const tasks = await tasksQuery
+    .where('project_phases.project_id', projectId)
     .select(
       'project_tasks.*',
       'project_status_mappings.is_standard',
@@ -64,20 +68,12 @@ export async function calculateProjectCompletion(projectId: string): Promise<Pro
   const taskCompletionPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   // Get time entries for the project
-  const timeEntries = await db<ITimeEntry>('time_entries')
-    .join('project_tasks', function() {
-      this.on('time_entries.work_item_id', '=', 'project_tasks.task_id')
-          .andOn('time_entries.tenant', '=', 'project_tasks.tenant')
-          .andOn('time_entries.work_item_type', '=', db.raw("'project_task'"));
-    })
-    .join('project_phases', function() {
-      this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-          .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-    })
-    .where({
-      'project_phases.project_id': projectId,
-      'time_entries.tenant': tenant
-    })
+  const timeEntriesQuery = scopedDb.table<ITimeEntry>('time_entries');
+  scopedDb.tenantJoin(timeEntriesQuery, 'project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id');
+  scopedDb.tenantJoin(timeEntriesQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+  const timeEntries = await timeEntriesQuery
+    .where('project_phases.project_id', projectId)
+    .where('time_entries.work_item_type', 'project_task')
     .select('time_entries.billable_duration');
 
   // Calculate hours-based completion

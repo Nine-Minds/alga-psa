@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Crown,
+  ExternalLink,
   KeyRound,
   RefreshCw,
   ShieldCheck,
@@ -27,10 +28,26 @@ import {
   submitLicense,
   startTrial,
   connectAppliance,
+  refreshLicenseNow,
 } from "@/lib/actions/licenseManagementActions";
 import type { LicenseStatus } from "@/lib/actions/licenseManagementActions";
+import {
+  getErrorMessage,
+  isActionPermissionError,
+} from "@alga-psa/ui/lib/errorHandling";
+import { isEnterpriseEdition } from "@/lib/features";
+import ApplianceAiSection from "@/components/licenses/ApplianceAiSection";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
+
+/**
+ * The Nine Minds customer licensing portal: buying Pro, changing seats, and
+ * reissuing activation codes all happen there (sign-in is a link emailed to the
+ * registered address). Overridable for non-production environments.
+ */
+const PORTAL_URL =
+  process.env.NEXT_PUBLIC_NINEMINDS_PORTAL_URL ||
+  "https://www.nineminds.com/portal";
 
 function formatDate(value: string | null) {
   if (!value) return null;
@@ -181,10 +198,20 @@ export default function LicenseManagementPage() {
   const { update: updateSession } = useSession();
 
   useEffect(() => {
-    getLicenseStatus().then((s) => {
-      setStatus(s);
-      setLoading(false);
-    });
+    getLicenseStatus()
+      .then((s) => {
+        if (isActionPermissionError(s)) {
+          setError(getErrorMessage(s));
+          return;
+        }
+        setStatus(s);
+      })
+      .catch(() => {
+        setError("Failed to load license status.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   async function refresh(newStatus: LicenseStatus) {
@@ -246,6 +273,22 @@ export default function LicenseManagementPage() {
         setSuccessMsg("15-day Enterprise trial started.");
       } else {
         setError(result.error ?? "Failed to start trial.");
+      }
+    });
+  }
+
+  function handleRefreshLicense() {
+    setError(null);
+    setSuccessMsg(null);
+    startTransition(async () => {
+      const result = await refreshLicenseNow();
+      if (result.success && result.status) {
+        await refresh(result.status);
+        setSuccessMsg(
+          "License refreshed. Seat or plan changes from the portal are now active.",
+        );
+      } else {
+        setError(result.error ?? "Failed to refresh the license.");
       }
     });
   }
@@ -453,11 +496,80 @@ export default function LicenseManagementPage() {
                     Last check-in: {lastCheckIn}
                   </p>
                 ) : null}
+                <Button
+                  id="license-refresh-now"
+                  variant="outline"
+                  onClick={handleRefreshLicense}
+                  disabled={isPending}
+                  className="mt-3 gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  {isPending ? "Refreshing…" : "Refresh license now"}
+                </Button>
+                <p className="mt-2 text-xs text-emerald-700/80 dark:text-emerald-200/80">
+                  Applies seat or plan changes made in the portal immediately.
+                </p>
               </div>
             ) : null}
           </section>
+
+          {status.state === "licensed" ? (
+            <section className="flex flex-col gap-3 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-semibold text-[rgb(var(--color-text-900))]">
+                  Seats, billing, and activation codes
+                </h3>
+                <p className="mt-1 max-w-2xl text-sm text-[rgb(var(--color-text-500))]">
+                  Add or remove seats, update billing, or reissue an activation
+                  code in the licensing portal. Sign in with your registered
+                  email — no password needed.
+                </p>
+              </div>
+              <Button
+                id="license-manage-in-portal"
+                variant="outline"
+                asChild
+                className="w-full gap-2 whitespace-nowrap sm:w-auto"
+              >
+                <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  Manage license in portal
+                </a>
+              </Button>
+            </section>
+          ) : (
+            <section className="flex flex-col gap-3 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-semibold text-[rgb(var(--color-text-900))]">
+                  Ready to buy AlgaPSA Pro?
+                </h3>
+                <p className="mt-1 max-w-2xl text-sm text-[rgb(var(--color-text-500))]">
+                  Purchase in the licensing portal — sign in with your
+                  registered email, pick your seat count, and you&apos;ll get a
+                  one-time activation code to enter below. Your appliance
+                  upgrades in place.
+                </p>
+              </div>
+              <Button
+                id="license-buy-pro-in-portal"
+                asChild
+                className="w-full gap-2 whitespace-nowrap sm:w-auto"
+              >
+                <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  Buy Pro in the portal
+                </a>
+              </Button>
+            </section>
+          )}
         </CardContent>
       </Card>
+
+      {/* Appliance AI add-on: data-sharing consent + credits balance.
+          Enterprise-only surface; the section itself self-manages loading and
+          gateway-unreachable states so a gateway problem never breaks this
+          page. Renders on this self-host page by construction. */}
+      {isEnterpriseEdition() ? <ApplianceAiSection /> : null}
 
       <details
         className="group rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm"
@@ -478,8 +590,16 @@ export default function LicenseManagementPage() {
         </summary>
         <div className="space-y-5 border-t border-[rgb(var(--color-border-200))] px-5 pb-5 pt-4">
           <p className="max-w-3xl text-sm text-[rgb(var(--color-text-500))]">
-            Use these options only if Nine Minds sent you a paid-license claim
-            code or a manually issued license key.
+            Enter the activation code or offline key you received from the{" "}
+            <a
+              href={PORTAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2 dark:text-[rgb(var(--color-primary-300))]"
+            >
+              licensing portal
+            </a>{" "}
+            or from Nine Minds support.
           </p>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -493,8 +613,9 @@ export default function LicenseManagementPage() {
                     Activate with claim code
                   </h3>
                   <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-                    Use an 8-character claim code from a paid-license email.
-                    This also enables automatic license refresh.
+                    Use the 8-character code from the licensing portal or a
+                    paid-license email. This also enables automatic license
+                    refresh.
                   </p>
                 </div>
               </div>
@@ -503,16 +624,16 @@ export default function LicenseManagementPage() {
                   id="license-claim-code"
                   type="text"
                   value={claimCode}
-                  onChange={(e) => setClaimCode(e.target.value.toUpperCase())}
-                  placeholder="XXXX-XXXX"
-                  maxLength={9}
+                  onChange={(e) => setClaimCode(e.target.value.toUpperCase().replace(/[\s-]/g, ""))}
+                  placeholder="XXXXXXXX"
+                  maxLength={8}
                   className="min-h-10 flex-1 rounded-md border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2 font-mono text-sm uppercase tracking-[0.12em] text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] focus:border-[rgb(var(--color-primary-400))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500)/0.25)]"
                 />
                 <Button
                   id="license-activate-claim-code"
                   variant="outline"
                   onClick={handleConnectAppliance}
-                  disabled={isPending || claimCode.replace(/-/g, "").length < 8}
+                  disabled={isPending || claimCode.length < 8}
                   className="whitespace-nowrap"
                 >
                   {isPending ? "Activating…" : "Apply claim code"}
@@ -530,8 +651,8 @@ export default function LicenseManagementPage() {
                     Paste a license key
                   </h3>
                   <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-                    Use this for manually issued or offline license keys from
-                    support.
+                    Use this for offline keys downloaded from the licensing
+                    portal (air-gapped installs) or issued by support.
                   </p>
                 </div>
               </div>

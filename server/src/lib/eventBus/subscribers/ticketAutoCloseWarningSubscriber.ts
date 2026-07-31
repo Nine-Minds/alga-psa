@@ -15,7 +15,7 @@
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { createTenantKnex, runWithTenant, buildTenantPortalSlug } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, buildTenantPortalSlug, tenantDb } from '@alga-psa/db';
 import { getEmailNotificationService } from '@alga-psa/notifications';
 
 const WARNING_SUBTYPE_NAME = 'Ticket Auto-Close Warning';
@@ -75,8 +75,9 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
 
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
+      const scopedDb = tenantDb(knex, tenantId);
 
-      const subtype = await knex('notification_subtypes')
+      const subtype = await scopedDb.table('notification_subtypes')
         .where({ name: WARNING_SUBTYPE_NAME })
         .first();
       if (!subtype) {
@@ -88,7 +89,7 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
       }
 
       const contact = contactNameId
-        ? await knex('contacts').where({ tenant: tenantId, contact_name_id: contactNameId }).first()
+        ? await scopedDb.table('contacts').where({ contact_name_id: contactNameId }).first()
         : null;
 
       if (!contact?.email) {
@@ -98,8 +99,8 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
         return;
       }
 
-      const portalUser = await knex('users')
-        .where({ tenant: tenantId, contact_id: contactNameId })
+      const portalUser = await scopedDb.table('users')
+        .where({ contact_id: contactNameId })
         .first('user_id');
       // Recipient is the contact; the user id only anchors preference lookup
       // and the notification log, so fall back to an MSP-side user when the

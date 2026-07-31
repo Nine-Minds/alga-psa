@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients';
 import {
   buildClientCreatedPayload,
@@ -11,6 +11,10 @@ import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { IClient, IContact } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import {
+  actionError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 function maybeUserActor(currentUser: unknown) {
   const userId = (currentUser as { user_id?: string } | undefined)?.user_id;
@@ -50,9 +54,9 @@ async function getClientNameById(
     return '';
   }
 
-  const client = await trx('clients')
+  const client = await tenantDb(trx, tenant).table('clients')
     .select('client_name')
-    .where({ client_id: clientId, tenant })
+    .where({ client_id: clientId })
     .first<{ client_name?: string | null }>();
 
   return client?.client_name ?? '';
@@ -66,9 +70,8 @@ export const getIntegrationClients = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const query = trx('clients')
+    const query = tenantDb(trx, tenant).table('clients')
       .select('*')
-      .where('tenant', tenant)
       .orderBy('client_name', 'asc');
 
     if (!includeInactive) {
@@ -87,9 +90,8 @@ export const getIntegrationContacts = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const query = trx('contacts')
+    const query = tenantDb(trx, tenant).table('contacts')
       .select('*')
-      .where('tenant', tenant)
       .orderBy('full_name', 'asc');
 
     if (!includeInactive) {
@@ -135,7 +137,7 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
     phone?: string;
     title?: string;
   }
-): Promise<{ contact: IContact & { client_name: string }; isNew: boolean }> => {
+): Promise<{ contact: IContact & { client_name: string }; isNew: boolean } | ActionMessageError> => {
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -146,9 +148,9 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
 
       if (existingBaseContact.client_id !== input.clientId) {
         if (!existingBaseContact.client_id) {
-          throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
+          return actionError('A contact with this email address already exists in the system without a client assignment');
         }
-        throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingClientName || 'another client'}`);
+        return actionError(`This email is already associated with ${existingClientName || 'another client'}`);
       }
 
       return {
@@ -169,9 +171,9 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
       is_inactive: false,
     }, tenant, trx);
 
-    const client = await trx('clients')
+    const client = await tenantDb(trx, tenant).table('clients')
       .select('client_name')
-      .where({ client_id: input.clientId, tenant })
+      .where({ client_id: input.clientId })
       .first();
 
     return {
@@ -191,7 +193,7 @@ export const createIntegrationClient = withAuth(async (
 ): Promise<{ success: true; data: IClient } | { success: false; error: string }> => {
   const canCreate = await hasPermission(user as any, 'client', 'create');
   if (!canCreate) {
-    throw new Error('Permission denied: Cannot create clients');
+    return { success: false, error: 'Permission denied: Cannot create clients' };
   }
 
   const { knex } = await createTenantKnex();
@@ -211,7 +213,7 @@ export const createIntegrationClient = withAuth(async (
     }
 
     const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await trx<IClient>('clients')
+      const [created] = await tenantDb(trx, tenant).table<IClient>('clients')
         .insert({
           ...clientData,
           tenant,
@@ -225,7 +227,10 @@ export const createIntegrationClient = withAuth(async (
     });
 
     if (!createdClient) {
-      throw new Error('Failed to create client');
+      return {
+        success: false,
+        error: 'Client could not be created. Please try again.'
+      };
     }
 
     const createdAt = createdClient.created_at ?? new Date().toISOString();
@@ -267,10 +272,6 @@ export const createIntegrationClient = withAuth(async (
       return { success: false, error: 'Referenced data not found. Please check account manager selection.' };
     }
 
-    if (error.message && !error.code) {
-      throw error;
-    }
-
-    throw new Error('Failed to create client. Please try again.');
+    throw error;
   }
 });

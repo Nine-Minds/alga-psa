@@ -8,6 +8,8 @@ function makeRecord(input: {
   periodKey: string;
   revision: number;
   duePosition: 'advance' | 'arrears';
+  servicePeriod?: IRecurringServicePeriodRecord['servicePeriod'];
+  invoiceWindow?: IRecurringServicePeriodRecord['invoiceWindow'];
   lifecycleState?: IRecurringServicePeriodRecord['lifecycleState'];
   provenance?: IRecurringServicePeriodRecord['provenance'];
 }): IRecurringServicePeriodRecord {
@@ -26,12 +28,12 @@ function makeRecord(input: {
     cadenceOwner: 'contract',
     duePosition: input.duePosition,
     lifecycleState: input.lifecycleState ?? 'generated',
-    servicePeriod: {
+    servicePeriod: input.servicePeriod ?? {
       start: '2026-03-01',
       end: '2026-04-01',
       semantics: 'half_open',
     },
-    invoiceWindow: {
+    invoiceWindow: input.invoiceWindow ?? {
       start: input.duePosition === 'advance' ? '2026-03-01' : '2026-04-01',
       end: input.duePosition === 'advance' ? '2026-04-01' : '2026-05-01',
       semantics: 'half_open',
@@ -82,5 +84,140 @@ describe('regenerateRecurringServicePeriods', () => {
     expect(plan.regeneratedRecords[0]?.recordId).toBe(
       'schedule:tenant-1:contract_line:line-1:contract:advance:period:2026-03-01:2026-04-01:r2',
     );
+  });
+
+  it('preserves existing records that start at or beyond the generated coverage end', () => {
+    const existingInsideCoverage = makeRecord({
+      recordId: 'record-june-r1',
+      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:advance',
+      periodKey: 'period:2026-06-01:2026-07-01',
+      revision: 1,
+      duePosition: 'advance',
+      servicePeriod: {
+        start: '2026-06-01',
+        end: '2026-07-01',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-06-01',
+        end: '2026-07-01',
+        semantics: 'half_open',
+      },
+    });
+    const existingOutsideCoverage = makeRecord({
+      recordId: 'record-august-r1',
+      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:advance',
+      periodKey: 'period:2026-08-01:2026-09-01',
+      revision: 1,
+      duePosition: 'advance',
+      servicePeriod: {
+        start: '2026-08-01',
+        end: '2026-09-01',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-08-01',
+        end: '2026-09-01',
+        semantics: 'half_open',
+      },
+    });
+
+    const plan = regenerateRecurringServicePeriods({
+      existingRecords: [existingInsideCoverage, existingOutsideCoverage],
+      candidateRecords: [],
+      candidateCoverageEnd: '2026-08-01',
+      regeneratedAt: '2026-06-15T00:00:00Z',
+      sourceRuleVersion: 'rule-v2',
+      sourceRunKey: 'run-v2',
+    });
+
+    expect(plan.supersededRecords.map((record) => record.recordId)).toEqual(['record-june-r1']);
+    expect(plan.preservedRecords.map((record) => record.recordId)).toEqual(['record-august-r1']);
+    expect(plan.activeRecords.map((record) => record.recordId)).toEqual(['record-august-r1']);
+  });
+
+  it('treats persisted UTC-midnight date ranges as equivalent to fresh date-only candidates', () => {
+    const existing = makeRecord({
+      recordId: 'record-june-r1',
+      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+      periodKey: 'period:2026-06-01:2026-07-01',
+      revision: 1,
+      duePosition: 'arrears',
+      servicePeriod: {
+        start: '2026-06-01T00:00:00Z',
+        end: '2026-07-01T00:00:00Z',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-07-01T00:00:00Z',
+        end: '2026-08-01T00:00:00Z',
+        semantics: 'half_open',
+      },
+    });
+    const candidate = makeRecord({
+      recordId: 'candidate-june-r1',
+      scheduleKey: existing.scheduleKey,
+      periodKey: existing.periodKey,
+      revision: 1,
+      duePosition: 'arrears',
+      servicePeriod: {
+        start: '2026-06-01',
+        end: '2026-07-01',
+        semantics: 'half_open',
+      },
+      invoiceWindow: {
+        start: '2026-07-01',
+        end: '2026-08-01',
+        semantics: 'half_open',
+      },
+    });
+
+    const plan = regenerateRecurringServicePeriods({
+      existingRecords: [existing],
+      candidateRecords: [candidate],
+      regeneratedAt: '2026-07-06T18:00:00.000Z',
+      sourceRuleVersion: 'rule-v1',
+      sourceRunKey: 'repair-rerun',
+    });
+
+    expect(plan.supersededRecords).toEqual([]);
+    expect(plan.regeneratedRecords).toEqual([]);
+    expect(plan.newRecords).toEqual([]);
+    expect(plan.activeRecords).toEqual([existing]);
+  });
+
+  it('assigns new records a revision above superseded ledger history', () => {
+    const superseded = makeRecord({
+      recordId: 'record-june-r1',
+      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+      periodKey: 'period:2026-06-01:2026-07-01',
+      revision: 1,
+      duePosition: 'arrears',
+      lifecycleState: 'superseded',
+    });
+    const candidate = makeRecord({
+      recordId: 'candidate-june-r1',
+      scheduleKey: superseded.scheduleKey,
+      periodKey: superseded.periodKey,
+      revision: 1,
+      duePosition: 'arrears',
+    });
+
+    const plan = regenerateRecurringServicePeriods({
+      existingRecords: [superseded],
+      candidateRecords: [candidate],
+      regeneratedAt: '2026-07-06T18:00:00.000Z',
+      sourceRuleVersion: 'rule-v1',
+      sourceRunKey: 'repair-after-superseded',
+    });
+
+    expect(plan.newRecords).toMatchObject([
+      {
+        recordId: `${candidate.scheduleKey}:${candidate.periodKey}:r2`,
+        revision: 2,
+        lifecycleState: 'generated',
+      },
+    ]);
+    expect(plan.supersededRecords).toEqual([]);
   });
 });

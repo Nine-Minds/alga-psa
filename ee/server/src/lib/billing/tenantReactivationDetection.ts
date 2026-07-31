@@ -1,3 +1,4 @@
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 const REACTIVATABLE_DELETION_STATUSES = new Set([
@@ -99,8 +100,8 @@ export async function getPendingDeletionSummary(
 ): Promise<PendingDeletionSummary | null> {
   try {
     const db = await getKnex(knex);
-    const row = await db('pending_tenant_deletions')
-      .where({ tenant: tenantId })
+    const row = await tenantDb(db, tenantId)
+      .table('pending_tenant_deletions')
       .first(
         'deletion_id',
         'status',
@@ -140,8 +141,10 @@ export async function resolveTenantAndAdminEmailByEmail(
   knex?: KnexLike,
 ): Promise<TenantEmailResolution | null> {
   const db = await getKnex(knex);
+  const discoveryDb = tenantDb(db, '__tenant_reactivation_email_discovery__');
 
-  const tenant = await db('tenants')
+  const tenant = await discoveryDb
+    .unscoped('tenants', 'tenant reactivation resolves tenant by billing email before tenant context exists')
     .where('email', email)
     .first('tenant', 'client_name', 'email');
 
@@ -155,7 +158,8 @@ export async function resolveTenantAndAdminEmailByEmail(
     };
   }
 
-  const adminUser = await db('users')
+  const adminUser = await discoveryDb
+    .unscoped('users', 'tenant reactivation resolves internal admin by email before tenant context exists')
     .where({
       email,
       user_type: 'internal',
@@ -166,8 +170,8 @@ export async function resolveTenantAndAdminEmailByEmail(
     return null;
   }
 
-  const userTenant = await db('tenants')
-    .where('tenant', adminUser.tenant)
+  const userTenant = await tenantDb(db, adminUser.tenant)
+    .table('tenants')
     .first('tenant', 'client_name', 'email');
 
   if (!userTenant) {
@@ -201,8 +205,8 @@ export async function resolveReactivationContactEmail(
 ): Promise<ReactivationContactEmailResolution | null> {
   const db = await getKnex(knex);
 
-  const tenant = await db('tenants')
-    .where('tenant', tenantId)
+  const tenant = await tenantDb(db, tenantId)
+    .table('tenants')
     .first('email');
 
   if (tenant?.email) {
@@ -219,8 +223,8 @@ export async function resolveTenantStripeCustomerForReactivation(
 ): Promise<TenantStripeCustomerResolution> {
   const db = await getKnex(knex);
 
-  const stripeCustomer = await db('stripe_customers')
-    .where('tenant', tenantId)
+  const stripeCustomer = await tenantDb(db, tenantId)
+    .table('stripe_customers')
     .whereNotNull('stripe_customer_external_id')
     .orderBy('created_at', 'desc')
     .first('stripe_customer_external_id');

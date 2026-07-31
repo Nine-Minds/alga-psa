@@ -38,7 +38,15 @@
     "no": "Non",
     "yes": "Oui"
   },
+  "clientLifecycle": {
+    "prospect": "Prospect",
+    "active": "Client actif",
+    "former": "Ancien client",
+    "all": "Toutes les étapes du cycle de vie"
+  },
   "clientsPage": {
+    "filterByLifecycle": "Filtrer par cycle de vie",
+    "lifecycleFilterLabel": "Filtre du cycle de vie",
     "title": "Page Clients",
     "description": "Page principale de gestion des clients avec recherche, filtres et vue grille/liste des clients",
     "searchPlaceholder": "Rechercher des clients, notes, documents et interactions",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "Autorisation refusée : impossible de supprimer des clients."
   },
   "clientDetails": {
+    "opportunities": "Opportunités",
+    "lifecycleStatus": "Cycle de vie",
+    "lifecycleStatusHelper": "Les prospects sont disponibles dans les flux de vente, mais masqués par défaut dans les listes opérationnelles de clients.",
     "title": "Détails du client",
     "backToClients": "Retour aux Clients",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
@@ -206,9 +217,9 @@
     "providerDefault": "Valeur par défaut du fournisseur",
     "inboundEmailDomains": "Domaines de messagerie entrants",
     "inboundEmailDomainsHelp": "Seuls ces domaines seront utilisés pour la mise en correspondance des domaines de courrier électronique entrant (par exemple, acme.com). Les domaines doivent être uniques pour tous les clients.",
-    "noInboundDomains": "Aucun domaine de messagerie entrant configuré. La correspondance de domaine ne sera pas utilisée.",
+    "noInboundDomains": "Ajoutez un domaine pour associer les e-mails entrants à ce client.",
     "inboundTicketDestination": "Destination du ticket entrant",
-    "inboundDestinationPrecedence": "Priorité : remplacement du contact -> destination du client -> valeur par défaut du fournisseur.",
+    "inboundDestinationPrecedence": "Utilise d'abord le remplacement du contact, puis celui du client, puis la valeur par défaut du fournisseur.",
     "manageLocations": "Gérer les emplacements",
     "loadingUsers": "Chargement des utilisateurs...",
     "loadingPolicies": "Chargement des politiques...",
@@ -278,9 +289,164 @@
     "nameAliasRemoveFailed": "Échec de la suppression de l'alias",
     "nameAliasRemoved": "Alias supprimé",
     "nameAliases": "Alias de correspondance",
-    "noNameAliases": "Aucun alias configuré. Le nom du client lui-même correspond toujours."
+    "noNameAliases": "Aucun alias configuré. Le nom du client lui-même correspond toujours.",
+    "equipment": "Équipement",
+    "parentClientSelf": "Un client ne peut pas être son propre parent",
+    "parentClientPlaceholder": "Aucun client parent",
+    "parentClientClear": "Effacer",
+    "parentClientLegacy": "Précédemment saisi comme texte : {{name}}"
+  },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Points d’attention",
+      "documents": "Documents",
+      "installBase": "Parc installé",
+      "locations": "Sites",
+      "money": "Finances",
+      "notes": "Notes",
+      "people": "Personnes",
+      "record": "Fiche client",
+      "service": "Service",
+      "timeline": "Tout, dans l’ordre"
+    },
+    "csatEmpty": "Aucune réponse d’enquête pour l’instant.",
+    "discardCancel": "Continuer la modification",
+    "discardConfirm": "Abandonner les modifications",
+    "discardMessage": "Vous avez des modifications non enregistrées sur la fiche client. Fermer et les abandonner ?",
+    "discardTitle": "Modifications non enregistrées",
+    "documents": {
+      "more": "+{{count}} de plus",
+      "none": "Aucun document pour l’instant."
+    },
+    "flags": {
+      "clientWaiting": "Client en attente depuis {{days}} j — {{ref}}",
+      "draftInvoices_one": "1 facture en brouillon — {{amount}} non facturé · {{ref}}",
+      "draftInvoices_other": "{{count}} factures en brouillon — {{amount}} non facturé · {{ref}}",
+      "rmaOpen_one": "1 RMA ouverte — {{days}} j",
+      "rmaOpen_other": "{{count}} RMA ouvertes — la plus ancienne {{days}} j",
+      "slaAtRisk_one": "SLA à risque — {{ref}}",
+      "slaAtRisk_other": "{{count}} tickets avec SLA à risque — prochain {{ref}}",
+      "slaBreached_one": "SLA non respecté — {{ref}}",
+      "slaBreached_other": "{{count}} SLA non respectés — le plus grave {{ref}}",
+      "soPartial": "{{ref}} : {{fulfilled}} lignes sur {{total}} livrées",
+      "ticketOverdue_one": "1 ticket en retard — {{ref}} {{days}} j de retard",
+      "ticketOverdue_other": "{{count}} tickets en retard — {{ref}} {{days}} j de retard",
+      "ticketUnassigned_one": "1 ticket non attribué — {{ref}}",
+      "ticketUnassigned_other": "{{count}} tickets non attribués — le plus ancien {{ref}}",
+      "wipAging_one": "1 élément non facturé — {{days}} j{{materials}}",
+      "wipAging_other": "{{count}} éléments non facturés — le plus ancien {{days}} j{{materials}}"
+    },
+    "installBase": {
+      "assets": "actifs gérés",
+      "assetsLink": "Actifs gérés",
+      "none": "Aucun équipement livré pour l’instant.",
+      "rmas": "RMA ouvertes",
+      "sold": "unités vendues",
+      "viewAsset": "actif",
+      "warrantyExpired_one": "1 hors garantie",
+      "warrantyExpired_other": "{{count}} hors garantie",
+      "warrantyExpiring_one": "1 expire sous ≤90 j",
+      "warrantyExpiring_other": "{{count}} expirent sous ≤90 j",
+      "warrantyTracked": " (sur {{count}} suivis)"
+    },
+    "locations": {
+      "billing": "Facturation",
+      "manage": "Gérer",
+      "more": "+{{count}} de plus",
+      "none": "Aucun site pour l’instant.",
+      "shipping": "Livraison"
+    },
+    "money": {
+      "activeContracts": "Contrats actifs",
+      "agingNote": "{{total}} en souffrance · paiements enregistrés déduits",
+      "billingSetup": "Configuration de facturation",
+      "current": "à jour",
+      "draft": "brouillon",
+      "moreDrafts_one": "+1 brouillon de plus",
+      "moreDrafts_other": "+{{count}} brouillons de plus",
+      "nothingOutstanding": "Rien en souffrance sur les factures finalisées.",
+      "taxSettings": "Paramètres de taxes",
+      "unbilledHours": "{{hours}} h",
+      "unbilledMaterials": "{{amount}} de matériel",
+      "unbilledWork": "Travaux non facturés"
+    },
+    "notes": {
+      "add": "Ajouter une note",
+      "lastEdited": "Note client partagée · modifiée il y a {{days}} j",
+      "none": "Aucune note pour l’instant."
+    },
+    "openView": "Ouvrir",
+    "people": {
+      "addContact": "Ajouter un contact",
+      "more": "+{{count}} de plus",
+      "noContactInfo": "aucune coordonnée enregistrée",
+      "none": "Aucun contact pour l’instant.",
+      "primary": "Principal"
+    },
+    "pulseError": "Impossible de charger l’aperçu du client.",
+    "rail": {
+      "close": "Fermer",
+      "installBase": "Parc installé",
+      "label": "Vues du client",
+      "money": "Finances",
+      "more": "Plus",
+      "records": "Enregistrements",
+      "service": "Service"
+    },
+    "record": {
+      "accountManager": "Chargé de compte",
+      "additionalInfo": "Informations complémentaires",
+      "clientSince": "Client depuis",
+      "defaultContact": "Contact par défaut",
+      "edit": "Modifier",
+      "unset": "non défini"
+    },
+    "service": {
+      "newTicket": "Nouveau ticket",
+      "none": "Aucun ticket ouvert.",
+      "oldest": "le plus ancien ouvert",
+      "open": "tickets ouverts",
+      "overdue": "en retard",
+      "overdueTag": "en retard",
+      "unassigned": "Non attribué"
+    },
+    "sla": {
+      "atRisk": "SLA à risque",
+      "atRiskLeft": "SLA : {{left}} restant",
+      "breached": "SLA non respecté",
+      "breachedAgo": "SLA non respecté il y a {{over}}",
+      "onTrack": "SLA respecté",
+      "onTrackLeft": "SLA : {{left}} restant",
+      "paused": "SLA en pause"
+    },
+    "timeline": {
+      "daysAgo": "il y a {{count}} j",
+      "empty": "Rien n’est encore enregistré pour ce client.",
+      "error": "Impossible de charger la chronologie.",
+      "filterAll": "Tout",
+      "filterInteractions": "Interactions",
+      "filterInventory": "Stock",
+      "filterMoney": "Finances",
+      "filterService": "Service",
+      "hoursAgo": "il y a {{count}} h",
+      "interaction": "Interaction",
+      "invoiceCreated": "Facture en brouillon",
+      "invoiceFinalized": "Facture finalisée",
+      "justNow": "à l’instant",
+      "loadMore": "Charger plus",
+      "loading": "Chargement…",
+      "materialAdded": "Matériel utilisé",
+      "quoteActivity": "Activité de devis",
+      "rmaClosed": "RMA clôturée",
+      "rmaOpened": "RMA ouverte",
+      "soCreated": "Commande client créée",
+      "ticketClosed": "Ticket clôturé",
+      "ticketOpened": "Ticket ouvert",
+      "unitDelivered": "Équipement livré"
+    }
   },
   "quickAddClient": {
+    "lifecycleStatus": "Cycle de vie",
     "title": "Ajouter un nouveau client",
     "clientDetails": "Détails du client",
     "clientLocation": "Emplacement du client",
@@ -328,7 +494,8 @@
     "created": "« {{name}} » a été créé. Ajoutez un autre client ci-dessous.",
     "createAndAddAnother": "Créer + Ajouter un autre",
     "createAndView": "Créer + Voir le client",
-    "additionalDetails": "Informations supplémentaires"
+    "additionalDetails": "Informations supplémentaires",
+    "createFailed": "Failed to create client. Please try again."
   },
   "clientCreatedDialog": {
     "title": "Client créé",
@@ -446,7 +613,8 @@
     "formattingError": "Erreur de formatage",
     "removeAssignmentTitle": "Supprimer l'affectation de ligne de contrat",
     "removeAssignmentMessage": "Êtes-vous sûr de vouloir supprimer cette attribution de ligne de contrat du client ? La ligne de contrat elle-même ne sera pas supprimée.",
-    "contracts": "Contrats"
+    "contracts": "Contrats",
+    "taxRatesLoadError": "Failed to load tax rate configuration."
   },
   "clientBillingSchedule": {
     "title": "Calendrier de facturation",
@@ -594,7 +762,8 @@
     "startDate": "Date de début",
     "startDateRequired": "La date de début est requise",
     "updateAssignment": "Mettre à jour l'affectation",
-    "useTenantRenewalDefaults": "Utiliser les paramètres par défaut de renouvellement du locataire"
+    "useTenantRenewalDefaults": "Utiliser les paramètres par défaut de renouvellement du locataire",
+    "saveError": "Failed to save contract. Please try again."
   },
   "clientContractLineDashboard": {
     "title": "Métriques d'utilisation (30 derniers jours)",
@@ -616,7 +785,10 @@
     "noActiveBucketPlans": "Aucun plan de compartiment actif trouvé.",
     "noHours": "Aucune heure enregistrée dans la période sélectionnée.",
     "noInvoices": "Aucune facture récente trouvée.",
-    "noUsage": "Aucune donnée d'utilisation trouvée dans la période sélectionnée."
+    "noUsage": "Aucune donnée d'utilisation trouvée dans la période sélectionnée.",
+    "retry": "Réessayer",
+    "loadError": "Le chargement de cette section a échoué.",
+    "balanceDue": "Solde dû"
   },
   "clientContractLineGuide": {
     "title": "Guide de désambiguïsation des lignes de contrat",
@@ -895,8 +1067,15 @@
     "email": "E-mail",
     "clientName": "Nom du client",
     "importCompleteMessage": "Clients {{count}} importés avec succès",
+    "importCompleteWithErrors": "Importation terminée avec des erreurs",
+    "importResultSummary": "{{created}} créés, {{updated}} mis à jour, {{skipped}} ignorés, {{failed}} en échec",
+    "skippedExistingMessage": "{{count}} clients ont été ignorés car ils existent déjà. Activez « Mettre à jour les clients existants » pour les remplacer.",
+    "error": "Erreur",
     "updateExistingTitle": "Mettre à jour les clients existants",
-    "updateExistingMessage": "Les clients {{count}} existent déjà. Voulez-vous les mettre à jour avec les nouvelles données ?"
+    "updateExistingMessage": "Les clients {{count}} existent déjà. Voulez-vous les mettre à jour avec les nouvelles données ?",
+    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
+    "noValidRows": "There are no valid client rows to import.",
+    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
   },
   "clientsList": {
     "name": "Nom",
@@ -1008,7 +1187,6 @@
     "title": "Paramètres de calcul des taxes",
     "description": "Configurez la façon dont les taxes sont calculées pour ce client.",
     "createDefault": "Créer des paramètres de taxe par défaut",
-    "goToBillingTaxSettings": "Accédez aux paramètres de taxe de facturation",
     "taxExemptStatus": "Statut d'exonération d'impôt",
     "taxExempt": "Exonéré d'impôt",
     "taxExemptHelp": "Lorsqu'elles sont activées, les taxes ne seront pas appliquées aux factures de ce client.",
@@ -1043,18 +1221,19 @@
     "taxExemptUpdatedSuccess": "Statut d'exonération fiscale mis à jour avec succès",
     "taxExemptUpdateError": "Échec de la mise à jour du statut d'exonération fiscale",
     "taxSourceExternal": "Externe",
-    "taxSourceHelp": "Gérez les taux de taxe par défaut des clients dans Paramètres client → Taux de taxe et gérez les taux globaux dans Facturation → Paramètres de taxe.",
+    "taxSourceHelp": "Définissez les taux de ce client dans Facturation → Taux de taxe. Définissez les taux globaux dans Paramètres de facturation → Taxe.",
     "taxSourceInternal": "Interne"
   },
   "clientNotesPanel": {
-    "title": "Notes et informations rapides",
+    "title": "Notes",
     "initialNote": "Remarque initiale",
-    "lastUpdated": "Dernière mise à jour :",
+    "lastUpdated": "Dernière mise à jour : {{value}}",
     "save": "Enregistrer",
     "retry": "Réessayer",
     "loadError": "Les notes n'ont pas pu être chargées",
     "unknownError": "Erreur inconnue",
-    "loadErrorTitle": "Les notes n'ont pas pu être chargées"
+    "loadErrorTitle": "Les notes n'ont pas pu être chargées",
+    "loadErrorDescription": "Could not load notes. Please try again."
   },
   "actions": {
     "cancel": "Annuler",
@@ -1218,7 +1397,9 @@
         "endRequired": "L'heure de fin est requise pour créer une réunion Teams",
         "startRequired": "L'heure de début est requise pour créer une réunion Teams",
         "unavailable": "La création de réunions Teams n'est pas disponible pour ce locataire."
-      }
+      },
+      "loadFailed": "Interaction options could not be loaded. Please try again.",
+      "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
       "addInteraction": "Ajouter une interaction",
@@ -1231,7 +1412,9 @@
       "searchPlaceholder": "Rechercher des interactions",
       "startDate": "Date de début",
       "title": "Interactions",
-      "typePlaceholder": "Type d'interaction"
+      "typePlaceholder": "Type d'interaction",
+      "loadFailed": "Interactions could not be loaded. Please try again.",
+      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
     },
     "overall": {
       "allContacts": "Tous les contacts",
@@ -1248,7 +1431,8 @@
       "startTimeLabel": "Heure de début de l'interaction",
       "startTimePlaceholder": "Filtrer à partir de cette heure de début",
       "statusPlaceholder": "Statut",
-      "title": "Interactions récentes"
+      "title": "Interactions récentes",
+      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
     }
   },
   "clientDrawer": {
@@ -1267,7 +1451,10 @@
         "serialNumber": "Numéro de série",
         "status": "Statut",
         "type": "Type",
-        "warrantyEnd": "Fin de garantie"
+        "warrantyEnd": "Fin de garantie",
+        "agent": "Agent",
+        "patching": "Correctifs",
+        "coverage": "Couverture"
       },
       "details": {
         "local": "Local",
@@ -1312,7 +1499,9 @@
         "printer": "Imprimante",
         "server": "Serveur",
         "workstation": "Poste de travail"
-      }
+      },
+      "loadError": "Impossible de charger les actifs pour le moment.",
+      "retry": "Réessayer"
     },
     "tickets": {
       "addTicket": "Ajouter un ticket",
@@ -1335,6 +1524,36 @@
         "openTicketFailed": "Échec de l'ouverture du ticket",
         "userNotAuthenticated": "Utilisateur non authentifié"
       }
+    }
+  },
+  "clientEquipmentTab": {
+    "retry": "Réessayer",
+    "loadError": "Le chargement de cette section a échoué.",
+    "emptyValue": "—",
+    "orderNumber": "Numéro de commande",
+    "status": "Statut",
+    "ordered": "Commandé",
+    "amount": "Montant",
+    "product": "Produit",
+    "sku": "SKU",
+    "serialNumber": "Numéro de série",
+    "delivered": "Livré",
+    "asset": "Actif",
+    "viewAsset": "Voir l'actif",
+    "rmaNumber": "Numéro de RMA",
+    "opened": "Ouvert",
+    "salesOrders": "Commandes clients",
+    "noSalesOrders": "Aucune commande client pour ce client.",
+    "deliveredUnits": "Unités livrées",
+    "noDeliveredEquipment": "Aucun équipement livré enregistré.",
+    "rmas": "RMAs",
+    "noRmas": "Aucun RMA pour ce client."
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "Chargement du contact...",
+      "notFound": "Contact introuvable.",
+      "loadFailed": "Échec du chargement du contact."
     }
   }
 }

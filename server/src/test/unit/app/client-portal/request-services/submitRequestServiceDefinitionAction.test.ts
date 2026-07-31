@@ -43,7 +43,7 @@ vi.mock('next/navigation', () => ({
   redirect: redirectMock,
 }));
 
-vi.mock('../../../../../lib/storage/StorageService', () => ({
+vi.mock('@alga-psa/storage/StorageService', () => ({
   StorageService: {
     validateFileUpload: vi.fn(),
     uploadFile: vi.fn(),

@@ -93,9 +93,7 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
         }
         catch (err) {
             console.error('Error creating folder:', err);
-            setError(err instanceof Error && err.message
-                ? err.message
-                : tDoc('folderSelector.errors.createFailed', 'Failed to create folder'));
+            setError(tDoc('folderSelector.errors.createFailed', 'Failed to create folder'));
         }
         finally {
             setCreatingFolder(false);

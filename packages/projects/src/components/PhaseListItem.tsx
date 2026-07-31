@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IProjectPhase } from '@alga-psa/types';
-import { Pencil, Trash2, GripVertical, Columns3 } from 'lucide-react';
+import { AlertTriangle, Pencil, Trash2, GripVertical, Columns3, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -11,9 +11,12 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
+import { phaseBadgeClasses, type PhaseBillingBadge } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import styles from './ProjectDetail.module.css';
 
 interface PhaseListItemProps {
+  viewMode: 'kanban' | 'list' | 'billing';
   phase: IProjectPhase;
   projectId: string;
   isSelected: boolean;
@@ -41,9 +44,18 @@ interface PhaseListItemProps {
   onDragEnd: (e: React.DragEvent) => void;
   onStatusesChanged?: () => void;
   phases: IProjectPhase[];
+  /** Billing badge for a phase linked to schedule entries (F136). */
+  billingBadge?: PhaseBillingBadge;
+  /** Whether the current user can mark phases complete / reopen them (F137). */
+  canCompletePhase?: boolean;
+  /** True when every task in the phase is in a closed status (F138 nudge). */
+  allTasksClosed?: boolean;
+  onMarkComplete?: (phase: IProjectPhase) => void;
+  onReopen?: (phase: IProjectPhase) => void;
 }
 
 export const PhaseListItem: React.FC<PhaseListItemProps> = ({
+  viewMode,
   phase,
   projectId,
   isSelected,
@@ -71,8 +83,18 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   onStatusesChanged,
   phases,
   taskDraggingOverPhaseId,
+  billingBadge,
+  canCompletePhase,
+  allTasksClosed,
+  onMarkComplete,
+  onReopen,
 }) => {
   const { t } = useTranslation('features/projects');
+  const { money, symbol } = useCurrencyFormat();
+  const isBillingView = viewMode === 'billing';
+  const effectiveIsEditing = isEditing && !isBillingView;
+  const isCompleted = Boolean(phase.completed_at);
+  const showCompletionNudge = !isBillingView && !isCompleted && Boolean(allTasksClosed) && (taskCount ?? 0) > 0;
   const [isDragging, setIsDragging] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [customStatusCount, setCustomStatusCount] = useState<number | null>(null);
@@ -82,17 +104,17 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
 
   // Load phase custom status count when entering edit mode or after dialog closes
   useEffect(() => {
-    if (!isEditing && !showStatusDialog) return;
+    if (!effectiveIsEditing && !showStatusDialog) return;
     let cancelled = false;
     getProjectStatusMappings(projectId, phase.phase_id)
       .then((mappings) => { if (!cancelled) setCustomStatusCount(mappings.length); })
       .catch(() => { if (!cancelled) setCustomStatusCount(null); });
     return () => { cancelled = true; };
-  }, [isEditing, showStatusDialog, projectId, phase.phase_id]);
+  }, [effectiveIsEditing, showStatusDialog, projectId, phase.phase_id]);
 
   // Auto-scroll the editing form into view when editing starts
   useEffect(() => {
-    if (isEditing && itemRef.current) {
+    if (effectiveIsEditing && itemRef.current) {
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       requestAnimationFrame(() => {
         const target = actionsRef.current ?? itemRef.current;
@@ -102,7 +124,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
         catch { nameInputRef.current?.focus(); }
       });
     }
-  }, [isEditing]);
+  }, [effectiveIsEditing]);
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -243,7 +265,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   return (
     <li
       ref={itemRef}
-      draggable={!isEditing}
+      draggable={!isBillingView && !effectiveIsEditing}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={`relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group
@@ -254,7 +276,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
         ${styles.phaseItem}
       `}
       onClick={() => {
-        if (!isEditing) {
+        if (!effectiveIsEditing) {
           onSelect(phase);
         }
       }}
@@ -262,7 +284,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {isEditing ? (
+      {effectiveIsEditing ? (
         <div className="flex flex-col w-full gap-3">
           <div className="flex-1 min-w-0">
             {/* Phase Name Input */}
@@ -369,17 +391,57 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       ) : (
         <>
           {/* Drag Handle — absolutely positioned so it doesn't consume layout space */}
-          <div className="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
-            <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-          </div>
+          {!isBillingView && (
+            <div className="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
+              <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            </div>
+          )}
           {/* Display View */}
           <div className="flex flex-col w-full min-w-0">
             <div className="flex items-start justify-between gap-2">
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100 min-w-0 break-words">{phase.phase_name}</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
-                {t('phases.taskCount', { count: taskCount ?? 0 })}
-              </span>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {isBillingView && billingBadge && (
+                  <Tooltip content={billingBadge.overdue ? (
+                    <div className="space-y-1">
+                      <div>{money(billingBadge.amountCents, billingBadge.currency ?? undefined)}</div>
+                      <div>{t(
+                        'billing.schedule.phaseOverdue',
+                        'Phase end date has passed — mark the phase complete to make this entry ready',
+                      )}</div>
+                    </div>
+                  ) : money(billingBadge.amountCents, billingBadge.currency ?? undefined)}>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${phaseBadgeClasses(billingBadge.status)} ${billingBadge.overdue ? 'ring-2 ring-amber-500/70 dark:ring-amber-400/70' : ''}`}
+                      aria-label={t('billing.phaseBadge.label', 'Billing milestone')}
+                    >
+                      {symbol(billingBadge.currency ?? undefined)}
+                      {billingBadge.overdue && <AlertTriangle className="h-3 w-3" />}
+                    </span>
+                  </Tooltip>
+                )}
+                {isCompleted && (
+                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: new Date(phase.completed_at as string).toLocaleDateString() })}>
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  </Tooltip>
+                )}
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                  {t('phases.taskCount', { count: taskCount ?? 0 })}
+                </span>
+              </div>
             </div>
+            {showCompletionNudge && (
+              <button
+                type="button"
+                id={`phase-complete-nudge-${phase.phase_id}`}
+                onClick={(e) => { e.stopPropagation(); onMarkComplete?.(phase); }}
+                disabled={!canCompletePhase}
+                className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:cursor-default disabled:hover:bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                {t('phases.allTasksClosedNudge', 'All tasks done — mark complete?')}
+              </button>
+            )}
             {phase.description && (
               <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">{phase.description}</span>
             )}
@@ -397,32 +459,53 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             </div>
           </div>
           {/* Hover Action Buttons — absolutely positioned so they don't consume layout space */}
-          <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(phase);
-              }}
-              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
-              title={t('phases.editPhase')}
-            >
-              <Pencil className="w-3 h-3" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(phase);
-              }}
-              className="p-1 rounded hover:bg-destructive/15 text-destructive"
-              title={t('phases.deletePhase')}
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
-          </div>
+          {!isBillingView && (
+            <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
+              {canCompletePhase && (isCompleted ? (
+                <button
+                  id={`reopen-phase-${phase.phase_id}`}
+                  onClick={(e) => { e.stopPropagation(); onReopen?.(phase); }}
+                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
+                  title={t('phases.reopenPhase', 'Reopen phase')}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              ) : (
+                <button
+                  id={`complete-phase-${phase.phase_id}`}
+                  onClick={(e) => { e.stopPropagation(); onMarkComplete?.(phase); }}
+                  className="p-1 rounded text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10"
+                  title={t('phases.markComplete', 'Mark phase complete')}
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                </button>
+              ))}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(phase);
+                }}
+                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
+                title={t('phases.editPhase')}
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(phase);
+                }}
+                className="p-1 rounded hover:bg-destructive/15 text-destructive"
+                title={t('phases.deletePhase')}
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          )}
         </>
       )}
 
-      {showStatusDialog && (
+      {!isBillingView && showStatusDialog && (
         <Dialog
           isOpen
           onClose={() => { setShowStatusDialog(false); onStatusesChanged?.(); }}

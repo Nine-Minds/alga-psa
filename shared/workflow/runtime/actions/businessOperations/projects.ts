@@ -2,7 +2,8 @@ import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { generateKeyBetween } from 'fractional-indexing';
-import { getDeletionConfig, validateDeletion } from '@alga-psa/core';
+import { getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
+import { tenantDb } from '@alga-psa/db';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -424,8 +425,23 @@ async function getTableColumns(tx: TenantTxContext, tableName: string): Promise<
   return new Set(rows.map((row: { column_name: string }) => row.column_name));
 }
 
+function tenantScopedTable(tx: TenantTxContext, table: string): Knex.QueryBuilder {
+  return tenantDb(tx.trx, tx.tenantId).table(table);
+}
+
+function tenantJoin(
+  tx: TenantTxContext,
+  query: Knex.QueryBuilder,
+  table: string,
+  left: string,
+  right: string,
+  options?: Parameters<ReturnType<typeof tenantDb>['tenantJoin']>[4]
+): Knex.QueryBuilder {
+  return tenantDb(tx.trx, tx.tenantId).tenantJoin(query, table, left, right, options);
+}
+
 async function ensureProjectExists(ctx: any, tx: TenantTxContext, projectId: string): Promise<Record<string, unknown>> {
-  const project = await tx.trx('projects').where({ tenant: tx.tenantId, project_id: projectId }).first();
+  const project = await tenantScopedTable(tx, 'projects').where('project_id', projectId).first();
   if (!project) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -438,7 +454,7 @@ async function ensureProjectExists(ctx: any, tx: TenantTxContext, projectId: str
 }
 
 async function ensurePhaseExists(ctx: any, tx: TenantTxContext, phaseId: string): Promise<Record<string, unknown>> {
-  const phase = await tx.trx('project_phases').where({ tenant: tx.tenantId, phase_id: phaseId }).first();
+  const phase = await tenantScopedTable(tx, 'project_phases').where('phase_id', phaseId).first();
   if (!phase) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -451,14 +467,12 @@ async function ensurePhaseExists(ctx: any, tx: TenantTxContext, phaseId: string)
 }
 
 async function ensureTaskContext(ctx: any, tx: TenantTxContext, taskId: string): Promise<Record<string, unknown>> {
-  const task = await tx.trx('project_tasks as pt')
-    .join('project_phases as pp', function joinPhases(this: Knex.JoinClause) {
-      this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
-    })
-    .join('projects as p', function joinProjects(this: Knex.JoinClause) {
-      this.on('p.tenant', 'pp.tenant').andOn('p.project_id', 'pp.project_id');
-    })
-    .where({ 'pt.tenant': tx.tenantId, 'pt.task_id': taskId })
+  const taskQuery = tenantScopedTable(tx, 'project_tasks as pt');
+  tenantJoin(tx, taskQuery, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+  tenantJoin(tx, taskQuery, 'projects as p', 'p.project_id', 'pp.project_id');
+
+  const task = await taskQuery
+    .where('pt.task_id', taskId)
     .select('pt.*', 'pp.project_id')
     .first();
 
@@ -498,7 +512,7 @@ function validateOptionalTaskScope(
 }
 
 async function ensureTicketExists(ctx: any, tx: TenantTxContext, ticketId: string): Promise<Record<string, unknown>> {
-  const ticket = await tx.trx('tickets').where({ tenant: tx.tenantId, ticket_id: ticketId }).first();
+  const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', ticketId).first();
   if (!ticket) {
     throwActionError(ctx, {
       category: 'ActionError',
@@ -515,8 +529,8 @@ async function ensureStatusMappingExists(
   tx: TenantTxContext,
   projectStatusMappingId: string
 ): Promise<Record<string, unknown>> {
-  const row = await tx.trx('project_status_mappings')
-    .where({ tenant: tx.tenantId, project_status_mapping_id: projectStatusMappingId })
+  const row = await tenantScopedTable(tx, 'project_status_mappings')
+    .where('project_status_mapping_id', projectStatusMappingId)
     .first();
 
   if (!row) {
@@ -570,14 +584,12 @@ async function getProjectStatusMappingDetails(
   tx: TenantTxContext,
   projectStatusMappingId: string
 ): Promise<ProjectStatusMappingDetails | null> {
-  const row = await tx.trx('project_status_mappings as psm')
-    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
-    .where({ 'psm.tenant': tx.tenantId, 'psm.project_status_mapping_id': projectStatusMappingId })
+  const query = tenantScopedTable(tx, 'project_status_mappings as psm');
+  tenantJoin(tx, query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  tenantJoin(tx, query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+
+  const row = await query
+    .where('psm.project_status_mapping_id', projectStatusMappingId)
     .select(
       'psm.*',
       tx.trx.raw('COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'),
@@ -605,14 +617,11 @@ async function getScopedProjectStatusMappings(
   projectId: string,
   phaseId?: string | null
 ): Promise<ProjectStatusMappingDetails[]> {
-  let query = tx.trx('project_status_mappings as psm')
-    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
-    .where({ 'psm.tenant': tx.tenantId, 'psm.project_id': projectId });
+  let query = tenantScopedTable(tx, 'project_status_mappings as psm');
+  tenantJoin(tx, query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+  tenantJoin(tx, query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+  query = query
+    .where('psm.project_id', projectId);
 
   query = phaseId ? query.andWhere('psm.phase_id', phaseId) : query.whereNull('psm.phase_id');
 
@@ -646,12 +655,12 @@ async function ensureProjectDefaultStatusMappings(
   const existing = await getScopedProjectStatusMappings(tx, projectId);
   if (existing.length > 0) return existing;
 
-  const standardStatuses = await tx.trx('standard_statuses')
+  const standardStatuses = await tenantDb(tx.trx, tx.tenantId).table('standard_statuses')
     .where({ item_type: 'project_task' })
     .orderBy('display_order', 'asc');
 
   for (const status of standardStatuses) {
-    await tx.trx('project_status_mappings').insert({
+    await tenantScopedTable(tx, 'project_status_mappings').insert({
       tenant: tx.tenantId,
       project_status_mapping_id: uuidv4(),
       project_id: projectId,
@@ -752,8 +761,9 @@ async function generateTaskWbsCode(
   targetPhase: Record<string, unknown>
 ): Promise<string> {
   const baseWbs = String(targetPhase.wbs_code ?? '1');
-  const countRow = await tx.trx('project_tasks')
-    .where({ tenant: tx.tenantId, phase_id: targetPhase.phase_id })
+  const phaseId = String(targetPhase.phase_id);
+  const countRow = await tenantScopedTable(tx, 'project_tasks')
+    .where('phase_id', phaseId)
     .count('* as count')
     .first();
   const nextNumber = parseInt(String((countRow as any)?.count ?? 0), 10) + 1;
@@ -769,8 +779,8 @@ async function getCurrentTaskAdditionalUserIds(
   const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
   if (!hasTaskResources) return [];
 
-  const rows = await tx.trx('task_resources')
-    .where({ tenant: tx.tenantId, task_id: taskId })
+  const rows = await tenantScopedTable(tx, 'task_resources')
+    .where('task_id', taskId)
     .whereNotNull('additional_user_id')
     .select('additional_user_id');
 
@@ -790,8 +800,8 @@ async function resolveActiveTaskAssignmentUsers(
   const supportsUserType = userColumns.has('user_type');
   const supportsInactive = userColumns.has('is_inactive');
 
-  const primaryQuery = tx.trx('users')
-    .where({ tenant: tx.tenantId, user_id: input.primaryUserId });
+  const primaryQuery = tenantScopedTable(tx, 'users')
+    .where('user_id', input.primaryUserId);
   if (supportsUserType) primaryQuery.andWhere('user_type', 'internal');
   if (supportsInactive) primaryQuery.andWhere('is_inactive', false);
   const primaryUser = await primaryQuery.first();
@@ -812,8 +822,7 @@ async function resolveActiveTaskAssignmentUsers(
     return { primaryUserId: input.primaryUserId, additionalUserIds: [] };
   }
 
-  const additionalQuery = tx.trx('users')
-    .where({ tenant: tx.tenantId });
+  const additionalQuery = tenantScopedTable(tx, 'users');
   if (supportsUserType) additionalQuery.andWhere('user_type', 'internal');
   if (supportsInactive) additionalQuery.andWhere('is_inactive', false);
 
@@ -848,13 +857,13 @@ async function reconcileTaskAdditionalUsers(
   const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
   if (!hasTaskResources) return;
 
-  await tx.trx('task_resources')
-    .where({ tenant: tx.tenantId, task_id: taskId })
+  await tenantScopedTable(tx, 'task_resources')
+    .where('task_id', taskId)
     .delete();
 
   if (additionalUserIds.length === 0) return;
 
-  await tx.trx('task_resources').insert(
+  await tenantScopedTable(tx, 'task_resources').insert(
     additionalUserIds.map((userId) => ({
       tenant: tx.tenantId,
       task_id: taskId,
@@ -889,7 +898,7 @@ async function deleteFromTableIfExists(
 ): Promise<number> {
   const hasTable = await tx.trx.schema.hasTable(tableName);
   if (!hasTable) return 0;
-  const query = whereBuilder(tx.trx(tableName));
+  const query = whereBuilder(tenantScopedTable(tx, tableName));
   const deleted = await query.delete();
   return Number(deleted ?? 0);
 }
@@ -983,13 +992,13 @@ async function ensureTagMappings(
       new Set(['tenant', 'tag_id', 'tag_text', 'tagged_type', 'background_color', 'text_color', 'created_at'])
     );
 
-    await tx.trx('tag_definitions')
+    await tenantScopedTable(tx, 'tag_definitions')
       .insert(definitionRow)
       .onConflict(['tenant', 'tag_text', 'tagged_type'])
       .ignore();
 
-    const definition = await tx.trx('tag_definitions')
-      .where({ tenant: tx.tenantId, tag_text: tagText, tagged_type: params.taggedType })
+    const definition = await tenantScopedTable(tx, 'tag_definitions')
+      .where({ tag_text: tagText, tagged_type: params.taggedType })
       .first();
     if (!definition?.tag_id) {
       throw new Error(`Failed to resolve tag definition for "${tagText}"`);
@@ -1010,7 +1019,7 @@ async function ensureTagMappings(
       new Set(['tenant', 'mapping_id', 'tag_id', 'tagged_id', 'tagged_type', 'created_by', 'created_at'])
     );
 
-    const insertedMappings = await tx.trx('tag_mappings')
+    const insertedMappings = await tenantScopedTable(tx, 'tag_mappings')
       .insert(mappingRow)
       .onConflict(['tenant', 'tag_id', 'tagged_id'])
       .ignore()
@@ -1025,9 +1034,8 @@ async function ensureTagMappings(
       continue;
     }
 
-    const mapping = await tx.trx('tag_mappings')
+    const mapping = await tenantScopedTable(tx, 'tag_mappings')
       .where({
-        tenant: tx.tenantId,
         tag_id: definition.tag_id,
         tagged_id: params.taggedId,
         tagged_type: params.taggedType,
@@ -1068,22 +1076,22 @@ function toTicketAuthorizationRecord(ticket: Record<string, unknown>): Authoriza
 
 async function resolveActorAuthorizationSubject(tx: TenantTxContext): Promise<AuthorizationSubject> {
   const userColumns = await getTableColumns(tx, 'users');
-  const actor = await tx.trx('users')
-    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
+  const actor = await tenantScopedTable(tx, 'users')
+    .where('user_id', tx.actorUserId)
     .select('*')
     .first<Record<string, unknown>>();
 
-  const roleRows = await tx.trx('user_roles')
-    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
+  const roleRows = await tenantScopedTable(tx, 'user_roles')
+    .where('user_id', tx.actorUserId)
     .select<{ role_id: string }[]>('role_id')
     .catch(() => []);
-  const teamRows = await tx.trx('team_members')
-    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
+  const teamRows = await tenantScopedTable(tx, 'team_members')
+    .where('user_id', tx.actorUserId)
     .select<{ team_id: string }[]>('team_id')
     .catch(() => []);
   const managedRows = userColumns.has('reports_to')
-    ? await tx.trx('users')
-        .where({ tenant: tx.tenantId, reports_to: tx.actorUserId })
+    ? await tenantScopedTable(tx, 'users')
+        .where('reports_to', tx.actorUserId)
         .select<{ user_id: string }[]>('user_id')
         .catch(() => [])
     : [];
@@ -1247,15 +1255,15 @@ export function registerProjectActions(): void {
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'project_task', action: 'create' });
 
-      const project = await tx.trx('projects').where({ tenant: tx.tenantId, project_id: input.project_id }).first();
+      const project = await tenantScopedTable(tx, 'projects').where('project_id', input.project_id).first();
       if (!project) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project not found' });
 
-      const phaseId = input.phase_id ?? (await tx.trx('project_phases')
-        .where({ tenant: tx.tenantId, project_id: input.project_id })
+      const phaseId = input.phase_id ?? (await tenantScopedTable(tx, 'project_phases')
+        .where('project_id', input.project_id)
         .orderBy('order_number', 'asc')
         .first())?.phase_id;
       if (!phaseId) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Project phase not found' });
-      const phase = await tx.trx('project_phases').where({ tenant: tx.tenantId, phase_id: phaseId }).first();
+      const phase = await tenantScopedTable(tx, 'project_phases').where('phase_id', phaseId).first();
       if (!phase || phase.project_id !== input.project_id) {
         throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Project phase does not belong to project' });
       }
@@ -1263,13 +1271,13 @@ export function registerProjectActions(): void {
       const assignedTo = input.assignee
         ? (input.assignee.type === 'user'
             ? input.assignee.id
-            : (await tx.trx('teams').where({ tenant: tx.tenantId, team_id: input.assignee.id }).first())?.manager_id)
+            : (await tenantScopedTable(tx, 'teams').where('team_id', input.assignee.id).first())?.manager_id)
         : null;
       if (input.assignee && input.assignee.type === 'team' && !assignedTo) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Team not found' });
       }
       if (assignedTo) {
-        const user = await tx.trx('users').where({ tenant: tx.tenantId, user_id: assignedTo }).first();
+        const user = await tenantScopedTable(tx, 'users').where('user_id', assignedTo).first();
         if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Assignee user not found' });
       }
 
@@ -1292,11 +1300,11 @@ export function registerProjectActions(): void {
           statusId = taskColumns.has('status_id') ? (defaultMapping?.status_id ?? null) : projectStatusMappingId;
         }
       } else if (statusId) {
-        const status = await tx.trx('statuses').where({ tenant: tx.tenantId, status_id: statusId, status_type: 'project_task' }).first();
+        const status = await tenantScopedTable(tx, 'statuses').where({ status_id: statusId, status_type: 'project_task' }).first();
         if (!status) throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid project task status_id' });
       } else {
-        const defaultStatus = await tx.trx('statuses')
-          .where({ tenant: tx.tenantId, status_type: 'project_task' })
+        const defaultStatus = await tenantScopedTable(tx, 'statuses')
+          .where('status_type', 'project_task')
           .orderBy('is_default', 'desc')
           .orderBy('order_number', 'asc')
           .first();
@@ -1304,8 +1312,8 @@ export function registerProjectActions(): void {
       }
 
       const baseWbs = (phase?.wbs_code as string) ?? '1';
-      const countRow = await tx.trx('project_tasks')
-        .where({ tenant: tx.tenantId, phase_id: phaseId })
+      const countRow = await tenantScopedTable(tx, 'project_tasks')
+        .where('phase_id', phaseId)
         .count('* as count')
         .first();
       const n = parseInt(String((countRow as any)?.count ?? 0), 10) + 1;
@@ -1330,10 +1338,10 @@ export function registerProjectActions(): void {
       if (taskColumns.has('project_status_mapping_id')) taskPayload.project_status_mapping_id = projectStatusMappingId;
       if (taskColumns.has('priority_id')) taskPayload.priority_id = input.priority_id ?? null;
 
-      await tx.trx('project_tasks').insert(taskPayload);
+      await tenantScopedTable(tx, 'project_tasks').insert(taskPayload);
 
       if (input.link_ticket_id) {
-        await tx.trx('project_ticket_links').insert({
+        await tenantScopedTable(tx, 'project_ticket_links').insert({
           tenant: tx.tenantId,
           link_id: uuidv4(),
           project_id: input.project_id,
@@ -1343,7 +1351,7 @@ export function registerProjectActions(): void {
           created_at: nowIso
         }).catch(() => undefined);
 
-        await tx.trx('ticket_entity_links').insert({
+        await tenantScopedTable(tx, 'ticket_entity_links').insert({
           tenant: tx.tenantId,
           link_id: uuidv4(),
           ticket_id: input.link_ticket_id,
@@ -1398,20 +1406,18 @@ export function registerProjectActions(): void {
         let matchedBy: 'project_id' | 'name' | 'external_ref' | null = null;
 
         if (input.project_id) {
-          project = await tx.trx('projects').where({ tenant: tx.tenantId, project_id: input.project_id }).first();
+          project = await tenantScopedTable(tx, 'projects').where('project_id', input.project_id).first();
           matchedBy = 'project_id';
         } else if (input.name) {
           const exactName = String(input.name).trim();
-          project = await tx.trx('projects')
-            .where({ tenant: tx.tenantId })
+          project = await tenantScopedTable(tx, 'projects')
             .andWhereRaw('lower(project_name) = ?', [exactName.toLowerCase()])
             .first();
           matchedBy = 'name';
         } else if (input.external_ref) {
           matchedBy = 'external_ref';
           if (projectColumns.has('properties')) {
-            project = await tx.trx('projects')
-              .where({ tenant: tx.tenantId })
+            project = await tenantScopedTable(tx, 'projects')
               .andWhereRaw(`(properties->>'external_ref') = ?`, [input.external_ref])
               .first();
           }
@@ -1484,7 +1490,7 @@ export function registerProjectActions(): void {
 
         const projectColumns = await getTableColumns(tx, 'projects');
 
-        let base = tx.trx('projects as p').where({ 'p.tenant': tx.tenantId });
+        let base = tenantScopedTable(tx, 'projects as p');
         base = base.andWhere(function searchByQuery() {
           this.whereRaw(`p.project_name ILIKE ?`, [pattern]);
           if (projectColumns.has('description')) {
@@ -1588,11 +1594,11 @@ export function registerProjectActions(): void {
         let matchedBy: 'phase_id' | 'name' | null = null;
 
         if (input.phase_id) {
-          phase = await tx.trx('project_phases').where({ tenant: tx.tenantId, phase_id: input.phase_id }).first();
+          phase = await tenantScopedTable(tx, 'project_phases').where('phase_id', input.phase_id).first();
           matchedBy = 'phase_id';
         } else if (input.name && input.project_id) {
-          phase = await tx.trx('project_phases')
-            .where({ tenant: tx.tenantId, project_id: input.project_id })
+          phase = await tenantScopedTable(tx, 'project_phases')
+            .where('project_id', input.project_id)
             .andWhereRaw('lower(phase_name) = ?', [String(input.name).trim().toLowerCase()])
             .first();
           matchedBy = 'name';
@@ -1660,11 +1666,8 @@ export function registerProjectActions(): void {
         const queryText = String(input.query ?? '').trim();
         const queryPattern = `%${queryText.replace(/[%_\\]/g, (match) => `\\${match}`)}%`;
 
-        let base = tx.trx('project_phases as pp')
-          .join('projects as p', function joinProjects(this: Knex.JoinClause) {
-            this.on('p.tenant', 'pp.tenant').andOn('p.project_id', 'pp.project_id');
-          })
-          .where({ 'pp.tenant': tx.tenantId });
+        let base = tenantScopedTable(tx, 'project_phases as pp');
+        tenantJoin(tx, base, 'projects as p', 'p.project_id', 'pp.project_id');
 
         if (input.project_id) {
           base = base.andWhere('pp.project_id', input.project_id);
@@ -1692,7 +1695,7 @@ export function registerProjectActions(): void {
           .orderBy('pp.order_number', 'asc')
           .orderBy('pp.phase_id', 'asc');
 
-        const authorizedRows = await Promise.all(rows.map(async (row) => {
+        const authorizedRows = await Promise.all(rows.map(async (row: Record<string, unknown>) => {
           const allowed = await canReadProject(tx, {
             project_id: row.project_project_id,
             client_id: row.project_client_id,
@@ -1764,15 +1767,10 @@ export function registerProjectActions(): void {
         let task: Record<string, unknown> | undefined;
         let matchedBy: 'task_id' | 'name' | null = null;
 
-        let query = tx.trx('project_tasks as pt')
-          .join('project_phases as pp', function joinPhases(this: Knex.JoinClause) {
-            this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
-          })
-          .join('projects as p', function joinProjects(this: Knex.JoinClause) {
-            this.on('p.tenant', 'pp.tenant').andOn('p.project_id', 'pp.project_id');
-          })
-          .where({ 'pt.tenant': tx.tenantId })
-          .select('pt.*', 'pp.project_id', ...PROJECT_TABLE_AUTH_COLUMNS.map((col) => `p.${col} as project_${col}`));
+        let query = tenantScopedTable(tx, 'project_tasks as pt');
+        tenantJoin(tx, query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+        tenantJoin(tx, query, 'projects as p', 'p.project_id', 'pp.project_id');
+        query = query.select('pt.*', 'pp.project_id', ...PROJECT_TABLE_AUTH_COLUMNS.map((col) => `p.${col} as project_${col}`));
 
         if (input.task_id) {
           task = await query.clone().andWhere('pt.task_id', input.task_id).first();
@@ -1869,14 +1867,9 @@ export function registerProjectActions(): void {
         const pageSize = input.page_size ?? 25;
         const taskColumns = await getTableColumns(tx, 'project_tasks');
 
-        let base = tx.trx('project_tasks as pt')
-          .join('project_phases as pp', function joinPhases(this: Knex.JoinClause) {
-            this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
-          })
-          .join('projects as p', function joinProjects(this: Knex.JoinClause) {
-            this.on('p.tenant', 'pp.tenant').andOn('p.project_id', 'pp.project_id');
-          })
-          .where({ 'pt.tenant': tx.tenantId });
+        let base = tenantScopedTable(tx, 'project_tasks as pt');
+        tenantJoin(tx, base, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+        tenantJoin(tx, base, 'projects as p', 'p.project_id', 'pp.project_id');
 
         if (filters.project_id) base = base.andWhere('pp.project_id', filters.project_id);
         if (filters.phase_id) base = base.andWhere('pt.phase_id', filters.phase_id);
@@ -1901,13 +1894,9 @@ export function registerProjectActions(): void {
         }
 
         if (Array.isArray(filters.tags) && filters.tags.length > 0) {
+          tenantJoin(tx, base, 'tag_mappings as tm', 'tm.tagged_id', 'pt.task_id');
+          tenantJoin(tx, base, 'tag_definitions as td', 'td.tag_id', 'tm.tag_id');
           base = base
-            .join('tag_mappings as tm', function joinMappings(this: Knex.JoinClause) {
-              this.on('tm.tenant', 'pt.tenant').andOn('tm.tagged_id', 'pt.task_id');
-            })
-            .join('tag_definitions as td', function joinDefinitions(this: Knex.JoinClause) {
-              this.on('td.tenant', 'tm.tenant').andOn('td.tag_id', 'tm.tag_id');
-            })
             .where('tm.tagged_type', 'project_task')
             .whereIn('td.tag_text', filters.tags);
         }
@@ -1920,7 +1909,7 @@ export function registerProjectActions(): void {
           .orderBy('pt.task_name', 'asc')
           .orderBy('pt.task_id', 'asc');
 
-        const authorizedRows = await Promise.all(rows.map(async (row) => {
+        const authorizedRows = await Promise.all(rows.map(async (row: Record<string, unknown>) => {
           const allowed = await canReadProject(tx, {
             project_id: row.project_project_id,
             client_id: row.project_client_id,
@@ -1988,8 +1977,8 @@ export function registerProjectActions(): void {
         const nowIso = new Date().toISOString();
 
         if (changedFields.length > 0) {
-          await tx.trx('projects')
-            .where({ tenant: tx.tenantId, project_id: input.project_id })
+          await tenantScopedTable(tx, 'projects')
+            .where('project_id', input.project_id)
             .update({ ...patch, updated_at: nowIso });
 
           await writeRunAudit(ctx, tx, {
@@ -2051,8 +2040,8 @@ export function registerProjectActions(): void {
         const nowIso = new Date().toISOString();
 
         if (changedFields.length > 0) {
-          await tx.trx('project_phases')
-            .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+          await tenantScopedTable(tx, 'project_phases')
+            .where('phase_id', input.phase_id)
             .update({ ...patch, updated_at: nowIso });
 
           await writeRunAudit(ctx, tx, {
@@ -2115,8 +2104,8 @@ export function registerProjectActions(): void {
         const nowIso = new Date().toISOString();
 
         if (changedFields.length > 0) {
-          await tx.trx('project_tasks')
-            .where({ tenant: tx.tenantId, task_id: input.task_id })
+          await tenantScopedTable(tx, 'project_tasks')
+            .where('task_id', input.task_id)
             .update({ ...patch, updated_at: nowIso });
 
           await writeRunAudit(ctx, tx, {
@@ -2201,24 +2190,24 @@ export function registerProjectActions(): void {
         let afterKey: string | null = null;
         if (taskColumns.has('order_key')) {
           if (input.before_task_id) {
-            const beforeTask = await tx.trx('project_tasks')
-              .where({ tenant: tx.tenantId, task_id: input.before_task_id, phase_id: input.target_phase_id })
+            const beforeTask = await tenantScopedTable(tx, 'project_tasks')
+              .where({ task_id: input.before_task_id, phase_id: input.target_phase_id })
               .first('order_key');
             if (!beforeTask) {
               throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'before_task_id must be in the target phase' });
             }
             afterKey = beforeTask.order_key ?? null;
           } else if (input.after_task_id) {
-            const afterTask = await tx.trx('project_tasks')
-              .where({ tenant: tx.tenantId, task_id: input.after_task_id, phase_id: input.target_phase_id })
+            const afterTask = await tenantScopedTable(tx, 'project_tasks')
+              .where({ task_id: input.after_task_id, phase_id: input.target_phase_id })
               .first('order_key');
             if (!afterTask) {
               throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'after_task_id must be in the target phase' });
             }
             beforeKey = afterTask.order_key ?? null;
           } else {
-            const lastTask = await tx.trx('project_tasks')
-              .where({ tenant: tx.tenantId, phase_id: input.target_phase_id })
+            const lastTask = await tenantScopedTable(tx, 'project_tasks')
+              .where('phase_id', input.target_phase_id)
               .modify((query) => {
                 if (targetProjectStatusMappingId && taskColumns.has('project_status_mapping_id')) {
                   query.andWhere('project_status_mapping_id', targetProjectStatusMappingId);
@@ -2240,12 +2229,12 @@ export function registerProjectActions(): void {
         if (taskColumns.has('project_status_mapping_id')) updatePayload.project_status_mapping_id = targetProjectStatusMappingId;
         if (taskColumns.has('status_id')) updatePayload.status_id = targetStatusId;
 
-        await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, task_id: input.task_id })
+        await tenantScopedTable(tx, 'project_tasks')
+          .where('task_id', input.task_id)
           .update(updatePayload);
 
-        await tx.trx('project_ticket_links')
-          .where({ tenant: tx.tenantId, task_id: input.task_id })
+        await tenantScopedTable(tx, 'project_ticket_links')
+          .where('task_id', input.task_id)
           .update({ project_id: targetProjectId, phase_id: input.target_phase_id });
 
         await writeRunAudit(ctx, tx, {
@@ -2349,8 +2338,8 @@ export function registerProjectActions(): void {
         };
         if (taskColumns.has('assigned_team_id')) taskPatch.assigned_team_id = null;
 
-        await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, task_id: input.task_id })
+        await tenantScopedTable(tx, 'project_tasks')
+          .where('task_id', input.task_id)
           .update(taskPatch);
 
         await reconcileTaskAdditionalUsers(
@@ -2440,8 +2429,8 @@ export function registerProjectActions(): void {
           targetProjectStatusMappingId,
         });
 
-        const sourceTaskRow = await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+        const sourceTaskRow = await tenantScopedTable(tx, 'project_tasks')
+          .where('task_id', input.source_task_id)
           .first();
         if (!sourceTaskRow) {
           throwActionError(ctx, {
@@ -2480,14 +2469,14 @@ export function registerProjectActions(): void {
         if (taskColumns.has('wbs_code')) copiedTaskRow.wbs_code = wbsCode;
         if (taskColumns.has('order_key') && orderKey) copiedTaskRow.order_key = orderKey;
 
-        await tx.trx('project_tasks').insert(copiedTaskRow);
+        await tenantScopedTable(tx, 'project_tasks').insert(copiedTaskRow);
 
         let copiedChecklistCount = 0;
         if (input.copy_checklist) {
           const hasChecklist = await tx.trx.schema.hasTable('task_checklist_items');
           if (hasChecklist) {
-            const checklistRows = await tx.trx('task_checklist_items')
-              .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+            const checklistRows = await tenantScopedTable(tx, 'task_checklist_items')
+              .where('task_id', input.source_task_id)
               .select('*');
             if (checklistRows.length > 0) {
               const checklistColumns = await getTableColumns(tx, 'task_checklist_items');
@@ -2501,7 +2490,7 @@ export function registerProjectActions(): void {
                 if (checklistColumns.has('updated_at')) item.updated_at = nowIso;
                 return item;
               });
-              await tx.trx('task_checklist_items').insert(checklistInserts);
+              await tenantScopedTable(tx, 'task_checklist_items').insert(checklistInserts);
               copiedChecklistCount = checklistInserts.length;
             }
           }
@@ -2511,8 +2500,8 @@ export function registerProjectActions(): void {
         if (input.copy_additional_assignees) {
           const hasTaskResources = await tx.trx.schema.hasTable('task_resources');
           if (hasTaskResources) {
-            const sourceResources = await tx.trx('task_resources')
-              .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+            const sourceResources = await tenantScopedTable(tx, 'task_resources')
+              .where('task_id', input.source_task_id)
               .whereNotNull('additional_user_id')
               .select('*');
             if (sourceResources.length > 0) {
@@ -2524,7 +2513,7 @@ export function registerProjectActions(): void {
                 assigned_to: assignedTo ?? parseNullableUuid(row.assigned_to) ?? String(row.additional_user_id),
                 assigned_at: resourceColumns.has('assigned_at') ? nowIso : row.assigned_at,
               }));
-              await tx.trx('task_resources').insert(inserts);
+              await tenantScopedTable(tx, 'task_resources').insert(inserts);
               copiedAdditionalAssigneeCount = inserts.length;
             }
           }
@@ -2532,20 +2521,20 @@ export function registerProjectActions(): void {
 
         let copiedTicketLinkCount = 0;
         if (input.copy_ticket_links) {
-          const sourceLinks = await tx.trx('project_ticket_links')
-            .where({ tenant: tx.tenantId, task_id: input.source_task_id })
+          const sourceLinks = await tenantScopedTable(tx, 'project_ticket_links')
+            .where('task_id', input.source_task_id)
             .select('*');
           if (sourceLinks.length > 0) {
             const canReadTicketLinks = await canReadTickets(ctx, tx);
             const sourceTicketIds = sourceLinks.map((link: Record<string, unknown>) => String(link.ticket_id));
             const tickets = canReadTicketLinks
-              ? await tx.trx('tickets').where({ tenant: tx.tenantId }).whereIn('ticket_id', sourceTicketIds).select('*')
+              ? await tenantScopedTable(tx, 'tickets').whereIn('ticket_id', sourceTicketIds).select('*')
               : [];
             const authorizeTicket = await createTicketReadAuthorizer(tx);
             const ticketAuthorization = await Promise.all(tickets.map((ticket: Record<string, unknown>) => authorizeTicket(ticket)));
             const allowedTicketIds = new Set(
               tickets
-                .filter((_, idx) => ticketAuthorization[idx])
+                .filter((_ticket: Record<string, unknown>, idx: number) => ticketAuthorization[idx])
                 .map((ticket: Record<string, unknown>) => String(ticket.ticket_id))
             );
 
@@ -2562,8 +2551,8 @@ export function registerProjectActions(): void {
                 }));
               for (const link of inserts) {
                 const ticketId = String((link as Record<string, unknown>).ticket_id);
-                await tx.trx('project_ticket_links').insert(link).catch(() => undefined);
-                await tx.trx('ticket_entity_links').insert({
+                await tenantScopedTable(tx, 'project_ticket_links').insert(link).catch(() => undefined);
+                await tenantScopedTable(tx, 'ticket_entity_links').insert({
                   tenant: tx.tenantId,
                   link_id: uuidv4(),
                   ticket_id: ticketId,
@@ -2634,8 +2623,8 @@ export function registerProjectActions(): void {
 
         const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
         if (timeEntriesExist) {
-          const timeEntryCountRow = await tx.trx('time_entries')
-            .where({ tenant: tx.tenantId, work_item_id: input.task_id, work_item_type: 'project_task' })
+          const timeEntryCountRow = await tenantScopedTable(tx, 'time_entries')
+            .where({ work_item_id: input.task_id, work_item_type: 'project_task' })
             .count('* as count')
             .first();
           const timeEntryCount = Number((timeEntryCountRow as { count?: string | number } | undefined)?.count ?? 0);
@@ -2650,38 +2639,38 @@ export function registerProjectActions(): void {
         }
 
         await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
-          query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForTask(this: Knex.QueryBuilder) {
+          query.andWhere(function dependenciesForTask(this: Knex.QueryBuilder) {
             this.where('predecessor_task_id', input.task_id).orWhere('successor_task_id', input.task_id);
           })
         );
         const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
-          ? await tx.trx('project_task_comments')
-              .where({ tenant: tx.tenantId, task_id: input.task_id })
+          ? await tenantScopedTable(tx, 'project_task_comments')
+              .where('task_id', input.task_id)
               .pluck<string[]>('task_comment_id')
           : [];
         if (taskCommentIds.length > 0) {
           await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+            query.whereIn('task_comment_id', taskCommentIds)
           );
         }
         await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
-          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+          query.where('task_id', input.task_id)
         );
 
         const deletedTicketLinks = await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
-          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+          query.where('task_id', input.task_id)
         );
         await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
-          query.where({ tenant: tx.tenantId, entity_type: 'project_task', entity_id: input.task_id })
+          query.where({ entity_type: 'project_task', entity_id: input.task_id })
         );
         const deletedChecklistItems = await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
-          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+          query.where('task_id', input.task_id)
         );
         await deleteFromTableIfExists(tx, 'task_resources', (query) =>
-          query.where({ tenant: tx.tenantId, task_id: input.task_id })
+          query.where('task_id', input.task_id)
         );
-        await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, task_id: input.task_id })
+        await tenantScopedTable(tx, 'project_tasks')
+          .where('task_id', input.task_id)
           .delete();
 
         await writeRunAudit(ctx, tx, {
@@ -2727,15 +2716,15 @@ export function registerProjectActions(): void {
         const project = await ensureProjectExists(ctx, tx, String(phase.project_id));
         await assertProjectReadable(ctx, tx, project);
 
-        const taskIds = await tx.trx('project_tasks')
-          .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+        const taskIds = await tenantScopedTable(tx, 'project_tasks')
+          .where('phase_id', input.phase_id)
           .pluck<string[]>('task_id');
 
         if (taskIds.length > 0) {
           const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
           if (timeEntriesExist) {
-            const timeEntryCountRow = await tx.trx('time_entries')
-              .where({ tenant: tx.tenantId, work_item_type: 'project_task' })
+            const timeEntryCountRow = await tenantScopedTable(tx, 'time_entries')
+              .where('work_item_type', 'project_task')
               .whereIn('work_item_id', taskIds)
               .count('* as count')
               .first();
@@ -2751,44 +2740,42 @@ export function registerProjectActions(): void {
           }
 
           await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
-            query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForPhaseTasks(this: Knex.QueryBuilder) {
+            query.andWhere(function dependenciesForPhaseTasks(this: Knex.QueryBuilder) {
               this.whereIn('predecessor_task_id', taskIds).orWhereIn('successor_task_id', taskIds);
             })
           );
           const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
-            ? await tx.trx('project_task_comments')
-                .where({ tenant: tx.tenantId })
+            ? await tenantScopedTable(tx, 'project_task_comments')
                 .whereIn('task_id', taskIds)
                 .pluck<string[]>('task_comment_id')
             : [];
           if (taskCommentIds.length > 0) {
             await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
-              query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+              query.whereIn('task_comment_id', taskCommentIds)
             );
           }
           await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'task_resources', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
-            query.where({ tenant: tx.tenantId, entity_type: 'project_task' }).whereIn('entity_id', taskIds)
+            query.where('entity_type', 'project_task').whereIn('entity_id', taskIds)
           );
-          await tx.trx('project_tasks')
-            .where({ tenant: tx.tenantId })
+          await tenantScopedTable(tx, 'project_tasks')
             .whereIn('task_id', taskIds)
             .delete();
         }
 
-        const deleted = await tx.trx('project_phases')
-          .where({ tenant: tx.tenantId, phase_id: input.phase_id })
+        const deleted = await tenantScopedTable(tx, 'project_phases')
+          .where('phase_id', input.phase_id)
           .delete();
 
         await writeRunAudit(ctx, tx, {
@@ -2855,20 +2842,19 @@ export function registerProjectActions(): void {
           });
         }
 
-        const phaseIds = await tx.trx('project_phases')
-          .where({ tenant: tx.tenantId, project_id: input.project_id })
+        const phaseIds = await tenantScopedTable(tx, 'project_phases')
+          .where('project_id', input.project_id)
           .pluck<string[]>('phase_id');
         const taskIds = phaseIds.length > 0
-          ? await tx.trx('project_tasks')
-              .where({ tenant: tx.tenantId })
+          ? await tenantScopedTable(tx, 'project_tasks')
               .whereIn('phase_id', phaseIds)
               .pluck<string[]>('task_id')
           : [];
 
         const timeEntriesExist = await tx.trx.schema.hasTable('time_entries');
         if (timeEntriesExist && taskIds.length > 0) {
-          const timeEntryCountRow = await tx.trx('time_entries')
-            .where({ tenant: tx.tenantId, work_item_type: 'project_task' })
+          const timeEntryCountRow = await tenantScopedTable(tx, 'time_entries')
+            .where('work_item_type', 'project_task')
             .whereIn('work_item_id', taskIds)
             .count('* as count')
             .first();
@@ -2887,65 +2873,62 @@ export function registerProjectActions(): void {
         }
 
         await deleteFromTableIfExists(tx, 'tag_mappings', (query) =>
-          query.where({ tenant: tx.tenantId, tagged_type: 'project', tagged_id: input.project_id })
+          query.where({ tagged_type: 'project', tagged_id: input.project_id })
         );
         if (taskIds.length > 0) {
           await deleteFromTableIfExists(tx, 'tag_mappings', (query) =>
-            query.where({ tenant: tx.tenantId, tagged_type: 'project_task' }).whereIn('tagged_id', taskIds)
+            query.where('tagged_type', 'project_task').whereIn('tagged_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'project_task_dependencies', (query) =>
-            query.where({ tenant: tx.tenantId }).andWhere(function dependenciesForProjectTasks(this: Knex.QueryBuilder) {
+            query.andWhere(function dependenciesForProjectTasks(this: Knex.QueryBuilder) {
               this.whereIn('predecessor_task_id', taskIds).orWhereIn('successor_task_id', taskIds);
             })
           );
           const taskCommentIds = await tx.trx.schema.hasTable('project_task_comments')
-            ? await tx.trx('project_task_comments')
-                .where({ tenant: tx.tenantId })
+            ? await tenantScopedTable(tx, 'project_task_comments')
                 .whereIn('task_id', taskIds)
                 .pluck<string[]>('task_comment_id')
             : [];
           if (taskCommentIds.length > 0) {
             await deleteFromTableIfExists(tx, 'project_task_comment_reactions', (query) =>
-              query.where({ tenant: tx.tenantId }).whereIn('task_comment_id', taskCommentIds)
+              query.whereIn('task_comment_id', taskCommentIds)
             );
           }
           await deleteFromTableIfExists(tx, 'project_task_comments', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'ticket_entity_links', (query) =>
-            query.where({ tenant: tx.tenantId, entity_type: 'project_task' }).whereIn('entity_id', taskIds)
+            query.where('entity_type', 'project_task').whereIn('entity_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'task_resources', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
           await deleteFromTableIfExists(tx, 'task_checklist_items', (query) =>
-            query.where({ tenant: tx.tenantId }).whereIn('task_id', taskIds)
+            query.whereIn('task_id', taskIds)
           );
         }
         await deleteFromTableIfExists(tx, 'project_ticket_links', (query) =>
-          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+          query.where('project_id', input.project_id)
         );
         await deleteFromTableIfExists(tx, 'email_reply_tokens', (query) =>
-          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+          query.where('project_id', input.project_id)
         );
 
         if (taskIds.length > 0) {
-          await tx.trx('project_tasks')
-            .where({ tenant: tx.tenantId })
+          await tenantScopedTable(tx, 'project_tasks')
             .whereIn('task_id', taskIds)
             .delete();
         }
         if (phaseIds.length > 0) {
-          await tx.trx('project_phases')
-            .where({ tenant: tx.tenantId })
+          await tenantScopedTable(tx, 'project_phases')
             .whereIn('phase_id', phaseIds)
             .delete();
         }
         await deleteFromTableIfExists(tx, 'project_status_mappings', (query) =>
-          query.where({ tenant: tx.tenantId, project_id: input.project_id })
+          query.where('project_id', input.project_id)
         );
-        const deleted = await tx.trx('projects')
-          .where({ tenant: tx.tenantId, project_id: input.project_id })
+        const deleted = await tenantScopedTable(tx, 'projects')
+          .where('project_id', input.project_id)
           .delete();
 
         await writeRunAudit(ctx, tx, {
@@ -3012,14 +2995,14 @@ export function registerProjectActions(): void {
         }
 
         const nowIso = new Date().toISOString();
-        const existingProjectLink = await tx.trx('project_ticket_links')
-          .where({ tenant: tx.tenantId, task_id: input.task_id, ticket_id: input.ticket_id })
+        const existingProjectLink = await tenantScopedTable(tx, 'project_ticket_links')
+          .where({ task_id: input.task_id, ticket_id: input.ticket_id })
           .first();
 
         let projectTicketLinkCreated = false;
         let projectTicketLinkId = parseNullableUuid(existingProjectLink?.link_id) ?? null;
         if (!existingProjectLink) {
-          const insertedProjectLinks = await tx.trx('project_ticket_links')
+          const insertedProjectLinks = await tenantScopedTable(tx, 'project_ticket_links')
             .insert({
               tenant: tx.tenantId,
               link_id: uuidv4(),
@@ -3037,16 +3020,15 @@ export function registerProjectActions(): void {
             : null;
           const resolvedProjectLink = insertedProjectLinkId
             ? { link_id: insertedProjectLinkId }
-            : await tx.trx('project_ticket_links')
-                .where({ tenant: tx.tenantId, task_id: input.task_id, ticket_id: input.ticket_id })
+            : await tenantScopedTable(tx, 'project_ticket_links')
+                .where({ task_id: input.task_id, ticket_id: input.ticket_id })
                 .first('link_id');
           projectTicketLinkId = parseNullableUuid(resolvedProjectLink?.link_id) ?? null;
           projectTicketLinkCreated = Boolean(insertedProjectLinkId);
         }
 
-        const existingEntityLink = await tx.trx('ticket_entity_links')
+        const existingEntityLink = await tenantScopedTable(tx, 'ticket_entity_links')
           .where({
-            tenant: tx.tenantId,
             ticket_id: input.ticket_id,
             entity_type: 'project_task',
             entity_id: input.task_id,
@@ -3057,7 +3039,7 @@ export function registerProjectActions(): void {
         let ticketEntityLinkCreated = false;
         let ticketEntityLinkId = parseNullableUuid(existingEntityLink?.link_id) ?? null;
         if (!existingEntityLink) {
-          const insertedEntityLinks = await tx.trx('ticket_entity_links')
+          const insertedEntityLinks = await tenantScopedTable(tx, 'ticket_entity_links')
             .insert({
               tenant: tx.tenantId,
               link_id: uuidv4(),
@@ -3076,9 +3058,8 @@ export function registerProjectActions(): void {
             : null;
           const resolvedEntityLink = insertedEntityLinkId
             ? { link_id: insertedEntityLinkId }
-            : await tx.trx('ticket_entity_links')
+            : await tenantScopedTable(tx, 'ticket_entity_links')
                 .where({
-                  tenant: tx.tenantId,
                   ticket_id: input.ticket_id,
                   entity_type: 'project_task',
                   entity_id: input.task_id,

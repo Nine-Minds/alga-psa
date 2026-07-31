@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 interface ResolveRmmTicketContactArgs {
   clientId?: string | null;
@@ -35,10 +36,10 @@ async function findValidContactId(
   clientId: string,
   contactId: string,
 ): Promise<string | null> {
-  const contactRow = await trx('contacts')
+  const db = tenantDb(trx, tenant);
+  const contactRow = await db.table('contacts')
     .select('contact_name_id')
     .where({
-      tenant,
       client_id: clientId,
       contact_name_id: contactId,
       is_inactive: false,
@@ -66,9 +67,10 @@ export async function resolveRmmTicketContactId(
     }
   }
 
-  const clientRow = await trx('clients')
+  const db = tenantDb(trx, tenant);
+  const clientRow = await db.table('clients')
     .select('properties')
-    .where({ tenant, client_id: clientId })
+    .where({ client_id: clientId })
     .first();
   const primaryContactId = getPrimaryContactId(
     (clientRow as { properties?: unknown } | undefined)?.properties,

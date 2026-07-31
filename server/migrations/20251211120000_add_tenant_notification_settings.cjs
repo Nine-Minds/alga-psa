@@ -81,6 +81,15 @@ exports.up = async function(knex) {
       for (const fk of crossFks) {
         await knex.raw(`ALTER TABLE ${fk.tbl} ADD CONSTRAINT "${fk.conname}" ${fk.def}`);
       }
+      // ⚠️ UNSAFE PATTERN — do not copy into new migrations.
+      // truncate_local_data_after_distributing_table() issues a TRUNCATE that
+      // CASCADEs across the whole FK graph. Distributed tables in the cascade
+      // only lose stranded coordinator-local rows, but any NON-distributed
+      // table in the recursive FK closure loses ALL of its data (a local
+      // table's coordinator heap is its only copy). Before ever calling this
+      // again, walk the FK closure (pg_constraint) and abort unless every
+      // member is distributed (pg_dist_partition). Retained as history, not
+      // as an example.
       for (const t of [...pendingReference, ...pendingDistributed]) {
         await knex.raw('SELECT truncate_local_data_after_distributing_table(?::regclass)', [t]);
       }

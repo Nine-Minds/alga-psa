@@ -94,3 +94,22 @@ The Argo workflow uses `npx nx next:build server` in the `build-app-ee` step, wh
 | `msp-composition` | Composition layer, imports from all verticals |
 | `client-portal-composition` | Same |
 | `ee-stubs` | Build-time CE/EE switching |
+
+## Server-action barrels & the RSC manifest (dev OOM)
+
+Importing a `@alga-psa/<pkg>/actions` barrel (or a feature `/components` barrel, which pulls it) from **shared/hot code** — root/MSP layouts, the app shell (`DefaultLayout`, `Header`, `QuickCreateDialog`, `SidebarWithFeatureFlags`), `msp-composition` providers, or any `packages/*/src/actions` file — drags **every** `'use server'` file of that package into the module graph of **every route**. Dev has no tree-shaking, and cross-package barrel edges (billing→inventory, tickets→reference-data, …) close the graph over ~20 packages.
+
+Next then writes one `moduleId` string per route enumerating all reachable action modules, duplicated per action ID, into `.next/dev/server/server-reference-manifest.json`. This grows ~`O(reachable actions × routes)` and, once it crosses V8's ~512 MB `JSON.stringify` string limit, the dev server aborts with `FATAL ERROR: Zone Allocation failed`. `--max-old-space-size` cannot help (it's a per-string cap, not a heap budget), and no Next config/upgrade fixes it — the only lever is our import graph.
+
+**Rule:** in shared/hot code import the specific module (`@alga-psa/billing/actions/serviceActions`), never the bare `/actions` barrel. The barrel is fine in a leaf page/component only one route reaches. An ESLint `no-restricted-imports` guard (`eslint.config.js`, `ALGA_BARREL_RESTRICTED_PATHS`) enforces this across the shell scopes and `packages/*/src/actions`.
+
+**Manifest-size canary** (run against a warm dev server; healthy is single-digit MB, alarm at tens of MB):
+
+```bash
+# total manifest size
+du -h server/.next/dev/server/server-reference-manifest.json
+# reachable 'use server' module count for one route (lower is better)
+grep -o 'ACTIONS_MODULE[0-9]*' server/.next/dev/server/app/msp/projects/page/server-reference-manifest.json | sort -u | wc -l
+```
+
+To trace *which* modules a route pulls (to find the next barrel to cut), read any `moduleId` value — it literally lists every reachable file. To regenerate the manifest without a browser session, run dev with `E2E_AUTH_BYPASS=true` and `curl` the `/msp/*` routes (they compile before the layout's own auth redirect).

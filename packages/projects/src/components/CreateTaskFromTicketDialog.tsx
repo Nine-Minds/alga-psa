@@ -14,7 +14,12 @@ import { useDrawer } from '@alga-psa/ui';
 import TaskQuickAdd from './TaskQuickAdd';
 import { IUserWithRoles } from '@alga-psa/types';
 import { useTicketIntegration, TicketIntegrationProvider } from '../context/TicketIntegrationContext';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface CreateTaskFromTicketDialogProps {
@@ -29,6 +34,10 @@ interface CreateTaskFromTicketDialogProps {
     client_id?: string | null;
     additional_agents?: { user_id: string; name: string }[];
   };
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function CreateTaskFromTicketDialog({
@@ -83,8 +92,8 @@ export default function CreateTaskFromTicketDialog({
         setPhases([]);
         setStatuses([]);
         const projectDetails = await getProjectDetails(selectedProjectId);
-        if (isActionPermissionError(projectDetails)) {
-          handleError(projectDetails.permissionError);
+        if (isReturnedActionError(projectDetails)) {
+          handleError(getErrorMessage(projectDetails));
           return;
         }
         setPhases(projectDetails.phases || []);

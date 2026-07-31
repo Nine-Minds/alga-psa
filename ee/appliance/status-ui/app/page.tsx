@@ -7,10 +7,12 @@ import {
   ScrollText,
   Server,
   Settings2,
+  SquareTerminal,
 } from "lucide-react";
 import { AlgaLogo } from "./AlgaLogo";
 import { LogoutButton } from "./auth/LogoutButton";
 import { ManageView } from "./manage/ManageView";
+import { PodAccessPanel } from "./PodAccessPanel";
 import styles from "./status.module.css";
 
 type RawTierMap = Record<
@@ -34,6 +36,19 @@ type EventItem = {
   timestamp?: string | null;
 };
 type SetupConfigResponse = { mode?: string };
+// Slice of /api/manage/status the status page needs to surface "update
+// available" outside the Manage view (Overview banner + sidebar badge).
+type ManageSummary = {
+  app?: {
+    version?: string | null;
+    channel?: string;
+    updateAvailable?: boolean;
+    availableVersion?: string | null;
+  };
+  controlPlane?: {
+    upgradeAvailable?: boolean;
+  };
+};
 type StatusResponse = {
   status?: string;
   // True when setup is blocked on a correctable install code; the UI offers a
@@ -134,13 +149,18 @@ type Pod = {
   containers: Array<{
     name: string;
     image?: string;
+    ports?: Array<{
+      name?: string | null;
+      containerPort: number;
+      protocol?: string;
+    }>;
     ready?: boolean;
     restarts?: number;
     state?: Record<string, unknown> | null;
   }>;
 };
 
-type Tab = "overview" | "deployments" | "pods" | "logs";
+type Tab = "overview" | "deployments" | "pods" | "logs" | "access";
 type TopView = "status" | "manage";
 type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
 
@@ -257,6 +277,7 @@ const statusTabs = [
   { value: "deployments", label: "Deployments", Icon: Boxes },
   { value: "pods", label: "Pods", Icon: Server },
   { value: "logs", label: "Logs", Icon: ScrollText },
+  { value: "access", label: "Access", Icon: SquareTerminal },
 ] satisfies Array<{ value: Tab; label: string; Icon: typeof Activity }>;
 
 function escapeRegExp(value: string) {
@@ -315,6 +336,9 @@ export default function StatusPage() {
   const [topView, setTopView] = useState<TopView>("status");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [status, setStatus] = useState<StatusResponse | null>(null);
+  const [manageSummary, setManageSummary] = useState<ManageSummary | null>(
+    null,
+  );
   const [setupMode, setSetupMode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recovering, setRecovering] = useState(false);
@@ -377,6 +401,23 @@ export default function StatusPage() {
         statusAbortController.current = null;
         setLoadingStatus(false);
       }
+    }
+  }, []);
+
+  // Best-effort update-availability check so the Overview can surface "update
+  // available" without the operator opening Manage. Polled on its own slow
+  // cadence: the endpoint resolves the release channel from the registry
+  // (60s-cached server-side), and availability changes rarely.
+  const loadManageSummary = useCallback(async () => {
+    try {
+      const response = await fetch(apiPath("/api/manage/status"), {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!response.ok) return; // keep the last snapshot; banner is best-effort
+      setManageSummary((await response.json()) as ManageSummary);
+    } catch {
+      /* keep the last snapshot across transient failures */
     }
   }, []);
 
@@ -558,8 +599,15 @@ export default function StatusPage() {
   }, [loadNamespaces, loadStatus]);
 
   useEffect(() => {
+    loadManageSummary();
+    const timer = setInterval(loadManageSummary, 60000);
+    return () => clearInterval(timer);
+  }, [loadManageSummary]);
+
+  useEffect(() => {
     if (activeTab === "deployments") loadDeployments();
-    if (activeTab === "pods" || activeTab === "logs") loadPods();
+    if (activeTab === "pods" || activeTab === "logs" || activeTab === "access")
+      loadPods();
   }, [activeTab, loadDeployments, loadPods]);
 
   useEffect(() => {
@@ -612,6 +660,11 @@ export default function StatusPage() {
     status?.rollup?.nextAction ||
     status?.installState?.lastAction ||
     "Waiting for the next appliance update";
+  const appUpdateAvailable = Boolean(manageSummary?.app?.updateAvailable);
+  const cpUpgradeAvailable = Boolean(
+    manageSummary?.controlPlane?.upgradeAvailable,
+  );
+  const anyUpdateAvailable = appUpdateAvailable || cpUpgradeAvailable;
 
   useEffect(() => {
     setActiveMatch(0);
@@ -678,6 +731,13 @@ export default function StatusPage() {
         >
           <Settings2 className={styles.navIcon} aria-hidden="true" />
           <span>Manage</span>
+          {anyUpdateAvailable ? (
+            <span
+              className={`${styles.updateDot} ${styles.updateDotEnd}`}
+              title="Update available"
+              aria-label="Update available"
+            />
+          ) : null}
         </button>
         <LogoutButton />
       </aside>
@@ -739,6 +799,39 @@ export default function StatusPage() {
             <a className={styles.primaryButton} href="/setup/">
               Re-enter install code
             </a>
+          </div>
+        ) : null}
+
+        {anyUpdateAvailable && setupMode !== "setup" ? (
+          <div className={styles.setupCta} role="status">
+            <div>
+              <strong>
+                {appUpdateAvailable
+                  ? "Update available"
+                  : "Control-plane update available"}
+              </strong>
+              <p>
+                {appUpdateAvailable
+                  ? `A newer Alga PSA version${
+                      manageSummary?.app?.availableVersion
+                        ? ` (${manageSummary.app.availableVersion})`
+                        : ""
+                    } is available on the ${
+                      manageSummary?.app?.channel || "stable"
+                    } channel. The appliance does not update itself — apply it from Manage → Updates.`
+                  : "A newer appliance setup & manage UI (control plane) is available. Apply it from Manage → Control-plane, or reboot the appliance to pick it up at boot."}
+                {appUpdateAvailable && cpUpgradeAvailable
+                  ? " A control-plane (setup & manage UI) update is also available."
+                  : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => setTopView("manage")}
+            >
+              Open Manage
+            </button>
           </div>
         ) : null}
 
@@ -1134,20 +1227,50 @@ export default function StatusPage() {
                           ))}
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setNamespace(pod.namespace);
-                              setSelectedPod(pod.name);
-                              setSelectedContainer(
-                                pod.containers[0]?.name || "",
-                              );
-                              setActiveTab("logs");
-                            }}
-                          >
-                            View logs
-                          </button>
+                          <div className={styles.podActions}>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setNamespace(pod.namespace);
+                                setSelectedPod(pod.name);
+                                setSelectedContainer(
+                                  pod.containers[0]?.name || "",
+                                );
+                                setActiveTab("logs");
+                              }}
+                            >
+                              Logs
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setNamespace(pod.namespace);
+                                setSelectedPod(pod.name);
+                                setSelectedContainer(
+                                  pod.containers[0]?.name || "",
+                                );
+                                setActiveTab("access");
+                              }}
+                            >
+                              Shell
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setNamespace(pod.namespace);
+                                setSelectedPod(pod.name);
+                                setSelectedContainer(
+                                  pod.containers[0]?.name || "",
+                                );
+                                setActiveTab("access");
+                              }}
+                            >
+                              Forward
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1156,6 +1279,22 @@ export default function StatusPage() {
               </table>
             </div>
           </section>
+        ) : null}
+
+        {activeTab === "access" ? (
+          <PodAccessPanel
+            namespace={namespace}
+            namespaces={namespaces}
+            pods={pods}
+            selectedPod={selectedPod}
+            selectedContainer={selectedContainer}
+            loadingNamespaces={loadingNamespaces}
+            loadingPods={loadingPods}
+            onNamespace={setNamespace}
+            onPod={setSelectedPod}
+            onContainer={setSelectedContainer}
+            onRefreshPods={loadPods}
+          />
         ) : null}
 
         {activeTab === "logs" ? (

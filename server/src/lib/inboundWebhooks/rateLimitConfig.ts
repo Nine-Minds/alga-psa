@@ -1,5 +1,6 @@
 import type { BucketConfig } from '@alga-psa/core/rateLimit';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 
 export const INBOUND_WEBHOOK_RATE_LIMIT_NAMESPACE = 'webhook-in';
@@ -19,8 +20,8 @@ export async function inboundWebhookRateLimitConfigGetter(
   }
 
   const knex = await getConnection(tenantId);
-  const row = await knex('inbound_webhooks')
-    .where({ tenant: tenantId, inbound_webhook_id: inboundWebhookId })
+  const row = await tenantDb(knex, tenantId).table('inbound_webhooks')
+    .where({ inbound_webhook_id: inboundWebhookId })
     .first<{ rate_limit_per_minute: number }>('rate_limit_per_minute');
   const ratePerMinute = row?.rate_limit_per_minute ?? DEFAULT_INBOUND_WEBHOOK_RATE_LIMIT_PER_MIN;
 

@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 export const SYSTEM_MANAGED_DEFAULT_CONTRACT_NAME = 'System-managed default contract';
@@ -74,9 +75,8 @@ async function findExistingDefaultContract(
   trx: Knex.Transaction,
   params: EnsureDefaultContractForClientParams
 ): Promise<{ contract_id: string; contract_name?: string | null; contract_description?: string | null } | null> {
-  const rows = await trx('contracts')
+  const rows = await tenantDb(trx, params.tenant).table('contracts')
     .where({
-      tenant: params.tenant,
       owner_client_id: params.clientId,
       is_system_managed_default: true,
     })
@@ -96,9 +96,9 @@ async function ensureClientContractAssignment(
   trx: Knex.Transaction,
   params: EnsureDefaultContractForClientParams & { contractId: string }
 ): Promise<{ clientContractId: string; createdAssignment: boolean }> {
-  const existing = await trx('client_contracts')
+  const db = tenantDb(trx, params.tenant);
+  const existing = await db.table('client_contracts')
     .where({
-      tenant: params.tenant,
       client_id: params.clientId,
       contract_id: params.contractId,
     })
@@ -112,7 +112,7 @@ async function ensureClientContractAssignment(
   const now = new Date().toISOString();
   const clientContractId = uuidv4();
 
-  await trx('client_contracts').insert({
+  await db.table('client_contracts').insert({
     tenant: params.tenant,
     client_contract_id: clientContractId,
     client_id: params.clientId,
@@ -131,8 +131,9 @@ async function ensureDefaultContractForClientInTransaction(
   trx: Knex.Transaction,
   params: EnsureDefaultContractForClientParams
 ): Promise<EnsureDefaultContractForClientResult> {
-  const client = await trx('clients')
-    .where({ tenant: params.tenant, client_id: params.clientId })
+  const db = tenantDb(trx, params.tenant);
+  const client = await db.table('clients')
+    .where({ client_id: params.clientId })
     .select('client_id', 'default_currency_code')
     .forUpdate()
     .first();
@@ -153,7 +154,7 @@ async function ensureDefaultContractForClientInTransaction(
         : 'USD';
 
     try {
-      await trx('contracts').insert({
+      await db.table('contracts').insert({
         tenant: params.tenant,
         contract_id: nextContractId,
         contract_name: SYSTEM_MANAGED_DEFAULT_CONTRACT_NAME,
@@ -194,9 +195,8 @@ async function ensureDefaultContractForClientInTransaction(
       (existing.contract_description ?? null) !== SYSTEM_MANAGED_DEFAULT_CONTRACT_DESCRIPTION
     )
   ) {
-    await trx('contracts')
+    await db.table('contracts')
       .where({
-        tenant: params.tenant,
         contract_id: contractId,
       })
       .update({
@@ -260,8 +260,8 @@ export async function ensureDefaultContractForClientIfBillingConfigured(
   knexOrTrx: Knex | Knex.Transaction,
   params: EnsureDefaultContractForClientParams
 ): Promise<EnsureDefaultContractFallbackResult> {
-  const billingSettings = await knexOrTrx('client_billing_settings')
-    .where({ tenant: params.tenant, client_id: params.clientId })
+  const billingSettings = await tenantDb(knexOrTrx, params.tenant).table('client_billing_settings')
+    .where({ client_id: params.clientId })
     .select('client_id')
     .first();
 

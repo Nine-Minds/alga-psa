@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth/withAuth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IClient, IUser, ITeam } from '@alga-psa/types';
 
 export type InboundWebhookLookupEntityType =
@@ -44,16 +44,16 @@ export const listInboundWebhookLookup = withAuth(
     const limit = Math.max(1, Math.min(MAX_RESULTS, request.limit ?? MAX_RESULTS));
     const search = (request.search ?? '').trim();
     const scope = request.scope ?? {};
+    const db = tenantDb(knex, tenant);
 
     switch (request.entityType) {
       case 'client': {
-        const rows = await knex('clients')
+        const rows = await db.table('clients')
           .select<{ client_id: string; client_name: string; is_inactive: boolean }[]>(
             'client_id',
             'client_name',
             'is_inactive',
           )
-          .where({ tenant })
           .modify((query) => {
             if (search) {
               query.andWhereILike('client_name', `%${search}%`);
@@ -72,13 +72,12 @@ export const listInboundWebhookLookup = withAuth(
       }
 
       case 'board': {
-        const rows = await knex('boards')
+        const rows = await db.table('boards')
           .select<{ board_id: string; board_name: string; is_inactive: boolean }[]>(
             'board_id',
             'board_name',
             'is_inactive',
           )
-          .where({ tenant })
           .modify((query) => {
             if (search) {
               query.andWhereILike('board_name', `%${search}%`);
@@ -98,14 +97,13 @@ export const listInboundWebhookLookup = withAuth(
 
       case 'ticket_status': {
         const boardId = scope.board_id;
-        const rows = await knex('statuses')
+        const rows = await db.table('statuses')
           .select<{ status_id: string; name: string; board_id: string | null; is_default: boolean | null }[]>(
             'status_id',
             'name',
             'board_id',
             'is_default',
           )
-          .where({ tenant })
           .andWhere('status_type', 'ticket')
           .modify((query) => {
             if (boardId) {
@@ -128,9 +126,8 @@ export const listInboundWebhookLookup = withAuth(
       }
 
       case 'ticket_priority': {
-        const rows = await knex('priorities')
+        const rows = await db.table('priorities')
           .select<{ priority_id: string; priority_name: string }[]>('priority_id', 'priority_name')
-          .where({ tenant })
           .modify((query) => {
             if (search) {
               query.andWhereILike('priority_name', `%${search}%`);
@@ -147,14 +144,13 @@ export const listInboundWebhookLookup = withAuth(
         const parentRequired = request.entityType === 'ticket_subcategory';
         const boardId = scope.board_id;
         const parentId = scope.parent_category_id;
-        const rows = await knex('categories')
+        const rows = await db.table('categories')
           .select<{ category_id: string; category_name: string; parent_category: string | null; board_id: string | null }[]>(
             'category_id',
             'category_name',
             'parent_category',
             'board_id',
           )
-          .where({ tenant })
           .modify((query) => {
             if (parentRequired) {
               query.whereNotNull('parent_category');
@@ -177,7 +173,7 @@ export const listInboundWebhookLookup = withAuth(
       }
 
       case 'user': {
-        const rows = await knex('users')
+        const rows = await db.table('users')
           .select<{ user_id: string; first_name: string | null; last_name: string | null; email: string | null; is_inactive: boolean }[]>(
             'user_id',
             'first_name',
@@ -185,7 +181,6 @@ export const listInboundWebhookLookup = withAuth(
             'email',
             'is_inactive',
           )
-          .where({ tenant })
           .andWhere('user_type', 'internal')
           .modify((query) => {
             if (search) {
@@ -214,9 +209,8 @@ export const listInboundWebhookLookup = withAuth(
       }
 
       case 'team': {
-        const rows = await knex('teams')
+        const rows = await db.table('teams')
           .select<{ team_id: string; team_name: string }[]>('team_id', 'team_name')
-          .where({ tenant })
           .modify((query) => {
             if (search) {
               query.andWhereILike('team_name', `%${search}%`);
@@ -229,7 +223,7 @@ export const listInboundWebhookLookup = withAuth(
 
       case 'contact': {
         const clientId = scope.client_id;
-        const rows = await knex('contacts')
+        const rows = await db.table('contacts')
           .select<{ contact_name_id: string; full_name: string; email: string | null; client_id: string | null; is_inactive: boolean }[]>(
             'contact_name_id',
             'full_name',
@@ -237,7 +231,6 @@ export const listInboundWebhookLookup = withAuth(
             'client_id',
             'is_inactive',
           )
-          .where({ tenant })
           .modify((query) => {
             if (clientId) {
               query.andWhere('client_id', clientId);
@@ -263,14 +256,13 @@ export const listInboundWebhookLookup = withAuth(
 
       case 'client_location': {
         const clientId = scope.client_id;
-        const rows = await knex('client_locations')
+        const rows = await db.table('client_locations')
           .select<{ location_id: string; location_name: string | null; address_line1: string | null; client_id: string }[]>(
             'location_id',
             'location_name',
             'address_line1',
             'client_id',
           )
-          .where({ tenant })
           .modify((query) => {
             if (clientId) {
               query.andWhere('client_id', clientId);
@@ -293,7 +285,7 @@ export const listInboundWebhookLookup = withAuth(
 
       case 'asset': {
         const clientId = scope.client_id;
-        const rows = await knex('assets')
+        const rows = await db.table('assets')
           .select<{ asset_id: string; name: string | null; asset_tag: string | null; client_id: string | null; status: string | null }[]>(
             'asset_id',
             'name',
@@ -301,7 +293,6 @@ export const listInboundWebhookLookup = withAuth(
             'client_id',
             'status',
           )
-          .where({ tenant })
           .modify((query) => {
             if (clientId) {
               query.andWhere('client_id', clientId);
@@ -323,9 +314,8 @@ export const listInboundWebhookLookup = withAuth(
       }
 
       case 'service': {
-        const rows = await knex('service_catalog')
+        const rows = await db.table('service_catalog')
           .select<{ service_id: string; service_name: string }[]>('service_id', 'service_name')
-          .where({ tenant })
           .modify((query) => {
             if (search) {
               query.andWhereILike('service_name', `%${search}%`);
@@ -345,8 +335,7 @@ export const listInboundWebhookLookup = withAuth(
 export const listClientsForInboundWebhook = withAuth(
   async (_user, { tenant }): Promise<IClient[]> => {
     const { knex } = await createTenantKnex(tenant);
-    const rows = await knex<IClient>('clients')
-      .where({ tenant })
+    const rows = await tenantDb(knex, tenant).table<IClient>('clients')
       .orderBy([
         { column: 'is_inactive', order: 'asc' },
         { column: 'client_name', order: 'asc' },
@@ -358,8 +347,7 @@ export const listClientsForInboundWebhook = withAuth(
 export const listUsersForInboundWebhook = withAuth(
   async (_user, { tenant }): Promise<IUser[]> => {
     const { knex } = await createTenantKnex(tenant);
-    const rows = await knex<IUser>('users')
-      .where({ tenant })
+    const rows = await tenantDb(knex, tenant).table<IUser>('users')
       .andWhere('user_type', 'internal')
       .orderBy([
         { column: 'is_inactive', order: 'asc' },
@@ -373,8 +361,8 @@ export const listUsersForInboundWebhook = withAuth(
 export const listTeamsForInboundWebhook = withAuth(
   async (_user, { tenant }): Promise<ITeam[]> => {
     const { knex } = await createTenantKnex(tenant);
-    const rows = await knex<{ team_id: string; team_name: string; manager_id: string | null; tenant: string }>('teams')
-      .where({ tenant })
+    const rows = await tenantDb(knex, tenant)
+      .table<{ team_id: string; team_name: string; manager_id: string | null; tenant: string }>('teams')
       .orderBy('team_name', 'asc');
     return rows.map((row) => ({
       ...row,

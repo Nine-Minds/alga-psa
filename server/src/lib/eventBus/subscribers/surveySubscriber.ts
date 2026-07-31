@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 
 import { getEventBus } from '../index';
 import { EventSchemas, type TicketClosedEvent, type ProjectClosedEvent } from '@alga-psa/event-schemas';
+import { tenantDb } from '@alga-psa/db';
 import { getSurveyTriggersForTenant, type SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 import { createTenantKnex, runWithTenant } from '../../db';
 import { sendSurveyInvitation } from '../../../services/surveyService';
@@ -56,12 +57,24 @@ function extractActorUserId(payload: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+function shouldSendTicketClosedSurveyInvitation(payload: { suppressContactNotifications?: boolean }): boolean {
+  return payload.suppressContactNotifications !== true;
+}
+
 async function handleTicketClosedEvent(event: unknown): Promise<void> {
   try {
     const validated = EventSchemas.TICKET_CLOSED.parse(event) as TicketClosedEvent;
     const { tenantId, ticketId } = validated.payload;
     const actorUserId = extractActorUserId(validated.payload);
     logger.info('[SurveySubscriber] Handling TICKET_CLOSED', { tenantId, ticketId, event });
+
+    if (!shouldSendTicketClosedSurveyInvitation(validated.payload)) {
+      logger.debug('[SurveySubscriber] Skipped ticket closed survey invitation due to suppression', {
+        tenantId,
+        ticketId,
+      });
+      return;
+    }
 
     const triggers = await getSurveyTriggersForTenant(tenantId);
     logger.info('[SurveySubscriber] Loaded triggers', { tenantId, triggerCount: triggers.length });
@@ -160,6 +173,7 @@ async function handleProjectClosedEvent(event: unknown): Promise<void> {
 }
 
 export const __testHooks = {
+  shouldSendTicketClosedSurveyInvitation,
   handleTicketClosedEvent,
   handleProjectClosedEvent,
 };
@@ -214,10 +228,9 @@ function matchesConditions(
 async function loadTicketSnapshot(tenantId: string, ticketId: string): Promise<TicketSnapshot | null> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const result = await knex<TicketSnapshot>('tickets')
+    const result = await tenantDb(knex, tenantId).table<TicketSnapshot>('tickets')
       .select('ticket_id', 'board_id', 'status_id', 'priority_id', 'client_id', 'contact_name_id')
-      .where('tenant', tenantId)
-      .andWhere('ticket_id', ticketId)
+      .where('ticket_id', ticketId)
       .first();
     return result || null;
   });
@@ -241,10 +254,9 @@ function collectMatchingTemplatesForProject(triggers: SurveyTrigger[]): Set<stri
 async function loadProjectSnapshot(tenantId: string, projectId: string): Promise<ProjectSnapshot | null> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const result = await knex<ProjectSnapshot>('projects')
+    const result = await tenantDb(knex, tenantId).table<ProjectSnapshot>('projects')
       .select('project_id', 'client_id', 'contact_name_id')
-      .where('tenant', tenantId)
-      .andWhere('project_id', projectId)
+      .where('project_id', projectId)
       .first();
     return result || null;
   });

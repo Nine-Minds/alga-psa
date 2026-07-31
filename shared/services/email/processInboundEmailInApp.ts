@@ -324,6 +324,14 @@ function toIsoOrNull(value: unknown): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+async function withTenantAdminTransaction<T>(
+  tenantId: string,
+  callback: (trx: any, db: any) => Promise<T>
+): Promise<T> {
+  const { withAdminTransaction, tenantDb } = await import('@alga-psa/db');
+  return withAdminTransaction(async (trx: any) => callback(trx, tenantDb(trx, tenantId)));
+}
+
 function isClosedTicketBeyondReopenCutoff(params: {
   closedAt: string | null;
   receivedAt?: string;
@@ -347,10 +355,8 @@ async function loadInboundReplyPolicyContext(params: {
   tenantId: string;
   ticketId: string;
 }): Promise<InboundReplyReopenPolicyContext | null> {
-  const { withAdminTransaction } = await import('@alga-psa/db');
-
-  return withAdminTransaction(async (trx: any) => {
-    const ticket = await trx('tickets')
+  return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const ticket = await db.table('tickets')
       .select(
         'ticket_id',
         'board_id',
@@ -358,8 +364,7 @@ async function loadInboundReplyPolicyContext(params: {
         'is_closed',
         'closed_at',
       )
-      .where('tenant', params.tenantId)
-      .andWhere('ticket_id', params.ticketId)
+      .where('ticket_id', params.ticketId)
       .first();
 
     if (!ticket?.ticket_id || !ticket?.board_id) {
@@ -367,16 +372,15 @@ async function loadInboundReplyPolicyContext(params: {
     }
 
     const status = ticket.status_id
-      ? await trx('statuses')
+      ? await db.table('statuses')
           .select('is_closed')
           .where({
-            tenant: params.tenantId,
             status_id: ticket.status_id,
           })
           .first()
       : null;
 
-    const board = await trx('boards')
+    const board = await db.table('boards')
       .select(
         'inbound_reply_reopen_enabled',
         'inbound_reply_reopen_cutoff_hours',
@@ -384,7 +388,6 @@ async function loadInboundReplyPolicyContext(params: {
         'inbound_reply_ai_ack_suppression_enabled',
       )
       .where({
-        tenant: params.tenantId,
         board_id: ticket.board_id,
       })
       .first();
@@ -414,15 +417,13 @@ async function resolveBoardReopenStatusTarget(params: {
   boardId: string;
   explicitStatusId: string | null;
 }): Promise<{ statusId: string; source: 'explicit' | 'board_default' }> {
-  const { withAdminTransaction } = await import('@alga-psa/db');
   const { TicketModel } = await import('../../models/ticketModel');
 
-  return withAdminTransaction(async (trx: any) => {
+  return withTenantAdminTransaction(params.tenantId, async (trx: any, db: any) => {
     if (params.explicitStatusId) {
-      const explicitStatus = await trx('statuses')
+      const explicitStatus = await db.table('statuses')
         .select('status_id', 'is_closed')
         .where({
-          tenant: params.tenantId,
           board_id: params.boardId,
           status_id: params.explicitStatusId,
           status_type: 'ticket',
@@ -455,7 +456,6 @@ async function applyInboundReplyReopenTransition(params: {
   statusId: string;
   updatedByUserId?: string;
 }): Promise<void> {
-  const { withAdminTransaction } = await import('@alga-psa/db');
   const {
     writeTicketActivity,
     TICKET_ACTIVITY_EVENT,
@@ -464,17 +464,14 @@ async function applyInboundReplyReopenTransition(params: {
     TICKET_ACTIVITY_SOURCE,
   } = await import('../../lib/ticketActivity/index');
 
-  await withAdminTransaction(async (trx: any) => {
-    const previous = await trx('tickets')
+  await withTenantAdminTransaction(params.tenantId, async (trx: any, db: any) => {
+    const previous = await db.table('tickets')
       .select('status_id')
-      .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+      .where({ ticket_id: params.ticketId })
       .first();
 
-    await trx('tickets')
-      .where({
-        tenant: params.tenantId,
-        ticket_id: params.ticketId,
-      })
+    await db.table('tickets')
+      .where({ ticket_id: params.ticketId })
       .update({
         status_id: params.statusId,
         is_closed: false,
@@ -554,12 +551,10 @@ async function findExistingEmailComment(params: {
   ticketId: string;
   messageId: string;
 }): Promise<string | null> {
-  const { withAdminTransaction } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => {
-    const row = await trx('comments as c')
+  return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const row = await db.table('comments as c')
       .select('c.comment_id as commentId')
-      .where('c.tenant', params.tenantId)
-      .andWhere('c.ticket_id', params.ticketId)
+      .where('c.ticket_id', params.ticketId)
       .andWhere(function (this: any) {
         this.whereRaw("c.metadata->'email'->>'messageId' = ?", [params.messageId]).orWhereRaw(
           "c.metadata->>'messageId' = ?",
@@ -576,11 +571,9 @@ async function findExistingEmailTicket(params: {
   providerId: string;
   messageId: string;
 }): Promise<{ ticketId: string; ticketNumber?: string } | null> {
-  const { withAdminTransaction } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => {
-    const row = await trx('tickets as t')
+  return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const row = await db.table('tickets as t')
       .select('t.ticket_id as ticketId', 't.ticket_number as ticketNumber')
-      .where('t.tenant', params.tenantId)
       .andWhereRaw("t.email_metadata->>'messageId' = ?", [params.messageId])
       .andWhere(function (this: any) {
         this.whereRaw("t.email_metadata->>'providerId' = ?", [params.providerId]).orWhereRaw(
@@ -597,20 +590,19 @@ async function resolveReplyTargetFromComment(params: {
   tenantId: string;
   commentId: string;
 }): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
-  const { withAdminTransaction } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => {
-    const source = await trx('comments')
+  return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const source = await db.table('comments')
       .select('ticket_id as ticketId', 'thread_id as threadId')
-      .where({ tenant: params.tenantId, comment_id: params.commentId })
+      .where({ comment_id: params.commentId })
       .first();
 
     if (!source?.ticketId || !source?.threadId) {
       return null;
     }
 
-    const latest = await trx('comments')
+    const latest = await db.table('comments')
       .select('comment_id as parentCommentId')
-      .where({ tenant: params.tenantId, thread_id: source.threadId })
+      .where({ thread_id: source.threadId })
       .orderBy('created_at', 'desc')
       .orderBy('comment_id', 'desc')
       .first();
@@ -629,20 +621,19 @@ async function resolveReplyTargetFromCommentThread(params: {
   tenantId: string;
   threadId: string;
 }): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
-  const { withAdminTransaction } = await import('@alga-psa/db');
-  return withAdminTransaction(async (trx: any) => {
-    const thread = await trx('comment_threads')
+  return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const thread = await db.table('comment_threads')
       .select('ticket_id as ticketId', 'thread_id as threadId')
-      .where({ tenant: params.tenantId, thread_id: params.threadId })
+      .where({ thread_id: params.threadId })
       .first();
 
     if (!thread?.ticketId || !thread?.threadId) {
       return null;
     }
 
-    const latest = await trx('comments')
+    const latest = await db.table('comments')
       .select('comment_id as parentCommentId')
-      .where({ tenant: params.tenantId, thread_id: thread.threadId })
+      .where({ thread_id: thread.threadId })
       .orderBy('created_at', 'desc')
       .orderBy('comment_id', 'desc')
       .first();
@@ -666,11 +657,10 @@ export async function resolveReplyTargetFromOutboundMessageId(params: {
     return null;
   }
 
-  const { withAdminTransaction } = await import('@alga-psa/db');
-  const row = await withAdminTransaction(async (trx: any) => {
-    return trx('email_sending_logs')
+  const row = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    return db.table('email_sending_logs')
       .select('comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
-      .where({ tenant: params.tenantId, rfc_message_id: normalizedMessageId })
+      .where({ rfc_message_id: normalizedMessageId })
       .orderBy('created_at', 'desc')
       .first();
   });
@@ -690,9 +680,9 @@ export async function resolveReplyTargetFromOutboundMessageId(params: {
   // Ticket-scoped match: a reply to any non-comment ticket notification
   // (created/updated/closed/assigned). Append at ticket level, no parent comment.
   if (row.entityType === 'ticket' && row.entityId) {
-    const ticketExists = await withAdminTransaction(async (trx: any) => {
-      return trx('tickets')
-        .where({ tenant: params.tenantId, ticket_id: row.entityId })
+    const ticketExists = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+      return db.table('tickets')
+        .where({ ticket_id: row.entityId })
         .first('ticket_id');
     });
     if (ticketExists?.ticket_id) {
@@ -733,12 +723,10 @@ async function resolveReplyTargetFromProviderThreadId(params: {
     return null;
   }
 
-  const { withAdminTransaction } = await import('@alga-psa/db');
-  const row = await withAdminTransaction(async (trx: any) => {
-    return trx('comment_threads')
+  const row = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    return db.table('comment_threads')
       .select('thread_id as threadId')
       .where({
-        tenant: params.tenantId,
         email_provider_thread_id: providerThreadId,
       })
       .whereNotNull('ticket_id')
@@ -804,6 +792,36 @@ function rewriteEmbeddedImageSourcesInHtml(
   return rewritten;
 }
 
+function preserveEmbeddedImageUrlBlocks(
+  blocks: unknown[],
+  embeddedMappings: ProcessInboundEmailArtifactsResult['embeddedImageUrlMappings']
+): unknown[] {
+  if (!embeddedMappings.length) {
+    return blocks;
+  }
+
+  const serializedBlocks = JSON.stringify(blocks);
+  const missingMappings = embeddedMappings.filter((mapping) => (
+    mapping.url && !serializedBlocks.includes(mapping.url)
+  ));
+
+  if (!missingMappings.length) {
+    return blocks;
+  }
+
+  return [
+    ...blocks,
+    ...missingMappings.map((mapping) => ({
+      type: 'image',
+      props: {
+        url: mapping.url,
+        name: mapping.fileId || mapping.documentId || 'embedded-image',
+        caption: '',
+      },
+    })),
+  ];
+}
+
 async function maybeRewriteCommentWithEmbeddedAttachmentUrls(args: {
   tenantId: string;
   commentId: string;
@@ -822,21 +840,22 @@ async function maybeRewriteCommentWithEmbeddedAttachmentUrls(args: {
     return;
   }
 
-  const rewrittenBlocks = await blocksFromEmailBody({
-    html: rewrittenHtml,
-    text: args.text,
-  });
+  const rewrittenBlocks = preserveEmbeddedImageUrlBlocks(
+    await blocksFromEmailBody({
+      html: rewrittenHtml,
+      text: args.text,
+    }),
+    embeddedMappings
+  );
   const rewrittenContent = JSON.stringify(rewrittenBlocks);
   if (rewrittenContent === args.originalCommentContent) {
     return;
   }
 
   try {
-    const { withAdminTransaction } = await import('@alga-psa/db');
-    await withAdminTransaction(async (trx: any) => {
-      await trx('comments as c')
-        .where('c.tenant', args.tenantId)
-        .andWhere('c.comment_id', args.commentId)
+    await withTenantAdminTransaction(args.tenantId, async (_trx: any, db: any) => {
+      await db.table('comments as c')
+        .where('c.comment_id', args.commentId)
         .update({
           note: rewrittenContent,
           updated_at: new Date(),

@@ -6,14 +6,30 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import KBArticleEditor from './KBArticleEditor';
 import type { IKBArticleWithDocument } from '../../actions/kbArticleActions';
 
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
-  }),
-}));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  // Stable singletons: fresh refs per hook call re-fire effects keyed on them.
+  const translation = {
+    t: (_key: string, fallback?: string | { defaultValue?: string }) =>
+      (typeof fallback === 'string' ? fallback : fallback?.defaultValue) ?? _key,
+  };
+  const formatters = {
+    formatDate: (value: string | Date) => String(value),
+    formatNumber: (value: number) => String(value),
+  };
+  return {
+    useTranslation: () => translation,
+    useFormatters: () => formatters,
+  };
+});
 
 vi.mock('@alga-psa/core/formatters', () => ({
   formatDate: (value: string | Date) => String(value),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), back: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/',
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
@@ -27,7 +43,9 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
-const mockArticle: IKBArticleWithDocument = {
+// vi.hoisted: the kbArticleActions mock factory below runs while this
+// module's imports evaluate — a plain const would still be in its TDZ then.
+const mockArticle: IKBArticleWithDocument = vi.hoisted(() => ({
   article_id: 'article-1',
   tenant: 'tenant-1',
   document_id: 'doc-1',
@@ -50,7 +68,7 @@ const mockArticle: IKBArticleWithDocument = {
   published_at: null,
   published_by: null,
   document_name: 'Test Article',
-};
+}));
 
 vi.mock('../../actions/kbArticleActions', () => ({
   getArticle: vi.fn().mockResolvedValue(mockArticle),
@@ -60,6 +78,7 @@ vi.mock('../../actions/kbArticleActions', () => ({
 vi.mock('@alga-psa/tags', () => ({
   TagManager: () => <div data-testid="tag-manager">Tags</div>,
   findTagsByEntityId: vi.fn().mockResolvedValue([]),
+  isTagActionError: () => false,
 }));
 
 vi.mock('../DocumentEditor', () => ({
@@ -160,7 +179,8 @@ describe('KBArticleEditor', () => {
       expect(screen.getByTestId('tag-manager')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Tags')).toBeInTheDocument();
+    // 'Tags' appears both as the card heading and inside the TagManager stub.
+    expect(screen.getAllByText('Tags').length).toBeGreaterThanOrEqual(1);
   });
 
   it('wraps DocumentEditor component for content editing', async () => {

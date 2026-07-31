@@ -5,6 +5,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { hashPassword } from '../utils/encryption';
@@ -57,13 +58,13 @@ export async function determinePortalUserRole(
   options: PortalRoleOptions
 ): Promise<IRole | null> {
   const { isClientAdmin, tenantId, roleId } = options;
+  const db = tenantDb(trx, tenantId);
 
   // If a specific roleId is provided, validate and use it
   if (roleId) {
-    const role = await trx('roles')
+    const role = await db.table<IRole>('roles')
       .where({
         role_id: roleId,
-        tenant: tenantId,
         client: true
       })
       .first();
@@ -79,9 +80,8 @@ export async function determinePortalUserRole(
   const roleName = isClientAdmin ? 'admin' : 'user';
 
   // Get the appropriate client portal role
-  let clientRole = await trx('roles')
+  let clientRole = await db.table<IRole>('roles')
     .where({
-      tenant: tenantId,
       client: true,
       msp: false
     })
@@ -111,12 +111,12 @@ async function _createPortalUserInDBWithTrx(
   input: CreatePortalUserInput
 ): Promise<CreatePortalUserResult> {
   try {
+      const db = tenantDb(trx, input.tenantId);
       // Check if a client-portal user already exists for this email
       // Allow the same email to exist for other user types (e.g., internal MSP users)
-      const existingUser = await trx('users')
+      const existingUser = await db.table('users')
         .where({
           email: input.email.toLowerCase(),
-          tenant: input.tenantId,
           user_type: 'client'
         })
         .first();
@@ -128,10 +128,9 @@ async function _createPortalUserInDBWithTrx(
       // Get the contact to check is_client_admin flag if not explicitly provided
       let isClientAdmin = input.isClientAdmin;
       if (isClientAdmin === undefined) {
-        const contact = await trx('contacts')
+        const contact = await db.table('contacts')
           .where({
             contact_name_id: input.contactId,
-            tenant: input.tenantId
           })
           .first();
 
@@ -175,12 +174,12 @@ async function _createPortalUserInDBWithTrx(
       if (input.lastName) userData.last_name = input.lastName;
 
       // Insert the user
-      const [user] = await trx('users')
+      const [user] = await db.table('users')
         .insert(userData)
         .returning('*');
 
       // Assign the role
-      await trx('user_roles')
+      await db.table('user_roles')
         .insert({
           user_id: user.user_id,
           role_id: roleToAssign.role_id,
@@ -242,11 +241,11 @@ export async function getPortalUsersForClient(
   tenantId: string
 ): Promise<IUser[]> {
   try {
+    const db = tenantDb(knex, tenantId);
     // Get all contacts for the client
-    const contacts = await knex('contacts')
+    const contacts = await db.table('contacts')
       .where({
         client_id: clientId,
-        tenant: tenantId
       })
       .select('contact_name_id');
 
@@ -257,10 +256,9 @@ export async function getPortalUsersForClient(
     }
 
     // Get all users associated with these contacts
-    const users = await knex('users')
+    const users = await db.table<IUser>('users')
       .whereIn('contact_id', contactIds)
       .andWhere({
-        tenant: tenantId,
         user_type: 'client'
       })
       .select('*');
@@ -280,9 +278,8 @@ export async function getClientPortalRoles(
   tenantId: string
 ): Promise<IRole[]> {
   try {
-    const roles = await knex('roles')
+    const roles = await tenantDb(knex, tenantId).table<IRole>('roles')
       .where({
-        tenant: tenantId,
         client: true,
         msp: false
       })

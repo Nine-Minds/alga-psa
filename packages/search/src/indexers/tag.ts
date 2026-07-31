@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface TagSearchRow {
@@ -51,9 +52,8 @@ export const tagIndexer: EntityIndexer = {
   ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<TagSearchRow>('tag_definitions')
+    const row = await createTenantScopedIndexerQuery<TagSearchRow>(knex, 'tag_definitions', 'tag_definitions', tenant)
       .select('tag_id', 'tag_text', 'tagged_type', 'board_id', 'created_at')
-      .where('tenant', tenant)
       .andWhere('tag_id', id)
       .first();
 
@@ -66,9 +66,8 @@ export const tagIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<TagSearchRow>('tag_definitions')
+    const query = createTenantScopedIndexerQuery<TagSearchRow>(knex, 'tag_definitions', 'tag_definitions', tenant)
       .select('tag_id', 'tag_text', 'tagged_type', 'board_id', 'created_at')
-      .where('tenant', tenant)
       .orderBy('tag_id', 'asc')
       .limit(limit);
 

@@ -1,8 +1,19 @@
+const MIGRATION_TENANT = 'migration:20250707120000_drop_deprecated_company_fields';
+const COMPANY_FIELD_BACKFILL_REASON = 'discover tenants with deprecated company fields to migrate';
+const COMPANY_LOCATIONS_BACKFILL_REASON = 'historical company location backfill; company_locations is not registered in tenantDb metadata';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+
   // Check if columns exist
   const hasAddress = await knex.schema.hasColumn('companies', 'address');
   const hasPhoneNo = await knex.schema.hasColumn('companies', 'phone_no');
@@ -12,13 +23,15 @@ exports.up = async function(knex) {
   if (hasAddress || hasPhoneNo || hasEmail) {
     // First, migrate any remaining data to company_locations
     // Loop through tenants to maintain CitusDB compatibility
-    const tenants = await knex('companies').distinct('tenant').pluck('tenant');
+    const tenants = await migrationDb.unscoped('companies', COMPANY_FIELD_BACKFILL_REASON)
+      .distinct('tenant')
+      .pluck('tenant');
     
     for (const tenant of tenants) {
+      const db = tenantDb(knex, tenant);
       // First, get companies that need migration for this tenant
-      const companiesNeedingMigration = await knex('companies')
+      const companiesNeedingMigration = await db.table('companies')
         .select('company_id', 'address', 'phone_no', 'email')
-        .where('tenant', tenant)
         .andWhere(function() {
           this.whereNotNull('address').andWhere('address', '!=', '')
               .orWhereNotNull('phone_no').andWhere('phone_no', '!=', '')
@@ -26,7 +39,7 @@ exports.up = async function(knex) {
         });
       
       // Then check which ones already have default locations
-      const existingDefaultLocations = await knex('company_locations')
+      const existingDefaultLocations = await db.unscoped('company_locations', COMPANY_LOCATIONS_BACKFILL_REASON)
         .select('company_id')
         .where('tenant', tenant)
         .andWhere('is_default', true);
@@ -40,7 +53,7 @@ exports.up = async function(knex) {
       
       // Now insert locations for companies that don't have them
       for (const company of companiesToMigrate) {
-        await knex('company_locations').insert({
+        await db.unscoped('company_locations', COMPANY_LOCATIONS_BACKFILL_REASON).insert({
           location_id: knex.raw('gen_random_uuid()'),
           company_id: company.company_id,
           tenant: tenant,

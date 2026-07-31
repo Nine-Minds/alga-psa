@@ -5,11 +5,21 @@ import type { DocumentFilters, IFolderNode } from '@alga-psa/types';
 import { getFolderTree, deleteFolder, toggleFolderVisibilityByPath } from '../actions/documentActions';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import VisibilityToggle from './VisibilityToggle';
+
+const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 interface FolderTreeViewProps {
   onFolderSelect: (folderPath: string | null) => void;
@@ -98,8 +108,8 @@ export default function FolderTreeView({
 
     try {
       const deleteResult = await deleteFolder(path);
-      if (isActionPermissionError(deleteResult)) {
-        handleError(deleteResult.permissionError);
+      if (isDocumentActionError(deleteResult)) {
+        handleError(deleteResult, getErrorMessage(deleteResult));
         return;
       }
       toast.success(
@@ -142,8 +152,8 @@ export default function FolderTreeView({
         entityType ?? null,
         cascade
       );
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isDocumentActionError(result)) {
+        handleError(result, getErrorMessage(result));
         return;
       }
       if (result.folderUpdated) {

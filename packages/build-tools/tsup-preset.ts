@@ -13,8 +13,8 @@
  *   include .js extensions required by Node.js ESM resolution.
  */
 import { defineConfig, type Options } from 'tsup';
-import { readdirSync, statSync, readFileSync, writeFileSync } from 'fs';
-import { join, relative } from 'path';
+import { readdirSync, statSync, readFileSync, writeFileSync, existsSync } from 'fs';
+import { join, relative, dirname } from 'path';
 
 export function getAllSourceFiles(dir: string, base: string = dir): Record<string, string> {
   const entries: Record<string, string> = {};
@@ -49,6 +49,13 @@ function addJsExtensions(dir: string) {
         /(from\s+["'])(\.\.?\/[^"']+)(["'])/g,
         (match, pre, path, post) => {
           if (path.endsWith('.js') || path.endsWith('.json')) return match;
+          const resolved = join(dirname(fullPath), path);
+          // Directory re-exports (`export * from './lib'`) must resolve to the
+          // directory's index.js, not a nonexistent sibling file. A same-named
+          // file wins, matching TypeScript resolution order.
+          if (!existsSync(`${resolved}.js`) && existsSync(resolved) && statSync(resolved).isDirectory()) {
+            return `${pre}${path}/index.js${post}`;
+          }
           return `${pre}${path}.js${post}`;
         }
       );

@@ -15,6 +15,11 @@ import type {
   AccountingMappingModule,
   AccountingMappingLoadResult
 } from '@alga-psa/integrations/components';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { getIntegrationClients } from '../../actions/clientLookupActions';
 
 const ADAPTER_TYPE = 'xero_csv';
@@ -27,6 +32,12 @@ type MappingLoadConfig<TAlga> = {
 };
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+function throwIfActionError(value: unknown): void {
+  if (isActionMessageError(value) || isActionPermissionError(value)) {
+    throw new Error(getErrorMessage(value));
+  }
+}
 
 export function createXeroCsvMappingModules(t?: TFn): AccountingMappingModule[] {
   const tab = (key: string, fallback: string) =>
@@ -100,7 +111,7 @@ function createClientModule(tabLabel: string): AccountingMappingModule {
       return updateMapping(mappingId, input);
     },
     async remove(_context, mappingId) {
-      await deleteExternalEntityMapping(mappingId);
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
     }
   };
 }
@@ -180,7 +191,7 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
       return updateMapping(mappingId, input);
     },
     async remove(_context, mappingId) {
-      await deleteExternalEntityMapping(mappingId);
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
     }
   };
 }
@@ -247,7 +258,7 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
       return updateMapping(mappingId, input);
     },
     async remove(_context, mappingId) {
-      await deleteExternalEntityMapping(mappingId);
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
     }
   };
 }
@@ -268,9 +279,10 @@ async function loadMappings<TAlga>({
     }),
     loadAlgaEntities(context)
   ]);
+  throwIfActionError(mappings);
 
   return {
-    mappings,
+    mappings: mappings as ExternalEntityMapping[],
     algaEntities: algaEntities.map(mapAlga),
     externalEntities: []
   };
@@ -299,7 +311,10 @@ function createMapping({
     sync_status: 'manual_link'
   };
 
-  return createExternalEntityMapping(payload);
+  return createExternalEntityMapping(payload).then((result) => {
+    throwIfActionError(result);
+    return result as ExternalEntityMapping;
+  });
 }
 
 function updateMapping(
@@ -320,7 +335,10 @@ function updateMapping(
     payload.alga_entity_id = input.algaEntityId;
   }
 
-  return updateExternalEntityMapping(mappingId, payload);
+  return updateExternalEntityMapping(mappingId, payload).then((result) => {
+    throwIfActionError(result);
+    return result as ExternalEntityMapping;
+  });
 }
 
 type IServicesResult = Pick<IService, 'service_id' | 'service_name'> & {

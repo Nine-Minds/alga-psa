@@ -355,10 +355,16 @@ describe('T014: global quick-create ProjectQuickAdd i18n coverage', () => {
     expect(getLeaf(pseudo, 'quickAdd.title')).toBe('11111');
   });
 
-  it('ProjectQuickAdd is imported by the global QuickCreateDialog', () => {
+  it('ProjectQuickAdd is reached through the global quick-create project route', () => {
     const quickCreate = read(
       '../../../../server/src/components/layout/QuickCreateDialog.tsx'
     );
-    expect(quickCreate).toContain('ProjectQuickAdd');
+    const projectRoute = read(
+      '../../../../server/src/app/msp/_components/CreateProjectRouteClient.tsx'
+    );
+    expect(quickCreate).toContain("project: () => '/msp/create-project'");
+    expect(quickCreate).toContain('router.push(QUICK_CREATE_HREFS[type]())');
+    expect(projectRoute).toContain("import ProjectQuickAdd from '@alga-psa/projects/components/ProjectQuickAdd'");
+    expect(projectRoute).toContain('<ProjectQuickAdd');
   });
 });

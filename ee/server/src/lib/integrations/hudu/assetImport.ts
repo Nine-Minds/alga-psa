@@ -9,6 +9,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 /** F216: same default asset status as the manual create form. */
 export function huduImportAssetStatus(): string {
@@ -31,7 +32,7 @@ export async function deriveHuduAssetTag(
 ): Promise<string> {
   const serial = (input.primarySerial ?? '').trim();
   if (serial) {
-    const taken = await knex('assets').where({ tenant, asset_tag: serial }).first('asset_id');
+    const taken = await tenantDb(knex, tenant).table('assets').where({ asset_tag: serial }).first('asset_id');
     if (!taken) return serial;
   }
   return `hudu-${input.huduAssetId}`;

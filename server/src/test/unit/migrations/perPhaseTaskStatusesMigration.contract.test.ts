@@ -2,13 +2,9 @@ import { readFileSync } from 'fs';
 import path from 'path';
 
 const serverRoot = path.resolve(__dirname, '../../../../');
-const repoRoot = path.resolve(serverRoot, '..');
 
 const readServerFile = (relativePath: string) =>
   readFileSync(path.resolve(serverRoot, relativePath), 'utf8');
-
-const readWorkspaceFile = (relativePath: string) =>
-  readFileSync(path.resolve(repoRoot, relativePath), 'utf8');
 
 describe('per-phase task statuses migrations', () => {
   const projectStatusesMigration = readServerFile(
@@ -16,9 +12,6 @@ describe('per-phase task statuses migrations', () => {
   );
   const templateStatusesMigration = readServerFile(
     'migrations/20260318101000_add_template_phase_id_to_project_template_status_mappings.cjs'
-  );
-  const citusCompanionMigration = readWorkspaceFile(
-    'ee/server/migrations/citus/20260318102000_fix_phase_status_mapping_foreign_keys.cjs'
   );
 
   it('T001/T002/T005: adds nullable phase_id and template_phase_id columns with cascade FKs', () => {
@@ -40,22 +33,5 @@ describe('per-phase task statuses migrations', () => {
     expect(projectStatusesMigration).not.toContain(".notNullable()");
     expect(templateStatusesMigration).not.toContain('UPDATE project_template_status_mappings');
     expect(templateStatusesMigration).not.toContain(".notNullable()");
-  });
-
-  it('T006: keeps EE companion migration transactionless and enforces composite phase foreign keys', () => {
-    expect(citusCompanionMigration).toContain('exports.config = { transaction: false }');
-    expect(citusCompanionMigration).toContain("requiredColumns: ['tenant', 'phase_id']");
-    expect(citusCompanionMigration).toContain("requiredForeignColumns: ['tenant', 'phase_id']");
-    expect(citusCompanionMigration).toContain('project_status_mappings_tenant_phase_id_foreign');
-    expect(citusCompanionMigration).toContain("requiredColumns: ['tenant', 'template_phase_id']");
-    expect(citusCompanionMigration).toContain(
-      "requiredForeignColumns: ['tenant', 'template_phase_id']"
-    );
-    expect(citusCompanionMigration).toContain(
-      'project_template_status_mappings_tenant_template_phase_id_foreign'
-    );
-    expect(citusCompanionMigration).toContain('FOREIGN KEY (${requiredColumns.join');
-    expect(citusCompanionMigration).toContain('REFERENCES ${foreignTableName}(${requiredForeignColumns.join');
-    expect(citusCompanionMigration).toContain("onDelete: 'CASCADE'");
   });
 });

@@ -87,7 +87,10 @@ describe("LicenseManagementPage", () => {
       .closest("details");
     expect(advanced).not.toHaveAttribute("open");
 
-    expect(screen.queryByText(/Air-gapped/i)).not.toBeInTheDocument();
+    // The offline-keys helper is the only air-gapped mention and stays inside
+    // the collapsed advanced section, not in the primary flow.
+    const offlineHelper = screen.getByText(/air-gapped installs/i);
+    expect(offlineHelper.closest("details")).toBe(advanced);
     expect(
       screen.queryByText(/Connect this appliance/i),
     ).not.toBeInTheDocument();

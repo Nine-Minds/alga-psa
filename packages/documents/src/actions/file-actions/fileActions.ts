@@ -8,6 +8,25 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { FileStoreModel } from '@alga-psa/storage';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 
+function fileActionErrorMessage(error: unknown, fallback: string): string {
+    const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+    if (
+        message === 'No file provided' ||
+        message === 'Missing required fields' ||
+        message === 'File not found' ||
+        message === 'uploaded_by_id is required' ||
+        message === 'Invalid file input type. Must be Buffer or Readable stream.' ||
+        message === 'File type not allowed' ||
+        message.startsWith('File size exceeds limit of ') ||
+        message.startsWith('Invalid file format.')
+    ) {
+        return message;
+    }
+
+    return fallback;
+}
+
 export const uploadFile = withAuth(async (
     _user,
     { tenant },
@@ -47,7 +66,7 @@ export const uploadFile = withAuth(async (
         console.error('Upload file error:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to upload file',
+            error: fileActionErrorMessage(error, 'Failed to upload file'),
         };
     }
 });
@@ -64,7 +83,7 @@ export const downloadFile = withAuth(async (
         console.error('Download file error:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to download file',
+            error: fileActionErrorMessage(error, 'Failed to download file'),
         };
     }
 });
@@ -84,7 +103,7 @@ export const deleteFile = withAuth(async (
         console.error('Delete file error:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to delete file',
+            error: fileActionErrorMessage(error, 'Failed to delete file'),
         };
     }
 });
@@ -106,7 +125,7 @@ export const validateFileUpload = withAuth(async (
         console.error('Validate file error:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to validate file',
+            error: fileActionErrorMessage(error, 'Failed to validate file'),
         };
     }
 });

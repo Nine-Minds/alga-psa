@@ -17,10 +17,16 @@ import {
   type AssetTypeRegistryError,
   type AssetTypeRegistryResult,
 } from '../lib/assetTypeRegistry';
+import {
+  permissionError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export type AssetTypeRegistryActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: AssetTypeRegistryError };
+
+export type AssetTypeRegistryPermissionError = ActionPermissionError;
 
 async function canManageAssetTypeRegistry(user: Parameters<typeof hasPermission>[0]): Promise<boolean> {
   return hasPermission(user, 'system_settings', 'update');
@@ -36,21 +42,21 @@ function toActionResult<T>(result: AssetTypeRegistryResult<T>): AssetTypeRegistr
   return { success: false, error: (result as Extract<AssetTypeRegistryResult<T>, { ok: false }>).error };
 }
 
-export const getAssetTypes = withAuth(async (user, { tenant }): Promise<AssetTypeRegistryEntry[]> => {
+export const getAssetTypes = withAuth(async (user, { tenant }): Promise<AssetTypeRegistryEntry[] | AssetTypeRegistryPermissionError> => {
   const { knex } = await createTenantKnex();
 
   if (!await hasPermission(user, 'asset', 'read')) {
-    throw new Error('Permission denied: Cannot read asset types');
+    return permissionError('Permission denied: Cannot read asset types');
   }
 
   return listAssetTypes(knex, tenant);
 });
 
-export const getAssetType = withAuth(async (user, { tenant }, slug: string): Promise<AssetTypeRegistryEntry | null> => {
+export const getAssetType = withAuth(async (user, { tenant }, slug: string): Promise<AssetTypeRegistryEntry | null | AssetTypeRegistryPermissionError> => {
   const { knex } = await createTenantKnex();
 
   if (!await hasPermission(user, 'asset', 'read')) {
-    throw new Error('Permission denied: Cannot read asset types');
+    return permissionError('Permission denied: Cannot read asset types');
   }
 
   return getAssetTypeBySlug(knex, tenant, slug);
@@ -60,11 +66,11 @@ export const createAssetTypeAction = withAuth(async (
   user,
   { tenant },
   data: CreateAssetTypeInput
-): Promise<AssetTypeRegistryActionResult<AssetTypeRegistryEntry>> => {
+): Promise<AssetTypeRegistryActionResult<AssetTypeRegistryEntry> | AssetTypeRegistryPermissionError> => {
   const { knex } = await createTenantKnex();
 
   if (!await canManageAssetTypeRegistry(user)) {
-    throw new Error('Permission denied: Cannot manage asset types');
+    return permissionError('Permission denied: Cannot manage asset types');
   }
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -77,11 +83,11 @@ export const updateAssetTypeAction = withAuth(async (
   { tenant },
   slug: string,
   data: UpdateAssetTypeInput
-): Promise<AssetTypeRegistryActionResult<AssetTypeRegistryEntry>> => {
+): Promise<AssetTypeRegistryActionResult<AssetTypeRegistryEntry> | AssetTypeRegistryPermissionError> => {
   const { knex } = await createTenantKnex();
 
   if (!await canManageAssetTypeRegistry(user)) {
-    throw new Error('Permission denied: Cannot manage asset types');
+    return permissionError('Permission denied: Cannot manage asset types');
   }
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -93,11 +99,11 @@ export const deleteAssetTypeAction = withAuth(async (
   user,
   { tenant },
   slug: string
-): Promise<AssetTypeRegistryActionResult<{ slug: string }>> => {
+): Promise<AssetTypeRegistryActionResult<{ slug: string }> | AssetTypeRegistryPermissionError> => {
   const { knex } = await createTenantKnex();
 
   if (!await canManageAssetTypeRegistry(user)) {
-    throw new Error('Permission denied: Cannot manage asset types');
+    return permissionError('Permission denied: Cannot manage asset types');
   }
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {

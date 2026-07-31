@@ -23,7 +23,7 @@
 
 import type { IUserWithRoles } from '@alga-psa/types';
 import { runWithTenant } from '@alga-psa/db';
-import { getCurrentUser } from './getCurrentUser';
+import { getCurrentUserWithRevocationCheck } from './getCurrentUser';
 
 /**
  * Context provided to authenticated actions
@@ -67,13 +67,15 @@ export interface WithAuthOptions {
  * // Basic usage - throws if not authenticated
  * export const getMyData = withAuth(async (user, ctx) => {
  *   const { knex } = await createTenantKnex();
- *   return await knex('my_table').where({ tenant: ctx.tenant }).first();
+ *   return await tenantDb(knex, ctx.tenant).table('my_table').first();
  * });
  *
  * // With arguments
  * export const updateItem = withAuth(async (user, ctx, itemId: string, data: ItemData) => {
  *   const { knex } = await createTenantKnex();
- *   return await knex('items').where({ item_id: itemId, tenant: ctx.tenant }).update(data);
+ *   return await tenantDb(knex, ctx.tenant).table('items')
+ *     .where({ item_id: itemId })
+ *     .update(data);
  * });
  * ```
  */
@@ -82,7 +84,7 @@ export function withAuth<TArgs extends unknown[], TResult>(
   options?: WithAuthOptions
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserWithRevocationCheck();
 
     if (!user) {
       if (options?.allowUnauthenticated) {
@@ -114,7 +116,7 @@ export function withAuth<TArgs extends unknown[], TResult>(
  *     return { publicData: 'only' };
  *   }
  *   const { knex } = await createTenantKnex();
- *   return await knex('my_table').where({ tenant: ctx.tenant }).first();
+ *   return await tenantDb(knex, ctx.tenant).table('my_table').first();
  * });
  * ```
  */
@@ -122,7 +124,7 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
   action: (user: IUserWithRoles | null, ctx: AuthContext | null, ...args: TArgs) => Promise<TResult>
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserWithRevocationCheck();
 
     if (!user) {
       return action(null, null, ...args);
@@ -151,7 +153,7 @@ export function withAuthCheck<TArgs extends unknown[], TResult>(
   action: (user: IUserWithRoles, ...args: TArgs) => Promise<TResult>
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserWithRevocationCheck();
 
     if (!user) {
       throw new AuthenticationError();

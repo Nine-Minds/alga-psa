@@ -15,7 +15,7 @@ import {
   revokeSessionAction,
   revokeAllOtherSessionsAction,
   type SessionData,
-} from '@alga-psa/auth/actions';
+} from '../../../actions/session-actions/sessionActions';
 import {
   Monitor,
   Smartphone,
@@ -61,6 +61,10 @@ export default function SessionManagement() {
     try {
       setRevoking(sessionId);
       const result = await revokeSessionAction(sessionId);
+
+      if (!result.success) {
+        throw new Error(result.message);
+      }
 
       if (result.is_current) {
         toast.success(t('sessionManagement.messages.loggingOut', 'Logging out...'));

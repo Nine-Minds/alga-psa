@@ -1,22 +1,34 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IContractPricingSchedule } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
-async function assertContractIsAuthorable(
+type PricingScheduleActionError = ActionMessageError | ActionPermissionError;
+type PricingScheduleMutationResult = IContractPricingSchedule | PricingScheduleActionError;
+type PricingScheduleDeleteResult = { success: true } | PricingScheduleActionError;
+
+async function getContractAuthoringError(
   knex: any,
   tenant: string,
   contractId: string,
-): Promise<void> {
-  const contract = await knex('contracts')
-    .where({ tenant, contract_id: contractId })
+): Promise<string | null> {
+  const contract = await tenantDb(knex, tenant).table('contracts')
+    .where({ contract_id: contractId })
     .first('is_system_managed_default');
 
   if (contract?.is_system_managed_default === true) {
-    throw new Error('System-managed default contracts are attribution-only; pricing schedule authoring is disabled.');
+    return 'System-managed default contracts are attribution-only; pricing schedule authoring is disabled.';
   }
+
+  return null;
 }
 
 
@@ -29,19 +41,19 @@ export const getPricingSchedulesByContract = withAuth(async (
   user,
   { tenant },
   contractId: string
-): Promise<IContractPricingSchedule[]> => {
+): Promise<IContractPricingSchedule[] | PricingScheduleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    throw new Error('Tenant not found');
+    return actionError('Tenant not found');
   }
 
-  const schedules = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const schedules = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       contract_id: contractId
     })
     .orderBy('effective_date', 'asc')
@@ -59,19 +71,19 @@ export const getPricingScheduleById = withAuth(async (
   user,
   { tenant },
   scheduleId: string
-): Promise<IContractPricingSchedule | null> => {
+): Promise<IContractPricingSchedule | null | PricingScheduleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    throw new Error('Tenant not found');
+    return actionError('Tenant not found');
   }
 
-  const schedule = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const schedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId
     })
     .first();
@@ -116,16 +128,20 @@ export const createPricingSchedule = withAuth(async (
   user,
   { tenant },
   scheduleData: Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>
-): Promise<IContractPricingSchedule> => {
+): Promise<PricingScheduleMutationResult> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    throw new Error('Tenant not found');
+    return actionError('Tenant not found');
   }
-  await assertContractIsAuthorable(knex, tenant, scheduleData.contract_id);
+  const authoringError = await getContractAuthoringError(knex, tenant, scheduleData.contract_id);
+  if (authoringError) {
+    return actionError(authoringError);
+  }
+  const db = tenantDb(knex, tenant);
 
   // Calculate end_date from duration if provided
   let endDate = scheduleData.end_date;
@@ -139,13 +155,12 @@ export const createPricingSchedule = withAuth(async (
 
   // Validate that end_date is after effective_date if provided
   if (endDate && endDate <= scheduleData.effective_date) {
-    throw new Error('End date must be after effective date');
+    return actionError('End date must be after effective date');
   }
 
   // Check for overlapping schedules
-  const overlapping = await knex('contract_pricing_schedules')
+  const overlapping = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       contract_id: scheduleData.contract_id
     })
     .where(function() {
@@ -170,10 +185,10 @@ export const createPricingSchedule = withAuth(async (
     .first();
 
   if (overlapping) {
-    throw new Error('This schedule overlaps with an existing pricing schedule');
+    return actionError('This schedule overlaps with an existing pricing schedule');
   }
 
-  const [schedule] = await knex('contract_pricing_schedules')
+  const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .insert({
       ...scheduleData,
       end_date: endDate,
@@ -197,28 +212,31 @@ export const updatePricingSchedule = withAuth(async (
   { tenant },
   scheduleId: string,
   scheduleData: Partial<Omit<IContractPricingSchedule, 'schedule_id' | 'tenant' | 'contract_id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>>
-): Promise<IContractPricingSchedule> => {
+): Promise<PricingScheduleMutationResult> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    throw new Error('Tenant not found');
+    return actionError('Tenant not found');
   }
 
   // Get existing schedule
-  const existingSchedule = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const existingSchedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId
     })
     .first();
 
   if (!existingSchedule) {
-    throw new Error('Pricing schedule not found');
+    return actionError('Pricing schedule not found');
   }
-  await assertContractIsAuthorable(knex, tenant, existingSchedule.contract_id);
+  const authoringError = await getContractAuthoringError(knex, tenant, existingSchedule.contract_id);
+  if (authoringError) {
+    return actionError(authoringError);
+  }
 
   // Calculate end_date from duration if provided
   const effectiveDate = scheduleData.effective_date || existingSchedule.effective_date;
@@ -233,13 +251,12 @@ export const updatePricingSchedule = withAuth(async (
   }
 
   if (endDate && endDate <= effectiveDate) {
-    throw new Error('End date must be after effective date');
+    return actionError('End date must be after effective date');
   }
 
   // Check for overlapping schedules (excluding current schedule)
-  const overlapping = await knex('contract_pricing_schedules')
+  const overlapping = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       contract_id: existingSchedule.contract_id
     })
     .whereNot('schedule_id', scheduleId)
@@ -265,12 +282,11 @@ export const updatePricingSchedule = withAuth(async (
     .first();
 
   if (overlapping) {
-    throw new Error('This schedule would overlap with an existing pricing schedule');
+    return actionError('This schedule would overlap with an existing pricing schedule');
   }
 
-  const [schedule] = await knex('contract_pricing_schedules')
+  const [schedule] = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId
     })
     .update({
@@ -292,32 +308,36 @@ export const deletePricingSchedule = withAuth(async (
   user,
   { tenant },
   scheduleId: string
-): Promise<void> => {
+): Promise<PricingScheduleDeleteResult> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    throw new Error('Tenant not found');
+    return actionError('Tenant not found');
   }
-  const existingSchedule = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const existingSchedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId,
     })
     .first('contract_id');
   if (!existingSchedule?.contract_id) {
-    return;
+    return { success: true };
   }
-  await assertContractIsAuthorable(knex, tenant, existingSchedule.contract_id);
+  const authoringError = await getContractAuthoringError(knex, tenant, existingSchedule.contract_id);
+  if (authoringError) {
+    return actionError(authoringError);
+  }
 
-  await knex('contract_pricing_schedules')
+  await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       schedule_id: scheduleId
     })
     .delete();
+
+  return { success: true };
 });
 
 /**
@@ -331,21 +351,21 @@ export const getActivePricingScheduleByContract = withAuth(async (
   { tenant },
   contractId: string,
   date?: Date
-): Promise<IContractPricingSchedule | null> => {
+): Promise<IContractPricingSchedule | null | PricingScheduleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
   if (!tenant) {
-    throw new Error('Tenant not found');
+    return actionError('Tenant not found');
   }
 
   const checkDate = date || new Date();
 
-  const schedule = await knex('contract_pricing_schedules')
+  const db = tenantDb(knex, tenant);
+  const schedule = await db.table<IContractPricingSchedule>('contract_pricing_schedules')
     .where({
-      tenant,
       contract_id: contractId
     })
     .where('effective_date', '<=', checkDate.toISOString())

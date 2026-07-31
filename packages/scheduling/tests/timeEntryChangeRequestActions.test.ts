@@ -11,6 +11,35 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  // The tenantDb facade applies the tenant predicate that production used to
+  // pass explicitly. Mirror that here so the tenant-scoping assertions stay
+  // meaningful: merge the (alias-qualified) tenant column into each .where().
+  tenantDb: (conn: any, tenant: string) => {
+    const tenantKeyFor = (expr: string) => {
+      const alias = / as (\S+)/i.exec(expr);
+      return alias ? `${alias[1]}.tenant` : 'tenant';
+    };
+    const scope = (qb: any, tenantKey: string): any =>
+      new Proxy(qb, {
+        get(target, prop, receiver) {
+          if (prop === 'where') {
+            return (criteria: any, ...rest: any[]) =>
+              criteria && typeof criteria === 'object' && !Array.isArray(criteria) && rest.length === 0
+                ? target.where({ ...criteria, [tenantKey]: tenant })
+                : target.where(criteria, ...rest);
+          }
+          const value = Reflect.get(target, prop, receiver);
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+    return {
+      tenant,
+      table: (expr: string) => scope(conn(expr), tenantKeyFor(expr)),
+      unscoped: (expr: string) => conn(expr),
+      tenantJoin: (query: any, expr: string, _left?: string, _right?: string, opts?: any) =>
+        opts?.type === 'left' ? query.leftJoin?.(expr) ?? query : query.join?.(expr) ?? query,
+    };
+  },
 }));
 
 vi.mock('../src/actions/timeEntryDelegationAuth', () => ({

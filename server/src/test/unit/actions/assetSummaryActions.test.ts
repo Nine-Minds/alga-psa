@@ -37,6 +37,12 @@ vi.mock('@alga-psa/db', () => ({
   getTenantContext: vi.fn(() => TEST_TENANT),
   runWithTenant: vi.fn((_tenant: string, cb: () => unknown) => cb()),
   withTransaction: vi.fn(async (knex: unknown, cb: (trx: unknown) => unknown) => cb(knex)),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 // Asset-read authorization always allows so the metric computation is exercised.
@@ -153,7 +159,9 @@ describe('Asset Summary Actions', () => {
 
       await expect(
         getAssetSummaryMetrics(TEST_ASSET_ID)
-      ).rejects.toThrow('Failed to get asset summary metrics');
+      ).resolves.toEqual({
+        actionError: 'Asset not found. It may have been deleted. Please refresh and try again.',
+      });
     });
 
     it('should return healthy status for online agent', async () => {

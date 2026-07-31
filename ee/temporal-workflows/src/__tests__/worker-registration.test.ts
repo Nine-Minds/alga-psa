@@ -30,4 +30,11 @@ describe('temporal worker registration', () => {
   it('exports applianceLicenseCheckInActivity from activities index', () => {
     expect(activities.applianceLicenseCheckInActivity).toBeDefined();
   });
+
+  it('exports tenant product upgrade workflow and activities', () => {
+    expect(workflows.tenantProductUpgradeWorkflow).toBeDefined();
+    expect(activities.product_upgrade_preflight).toBeDefined();
+    expect(activities.product_upgrade_stripe_swap).toBeDefined();
+    expect(activities.product_upgrade_verify).toBeDefined();
+  });
 });

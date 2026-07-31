@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import { TenantEntity } from 'server/src/interfaces/index';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
@@ -19,7 +20,7 @@ export async function createTenant(
   const tenantId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('tenants').insert({
+  await tenantDb(db, tenantId).table('tenants').insert({
     tenant: tenantId,
     client_name: name,
     phone_number: '555-0100',
@@ -63,7 +64,6 @@ export async function createClient(
     created_at: now,
     updated_at: now,
     is_inactive: options.is_inactive ?? false,
-    credit_balance: options.credit_balance ?? 0,
     client_type: options.client_type,
     tax_id_number: options.tax_id_number,
     notes: options.notes,
@@ -82,7 +82,17 @@ export async function createClient(
     billing_email: options.billing_email
   };
 
-  await db('clients').insert(client);
+  await tenantDb(db, tenantId).table('clients').insert(client);
+
+  // Invoice generation validates that the client has a billing email on its
+  // billing/default location (invoiceService.getClientBillingEmail), so every
+  // factory client gets one. Tests exercising the missing-email failure path
+  // should create a bare client row directly instead of using this factory.
+  await createClientLocation(db, clientId, tenantId, {
+    is_billing_address: true,
+    is_default: true,
+    email: options.billing_email || 'billing@test-client.test'
+  });
 
   return clientId;
 }
@@ -116,11 +126,14 @@ export async function createClientLocation(
     country_code: options.country_code || 'US',
     country_name: options.country_name || 'United States',
     region_code: options.region_code || 'US-NY',
+    is_billing_address: options.is_billing_address ?? false,
+    is_default: options.is_default ?? false,
+    email: options.email,
     created_at: now.toISOString(),
     updated_at: now.toISOString()
   };
 
-  await db('client_locations').insert(location);
+  await tenantDb(db, tenantId).table('client_locations').insert(location);
 
   return locationId;
 }
@@ -173,7 +186,7 @@ export async function createUser(
     timezone: options.timezone
   };
 
-  await db('users').insert(user);
+  await tenantDb(db, tenantId).table('users').insert(user);
 
   return userId;
 }

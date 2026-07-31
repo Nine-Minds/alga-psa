@@ -21,6 +21,16 @@ const messageIdSchema = uuidSchema('Message ID');
 const noteIdSchema = uuidSchema('Note ID');
 const timeEntryIdSchema = uuidSchema('Time Entry ID');
 const assigneeTypeSchema = z.enum(['user', 'team']).describe('Assignee type');
+const notificationSuppressionPayloadFields = {
+  suppressContactNotifications: z
+    .boolean()
+    .default(false)
+    .describe('Skip contact-facing ticket notifications for this operation'),
+  suppressInternalNotifications: z
+    .boolean()
+    .default(false)
+    .describe('Skip internal staff ticket notifications for this operation'),
+};
 
 export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
@@ -44,6 +54,7 @@ export const ticketAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
   assignedAt: z.string().optional().describe('Assigned timestamp (ISO 8601)'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
+  ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_ASSIGNED');
 
 export type TicketAssignedEventPayload = z.infer<typeof ticketAssignedEventPayloadSchema>;
@@ -55,6 +66,7 @@ export const ticketClosedEventPayloadSchema = BaseDomainEventPayloadSchema.exten
   reason: z.string().optional().describe('Optional close reason'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
+  ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_CLOSED');
 
 export type TicketClosedEventPayload = z.infer<typeof ticketClosedEventPayloadSchema>;
@@ -64,14 +76,15 @@ export const ticketUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   updatedByUserId: userIdSchema.optional().describe('User who updated the ticket'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
+  ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_UPDATED');
 
 export type TicketUpdatedEventPayload = z.infer<typeof ticketUpdatedEventPayloadSchema>;
 
 export const ticketResponseStateChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousResponseState: z.string().optional().describe('Previous response state'),
-  newResponseState: z.string().optional().describe('New response state'),
+  previousResponseState: z.string().nullable().optional().describe('Previous response state (null on first transition)'),
+  newResponseState: z.string().nullable().optional().describe('New response state (null when cleared)'),
 }).describe('Payload for TICKET_RESPONSE_STATE_CHANGED');
 
 export type TicketResponseStateChangedEventPayload = z.infer<

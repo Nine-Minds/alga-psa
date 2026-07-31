@@ -12,7 +12,8 @@ describe('TicketService ticket comments contact authorship contract', () => {
   it('T032: getTicketComments maps contact author fields and nullable created_by', () => {
     const source = readTicketServiceSource();
 
-    expect(source).toContain(".leftJoin('contacts as c'");
+    // The contacts left join is now tenant-matched via the tenantDb facade.
+    expect(source).toContain("scopedDb.tenantJoin(commentsQuery, 'contacts as c', 'tc.contact_id', 'c.contact_name_id', { type: 'left' });");
     expect(source).toContain("'c.contact_name_id as author_contact_id'");
     expect(source).toContain("'c.full_name as author_contact_name'");
     expect(source).toContain("'c.email as author_contact_email'");

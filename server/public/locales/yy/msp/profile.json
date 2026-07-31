@@ -91,7 +91,8 @@
       "userRoles": "55555",
       "policies": "55555",
       "apiKeys": "55555",
-      "webhooks": "55555"
+      "webhooks": "55555",
+      "userProvisioning": "55555"
     },
     "loading": {
       "roles": "55555",
@@ -101,7 +102,88 @@
       "apiKeys": "55555",
       "webhooks": "55555",
       "sso": "55555",
-      "sessions": "55555"
+      "sessions": "55555",
+      "userProvisioning": "55555"
+    },
+    "scim": {
+      "title": "55555",
+      "description": "55555",
+      "loading": "55555",
+      "status": {
+        "enabled": "55555",
+        "disabled": "55555"
+      },
+      "errors": {
+        "load": "55555",
+        "update": "55555"
+      },
+      "upgrade": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "setup": {
+        "title": "55555",
+        "description": "55555",
+        "create": "55555"
+      },
+      "connection": {
+        "title": "55555",
+        "description": "55555",
+        "url": "55555",
+        "copyUrl": "55555",
+        "oneTimeToken": "55555",
+        "oneTimeWarning": "55555",
+        "rotate": "55555",
+        "revokePrevious": "55555",
+        "enabled": "55555",
+        "disableWarning": "55555"
+      },
+      "health": {
+        "title": "55555",
+        "lastRequest": "55555",
+        "lastSuccess": "55555",
+        "tokenAge": "55555",
+        "lastError": "55555"
+      },
+      "mapping": {
+        "title": "55555",
+        "description": "55555",
+        "match": "55555",
+        "matchValue": "55555",
+        "scope": "55555",
+        "scopeValue": "55555",
+        "unsupported": "55555",
+        "unsupportedValue": "55555"
+      },
+      "links": {
+        "title": "55555",
+        "user": "55555",
+        "directory": "55555",
+        "state": "55555",
+        "action": "55555",
+        "drift": "55555",
+        "active": "55555",
+        "inactive": "55555",
+        "accessOn": "55555",
+        "accessOff": "55555",
+        "unlink": "55555",
+        "empty": "55555"
+      },
+      "unresolved": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "state": {
+        "active": "55555",
+        "inactive": "55555"
+      }
+    },
+    "sso": {
+      "advanced": {
+        "title": "55555",
+        "description": "55555",
+        "inertNotice": "55555"
+      }
     },
     "userRoles": {
       "title": "55555",
@@ -576,7 +658,8 @@
         "description": "55555",
         "descriptionPlaceholder": "55555",
         "expiration": "55555",
-        "submit": "55555"
+        "submit": "55555",
+        "createFailed": "55555"
       },
       "list": {
         "title": "55555",
@@ -602,7 +685,8 @@
           "active": "55555",
           "inactive": "55555"
         },
-        "deactivate": "55555"
+        "deactivate": "55555",
+        "deactivateFailed": "55555"
       },
       "newKeyDialog": {
         "title": "55555",

@@ -17,6 +17,10 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: h.tenant })),
+  tenantDb: vi.fn((knex: any) => ({
+    table: (table: string) => knex(table),
+    unscoped: (table: string) => knex(table),
+  })),
 }));
 
 vi.mock('../../src/models/clientTaxSettings', () => ({
@@ -217,7 +221,11 @@ describe('TaxService.calculateTax', () => {
 
       await expect(
         new TaxService().calculateTax('client-1', 10000, DATE, 'XX-ZZ')
-      ).rejects.toThrow(`No active tax rate(s) found for region XX-ZZ on date ${DATE}`);
+      ).rejects.toMatchObject({
+        code: 'NO_TAX_RATE',
+        params: { region: 'XX-ZZ', date: DATE },
+        message: `No active tax rate(s) found for region XX-ZZ on date ${DATE}`,
+      });
     });
   });
 

@@ -8,15 +8,18 @@ export function IconButton({
   disabled = false,
   size = 44,
   accessibilityLabel,
+  testID,
 }: {
   icon: ReactNode;
   onPress: () => void;
   disabled?: boolean;
   size?: number;
   accessibilityLabel: string;
+  testID?: string;
 }) {
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"

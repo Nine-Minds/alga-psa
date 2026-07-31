@@ -1,8 +1,7 @@
 'use server'
 
 import type { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { BillingCycleType } from '@alga-psa/types';
 import type { ISO8601String } from '@alga-psa/types';
 import {
@@ -13,6 +12,12 @@ import {
 } from '../lib/billing/billingCycleAnchors';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import {
   applyClientCadenceChange,
   previewClientCadenceScheduleChange,
@@ -38,13 +43,15 @@ export type ClientBillingScheduleConfig = {
   anchor: NormalizedBillingCycleAnchorSettings;
 };
 
+type BillingScheduleActionError = ActionMessageError | ActionPermissionError;
+
 export const getClientBillingScheduleSummaries = withAuth(async (
   user,
   { tenant },
   clientIds: string[]
-): Promise<Record<string, ClientBillingScheduleConfig>> => {
+): Promise<Record<string, ClientBillingScheduleConfig> | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   if (clientIds.length === 0) {
     return {};
@@ -53,20 +60,20 @@ export const getClientBillingScheduleSummaries = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients as c')
-      .leftJoin('client_billing_settings as s', function () {
-        this.on('s.client_id', '=', 'c.client_id').andOn('s.tenant', '=', 'c.tenant');
-      })
-      .where('c.tenant', tenant)
+    const db = tenantDb(trx, tenant);
+    const query = db.table('clients as c');
+    db.tenantJoin(query, 'client_billing_settings as s', 's.client_id', 'c.client_id', { type: 'left' });
+
+    return await query
       .whereIn('c.client_id', clientIds)
-      .select(
-        'c.client_id',
-        'c.billing_cycle',
-        's.billing_cycle_anchor_day_of_month',
-        's.billing_cycle_anchor_month_of_year',
-        's.billing_cycle_anchor_day_of_week',
-        's.billing_cycle_anchor_reference_date'
-      );
+      .select({
+        client_id: 'c.client_id',
+        billing_cycle: 'c.billing_cycle',
+        billing_cycle_anchor_day_of_month: 's.billing_cycle_anchor_day_of_month',
+        billing_cycle_anchor_month_of_year: 's.billing_cycle_anchor_month_of_year',
+        billing_cycle_anchor_day_of_week: 's.billing_cycle_anchor_day_of_week',
+        billing_cycle_anchor_reference_date: 's.billing_cycle_anchor_reference_date',
+      });
   });
 
   const summaries: Record<string, ClientBillingScheduleConfig> = {};
@@ -99,15 +106,22 @@ export const updateClientBillingSchedule = withAuth(async (
   user,
   { tenant },
   input: UpdateClientBillingScheduleInput
-): Promise<{ success: true }> => {
+): Promise<{ success: true } | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await applyClientCadenceChange(trx, tenant, input);
-  });
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await applyClientCadenceChange(trx, tenant, input);
+    });
+  } catch (error) {
+    if (error instanceof Error && /client.*not found/i.test(error.message)) {
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    throw error;
+  }
 
   return { success: true };
 });
@@ -128,17 +142,17 @@ export const previewClientCadenceChange = withAuth(async (
   user,
   { tenant },
   input: PreviewClientCadenceChangeInput
-): Promise<ClientCadenceChangePreview> => {
+): Promise<ClientCadenceChangePreview | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     let anchorInput = input.anchor;
     if (!anchorInput) {
-      const settings = await trx('client_billing_settings')
-        .where({ tenant, client_id: input.clientId })
+      const settings = await tenantDb(trx, tenant).table('client_billing_settings')
+        .where({ client_id: input.clientId })
         .first()
         .select(
           'billing_cycle_anchor_day_of_month',

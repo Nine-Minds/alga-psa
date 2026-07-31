@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IContact } from '@alga-psa/types';
 import type { ContactFilterStatus } from './types';
 import { ContactModel } from '../models/contactModel';
@@ -35,19 +36,25 @@ function sortContacts(
   });
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string,
+): Knex.QueryBuilder<any, any> {
+  return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
+}
+
 export async function getContactByContactNameId(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   contactNameId: string
 ): Promise<IContact | null> {
-  const baseContact = await knexOrTrx('contacts')
-    .select('contacts.*', 'clients.client_name')
-    .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-      this.on('contacts.client_id', 'clients.client_id').andOn('clients.tenant', 'contacts.tenant');
-    })
+  const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
+    .select('contacts.*', 'clients.client_name');
+  tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
+  const baseContact = await query
     .where({
       'contacts.contact_name_id': contactNameId,
-      'contacts.tenant': tenant,
     })
     .first();
 
@@ -65,19 +72,16 @@ export async function getContactsByClient(
   sortBy: ContactSortBy = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> {
-  const query = knexOrTrx('contacts')
+  const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
     .select('contacts.*', 'clients.client_name')
-    .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-      this.on('contacts.client_id', 'clients.client_id').andOn('clients.tenant', 'contacts.tenant');
-    })
     .where('contacts.client_id', clientId)
-    .andWhere('contacts.tenant', tenant)
     .modify((qb: Knex.QueryBuilder) => {
       if (status !== 'all') {
         qb.where('contacts.is_inactive', status === 'inactive');
       }
     })
     .orderBy('contacts.full_name', 'asc');
+  tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
 
   const contacts = await ContactModel.hydrateContactsWithPhoneNumbers((await query) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
   return sortContacts(contacts, sortBy, sortDirection)
@@ -89,14 +93,12 @@ export async function getAllActiveContacts(
   tenant: string,
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> {
-  const contacts = await ContactModel.hydrateContactsWithPhoneNumbers((await knexOrTrx('contacts')
+  const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
     .select('contacts.*', 'clients.client_name')
-    .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
-      this.on('contacts.client_id', 'clients.client_id').andOn('clients.tenant', 'contacts.tenant');
-    })
-    .where('contacts.tenant', tenant)
     .andWhere('contacts.is_inactive', false)
-    .orderBy('contacts.full_name', sortDirection)) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
+    .orderBy('contacts.full_name', sortDirection);
+  tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
+  const contacts = await ContactModel.hydrateContactsWithPhoneNumbers((await query) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
 
   return contacts.map((c) => ({ ...c, avatarUrl: (c as any).avatarUrl ?? null } as IContact));
 }

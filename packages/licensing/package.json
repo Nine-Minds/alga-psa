@@ -27,11 +27,9 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
-    "@alga-psa/validation": "*",
-    "jsonwebtoken": "^9.0.2"
+    "@alga-psa/validation": "*"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.8",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
   }

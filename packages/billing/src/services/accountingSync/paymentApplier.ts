@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import type { AccountingExternalChange } from '@alga-psa/types';
 import { SyncMappingLedger } from './syncMappingLedger';
@@ -62,6 +63,27 @@ function toCents(value: unknown): number {
 function paymentReference(payload: Record<string, any> | undefined, externalId: string): string {
   const ref = payload?.PaymentRefNum;
   return typeof ref === 'string' && ref.trim().length > 0 ? ref.trim() : externalId;
+}
+
+/** QBO's TxnDate is the bookkeeping date. Stamping "now" instead shifts every
+ *  payment that syncs across a month boundary into the wrong period. */
+function paymentTxnDate(payload: Record<string, any> | undefined): Date | undefined {
+  const raw = payload?.TxnDate;
+  if (typeof raw !== 'string' || !raw) {
+    return undefined;
+  }
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+/** A Payment carrying CreditMemo-linked lines is a credit application, not
+ *  cash — label it honestly so AR readers can tell the two apart. */
+function isCreditApplicationPayment(payload: Record<string, any> | undefined): boolean {
+  const lines = Array.isArray(payload?.Line) ? payload!.Line : [];
+  return lines.some(
+    (line: any) =>
+      Array.isArray(line?.LinkedTxn) && line.LinkedTxn.some((txn: any) => txn?.TxnType === 'CreditMemo')
+  );
 }
 
 async function resolveAllocations(
@@ -140,6 +162,8 @@ async function applyAllocations(
     typeof (change.payload as any)?.CurrencyRef?.value === 'string'
       ? String((change.payload as any).CurrencyRef.value)
       : undefined;
+  const txnDate = paymentTxnDate(change.payload);
+  const creditApplication = isCreditApplicationPayment(change.payload);
 
   const recorded: RecordedAllocation[] = [];
   for (const allocation of allocations) {
@@ -149,9 +173,14 @@ async function applyAllocations(
       provider,
       referenceNumber: reference,
       currency,
-      notes: `QuickBooks payment ${reference}`,
+      paymentDate: txnDate,
+      notes: creditApplication
+        ? `QuickBooks credit applied ${reference}`
+        : `QuickBooks payment ${reference}`,
       transactionMetadata: {
         external_payment_id: change.externalId,
+        qbo_payment_kind: creditApplication ? 'credit_application' : 'payment',
+        ...(txnDate ? { qbo_txn_date: txnDate.toISOString().slice(0, 10) } : {}),
         realm: deps.targetRealm
       }
     });
@@ -181,8 +210,8 @@ async function loadTargetInvoices(
   const invoiceIds = [...new Set(allocations.map((allocation) => allocation.invoiceId))];
 
   for (const invoiceId of invoiceIds) {
-    const invoiceRow = await deps.knex('invoices')
-      .where({ tenant: deps.tenantId, invoice_id: invoiceId })
+    const invoiceRow = await tenantDb(deps.knex, deps.tenantId).table('invoices')
+      .where({ invoice_id: invoiceId })
       .select('status', 'total_amount', 'credit_applied')
       .first<PaymentTargetInvoiceRow | undefined>();
 

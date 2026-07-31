@@ -17,7 +17,14 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  type ActionMessageError,
+  type ActionPermissionError,
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface StatusPauseState {
   statusId: string;
@@ -26,6 +33,9 @@ interface StatusPauseState {
   pausesSla: boolean;
   originalPausesSla: boolean;
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function SlaPauseSettings() {
   const [slaSettings, setSlaSettings] = useState<ISlaSettings | null>(null);
@@ -79,7 +89,7 @@ export function SlaPauseSettings() {
         setStatusPauseStates(states);
       } catch (err) {
         handleError(err, 'Failed to load SLA pause settings');
-        setError(err instanceof Error ? err.message : 'Failed to load SLA pause settings');
+        setError('Failed to load SLA pause settings');
       } finally {
         setIsLoading(false);
       }
@@ -107,6 +117,11 @@ export function SlaPauseSettings() {
       const updatedSettings = await updateSlaSettings({
         pause_on_awaiting_client: checked,
       });
+      if (isReturnedActionError(updatedSettings)) {
+        handleError(updatedSettings, getErrorMessage(updatedSettings));
+        return;
+      }
+
       setSlaSettings(updatedSettings);
       toast.success('Global SLA settings updated successfully');
     } catch (err) {
@@ -147,7 +162,11 @@ export function SlaPauseSettings() {
 
     try {
       setIsSaving(true);
-      await bulkUpdateStatusSlaPauseConfigs(changedItems);
+      const result = await bulkUpdateStatusSlaPauseConfigs(changedItems);
+      if (isReturnedActionError(result)) {
+        handleError(result, getErrorMessage(result));
+        return;
+      }
 
       // Update original values to match current values
       setStatusPauseStates((prevStates) =>

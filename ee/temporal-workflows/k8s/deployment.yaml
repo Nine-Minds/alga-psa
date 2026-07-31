@@ -36,6 +36,11 @@ spec:
           value: "default"
         - name: TEMPORAL_TASK_QUEUE
           value: "tenant-workflows"
+        # Extension runner endpoint - used by the extension-scheduled-invocation
+        # activity to POST /v1/execute. runner-exec lives in the msp namespace,
+        # so this must be the cross-namespace FQDN (the worker runs in temporal).
+        - name: RUNNER_BASE_URL
+          value: "http://runner-exec.msp.svc.cluster.local"
         # Database configuration (StackGres) - used by tenant/user activities
         - name: DB_HOST
           value: "pgvector.stackgres-pgvector.svc.cluster.local"

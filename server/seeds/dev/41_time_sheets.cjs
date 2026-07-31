@@ -1,17 +1,18 @@
-exports.seed = async function (knex) {
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
-    const glinda = await knex('users')
+exports.seed = async function (knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+    const glinda = await db.table('users')
         .where({
-            tenant: tenant.tenant,
             username: 'glinda'
         })
         .select('user_id')
         .first();
 
-    const weeklyPeriod = await knex('time_periods')
-        .where({ tenant: tenant.tenant })
+    const weeklyPeriod = await db.table('time_periods')
         .whereRaw("(end_date - start_date) <= 8")
         .orderBy('start_date', 'desc')
         .select('period_id')
@@ -19,9 +20,9 @@ exports.seed = async function (knex) {
 
     if (!glinda || !weeklyPeriod) return;
 
-    return knex('time_sheets').insert([
+    return db.table('time_sheets').insert([
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             user_id: glinda.user_id,
             period_id: weeklyPeriod.period_id,
             approval_status: 'SUBMITTED',

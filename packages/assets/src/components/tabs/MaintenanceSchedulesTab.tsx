@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@alga-psa/ui/components/Button';
 import { CalendarPlus, Pencil, Trash2 } from 'lucide-react';
 import { getAssetMaintenanceReport, getAssetMaintenanceSchedules, deleteMaintenanceSchedule } from '../../actions/assetActions';
+import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import { formatDateOnly } from '@alga-psa/core';
 import { cn } from '@alga-psa/ui';
 import { CreateMaintenanceScheduleDialog } from './CreateMaintenanceScheduleDialog';
@@ -25,11 +26,11 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
   const [isDeleting, setIsDeleting] = useState(false);
   const { data: report, isLoading, mutate } = useSWR(
     assetId ? ['asset', assetId, 'maintenance'] : null,
-    ([, id]) => getAssetMaintenanceReport(id)
+    ([, id]) => getAssetMaintenanceReport(id).then(unwrapAssetActionResult)
   );
   const { data: schedules, mutate: mutateSchedules } = useSWR(
     assetId ? ['asset', assetId, 'maintenance-schedules'] : null,
-    ([, id]) => getAssetMaintenanceSchedules(id)
+    ([, id]) => getAssetMaintenanceSchedules(id).then(unwrapAssetActionResult)
   );
 
   const handleDelete = async () => {
@@ -37,7 +38,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
     
     setIsDeleting(true);
     try {
-      await deleteMaintenanceSchedule(deletingSchedule.schedule_id);
+      unwrapAssetActionResult(await deleteMaintenanceSchedule(deletingSchedule.schedule_id));
       mutate();
       mutateSchedules();
       setDeletingSchedule(null);

@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { resolveTier, type TenantTier } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 
 const WORKFLOW_STEP_LIMIT_METADATA_KEY = 'workflow_step_limit';
 const ACTIVE_STATUSES = ['trialing', 'active', 'past_due', 'unpaid'] as const;
@@ -81,8 +82,18 @@ type UsageRow = {
   used_count: number;
   limit_source: WorkflowStepQuotaLimitSource;
   tier: TenantTier;
+  metadata_json?: Record<string, unknown> | null;
+  created_at?: string | Date;
   updated_at?: string | Date;
 };
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string,
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 function toIso(value: string | Date): string {
   return typeof value === 'string' ? new Date(value).toISOString() : value.toISOString();
@@ -128,14 +139,15 @@ async function hasStripeTables(knex: Knex): Promise<boolean> {
 }
 
 async function getTenantTier(knex: Knex, tenant: string): Promise<TenantTier> {
-  const row = await knex('tenants').where({ tenant }).select('plan').first<{ plan?: string | null }>();
+  const row = await tenantScopedTable<{ plan?: string | null }>(knex, tenant, 'tenants')
+    .select('plan')
+    .first();
   return resolveTier(row?.plan ?? null).tier;
 }
 
 async function findPreferredSubscription(knex: Knex, tenant: string, now: Date): Promise<StripeSubscriptionRow | null> {
   const nowIso = now.toISOString();
-  const subscriptions = await knex<StripeSubscriptionRow>('stripe_subscriptions')
-    .where({ tenant })
+  const subscriptions = await tenantScopedTable<StripeSubscriptionRow>(knex, tenant, 'stripe_subscriptions')
     .whereIn('status', ACTIVE_STATUSES as unknown as string[])
     .whereNotNull('current_period_start')
     .whereNotNull('current_period_end')
@@ -156,9 +168,12 @@ async function findPreferredSubscription(knex: Knex, tenant: string, now: Date):
 }
 
 async function resolveMetadataLimit(knex: Knex, tenant: string, priceId: string): Promise<MetadataLimit | null> {
-  const price = await knex('stripe_prices')
-    .where({ tenant, stripe_price_id: priceId })
-    .first<{ metadata?: Record<string, unknown> | null; stripe_product_id?: string | null }>();
+  const price = await tenantScopedTable<{
+    metadata?: Record<string, unknown> | null;
+    stripe_product_id?: string | null;
+  }>(knex, tenant, 'stripe_prices')
+    .where('stripe_price_id', priceId)
+    .first();
 
   const priceRaw = price?.metadata?.[WORKFLOW_STEP_LIMIT_METADATA_KEY];
   const priceValue = parseLimitMetadata(priceRaw, 'stripe_price_metadata');
@@ -174,9 +189,9 @@ async function resolveMetadataLimit(knex: Knex, tenant: string, priceId: string)
 
   if (!price?.stripe_product_id) return null;
 
-  const product = await knex('stripe_products')
-    .where({ tenant, stripe_product_id: price.stripe_product_id })
-    .first<{ metadata?: Record<string, unknown> | null }>();
+  const product = await tenantScopedTable<{ metadata?: Record<string, unknown> | null }>(knex, tenant, 'stripe_products')
+    .where('stripe_product_id', price.stripe_product_id)
+    .first();
 
   const productRaw = product?.metadata?.[WORKFLOW_STEP_LIMIT_METADATA_KEY];
   const productValue = parseLimitMetadata(productRaw, 'stripe_product_metadata');
@@ -241,8 +256,8 @@ export class WorkflowStepQuotaService {
       });
     }
 
-    const usage = await knex<UsageRow>('workflow_step_usage_periods')
-      .where({ tenant, period_start: periodStart, period_end: periodEnd })
+    const usage = await tenantScopedTable<UsageRow>(knex, tenant, 'workflow_step_usage_periods')
+      .where({ period_start: periodStart, period_end: periodEnd })
       .first();
 
     const usedCount = usage?.used_count ?? 0;
@@ -269,7 +284,7 @@ export class WorkflowStepQuotaService {
         reservedAt: now.toISOString(),
       };
 
-      await trx('workflow_step_usage_periods')
+      await tenantScopedTable<UsageRow>(trx, summary.tenant, 'workflow_step_usage_periods')
         .insert({
           tenant: summary.tenant,
           period_start: summary.periodStart,
@@ -295,8 +310,8 @@ export class WorkflowStepQuotaService {
           updated_at: new Date().toISOString(),
         });
 
-      const usage = await trx<UsageRow>('workflow_step_usage_periods')
-        .where({ tenant: summary.tenant, period_start: summary.periodStart, period_end: summary.periodEnd })
+      const usage = await tenantScopedTable<UsageRow>(trx, summary.tenant, 'workflow_step_usage_periods')
+        .where({ period_start: summary.periodStart, period_end: summary.periodEnd })
         .forUpdate()
         .first();
 
@@ -324,8 +339,8 @@ export class WorkflowStepQuotaService {
         };
       }
 
-      const [updated] = await trx<UsageRow>('workflow_step_usage_periods')
-        .where({ tenant: summary.tenant, period_start: summary.periodStart, period_end: summary.periodEnd })
+      const [updated] = await tenantScopedTable<UsageRow>(trx, summary.tenant, 'workflow_step_usage_periods')
+        .where({ period_start: summary.periodStart, period_end: summary.periodEnd })
         .update({
           used_count: trx.raw('used_count + 1'),
           updated_at: trx.fn.now(),
@@ -360,17 +375,17 @@ export class WorkflowStepQuotaService {
     periodStart: string,
     periodEnd: string
   ): Promise<WorkflowStepQuotaReconciliation> {
-    const usage = await knex<UsageRow>('workflow_step_usage_periods')
+    const usage = await tenantScopedTable<UsageRow>(knex, tenant, 'workflow_step_usage_periods')
       .where({
-        tenant,
         period_start: periodStart,
         period_end: periodEnd,
       })
       .first();
 
-    const ledgerRow = await knex('workflow_run_steps as s')
-      .join('workflow_runs as r', 'r.run_id', 's.run_id')
-      .where('r.tenant', tenant)
+    const db = tenantDb(knex, tenant);
+    const ledgerQuery = db.table('workflow_run_steps as s');
+    db.tenantJoin(ledgerQuery, 'workflow_runs as r', 'r.run_id', 's.run_id');
+    const ledgerRow = await ledgerQuery
       .andWhere('s.started_at', '>=', periodStart)
       .andWhere('s.started_at', '<', periodEnd)
       .count<{ count: string }>('s.step_id as count')

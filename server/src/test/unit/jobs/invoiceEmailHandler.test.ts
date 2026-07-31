@@ -17,8 +17,10 @@ const mocks = vi.hoisted(() => ({
   // Clients
   getClientById: vi.fn(),
   getContactByContactNameId: vi.fn(),
-  // DB connection (tenant company name lookup)
+  // DB connection (knex passed through to fetchTenantParty)
   getConnection: vi.fn(),
+  // Tenant party (sender company name lookup)
+  fetchTenantParty: vi.fn(),
   // Billing actions
   getInvoiceForRendering: vi.fn(),
   getInvoicePaymentLinkUrlForEmail: vi.fn(),
@@ -44,7 +46,7 @@ vi.mock('server/src/services/emailService', () => ({
   getEmailService: mocks.getEmailService,
 }));
 
-vi.mock('server/src/lib/storage/StorageService', () => ({
+vi.mock('@alga-psa/storage/StorageService', () => ({
   StorageService: { downloadFile: mocks.downloadFile },
 }));
 
@@ -68,6 +70,10 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
 
 vi.mock('@alga-psa/billing/actions/paymentActions', () => ({
   getInvoicePaymentLinkUrlForEmail: mocks.getInvoicePaymentLinkUrlForEmail,
+}));
+
+vi.mock('@alga-psa/billing/lib/adapters/tenantPartyAdapter', () => ({
+  fetchTenantParty: mocks.fetchTenantParty,
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -150,12 +156,15 @@ describe('InvoiceEmailHandler', () => {
     mocks.getContactByContactNameId.mockResolvedValue(null);
     mocks.getInvoicePaymentLinkUrlForEmail.mockResolvedValue('https://pay.example/invoice-1');
 
-    // Tenant lookup used by getTenantCompanyName
-    const tenantQuery = {
-      where: vi.fn().mockReturnThis(),
-      first: vi.fn().mockResolvedValue({ tenant: TENANT, company_name: 'MSP Co' }),
-    };
-    mocks.getConnection.mockResolvedValue(vi.fn().mockReturnValue(tenantQuery));
+    // Sender company name comes from the tenant party adapter
+    mocks.getConnection.mockResolvedValue(vi.fn());
+    mocks.fetchTenantParty.mockResolvedValue({
+      name: 'MSP Co',
+      address: null,
+      email: null,
+      phone: null,
+      logo_url: null,
+    });
   });
 
   describe('input validation', () => {
@@ -338,7 +347,7 @@ describe('InvoiceEmailHandler', () => {
     // before its own createJobDetail calls run (e.g. getInvoiceForRendering returns null), the catch
     // block (lines 301-324) updates the PREVIOUS invoice's detail records to 'failed' even though that
     // invoice was already processed and marked 'completed'. Skipped until the product bug is fixed.
-    it.skip('should not overwrite a completed invoice\'s step details when a later invoice fails early', async () => {
+    it('should not overwrite a completed invoice\'s step details when a later invoice fails early', async () => {
       mocks.getInvoiceForRendering
         .mockResolvedValueOnce(buildInvoice()) // invoice-1 succeeds
         .mockResolvedValueOnce(null) // invoice-2 fails before job details are created

@@ -2,6 +2,7 @@
 
 import { exit } from "process";
 import logger from "@alga-psa/core/logger";
+import { tenantDb } from "@alga-psa/db";
 import { getAdminConnection } from "@alga-psa/db/admin";
 import type { Knex } from "knex";
 import type { OAuthLinkProvider } from "@ee/lib/auth/oauthAccountLinks";
@@ -100,9 +101,9 @@ async function findUserIdsForDomains(
     return { userIds: [], emails: {} };
   }
 
-  const rows = await knex('users')
+  const rows = await tenantDb(knex, tenant).table('users')
     .select('user_id', 'email')
-    .where({ tenant, user_type: userType })
+    .where({ user_type: userType })
     .andWhere((builder) => {
       builder.whereRaw('lower(email) like ?', [domainPatterns[0]]);
       for (const pattern of domainPatterns.slice(1)) {

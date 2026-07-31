@@ -1,102 +1,64 @@
-"use client";
-import { useEffect, useState, useRef, Suspense  } from 'react';
-
-import { useRouter, useSearchParams } from 'next/navigation';
-
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { verifyRegisterUser } from '@alga-psa/auth/actions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import VerifyEmailRedirect from './VerifyEmailRedirect';
 
-const VerifyEmailContent = () => {
-    const { t } = useTranslation('msp/auth');
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const token = searchParams!.get('token');
-    const [countdown, setCountdown] = useState(5);
-    const [verificationSuccess, setVerificationSuccess] = useState(false);
-    const [verificationMessage, setVerificationMessage] = useState('');
-    const hasRun = useRef(false);
+export const dynamic = 'force-dynamic';
 
-    useEffect(() => {
-        const verifyToken = async () => {
-            if (token && !hasRun.current) {
-                hasRun.current = true;
-                try {
-                    const {message, wasSuccess} = await verifyRegisterUser(token);
-                    setVerificationSuccess(wasSuccess);
-                    setVerificationMessage(message);
-                } catch (error) {
-                    console.error("Verification failed:", error);
-                    setVerificationSuccess(false);
-                    setVerificationMessage(t('verifyEmail.unknownErrorMessage', 'Unknow error verifying token'));
-                }
-            }
-        };
+interface VerifyEmailPageProps {
+  searchParams?: Promise<{ token?: string }>;
+}
 
-        verifyToken();
-    }, [token]);
+export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const token = resolvedSearchParams?.token;
+  const { t } = await getServerTranslation(undefined, 'msp/auth');
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-        }, 1000);
+  // The verification runs on the server during render — equivalent to the
+  // previous client effect, but with no loading flash and the result text is
+  // server-rendered. A page refresh re-runs it, matching prior behaviour.
+  let verificationSuccess = false;
+  let verificationMessage = '';
 
-        // Redirect after 10 seconds
-        if (countdown <= 0) {
-        clearInterval(interval);
-        router.push('/auth/msp/signin');
-        }
+  if (token) {
+    try {
+      const { message, wasSuccess } = await verifyRegisterUser(token);
+      verificationSuccess = wasSuccess;
+      verificationMessage = message;
+    } catch {
+      verificationSuccess = false;
+      verificationMessage = t('verifyEmail.unknownErrorMessage', 'Unknow error verifying token');
+    }
+  }
 
-        return () => clearInterval(interval);
-    }, [countdown, router]);
-
-    return (
-        <div className="min-h-screen bg-[rgb(var(--color-background-50))] flex items-center justify-center">
-        <div className="bg-card p-8 rounded-lg shadow-lg max-w-md text-center">
-            
-            {
-                token
-                ?
-                verificationSuccess
-                ?
-                <>
-                    <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">{t('verifyEmail.welcomeTitle', 'Welcome!')}</h1>
-                    <p className="text-[rgb(var(--color-text-700))] mb-6">
-                    {t('verifyEmail.welcomeMessage', 'Your email has been successfully verified. You will be redirected to the sign in page shortly.')}
-                    </p>
-                </>
-                :
-                <>
-                    <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">{t('verifyEmail.processErrorTitle', 'Process Error!')}</h1>
-                    <p className="text-[rgb(var(--color-text-700))] mb-6">
-                        {verificationMessage}
-                    </p>
-                </>
-                :
-                <>
-                    <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">{t('verifyEmail.errorTitle', 'Error!')}</h1>
-                    <p className="text-[rgb(var(--color-text-700))] mb-6">
-                    {t('verifyEmail.tokenRequiredMessage', 'Verification process required a token. Please try again.')}
-                    </p>
-                </>
-            }
-            <p className="text-[rgb(var(--color-text-500))] mb-4">{t('verifyEmail.redirecting', 'Redirecting in {{count}} seconds...', { count: countdown })}</p>
-            <button
-            onClick={() => router.push('/auth/msp/signin')}
-            className="mt-4 px-4 py-2 bg-[rgb(var(--color-primary-600))] text-white rounded-md shadow hover:bg-[rgb(var(--color-primary-700))] transition"
-            >
-            {t('verifyEmail.goToSignIn', 'Go to Sign In')}
-            </button>
-        </div>
-        </div>
-    );
-};
-
-const VerifyEmail: React.FC = () => {
-    return (
-    <Suspense fallback={<div>Loading...</div>}>
-        <VerifyEmailContent />
-    </Suspense>
-    );
-};
-
-export default VerifyEmail;
+  return (
+    <div className="min-h-screen bg-[rgb(var(--color-background-50))] flex items-center justify-center">
+      <div className="bg-card p-8 rounded-lg shadow-lg max-w-md text-center">
+        {token ? (
+          verificationSuccess ? (
+            <>
+              <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">{t('verifyEmail.welcomeTitle', 'Welcome!')}</h1>
+              <p className="text-[rgb(var(--color-text-700))] mb-6">
+                {t('verifyEmail.welcomeMessage', 'Your email has been successfully verified. You will be redirected to the sign in page shortly.')}
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">{t('verifyEmail.processErrorTitle', 'Process Error!')}</h1>
+              <p className="text-[rgb(var(--color-text-700))] mb-6">
+                {verificationMessage}
+              </p>
+            </>
+          )
+        ) : (
+          <>
+            <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">{t('verifyEmail.errorTitle', 'Error!')}</h1>
+            <p className="text-[rgb(var(--color-text-700))] mb-6">
+              {t('verifyEmail.tokenRequiredMessage', 'Verification process required a token. Please try again.')}
+            </p>
+          </>
+        )}
+        <VerifyEmailRedirect />
+      </div>
+    </div>
+  );
+}

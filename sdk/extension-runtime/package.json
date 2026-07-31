@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.18",
-    "esbuild": "^0.27.3",
+    "esbuild": "^0.28.1",
     "tsup": "^8.5.1",
     "typescript": "^5.4.0",
     "vitest": "^4.0.18"

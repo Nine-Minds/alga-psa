@@ -7,6 +7,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useClientDrawer } from '@alga-psa/ui';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { AssetAgentCell, AssetCoverageCell, AssetIdentityMeta, AssetPatchingCell } from './assetListCells';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -32,6 +33,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import type { Asset, AssetListResponse, AssetQueryParams, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation } from '@alga-psa/types';
 import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
+import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -93,6 +95,12 @@ type ColumnKey =
   | 'details'
   | 'status'
   | 'agent_status'
+  // Composite cells (see assetListCells): each pairs a signal with its
+  // qualifier. 'agent_status' is kept as the plain single-value column so the
+  // column picker and print selection still offer the old, narrower rendering.
+  | 'agent'
+  | 'patching'
+  | 'coverage'
   | 'client_name'
   | 'location'
   | 'actions';
@@ -137,7 +145,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const [assets, setAssets] = useState<Asset[]>(initialAssets.assets);
   const [totalAssets, setTotalAssets] = useState(initialAssets.total);
-  const [systemTotalAssets] = useState(initialAssets.total);
   const [pageSize, setPageSize] = useState(initialAssets.limit || 10);
   const [currentPage, setCurrentPage] = useState(initialAssets.page || 1);
   const [maintenanceSummaries, setMaintenanceSummaries] = useState<Record<string, ClientMaintenanceSummary>>({});
@@ -161,9 +168,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [visibleColumnIds, setVisibleColumnIds] = useState<ColumnKey[]>([
     'select',
     'name',
-    'asset_tag',
-    'asset_type',
-    'status',
+    'agent',
+    'patching',
+    'coverage',
     'client_name',
     'location',
     'actions'
@@ -344,7 +351,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         if (clientIds.length === 0) {
           setMaintenanceSummaries({});
         } else {
-          const summaries = await getClientMaintenanceSummaries(clientIds);
+          const summaries = unwrapAssetActionResult(await getClientMaintenanceSummaries(clientIds));
           setMaintenanceSummaries(summaries);
         }
       } catch (error) {
@@ -477,6 +484,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
       agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
       rmm_managed: rmmManaged,
+      // Patch/OS state lives on the per-type extension row.
+      include_extension_data: true,
       sort_by: sortBy,
       sort_direction: sortDirection,
       ...overrides,
@@ -504,10 +513,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       }
     }
 
-    const response = await listAssets(getAssetListParams({
+    const response = unwrapAssetActionResult(await listAssets(getAssetListParams({
       page: 1,
       limit: Math.max(totalAssets, pageSize, ASSETS_PRINT_PAGE_SIZE),
-    }));
+    })));
 
     setPrintAssets(selectedAssetIds.length > 0
       ? response.assets.filter((asset) => selectedAssetSet.has(asset.asset_id))
@@ -544,10 +553,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setAssetsLoading(true);
     (async () => {
       try {
-        const response = await listAssets(getAssetListParams({
-          page: currentPage,
-          limit: pageSize,
-        }));
+          const response = unwrapAssetActionResult(await listAssets(getAssetListParams({
+            page: currentPage,
+            limit: pageSize,
+          })));
 
         if (lastAssetsRequestIdRef.current !== requestId) {
           return;
@@ -669,7 +678,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const handleBulkStatusUpdate = useCallback(async () => {
     setBulkActionLoading(true);
     try {
-      const response = await bulkUpdateAssets(selectedAssetIds, { status: bulkStatusValue });
+      const response = unwrapAssetActionResult(await bulkUpdateAssets(selectedAssetIds, { status: bulkStatusValue }));
       summarizeBulkResult(
         t('assetDashboardClient.bulk.actions.updateStatus', { defaultValue: 'Status update' }),
         response.succeeded,
@@ -698,7 +707,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             ? { location_id: null, location: '' }
             : { location_id: null, location: bulkCustomLocation.trim() };
 
-      const response = await bulkUpdateAssets(selectedAssetIds, payload);
+      const response = unwrapAssetActionResult(await bulkUpdateAssets(selectedAssetIds, payload));
       summarizeBulkResult(
         t('assetDashboardClient.bulk.actions.updateLocation', { defaultValue: 'Location update' }),
         response.succeeded,
@@ -720,7 +729,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const handleBulkDelete = useCallback(async () => {
     setBulkActionLoading(true);
     try {
-      const response = await bulkDeleteAssets(selectedAssetIds);
+      const response = unwrapAssetActionResult(await bulkDeleteAssets(selectedAssetIds));
       summarizeBulkResult(
         t('assetDashboardClient.bulk.actions.deleteAssets', { defaultValue: 'Delete' }),
         response.succeeded,
@@ -906,8 +915,30 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           >
             <span className="truncate block">{record.name}</span>
           </button>
+          <AssetIdentityMeta
+            asset={record}
+            typeLabel={getAssetTypeLabel(record.asset_type)}
+            typeIcon={getAssetTypeIcon(record.asset_type)}
+          />
         </div>
       )
+    },
+    agent: {
+      dataIndex: 'agent_status',
+      title: t('assetDashboardClient.table.agent', { defaultValue: 'Agent' }),
+      render: (_: unknown, record: Asset) => <AssetAgentCell asset={record} now={Date.now()} />
+    },
+    patching: {
+      dataIndex: 'patching',
+      title: t('assetDashboardClient.table.patching', { defaultValue: 'Patching' }),
+      sortable: false,
+      render: (_: unknown, record: Asset) => <AssetPatchingCell asset={record} now={Date.now()} />
+    },
+    coverage: {
+      dataIndex: 'coverage',
+      title: t('assetDashboardClient.table.coverage', { defaultValue: 'Coverage' }),
+      sortable: false,
+      render: (_: unknown, record: Asset) => <AssetCoverageCell asset={record} now={Date.now()} />
     },
     asset_tag: {
       dataIndex: 'asset_tag',
@@ -1165,60 +1196,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               </Button>
               <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                {t('assetDashboardClient.metrics.totalAssets.title', { defaultValue: 'Total assets' })}
-              </p>
-              <p className="text-3xl font-semibold text-gray-900 mt-2">{systemTotalAssets}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {t('assetDashboardClient.metrics.totalAssets.helper', {
-                  defaultValue: 'Across all clients'
-                })}
-              </p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                {t('assetDashboardClient.metrics.filteredView.title', { defaultValue: 'Filtered view' })}
-              </p>
-              <p className="text-3xl font-semibold text-gray-900 mt-2">{filteredCount}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {t('assetDashboardClient.metrics.filteredView.helper', {
-                  defaultValue: 'Matching active filters'
-                })}
-              </p>
-            </Card>
-            <Card className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {t('assetDashboardClient.metrics.automationReady.title', {
-                    defaultValue: 'Automation ready'
-                  })}
-                </p>
-                <p className="text-3xl font-semibold text-gray-900 mt-2">{maintenanceStats.totalSchedules}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {t('assetDashboardClient.metrics.automationReady.helper', {
-                    defaultValue: 'Active maintenance schedules'
-                  })}
-                </p>
-              </div>
-              <div className="flex flex-col gap-1 text-right text-xs text-gray-500">
-                <span className="font-medium text-emerald-600">
-                  {t('assetDashboardClient.metrics.automationReady.upcoming', {
-                    defaultValue: 'Upcoming: {{count}}',
-                    count: maintenanceStats.upcomingMaintenances
-                  })}
-                </span>
-                <span className="font-medium text-amber-600">
-                  {t('assetDashboardClient.metrics.automationReady.overdue', {
-                    defaultValue: 'Overdue: {{count}}',
-                    count: maintenanceStats.overdueMaintenances
-                  })}
-                </span>
-              </div>
-            </Card>
           </div>
 
           <Card className="p-4 space-y-4" {...withDataAutomationId({ id: 'asset-toolbar-card' })}>

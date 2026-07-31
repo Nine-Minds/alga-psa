@@ -8,12 +8,13 @@ import { TestContext } from 'server/test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { assignContractLineToClient } from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from 'server/src/lib/db';
 
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -26,7 +27,8 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));
@@ -48,7 +50,8 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecret: async () => undefined,
   getAppSecret: async () => undefined,
   getSecretProviderInstance: () => ({
@@ -60,7 +63,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecret: async () => undefined,
   getAppSecret: async () => undefined,
   getSecretProviderInstance: () => ({
@@ -78,7 +82,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),
@@ -117,14 +122,10 @@ describe('Client Billing Cycle Anchors', () => {
     }, 'contract_line_id');
 
     const clientContractLineId = uuidv4();
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: clientContractLineId,
-      client_id: context.clientId,
-      contract_line_id: contractLineId,
-      start_date: options?.startDate ?? '2025-01-01T00:00:00Z',
-      end_date: options?.endDate ?? null,
-      is_active: true,
-      tenant: context.tenantId,
+    await assignContractLineToClient(context, contractLineId, {
+      startDate: options?.startDate ?? '2025-01-01T00:00:00Z',
+      endDate: options?.endDate ?? null,
+      clientContractLineId: clientContractLineId
     });
 
     return { contractLineId, clientContractLineId };

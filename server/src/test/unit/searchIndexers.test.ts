@@ -89,9 +89,10 @@ describe('search entity indexers', () => {
       'client-1',
     );
 
-    expect(knex).toHaveBeenCalledWith('clients');
+    // tenantDb self-aliases bare tables and qualifies the tenant predicate.
+    expect(knex).toHaveBeenCalledWith('clients as clients');
     expect(queryBuilder.where).toHaveBeenCalledWith(
-      'tenant',
+      'clients.tenant',
       '11111111-1111-4111-8111-111111111111',
     );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('client_id', 'client-1');
@@ -135,9 +136,9 @@ describe('search entity indexers', () => {
       500,
     );
 
-    expect(knex).toHaveBeenCalledWith('clients');
+    expect(knex).toHaveBeenCalledWith('clients as clients');
     expect(queryBuilder.where).toHaveBeenCalledWith(
-      'tenant',
+      'clients.tenant',
       '11111111-1111-4111-8111-111111111111',
     );
     expect(queryBuilder.orderBy).toHaveBeenCalledWith('client_id', 'asc');
@@ -163,7 +164,11 @@ describe('search entity indexers', () => {
       'contact-1',
     );
 
-    expect(knex).toHaveBeenCalledWith('contacts');
+    expect(knex).toHaveBeenCalledWith('contacts as contacts');
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      'contacts.tenant',
+      '11111111-1111-4111-8111-111111111111',
+    );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('contact_name_id', 'contact-1');
     expect(doc).toMatchObject({
       objectType: 'contact',
@@ -184,7 +189,11 @@ describe('search entity indexers', () => {
       'user-1',
     );
 
-    expect(knex).toHaveBeenCalledWith('users');
+    expect(knex).toHaveBeenCalledWith('users as users');
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      'users.tenant',
+      '11111111-1111-4111-8111-111111111111',
+    );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('user_id', 'user-1');
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('user_type', 'internal');
     expect(doc).toBeNull();
@@ -207,8 +216,8 @@ describe('search entity indexers', () => {
 
     expect(knex).toHaveBeenCalledWith('tickets as t');
     expect(queryBuilder.leftJoin).toHaveBeenCalledWith('clients as c', expect.any(Function));
-    expect(joinBuilder.on).toHaveBeenCalledWith('c.tenant', 't.tenant');
-    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.client_id', 't.client_id');
+    expect(joinBuilder.on).toHaveBeenCalledWith('c.client_id', '=', 't.client_id');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.tenant', '=', 't.tenant');
     expect(queryBuilder.where).toHaveBeenCalledWith(
       't.tenant',
       '11111111-1111-4111-8111-111111111111',
@@ -244,8 +253,8 @@ describe('search entity indexers', () => {
 
     expect(knex).toHaveBeenCalledWith('comments as c');
     expect(queryBuilder.join).toHaveBeenCalledWith('tickets as t', expect.any(Function));
-    expect(joinBuilder.on).toHaveBeenCalledWith('t.tenant', 'c.tenant');
-    expect(joinBuilder.andOn).toHaveBeenCalledWith('t.ticket_id', 'c.ticket_id');
+    expect(joinBuilder.on).toHaveBeenCalledWith('t.ticket_id', '=', 'c.ticket_id');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('t.tenant', '=', 'c.tenant');
     expect(queryBuilder.where).toHaveBeenCalledWith(
       'c.tenant',
       '11111111-1111-4111-8111-111111111111',
@@ -325,7 +334,11 @@ describe('search entity indexers', () => {
       'project-1',
     );
 
-    expect(knex).toHaveBeenCalledWith('projects');
+    expect(knex).toHaveBeenCalledWith('projects as projects');
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      'projects.tenant',
+      '11111111-1111-4111-8111-111111111111',
+    );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('project_id', 'project-1');
     expect(doc).toMatchObject({
       objectType: 'project',
@@ -529,8 +542,8 @@ describe('search entity indexers', () => {
 
     expect(knex).toHaveBeenCalledWith('invoices as i');
     expect(queryBuilder.leftJoin).toHaveBeenCalledWith('clients as c', expect.any(Function));
-    expect(joinBuilder.on).toHaveBeenCalledWith('c.tenant', 'i.tenant');
-    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.client_id', 'i.client_id');
+    expect(joinBuilder.on).toHaveBeenCalledWith('c.client_id', '=', 'i.client_id');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.tenant', '=', 'i.tenant');
     expect(doc).toMatchObject({
       objectType: 'invoice',
       objectId: 'invoice-1',
@@ -666,10 +679,10 @@ describe('search entity indexers', () => {
     expect(knex).toHaveBeenCalledWith('client_contracts as cc');
     expect(queryBuilder.join).toHaveBeenCalledWith('clients as cl', expect.any(Function));
     expect(queryBuilder.join).toHaveBeenCalledWith('contracts as c', expect.any(Function));
-    expect(joinBuilder.on).toHaveBeenCalledWith('cl.tenant', 'cc.tenant');
-    expect(joinBuilder.andOn).toHaveBeenCalledWith('cl.client_id', 'cc.client_id');
-    expect(joinBuilder.on).toHaveBeenCalledWith('c.tenant', 'cc.tenant');
-    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.contract_id', 'cc.contract_id');
+    expect(joinBuilder.on).toHaveBeenCalledWith('cl.client_id', '=', 'cc.client_id');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('cl.tenant', '=', 'cc.tenant');
+    expect(joinBuilder.on).toHaveBeenCalledWith('c.contract_id', '=', 'cc.contract_id');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.tenant', '=', 'cc.tenant');
     expect(doc).toMatchObject({
       objectType: 'client_contract',
       objectId: 'client-contract-1',
@@ -786,8 +799,8 @@ describe('search entity indexers', () => {
 
     expect(knex).toHaveBeenCalledWith('kb_articles as ka');
     expect(queryBuilder.join).toHaveBeenCalledWith('documents as d', expect.any(Function));
-    expect(joinBuilder.on).toHaveBeenCalledWith('d.tenant', 'ka.tenant');
-    expect(joinBuilder.andOn).toHaveBeenCalledWith('d.document_id', 'ka.document_id');
+    expect(joinBuilder.on).toHaveBeenCalledWith('d.document_id', '=', 'ka.document_id');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('d.tenant', '=', 'ka.tenant');
     expect(doc).toMatchObject({
       objectType: 'kb_article',
       objectId: 'article-1',
@@ -816,7 +829,7 @@ describe('search entity indexers', () => {
       'service-1',
     );
 
-    expect(knex).toHaveBeenCalledWith('service_catalog');
+    expect(knex).toHaveBeenCalledWith('service_catalog as service_catalog');
     expect(doc).toMatchObject({
       objectType: 'service_catalog',
       objectId: 'service-1',
@@ -963,8 +976,8 @@ describe('search entity indexers', () => {
       'workflow-task-pk',
     );
 
-    expect(knex).toHaveBeenCalledWith('workflow_tasks');
-    expect(queryBuilder.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(knex).toHaveBeenCalledWith('workflow_tasks as workflow_tasks');
+    expect(queryBuilder.where).toHaveBeenCalledWith('workflow_tasks.tenant', 'tenant-1');
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('task_id', 'workflow-task-pk');
     expect(doc).toMatchObject({
       objectType: 'workflow_task',
@@ -1175,7 +1188,8 @@ describe('search entity indexers', () => {
 
     const doc = await statusIndexer.loadOne(knex as never, 'tenant-1', 'status-1');
 
-    expect(knex).toHaveBeenCalledWith('statuses');
+    expect(knex).toHaveBeenCalledWith('statuses as statuses');
+    expect(queryBuilder.where).toHaveBeenCalledWith('statuses.tenant', 'tenant-1');
     // Scoped to ticket statuses only (project/task/interaction excluded).
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('status_type', 'ticket');
     // Non-UUID id resolves via name column (reconcile delete-sweep path).
@@ -1214,7 +1228,8 @@ describe('search entity indexers', () => {
 
     const docs = await statusIndexer.loadBatch(knex as never, 'tenant-1', undefined, 500);
 
-    expect(knex).toHaveBeenCalledWith('statuses');
+    expect(knex).toHaveBeenCalledWith('statuses as statuses');
+    expect(queryBuilder.where).toHaveBeenCalledWith('statuses.tenant', 'tenant-1');
     expect(queryBuilder.distinctOn).toHaveBeenCalledWith('name');
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('status_type', 'ticket');
     expect(queryBuilder.orderBy).toHaveBeenCalledWith('name', 'asc');

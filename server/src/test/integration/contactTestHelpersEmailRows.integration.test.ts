@@ -139,7 +139,7 @@ describe('contact test helper email rows integration', () => {
 
     expect(seedSource).toContain("primary_email_canonical_type: 'work'");
     expect(seedSource).toContain("primary_email_canonical_type: 'personal'");
-    expect(seedSource).toContain("await knex('contact_additional_email_addresses').insert([");
+    expect(seedSource).toContain("await db.table('contact_additional_email_addresses').insert([");
     expect(seedSource).toContain("canonical_type: 'billing'");
   });
 });

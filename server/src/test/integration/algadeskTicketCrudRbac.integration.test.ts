@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { TicketModel } from '@shared/models/ticketModel';
 
@@ -36,17 +37,31 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('tickets').where({ tenant: tenantId }).del();
-  await db('next_number').where({ tenant: tenantId }).del();
-  await db('categories').where({ tenant: tenantId }).del();
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('priorities').where({ tenant: tenantId }).del();
-  await db('boards').where({ tenant: tenantId }).del();
-  await db('contacts').where({ tenant: tenantId }).del();
-  await db('clients').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'tickets').del();
+  await tenantTable(tenantId, 'next_number').del();
+  await tenantTable(tenantId, 'categories').del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'priorities').del();
+  await tenantTable(tenantId, 'boards').del();
+  await tenantTable(tenantId, 'contacts').del();
+  await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function createFixture(): Promise<Fixture> {
@@ -63,7 +78,7 @@ async function createFixture(): Promise<Fixture> {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -74,7 +89,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert([
+  await tenantTable(tenantId, 'users').insert([
     {
       tenant: tenantId,
       user_id: enteredByUserId,
@@ -97,7 +112,7 @@ async function createFixture(): Promise<Fixture> {
     },
   ]);
 
-  await db('clients').insert({
+  await tenantTable(tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Client ${tenantId.slice(0, 8)}`,
@@ -108,7 +123,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(clientColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('contacts').insert({
+  await tenantTable(tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: contactId,
     client_id: clientId,
@@ -118,7 +133,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(categoryColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('boards').insert({
+  await tenantTable(tenantId, 'boards').insert({
     tenant: tenantId,
     board_id: boardId,
     board_name: 'Support',
@@ -133,7 +148,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(boardColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('priorities').insert({
+  await tenantTable(tenantId, 'priorities').insert({
     tenant: tenantId,
     priority_id: priorityId,
     priority_name: 'High',
@@ -146,7 +161,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(priorityColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('statuses').insert([
+  await tenantTable(tenantId, 'statuses').insert([
     {
       tenant: tenantId,
       status_id: statusOpenId,
@@ -181,7 +196,7 @@ async function createFixture(): Promise<Fixture> {
     },
   ]);
 
-  await db('categories').insert({
+  await tenantTable(tenantId, 'categories').insert({
     tenant: tenantId,
     category_id: categoryId,
     category_name: 'General Support',
@@ -211,13 +226,13 @@ describe('AlgaDesk ticket create/update integration', () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    boardColumns = await db('boards').columnInfo();
-    clientColumns = await db('clients').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
-    categoryColumns = await db('categories').columnInfo();
-    priorityColumns = await db('priorities').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    boardColumns = await schemaTable('boards').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
+    categoryColumns = await schemaTable('categories').columnInfo();
+    priorityColumns = await schemaTable('priorities').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -267,8 +282,8 @@ describe('AlgaDesk ticket create/update integration', () => {
       );
     });
 
-    const persisted = await db('tickets')
-      .where({ tenant: fixture.tenantId, ticket_id: createdTicketId! })
+    const persisted = await tenantTable(fixture.tenantId, 'tickets')
+      .where({ ticket_id: createdTicketId! })
       .first();
 
     expect(persisted).toBeDefined();

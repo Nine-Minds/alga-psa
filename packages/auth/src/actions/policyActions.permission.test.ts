@@ -12,8 +12,13 @@ const withTransactionMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
+  tenantDb: (conn: any) => ({ table: (table: string) => conn(table) }),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
+
+vi.mock('@alga-psa/core/server', () => ({
+  deleteEntityWithValidation: vi.fn(),
+}), { virtual: true });
 
 vi.mock('../lib/withAuth', () => ({
   withAuth:
@@ -78,7 +83,9 @@ describe('policyActions authorization', () => {
 
       const { assignRoleToUser } = await import('./policyActions');
 
-      await expect(assignRoleToUser('target-1', 'role-admin')).rejects.toThrow('Permission denied');
+      await expect(assignRoleToUser('target-1', 'role-admin')).resolves.toEqual({
+        permissionError: 'Permission denied: You do not have permission to change user roles.',
+      });
       expect(insertSpy).not.toHaveBeenCalled();
     });
 
@@ -119,7 +126,9 @@ describe('policyActions authorization', () => {
 
       const { removeRoleFromUser } = await import('./policyActions');
 
-      await expect(removeRoleFromUser('target-1', 'role-admin')).rejects.toThrow('Permission denied');
+      await expect(removeRoleFromUser('target-1', 'role-admin')).resolves.toEqual({
+        permissionError: 'Permission denied: You do not have permission to change user roles.',
+      });
       expect(delSpy).not.toHaveBeenCalled();
     });
 

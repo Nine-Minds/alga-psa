@@ -1,9 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any) => ({
+    table: (table: string) => conn(table),
+    tenantJoin: (query: any) => query.join?.() ?? query,
+  }),
+}));
+
 import {
   VISIBILITY_GROUP_MISMATCH_ERROR,
   applyVisibilityBoardFilter,
-  getClientContactVisibilityContext,
 } from './clientPortalVisibility';
+import { getClientContactVisibilityContext } from './clientPortalVisibility.server';
 
 function makeQueryBuilder() {
   return {

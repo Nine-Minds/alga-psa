@@ -13,12 +13,17 @@ import {
   BundleAuthorizationKernelProvider,
   createAuthorizationKernel,
 } from '@alga-psa/authorization/kernel';
+import { tenantDb } from '@alga-psa/db';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 900_000;
 
 describe('authorization bundle assignment and resolution integration', () => {
   let ctx: TestContext;
+
+  function tenantTable(table: string) {
+    return tenantDb(ctx.db, ctx.tenantId).table(table);
+  }
 
   beforeAll(async () => {
     ctx = await helpers.beforeAll({
@@ -132,23 +137,23 @@ describe('authorization bundle assignment and resolution integration', () => {
   it('combines role, team, and direct-user assignments as narrowing intersections', async () => {
     const roleId = randomUUID();
     const teamId = randomUUID();
-    await ctx.db('roles').insert({
+    await tenantTable('roles').insert({
       tenant: ctx.tenantId,
       role_id: roleId,
       role_name: 'Bundle Test Role',
     });
-    await ctx.db('user_roles').insert({
+    await tenantTable('user_roles').insert({
       tenant: ctx.tenantId,
       user_id: ctx.user.user_id,
       role_id: roleId,
     });
-    await ctx.db('teams').insert({
+    await tenantTable('teams').insert({
       tenant: ctx.tenantId,
       team_id: teamId,
       team_name: 'Bundle Test Team',
       manager_id: ctx.user.user_id,
     });
-    await ctx.db('team_members').insert({
+    await tenantTable('team_members').insert({
       tenant: ctx.tenantId,
       team_id: teamId,
       user_id: ctx.user.user_id,
@@ -246,7 +251,7 @@ describe('authorization bundle assignment and resolution integration', () => {
     });
 
     const apiKeyId = randomUUID();
-    await ctx.db('api_keys').insert({
+    await tenantTable('api_keys').insert({
       api_key_id: apiKeyId,
       api_key: `test-key-${randomUUID()}`,
       user_id: ctx.user.user_id,
@@ -312,12 +317,12 @@ describe('authorization bundle assignment and resolution integration', () => {
 
   it('role assignment to a published bundle immediately narrows ticket read decisions', async () => {
     const roleId = randomUUID();
-    await ctx.db('roles').insert({
+    await tenantTable('roles').insert({
       tenant: ctx.tenantId,
       role_id: roleId,
       role_name: 'Ticket Restricted Role',
     });
-    await ctx.db('user_roles').insert({
+    await tenantTable('user_roles').insert({
       tenant: ctx.tenantId,
       user_id: ctx.user.user_id,
       role_id: roleId,

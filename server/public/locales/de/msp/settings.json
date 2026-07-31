@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Allgemeine Einstellungen",
-    "description": "Verwalten Sie Ihren Organisationsnamen und den Standardkunden. Der Standardkunde wird zu Konfigurationszwecken verwendet und repräsentiert Ihren MSP.",
+    "description": "Verwalten Sie Ihren Organisationsnamen und legen Sie fest, welcher Kundendatensatz Ihr eigenes Unternehmen darstellt. Die Daten dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation.",
     "fields": {
       "organizationName": {
         "label": "Organisationsname"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Standardzeitzone speichern"
     },
     "clients": {
-      "title": "Kunden",
+      "title": "Ihr Unternehmen",
+      "help": "Der als Ihr Unternehmen markierte Kunde ist Ihre eigene Organisation. Name, Adresse und Logo dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation.",
+      "currentDefault": "Ihr Unternehmen ist derzeit {{name}}.",
+      "yourCompanyBadge": "Ihr Unternehmen",
       "table": {
         "name": "Name",
-        "default": "Standard",
+        "default": "Ihr Unternehmen (Standard)",
         "actions": "Aktionen"
       },
       "placeholder": "Wählen Sie einen Kunden zum Hinzufügen aus",
-      "addClient": "Kunde hinzufügen"
+      "addClient": "Kunde hinzufügen",
+      "confirmDialog": {
+        "title": "Ihr Unternehmen ändern?",
+        "message": "Dadurch wird Ihr Unternehmen von {{current}} auf {{next}} geändert. {{next}} repräsentiert dann Ihre eigene Organisation auf Rechnungen, Angeboten sowie in E-Mails und Einladungen an Kunden.",
+        "messageInitial": "Dadurch wird {{next}} als Ihr Unternehmen festgelegt. {{next}} repräsentiert dann Ihre eigene Organisation auf Rechnungen, Angeboten sowie in E-Mails und Einladungen an Kunden.",
+        "confirm": "Unternehmen ändern",
+        "cancel": "Abbrechen"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Zeitzone konnte nicht aktualisiert werden",
         "selectClient": "Bitte wählen Sie einen Kunden aus",
         "clientNotFound": "Kunde nicht gefunden",
+        "clientAlreadyAdded": "Dieser Kunde ist hier bereits aufgeführt",
         "addClient": "Kunde konnte nicht hinzugefügt werden",
         "removeClient": "Kunde konnte nicht entfernt werden",
         "setDefaultClient": "Standardkunde konnte nicht festgelegt werden",
@@ -150,6 +161,7 @@
       "copying": "Wird kopiert...",
       "createUser": "Benutzer erstellen",
       "sendInvitation": "Portal-Einladung senden",
+      "sendTeamInvitation": "Einladung senden",
       "cancel": "Abbrechen"
     },
     "form": {
@@ -183,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "Wenn Sie ein Passwort festlegen, wird der Benutzer sofort erstellt. Er kann sich sofort anmelden.",
-        "withoutPassword": "Kein Passwort erforderlich — wir senden eine Portal-Einladung, damit der Benutzer es selbst festlegen kann."
+        "withoutPassword": "Kein Passwort erforderlich — wir senden eine Portal-Einladung, damit der Benutzer es selbst festlegen kann.",
+        "withoutPasswordMsp": "Kein Passwort erforderlich — wir senden eine E-Mail-Einladung, damit die Person es selbst festlegen kann."
       },
       "requirePasswordChange": "Passwortänderung bei der ersten Anmeldung erforderlich"
     },
@@ -208,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Portal-Einladung erfolgreich gesendet!",
+        "teamInvitationSent": "Einladung erfolgreich gesendet!",
         "clientPortalUserCreated": "Kundenportal-Benutzer erfolgreich erstellt!",
         "copiedVanityLink": "Benutzerdefinierter Portal-Anmeldelink in die Zwischenablage kopiert",
-        "copiedCanonicalLink": "Kanonischer Portal-Anmeldelink in die Zwischenablage kopiert"
+        "copiedCanonicalLink": "Kanonischer Portal-Anmeldelink in die Zwischenablage kopiert",
+        "invitationRevoked": "Einladung widerrufen"
       },
       "error": {
         "fetchUsers": "Benutzer konnten nicht abgerufen werden",
@@ -237,6 +252,7 @@
         "contactNotFound": "Kontakt nicht gefunden.",
         "contactMissingEmailGeneric": "Der Kontakt hat keine E-Mail-Adresse. Bitte fügen Sie dem Kontakt eine E-Mail-Adresse hinzu, bevor Sie eine Einladung senden.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse. Bitte aktualisieren Sie den Kontakt mit einer gültigen E-Mail-Adresse, bevor Sie eine Einladung senden.",
+        "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
         "noDefaultClient": "Kein Standard-Client für diesen Mandanten konfiguriert. Bitte legen Sie in den allgemeinen Einstellungen einen Standard-Client fest.",
         "noDefaultLocation": "Der Standard-Client muss einen Standard-Standort konfiguriert haben, um Portaleinladungen zu senden.",
         "noLocationEmail": "Der Standort des Standard-Clients muss eine Kontakt-E-Mail-Adresse konfiguriert haben.",
@@ -245,8 +261,17 @@
         "roleRequired": "Rolle ist erforderlich",
         "invalidRole": "Ausgewählte Rolle ist ungültig",
         "licenseLimitReached": "Sie haben Ihr MSP-Benutzerlizenzlimit erreicht.",
-        "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen."
+        "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen.",
+        "revokeInvitation": "Einladung konnte nicht widerrufen werden",
+        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet"
       }
+    },
+    "invitations": {
+      "title": "Ausstehende Einladungen",
+      "description": "Eingeladene Teammitglieder, die ihr Konto noch nicht eingerichtet haben.",
+      "expiresPrefix": "Läuft ab:",
+      "revoke": "Widerrufen",
+      "revoking": "Wird widerrufen..."
     }
   },
   "userDetails": {
@@ -267,6 +292,27 @@
       "reportsTo": {
         "label": "Vorgesetzter",
         "placeholder": "Vorgesetzten auswählen"
+      },
+      "workSchedule": {
+        "label": "Arbeitszeiten",
+        "help": "Wann diese Person im Dienst ist. Wird in Auslastungsberichten verwendet. Dies ist nicht die Buchbarkeit für Kunden.",
+        "setHours": "Arbeitszeiten festlegen",
+        "clear": "Löschen",
+        "weeklyTotal": "{{hours}} Std. pro Woche",
+        "days": {
+          "0": "Sonntag",
+          "1": "Montag",
+          "2": "Dienstag",
+          "3": "Mittwoch",
+          "4": "Donnerstag",
+          "5": "Freitag",
+          "6": "Samstag"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Wochenkapazität (Stunden)",
+        "placeholder": "z. B. 40",
+        "help": "Nur als Rückfallwert verwendet, wenn oben keine Arbeitszeiten festgelegt sind."
       },
       "lastLogin": "Letzte Anmeldung",
       "roles": "Rollen",
@@ -312,7 +358,9 @@
         "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
         "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
         "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
-        "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern."
+        "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
+        "invalidCapacity": "Die Wochenkapazität muss eine positive Zahl sein.",
+        "invalidWorkSchedule": "Arbeitszeiten müssen gültige Zeiträume sein, die nach ihrem Beginn enden."
       }
     },
     "loading": "Benutzerdetails werden geladen..."
@@ -717,8 +765,12 @@
           "fetchFailed": "Abschlussregeln für dieses Board konnten nicht geladen werden",
           "autoCloseStatusRequired": "Jede automatische Abschlussregel benötigt einen Auslösestatus und einen geschlossenen Zielstatus",
           "autoCloseDaysInvalid": "Die Inaktivitätstage für den automatischen Abschluss müssen eine positive ganze Zahl sein",
-          "autoCloseWarningInvalid": "Die Warnvorlaufzeit muss kleiner als die Inaktivitätstage sein"
-        }
+          "autoCloseWarningInvalid": "Die Warnvorlaufzeit muss kleiner als die Inaktivitätstage sein",
+          "autoCloseSuppressionInvalid": "Benachrichtigungen an Agenten und Beobachter können nur übersprungen werden, wenn Kundenbenachrichtigungen übersprungen werden."
+        },
+        "suppressContactNotificationsLabel": "Kunden nicht benachrichtigen",
+        "suppressContactNotificationsHelp": "Überspringt die Warn-E-Mail, die Abschluss-E-Mail, die Umfrage-Einladung und die Kundenportal-Benachrichtigung.",
+        "suppressInternalNotificationsLabel": "Auch Agenten und Beobachter nicht benachrichtigen"
       },
       "editor": {
         "sections": {
@@ -1038,6 +1090,15 @@
     "openMenu": "Menü öffnen"
   },
   "clientPortal": {
+    "features": {
+      "title": "Portal-Funktionen",
+      "description": "Wählen Sie aus, auf welche Self-Service-Funktionen Kunden zugreifen können.",
+      "appointmentsLabel": "Termine",
+      "appointmentsHelp": "Erlauben Sie Kunden, Termine im Kundenportal anzuzeigen und anzufragen.",
+      "appointmentsEnabled": "Termine sind jetzt im Kundenportal verfügbar",
+      "appointmentsDisabled": "Termine sind jetzt im Kundenportal ausgeblendet",
+      "updateFailed": "Die Funktionen des Kundenportals konnten nicht aktualisiert werden"
+    },
     "branding": {
       "title": "Branding & Erscheinungsbild",
       "description": "Passen Sie das Erscheinungsbild Ihres Kundenportals mit Ihrem Unternehmensbranding an.",
@@ -1048,7 +1109,8 @@
         "primaryColor": "Primärfarbe",
         "secondaryColor": "Sekundärfarbe",
         "supportEmail": "Support-E-Mail",
-        "supportPhone": "Support-Telefon"
+        "supportPhone": "Support-Telefon",
+        "heroGradient": "Dashboard-Hintergrundverlauf"
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
@@ -1056,7 +1118,12 @@
         "primaryColor": "Wird für Schaltflächen, Links und Hervorhebungen verwendet",
         "secondaryColor": "Wird für Akzente und sekundäre Aktionen verwendet",
         "supportEmail": "Wird Kunden in Terminbestätigungen und anderen ausgehenden E-Mails als Kontaktadresse für den Support angezeigt.",
-        "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt."
+        "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt.",
+        "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard."
+      },
+      "heroGradient": {
+        "primaryShades": "Primärfarbe zu Primärfarbton",
+        "primarySecondary": "Primärfarbe zu Sekundärfarbe"
       },
       "preview": "Vorschau",
       "previewDarkMode": "Dunkelmodus-Vorschau",
@@ -1170,6 +1237,17 @@
         "step2": "Klicken Sie auf „Domain speichern“, um die DNS-Verifizierung und die Zertifikatsbereitstellung auszulösen.",
         "step3": "Verwenden Sie die Schaltfläche „Aktualisieren“, um den Bereitstellungsfortschritt abzufragen. Wir benachrichtigen Ihre Administratoren per E-Mail, falls die Bereitstellung fehlschlägt.",
         "canonicalHostFallback": "kanonischer Host"
+      },
+      "appliance": {
+        "helpText": "Richten Sie diesen Hostnamen auf Ihre Appliance aus und lassen Sie Ihren Reverse-Proxy den ursprünglichen Host-Header weiterleiten, bevor Sie speichern.",
+        "checklistTitle": "Reverse-Proxy-Einrichtung",
+        "step1Prefix": "Richten Sie ",
+        "step1Suffix": " auf diese Appliance aus (ein A-Record auf ihre Adresse oder ein CNAME auf Ihren Appliance-Host).",
+        "step2": "Terminieren Sie auf Ihrem Reverse-Proxy TLS für die Domain und leiten Sie an diese Appliance auf Port 3000 weiter, wobei der ursprüngliche Host-Header erhalten bleibt (z. B. proxy_set_header Host $host) und X-Forwarded-Proto: https gesendet wird.",
+        "step3": "Beschaffen und pflegen Sie das TLS-Zertifikat für die Domain auf Ihrem Proxy.",
+        "step4": "Speichern Sie die Domain hier — sie wird sofort aktiviert. Richten Sie zuerst DNS und Ihren Proxy ein, da Portal-Links sofort auf diese Domain umgestellt werden.",
+        "docLinkText": "Anleitung zur Reverse-Proxy-Einrichtung und Fehlerbehebung",
+        "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet."
       },
       "badges": {
         "pending_dns": "DNS ausstehend",
@@ -1780,6 +1858,12 @@
     "loading": {
       "title": "Single Sign-On",
       "description": "SSO-Massenzuweisungs-Werkzeuge werden geladen..."
+    },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
     },
     "autoLink": {
       "title": "SSO für neue interne Benutzer automatisch einrichten",

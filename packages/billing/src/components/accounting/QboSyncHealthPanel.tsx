@@ -10,6 +10,11 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   getAccountingSyncHealth,
   updateAccountingSyncSettingsAction,
   runAccountingSyncNow,
@@ -17,9 +22,9 @@ import {
 } from '../../actions/accountingSyncActions';
 import type { AccountingSyncHealth } from '../../actions/accountingSyncActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing-owned panel is slot-injected into the integrations settings page and reads the QBO catalogs directly (same bridge as the accounting export adapter)
-import { getQboAccounts, getQboClasses, getQboDepartments } from '@alga-psa/integrations/actions';
+import { getQboAccounts, getQboClasses, getQboDepartments } from '@alga-psa/integrations/actions/qboActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- type-only import for the QBO catalog shapes above
-import type { QboAccount, QboClass, QboDepartment } from '@alga-psa/integrations/actions';
+import type { QboAccount, QboClass, QboDepartment } from '@alga-psa/integrations/actions/qboActions';
 
 export default function QboSyncHealthPanel() {
   const { t } = useTranslation('msp/integrations');
@@ -29,13 +34,17 @@ export default function QboSyncHealthPanel() {
   const [syncNowRunning, setSyncNowRunning] = React.useState(false);
   const [syncNowFeedback, setSyncNowFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [autoSyncToggling, setAutoSyncToggling] = React.useState(false);
+  const [autoProvisionToggling, setAutoProvisionToggling] = React.useState(false);
 
   // Sync config catalog data
   const [accounts, setAccounts] = React.useState<QboAccount[]>([]);
   const [classes, setClasses] = React.useState<QboClass[]>([]);
   const [departments, setDepartments] = React.useState<QboDepartment[]>([]);
   const [catalogLoaded, setCatalogLoaded] = React.useState(false);
+  const [catalogError, setCatalogError] = React.useState<string | null>(null);
   const [savingRef, setSavingRef] = React.useState<string | null>(null);
+  const isReturnedActionError = (value: unknown) =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
   const loadHealth = React.useCallback(async () => {
     if (healthHidden) return;
@@ -54,17 +63,26 @@ export default function QboSyncHealthPanel() {
 
   React.useEffect(() => {
     if (!health?.connected || catalogLoaded) return;
+    setCatalogError(null);
     Promise.all([
-      getQboAccounts().catch(() => []),
-      getQboClasses().catch(() => []),
-      getQboDepartments().catch(() => [])
+      getQboAccounts(),
+      getQboClasses(),
+      getQboDepartments()
     ]).then(([accts, cls, deps]) => {
-      setAccounts(accts);
-      setClasses(cls);
-      setDepartments(deps);
+      const errors = [accts, cls, deps]
+        .filter(isReturnedActionError)
+        .map(getErrorMessage);
+
+      setAccounts(isReturnedActionError(accts) ? [] : accts);
+      setClasses(isReturnedActionError(cls) ? [] : cls);
+      setDepartments(isReturnedActionError(deps) ? [] : deps);
+      setCatalogError(errors.length > 0 ? errors.join(' ') : null);
+      setCatalogLoaded(true);
+    }).catch(() => {
+      setCatalogError(t('integrations.qbo.sync.catalogLoadError', { defaultValue: 'Failed to load QuickBooks sync configuration options.' }));
       setCatalogLoaded(true);
     });
-  }, [health?.connected, catalogLoaded]);
+  }, [health?.connected, catalogLoaded, t]);
 
   if (healthHidden || !health) {
     return null;
@@ -85,6 +103,12 @@ export default function QboSyncHealthPanel() {
         {syncNowFeedback && (
           <Alert variant={syncNowFeedback.type === 'success' ? 'success' : 'destructive'}>
             <AlertDescription>{syncNowFeedback.message}</AlertDescription>
+          </Alert>
+        )}
+
+        {catalogError && (
+          <Alert variant="destructive">
+            <AlertDescription>{catalogError}</AlertDescription>
           </Alert>
         )}
 
@@ -336,6 +360,39 @@ export default function QboSyncHealthPanel() {
                   // Silently ignore — badge state stays as-is
                 } finally {
                   setAutoSyncToggling(false);
+                }
+              }}
+            />
+          </div>
+
+          {/* Customer auto-provisioning toggle */}
+          <div className="flex items-center justify-between">
+            <div className="pr-4">
+              <span className="text-sm font-medium">
+                {t('integrations.qbo.sync.autoProvisionCustomersLabel', {
+                  defaultValue: 'Create QuickBooks customers automatically'
+                })}
+              </span>
+              <p className="text-xs text-muted-foreground">
+                {t('integrations.qbo.sync.autoProvisionCustomersHint', {
+                  defaultValue:
+                    'Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.'
+                })}
+              </p>
+            </div>
+            <Switch
+              id="qbo-sync-auto-provision-toggle"
+              checked={Boolean(health.settings.autoProvisionCustomers)}
+              disabled={autoProvisionToggling}
+              onCheckedChange={async (checked) => {
+                setAutoProvisionToggling(true);
+                try {
+                  const updated = await updateAccountingSyncSettingsAction({ autoProvisionCustomers: checked });
+                  setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                } catch {
+                  // Silently ignore — badge state stays as-is
+                } finally {
+                  setAutoProvisionToggling(false);
                 }
               }}
             />

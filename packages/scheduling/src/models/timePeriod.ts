@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import type { ISO8601String, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
 import { toPlainDate } from '@alga-psa/core';
+import { tenantDb } from '@alga-psa/db';
 
 // Database representation of time period
 // After migration to DATE type, pg driver may return Date objects for date columns
@@ -11,6 +12,14 @@ interface DbTimePeriod {
   start_date: string | Date;
   end_date: string | Date;
   tenant: string;
+}
+
+function tenantScopedTable<T extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder<T, T[]> {
+  return tenantDb(conn, tenant).table<T>(table);
 }
 
 // Helper function to convert Temporal.PlainDate to database format
@@ -32,8 +41,7 @@ function fromDbDate(date: string | Date): Temporal.PlainDate {
 
 export class TimePeriod {
   static async getLatest(knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITimePeriod | null> {
-    const latestPeriod = await knexOrTrx<DbTimePeriod>('time_periods')
-      .where('tenant', tenant)
+    const latestPeriod = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)
       .orderBy('end_date', 'desc')
       .first();
 
@@ -47,8 +55,7 @@ export class TimePeriod {
   }
 
   static async getAll(knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<ITimePeriod[]> {
-    const timePeriods = await knexOrTrx<DbTimePeriod>('time_periods')
-      .where('tenant', tenant)
+    const timePeriods = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)
       .select('*')
       .orderBy('start_date', 'desc');
 
@@ -72,7 +79,7 @@ export class TimePeriod {
       end_date: toDbDate(timePeriodData.end_date),
     };
 
-    const [newPeriod] = await knexOrTrx<DbTimePeriod>('time_periods').insert(dbData).returning('*');
+    const [newPeriod] = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant).insert(dbData).returning('*');
 
     return {
       ...newPeriod,
@@ -86,8 +93,7 @@ export class TimePeriod {
     tenant: string,
     date: ISO8601String | string
   ): Promise<ITimePeriodView | null> {
-    const period = await knexOrTrx<DbTimePeriod>('time_periods')
-      .where('tenant', tenant)
+    const period = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)
       .where('start_date', '<=', date)
       .where('end_date', '>', date)
       .first();
@@ -122,8 +128,7 @@ export class TimePeriod {
     const endStr = toDbDate(endDate);
 
     // For half-open intervals [A,B), two periods overlap if: existing.start_date < newEnd AND existing.end_date > newStart
-    const period = await knexOrTrx<DbTimePeriod>('time_periods')
-      .where('tenant', tenant)
+    const period = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)
       .andWhere('start_date', '<', endStr)
       .andWhere('end_date', '>', startStr)
       .modify((qb) => {
@@ -142,8 +147,7 @@ export class TimePeriod {
   }
 
   static async findById(knexOrTrx: Knex | Knex.Transaction, tenant: string, periodId: string): Promise<ITimePeriod | null> {
-    const period = await knexOrTrx<DbTimePeriod>('time_periods')
-      .where('tenant', tenant)
+    const period = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)
       .where('period_id', periodId)
       .first();
 
@@ -157,8 +161,7 @@ export class TimePeriod {
   }
 
   static async hasTimeSheets(knexOrTrx: Knex | Knex.Transaction, tenant: string, periodId: string): Promise<boolean> {
-    const count = await knexOrTrx('time_sheets')
-      .where('tenant', tenant)
+    const count = await tenantScopedTable(knexOrTrx, 'time_sheets', tenant)
       .where('period_id', periodId)
       .count('id as count')
       .first();
@@ -188,9 +191,8 @@ export class TimePeriod {
       dbUpdates.end_date = toDbDate(updates.end_date);
     }
 
-    const [updatedPeriod] = await knexOrTrx<DbTimePeriod>('time_periods')
+    const [updatedPeriod] = await tenantScopedTable<DbTimePeriod>(knexOrTrx, 'time_periods', tenant)
       .where('period_id', periodId)
-      .where('tenant', tenant)
       .update(dbUpdates)
       .returning('*');
 
@@ -206,11 +208,10 @@ export class TimePeriod {
   }
 
   static async delete(knexOrTrx: Knex | Knex.Transaction, tenant: string, periodId: string): Promise<void> {
-    const deleted = await knexOrTrx('time_periods').where('period_id', periodId).where('tenant', tenant).delete();
+    const deleted = await tenantScopedTable(knexOrTrx, 'time_periods', tenant).where('period_id', periodId).delete();
 
     if (!deleted) {
       throw new Error('Time period not found or belongs to different tenant');
     }
   }
 }
-

@@ -177,7 +177,8 @@ describe('manual invoice edit and viewing compatibility', () => {
         currency_code: 'USD',
       }),
     });
-    expect(result.invoice_charges[0]).toMatchObject({
+    expect(result.success).toBe(true);
+    expect(result.invoice.invoice_charges[0]).toMatchObject({
       item_id: 'recurring-1',
       service_period_start: '2025-01-01T00:00:00.000Z',
       service_period_end: '2025-02-01T00:00:00.000Z',
@@ -202,8 +203,9 @@ describe('manual invoice edit and viewing compatibility', () => {
     expect(mocks.persistManualInvoiceCharges).toHaveBeenCalledTimes(1);
     expect(mocks.recalculateInvoice).toHaveBeenCalledWith('invoice-1');
 
-    const recurringCharge = result.invoice_charges.find((charge: any) => charge.item_id === 'recurring-1');
-    const manualCharge = result.invoice_charges.find((charge: any) => charge.item_id === 'manual-1');
+    expect(result.success).toBe(true);
+    const recurringCharge = result.invoice.invoice_charges.find((charge: any) => charge.item_id === 'recurring-1');
+    const manualCharge = result.invoice.invoice_charges.find((charge: any) => charge.item_id === 'manual-1');
 
     expect(recurringCharge).toMatchObject({
       recurring_detail_periods: [

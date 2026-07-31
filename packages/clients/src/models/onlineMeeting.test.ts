@@ -3,10 +3,14 @@ import type { IOnlineMeeting, IOnlineMeetingArtifact } from '@alga-psa/types';
 
 const hoisted = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
+  tenantDbMock: vi.fn((conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+  })),
 }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: hoisted.createTenantKnexMock,
+  tenantDb: hoisted.tenantDbMock,
 }));
 
 import OnlineMeetingModel from './onlineMeeting';
@@ -186,6 +190,7 @@ function meeting(overrides: Partial<IOnlineMeeting> = {}): Omit<IOnlineMeeting, 
     start_time: new Date('2026-06-01T09:00:00.000Z'),
     end_time: new Date('2026-06-01T09:30:00.000Z'),
     status: 'ended',
+    error_code: null,
     recording_fetch_attempts: 0,
     last_fetch_at: null,
     appointment_request_id: 'appointment-1',
@@ -226,6 +231,7 @@ describe('OnlineMeetingModel', () => {
       online_meeting_artifacts: [],
     };
     hoisted.createTenantKnexMock.mockReset();
+    hoisted.tenantDbMock.mockClear();
     hoisted.createTenantKnexMock.mockImplementation(async (tenantId: string) => ({
       knex: createFakeKnex(tables),
       tenant: tenantId,

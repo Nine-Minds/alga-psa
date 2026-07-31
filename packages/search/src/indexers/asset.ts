@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import { flattenJsonbPayload } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -51,9 +52,8 @@ export const assetIndexer: EntityIndexer = {
   sourceEvents: ['ASSET_CREATED', 'ASSET_UPDATED', 'ASSET_DELETED', 'ASSET_ASSIGNED', 'ASSET_UNASSIGNED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<AssetSearchRow>('assets')
+    const row = await createTenantScopedIndexerQuery<AssetSearchRow>(knex, 'assets', 'assets', tenant)
       .select('asset_id', 'name', 'asset_tag', 'serial_number', 'location', 'attributes', 'client_id', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .andWhere('asset_id', id)
       .first();
 
@@ -66,9 +66,8 @@ export const assetIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<AssetSearchRow>('assets')
+    const query = createTenantScopedIndexerQuery<AssetSearchRow>(knex, 'assets', 'assets', tenant)
       .select('asset_id', 'name', 'asset_tag', 'serial_number', 'location', 'attributes', 'client_id', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .orderBy('asset_id', 'asc')
       .limit(limit);
 

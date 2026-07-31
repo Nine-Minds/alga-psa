@@ -1,11 +1,21 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { importReferenceData, getAvailableReferenceData } from '@alga-psa/reference-data/actions';
+import { importReferenceData, getAvailableReferenceData } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+
+function serviceTypeActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message.startsWith('Permission denied')) {
+    return message;
+  }
+
+  return fallback;
+}
 
 export const getStandardServiceTypes = withAuth(async (
   _user: IUserWithRoles,
@@ -27,7 +37,7 @@ export const getStandardServiceTypes = withAuth(async (
     console.error('Error getting standard service types:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: serviceTypeActionErrorMessage(error, 'Failed to load standard service types')
     };
   }
 });
@@ -55,7 +65,7 @@ export const importServiceTypes = withAuth(async (
     console.error('Error importing service types:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: serviceTypeActionErrorMessage(error, 'Failed to import service types')
     };
   }
 });
@@ -72,11 +82,8 @@ export const getTenantServiceTypes = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const serviceTypes = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('service_types')
-        .where({
-          tenant: tenant,
-          is_active: true
-        })
+      return await tenantDb(trx, tenant).table('service_types')
+        .where({ is_active: true })
         .select('id', 'name', 'order_number')
         .orderBy('name');
     });
@@ -89,7 +96,7 @@ export const getTenantServiceTypes = withAuth(async (
     console.error('Error getting tenant service types:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: serviceTypeActionErrorMessage(error, 'Failed to load service types')
     };
   }
 });
@@ -108,7 +115,7 @@ export const createTenantServiceType = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const inserted = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [row] = await trx('service_types')
+      const [row] = await tenantDb(trx, tenant).table('service_types')
         .insert({
           tenant,
           name: input.name,
@@ -125,7 +132,7 @@ export const createTenantServiceType = withAuth(async (
     console.error('Error creating tenant service type:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: serviceTypeActionErrorMessage(error, 'Failed to create service type'),
     };
   }
 });

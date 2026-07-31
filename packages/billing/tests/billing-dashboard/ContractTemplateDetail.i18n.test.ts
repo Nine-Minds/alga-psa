@@ -22,6 +22,14 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
   }, record);
 }
 
+// Source files mix quote styles (the prettier rewrite moved some components to
+// double quotes), so assert t() calls quote-agnostically.
+function expectTCall(source: string, key: string): void {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`t\\(\\s*['"]${escaped}['"]`);
+  expect(pattern.test(source), `expected a t() call for ${key}`).toBe(true);
+}
+
 describe('ContractTemplateDetail i18n wiring contract', () => {
   it('T013: page header, back actions, and key section labels use msp/contracts keys', () => {
     const source = read('../../src/components/billing-dashboard/contracts/ContractTemplateDetail.tsx');
@@ -29,7 +37,7 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/contracts.json'
     );
 
-    expect(source).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(source).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
 
     const keyChecks = [
       'templateDetail.loadingTemplate',
@@ -48,7 +56,7 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
     ];
 
     for (const key of keyChecks) {
-      expect(source).toContain(`t('${key}'`);
+      expectTCall(source, key);
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
@@ -88,7 +96,7 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
     ];
 
     for (const key of keyChecks) {
-      expect(source).toContain(`t('${key}'`);
+      expectTCall(source, key);
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
@@ -109,7 +117,7 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
     ];
 
     for (const key of templateKeyChecks) {
-      expect(templateSource).toContain(`t('${key}'`);
+      expectTCall(templateSource, key);
       expect(getLeaf(en, key)).toBeDefined();
     }
 
@@ -123,7 +131,7 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
     ];
 
     for (const key of billingTimingKeyChecks) {
-      expect(lineEditSource).toContain(`t('${key}'`);
+      expectTCall(lineEditSource, key);
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
@@ -135,7 +143,7 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
     );
 
     const keys = Array.from(
-      new Set(Array.from(source.matchAll(/(?:^|[^\w])t\('([^']+)'/g), (match) => match[1]))
+      new Set(Array.from(source.matchAll(/(?:^|[^\w])t\(\s*(['"])([^'"]+)\1/g), (match) => match[2]))
     );
 
     expect(keys.length).toBeGreaterThan(60);

@@ -34,6 +34,7 @@ import {
 } from '../utils/responseHelpers';
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 import { computeBackoff } from '../../webhooks/backoff';
+import { BadGatewayError, ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 export class WebhookService {
   constructor(
@@ -145,7 +146,7 @@ export class WebhookService {
       });
   
       if (!webhook) {
-        throw new Error('Webhook not found');
+        throw new NotFoundError('Webhook not found');
       }
   
       // Get recent delivery statistics
@@ -196,7 +197,7 @@ export class WebhookService {
     });
 
     if (!existing) {
-      throw new Error('Webhook not found');
+      throw new NotFoundError('Webhook not found');
     }
 
     // Validate URL if being updated
@@ -266,7 +267,7 @@ export class WebhookService {
     });
 
     if (!existing) {
-      throw new Error('Webhook not found');
+      throw new NotFoundError('Webhook not found');
     }
 
     // Delete webhook and related data
@@ -376,14 +377,14 @@ export class WebhookService {
       });
 
       if (!webhook) {
-        throw new Error('Webhook not found');
+        throw new NotFoundError('Webhook not found');
       }
 
       testUrl = testUrl || webhook.url;
     }
 
     if (!testUrl) {
-      throw new Error('No webhook URL provided for testing');
+      throw new ValidationError('No webhook URL provided for testing');
     }
 
     const testId = crypto.randomUUID();
@@ -438,11 +439,11 @@ export class WebhookService {
         success: true,
         data: testResult
       };
-    } catch (error) {
+    } catch {
       const testResult: WebhookTestResult = {
         test_id: testId,
         success: false,
-        error_message: error instanceof Error ? error.message : String(error),
+        error_message: 'Webhook test failed. Check the webhook configuration and try again.',
         tested_at: new Date().toISOString()
       };
 
@@ -543,7 +544,7 @@ export class WebhookService {
         eventType: event.event_type
       });
 
-    } catch (error) {
+    } catch {
       // Record failed delivery
       const delivery: WebhookDelivery = {
         delivery_id: deliveryId,
@@ -554,7 +555,7 @@ export class WebhookService {
         request_method: webhook.method,
         status: 'failed',
         attempt_number: 1,
-        error_message: error instanceof Error ? error.message : String(error),
+        error_message: 'Webhook delivery failed.',
         attempted_at: now,
         completed_at: now,
         next_retry_at: undefined,
@@ -579,11 +580,11 @@ export class WebhookService {
     });
 
     if (!delivery) {
-      throw new Error('Webhook delivery not found');
+      throw new NotFoundError('Webhook delivery not found');
     }
 
     if (delivery.status === 'delivered') {
-      throw new Error('Cannot retry successful delivery');
+      throw new ConflictError('Cannot retry successful delivery');
     }
 
     const webhook = await this.db.findOne('webhooks', {
@@ -592,7 +593,7 @@ export class WebhookService {
     });
 
     if (!webhook) {
-      throw new Error('Webhook not found');
+      throw new NotFoundError('Webhook not found');
     }
 
     // Perform retry
@@ -646,7 +647,7 @@ export class WebhookService {
         data: updated as WebhookDelivery
       };
     } catch (error) {
-      throw new Error(`Retry failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new BadGatewayError('Webhook retry failed. Please try again.');
     }
   }
 
@@ -767,7 +768,7 @@ export class WebhookService {
     });
 
     if (!template) {
-      throw new Error('Webhook template not found');
+      throw new NotFoundError('Webhook template not found');
     }
 
     // Merge template configuration with customization
@@ -847,7 +848,7 @@ export class WebhookService {
             break;
           case 'test':
             if (!testEventType) {
-              throw new Error('Test event type required for test operation');
+              throw new ValidationError('Test event type required for test operation');
             }
             await this.testWebhook({ 
               webhook_id: webhookId, 
@@ -856,8 +857,8 @@ export class WebhookService {
             break;
         }
         results.processed++;
-      } catch (error) {
-        results.errors.push(`${webhookId}: ${error instanceof Error ? error.message : String(error)}`);
+      } catch {
+        results.errors.push(`${webhookId}: Webhook operation failed.`);
       }
     }
 
@@ -875,10 +876,13 @@ export class WebhookService {
     try {
       const parsedUrl = new URL(url);
       if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-        throw new Error('Webhook URL must use HTTP or HTTPS protocol');
+        throw new ValidationError('Webhook URL must use HTTP or HTTPS protocol');
       }
     } catch (error) {
-      throw new Error('Invalid webhook URL format');
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      throw new ValidationError('Invalid webhook URL format');
     }
   }
 
@@ -890,7 +894,7 @@ export class WebhookService {
     ];
 
     if (!supportedEvents.includes(eventType)) {
-      throw new Error(`Unsupported event type: ${eventType}`);
+      throw new ValidationError(`Unsupported event type: ${eventType}`);
     }
   }
 

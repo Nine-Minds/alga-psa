@@ -167,8 +167,8 @@ console.log('[DynamicForm] Received contextData:', contextData);
         console.warn(`No handler found for action: ${actionId}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('dynamicForm.errors.generic', { defaultValue: 'An error occurred' }));
       console.error('Error handling action:', err);
+      setError(t('dynamicForm.errors.generic', { defaultValue: 'An error occurred' }));
     }
   };
   

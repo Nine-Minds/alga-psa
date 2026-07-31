@@ -24,11 +24,20 @@ vi.mock('../../../../../packages/clients/src/lib/usersHelpers', () => ({
   getAllUsersBasicAsync: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
+vi.mock('@alga-psa/clients/actions/clientActions', () => ({
   createClient: createClientMock,
+}));
+
+vi.mock('@alga-psa/clients/actions/clientLocationActions', () => ({
   createClientLocation: vi.fn().mockResolvedValue({}),
-  createClientContact: createClientContactMock,
+}));
+
+vi.mock('@alga-psa/clients/actions/countryActions', () => ({
   getAllCountries: vi.fn().mockResolvedValue([{ code: 'US', name: 'United States', phone_code: '+1' }]),
+}));
+
+vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({
+  createClientContact: createClientContactMock,
   listContactPhoneTypeSuggestions: vi.fn().mockResolvedValue(['After Hours']),
 }));
 
@@ -113,11 +122,11 @@ vi.mock('../../../../../packages/clients/src/components/clients/ClientCreatedDia
   default: () => <div data-testid="client-created-dialog" />,
 }));
 
-vi.mock('@alga-psa/tags/components', () => ({
+vi.mock('@alga-psa/tags/components/QuickAddTagPicker', () => ({
   QuickAddTagPicker: () => <div data-testid="quick-add-tag-picker" />,
 }));
 
-vi.mock('@alga-psa/tags/actions', () => ({
+vi.mock('@alga-psa/tags/actions/tagActions', () => ({
   createTagsForEntity: vi.fn().mockResolvedValue([]),
 }));
 

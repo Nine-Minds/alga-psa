@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
 import { computeTacticalAgentStatus } from './agentStatus';
@@ -66,14 +66,18 @@ export async function syncTacticalSingleAgentForTenant(args: {
   tenant: string;
   agentId: string;
 }): Promise<{ updated: boolean; assetId: string | null }> {
+  const tenant = String(args.tenant || '').trim();
+  if (!tenant) return { updated: false, assetId: null };
+
   const agentId = String(args.agentId || '').trim();
   if (!agentId) return { updated: false, assetId: null };
 
   const { knex } = await createTenantKnex();
+  const scopedDb = tenantDb(knex, tenant);
   const secretProvider = await getSecretProviderInstance();
 
-  const integration = await knex('rmm_integrations')
-    .where({ tenant: args.tenant, provider: PROVIDER })
+  const integration = await scopedDb.table('rmm_integrations')
+    .where({ provider: PROVIDER })
     .first(['instance_url', 'settings']);
 
   const authMode = (integration?.settings?.auth_mode as 'api_key' | 'knox' | undefined) || 'api_key';
@@ -82,12 +86,12 @@ export async function syncTacticalSingleAgentForTenant(args: {
 
   let client: TacticalRmmClient;
   if (authMode === 'api_key') {
-    const apiKey = await secretProvider.getTenantSecret(args.tenant, TACTICAL_API_KEY_SECRET);
+    const apiKey = await secretProvider.getTenantSecret(tenant, TACTICAL_API_KEY_SECRET);
     client = new TacticalRmmClient({ baseUrl: instanceUrl, authMode: 'api_key', apiKey: apiKey || undefined });
   } else {
-    const token = await secretProvider.getTenantSecret(args.tenant, TACTICAL_KNOX_TOKEN_SECRET);
-    const username = await secretProvider.getTenantSecret(args.tenant, TACTICAL_KNOX_USERNAME_SECRET);
-    const password = await secretProvider.getTenantSecret(args.tenant, TACTICAL_KNOX_PASSWORD_SECRET);
+    const token = await secretProvider.getTenantSecret(tenant, TACTICAL_KNOX_TOKEN_SECRET);
+    const username = await secretProvider.getTenantSecret(tenant, TACTICAL_KNOX_USERNAME_SECRET);
+    const password = await secretProvider.getTenantSecret(tenant, TACTICAL_KNOX_PASSWORD_SECRET);
 
     client = new TacticalRmmClient({
       baseUrl: instanceUrl,
@@ -99,7 +103,7 @@ export async function syncTacticalSingleAgentForTenant(args: {
         const { totp } = await unauth.checkCreds({ username, password });
         if (totp) throw new Error('TOTP required to refresh Knox token');
         const login = await unauth.login({ username, password });
-        await secretProvider.setTenantSecret(args.tenant, TACTICAL_KNOX_TOKEN_SECRET, login.token);
+        await secretProvider.setTenantSecret(tenant, TACTICAL_KNOX_TOKEN_SECRET, login.token);
         return login.token;
       },
     });
@@ -110,9 +114,8 @@ export async function syncTacticalSingleAgentForTenant(args: {
     path: `/beta/v1/agent/${encodeURIComponent(agentId)}/`,
   });
 
-  const mapping = await knex('tenant_external_entity_mappings')
+  const mapping = await scopedDb.table('tenant_external_entity_mappings')
     .where({
-      tenant: args.tenant,
       integration_type: PROVIDER,
       alga_entity_type: 'asset',
       external_entity_id: agentId,
@@ -136,13 +139,11 @@ export async function syncTacticalSingleAgentForTenant(args: {
   const vitals = extractVitals(agent);
   const agentVersion = agent?.agent_version ?? agent?.version ?? null;
 
-  const assetRow = await knex('assets')
-    .where({ tenant: args.tenant })
+  const assetRow = await scopedDb.table('assets')
     .whereRaw('assets.asset_id::text = ?', [assetIdText])
     .first(['asset_type']);
 
-  await knex('assets')
-    .where({ tenant: args.tenant })
+  await scopedDb.table('assets')
     .whereRaw('assets.asset_id::text = ?', [assetIdText])
     .update({
       name: deviceName,
@@ -155,9 +156,9 @@ export async function syncTacticalSingleAgentForTenant(args: {
     });
 
   const extensionTable = assetRow?.asset_type === 'server' ? 'server_assets' : 'workstation_assets';
-  await knex(extensionTable)
+  await scopedDb.table(extensionTable)
     .insert({
-      tenant: args.tenant,
+      tenant,
       asset_id: knex.raw('?::uuid', [assetIdText]),
       os_type: osFields.os_type,
       os_version: osFields.os_version,
@@ -178,8 +179,8 @@ export async function syncTacticalSingleAgentForTenant(args: {
       wan_ip: vitals.wan_ip,
     });
 
-  await knex('tenant_external_entity_mappings')
-    .where({ tenant: args.tenant, id: mapping.id })
+  await scopedDb.table('tenant_external_entity_mappings')
+    .where({ id: mapping.id })
     .update({
       external_realm_id: externalOrgId || mapping.external_realm_id,
       sync_status: 'synced',
@@ -189,4 +190,3 @@ export async function syncTacticalSingleAgentForTenant(args: {
 
   return { updated: true, assetId: assetIdText };
 }
-

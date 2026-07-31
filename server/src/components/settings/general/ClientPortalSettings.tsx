@@ -1,36 +1,68 @@
 'use client';
 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
-import { Globe, Palette } from 'lucide-react';
+import { Calendar, Globe, Palette } from 'lucide-react';
 import { LanguageHierarchyTable } from '@alga-psa/ui/components/LanguageHierarchyTable';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   getTenantBrandingAction,
   updateTenantBrandingAction,
+  type PortalHeroGradient,
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
+import {
   getTenantLocaleSettingsAction,
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions';
+import {
   getTenantClientPortalLocaleAction,
   updateTenantClientPortalLocaleAction,
-} from '@alga-psa/tenancy/actions';
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantClientPortalLocaleActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { useBranding } from '@alga-psa/tenancy/components';
+import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
+import { useBranding } from '@alga-psa/tenancy/components/providers/BrandingProvider';
 import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
 import SignInPagePreview from './SignInPagePreview';
-import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
+import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-actions/portalDomainActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useActionPolling } from '@alga-psa/ui/hooks';
+import {
+  getClientPortalFeatureSettings,
+  updateClientPortalFeatureSettings,
+} from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
 
 const UNSET_LOCALE_VALUE = '__inherit__';
+const DEFAULT_PORTAL_HERO_GRADIENT: PortalHeroGradient = 'primary-shades';
+
+const hexToRgb = (hex: string): [number, number, number] | null => {
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return match
+    ? [parseInt(match[1], 16), parseInt(match[2], 16), parseInt(match[3], 16)]
+    : null;
+};
+
+const rgbToCss = (rgb: [number, number, number]): string => `rgb(${rgb.join(', ')})`;
+
+/** Mirror the live portal's generated primary-700 shade in the dashboard preview. */
+const getPrimaryShadeEnd = (primary: string, isDark: boolean): string => {
+  const rgb = hexToRgb(primary);
+  if (!rgb) return primary;
+
+  return rgbToCss(rgb.map((channel) => (
+    isDark
+      ? Math.min(255, Math.round(channel + (255 - channel) * 0.75))
+      : Math.max(0, Math.round(channel * 0.7))
+  )) as [number, number, number]);
+};
 
 const ClientPortalSettings = () => {
   const { t } = useTranslation('msp/settings');
@@ -39,6 +71,9 @@ const ClientPortalSettings = () => {
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [secondaryColor, setSecondaryColor] = useState<string>('');
+  const [portalHeroGradient, setPortalHeroGradient] = useState<PortalHeroGradient>(
+    DEFAULT_PORTAL_HERO_GRADIENT,
+  );
   const [clientName, setClientName] = useState<string>('');
   const [supportEmail, setSupportEmail] = useState<string>('');
   const [supportPhone, setSupportPhone] = useState<string>('');
@@ -52,6 +87,9 @@ const ClientPortalSettings = () => {
   );
   const [localeLoading, setLocaleLoading] = useState<boolean>(true);
   const [localeSaving, setLocaleSaving] = useState<boolean>(false);
+  const [appointmentsEnabled, setAppointmentsEnabled] = useState(true);
+  const [portalFeaturesLoading, setPortalFeaturesLoading] = useState(true);
+  const [portalFeaturesSaving, setPortalFeaturesSaving] = useState(false);
   const { refreshBranding } = useBranding();
 
   const visibleLocales = useMemo(
@@ -73,36 +111,29 @@ const ClientPortalSettings = () => {
     ];
   }, [visibleLocales, orgDefaultLocale, t]);
 
-  // Check if custom domain is configured
-  useEffect(() => {
-    const checkCustomDomain = async () => {
-      try {
-        const status = await getPortalDomainStatusAction();
-        // Enable preview if there's a domain value (regardless of status)
-        setHasCustomDomain(!!status?.domain);
-      } catch (error) {
-        console.error('Failed to check custom domains:', error);
-        setHasCustomDomain(false);
-      }
-    };
-
-    // Check initially
-    checkCustomDomain();
-
-    // Check periodically every 5 seconds to detect domain changes
-    const interval = setInterval(checkCustomDomain, 5000);
-
-    return () => clearInterval(interval);
+  const checkCustomDomain = useCallback(async () => {
+    const status = await getPortalDomainStatusAction();
+    // Enable preview if there's a domain value (regardless of status)
+    setHasCustomDomain(!!status?.domain);
   }, []);
+
+  useActionPolling(checkCustomDomain, { intervalMs: 5000 });
 
   useEffect(() => {
     const loadTenantSettings = async () => {
       try {
-        const [user, brandingSettings, orgLocaleSettings, clientPortalLocaleSettings] = await Promise.all([
+        const [
+          user,
+          brandingSettings,
+          orgLocaleSettings,
+          clientPortalLocaleSettings,
+          portalFeatureSettings,
+        ] = await Promise.all([
           getCurrentUser(),
           getTenantBrandingAction(),
           getTenantLocaleSettingsAction(),
           getTenantClientPortalLocaleAction(),
+          getClientPortalFeatureSettings(),
         ]);
 
         if (user) {
@@ -113,6 +144,7 @@ const ClientPortalSettings = () => {
           setLogoUrl(brandingSettings.logoUrl || '');
           setPrimaryColor(brandingSettings.primaryColor || '');
           setSecondaryColor(brandingSettings.secondaryColor || '');
+          setPortalHeroGradient(brandingSettings.portalHeroGradient ?? DEFAULT_PORTAL_HERO_GRADIENT);
           setClientName(brandingSettings.clientName || '');
           setSupportEmail(brandingSettings.supportEmail || '');
           setSupportPhone(brandingSettings.supportPhone || '');
@@ -123,11 +155,13 @@ const ClientPortalSettings = () => {
         }
 
         setClientPortalLocale(clientPortalLocaleSettings?.defaultLocale ?? null);
+        setAppointmentsEnabled(portalFeatureSettings.appointmentsEnabled);
       } catch (error) {
         console.error('Failed to load tenant settings:', error);
       } finally {
         setBrandingLoading(false);
         setLocaleLoading(false);
+        setPortalFeaturesLoading(false);
       }
     };
 
@@ -166,9 +200,48 @@ const ClientPortalSettings = () => {
     }
   };
 
+  const handleAppointmentsEnabledChange = async (enabled: boolean) => {
+    const previous = appointmentsEnabled;
+    setAppointmentsEnabled(enabled);
+    setPortalFeaturesSaving(true);
+
+    try {
+      const result = await updateClientPortalFeatureSettings({
+        appointmentsEnabled: enabled,
+      });
+      if (isActionPermissionError(result)) {
+        setAppointmentsEnabled(previous);
+        handleError(result);
+        return;
+      }
+
+      setAppointmentsEnabled(result.appointmentsEnabled);
+      toast.success(
+        result.appointmentsEnabled
+          ? t('clientPortal.features.appointmentsEnabled', {
+              defaultValue: 'Appointments are now available in the client portal',
+            })
+          : t('clientPortal.features.appointmentsDisabled', {
+              defaultValue: 'Appointments are now hidden from the client portal',
+            }),
+      );
+    } catch (error) {
+      setAppointmentsEnabled(previous);
+      handleError(
+        error,
+        t('clientPortal.features.updateFailed', {
+          defaultValue: 'Failed to update client portal features',
+        }),
+      );
+    } finally {
+      setPortalFeaturesSaving(false);
+    }
+  };
+
   const saveBrandingSettings = async (updates: Partial<{
     primaryColor: string;
     secondaryColor: string;
+    portalHeroGradient: PortalHeroGradient;
     clientName: string;
     supportEmail: string;
     supportPhone: string;
@@ -177,6 +250,7 @@ const ClientPortalSettings = () => {
       logoUrl: logoUrl, // Keep existing logo URL
       primaryColor: updates.primaryColor || primaryColor,
       secondaryColor: updates.secondaryColor || secondaryColor,
+      portalHeroGradient: updates.portalHeroGradient ?? portalHeroGradient,
       clientName: updates.clientName !== undefined ? updates.clientName : clientName,
       supportEmail: updates.supportEmail !== undefined ? updates.supportEmail : supportEmail,
       supportPhone: updates.supportPhone !== undefined ? updates.supportPhone : supportPhone,
@@ -192,6 +266,7 @@ const ClientPortalSettings = () => {
       await saveBrandingSettings({
         primaryColor,
         secondaryColor,
+        portalHeroGradient,
         clientName,
         supportEmail,
         supportPhone,
@@ -237,14 +312,55 @@ const ClientPortalSettings = () => {
     <div className="space-y-6">
       <ClientPortalDomainSettings />
 
-      {/* Client Portal Language Card */}
       <Card>
         <CardHeader>
           <CardTitle>
             <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              {t('clientPortal.features.title', { defaultValue: 'Portal Features' })}
+            </div>
+          </CardTitle>
+          <CardDescription>
+            {t('clientPortal.features.description', {
+              defaultValue: 'Choose which self-service features clients can access.',
+            })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                {t('clientPortal.features.appointmentsLabel', {
+                  defaultValue: 'Appointments',
+                })}
+              </div>
+              <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
+                {t('clientPortal.features.appointmentsHelp', {
+                  defaultValue: 'Allow clients to view and request appointments from the client portal.',
+                })}
+              </p>
+            </div>
+            <Switch
+              id="client-portal-appointments-enabled"
+              checked={appointmentsEnabled}
+              onCheckedChange={handleAppointmentsEnabledChange}
+              disabled={portalFeaturesLoading || portalFeaturesSaving}
+              aria-label={t('clientPortal.features.appointmentsLabel', {
+                defaultValue: 'Appointments',
+              })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Client Portal Language Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
               {t('clientPortalLanguage.title', { defaultValue: 'Client Portal Language' })}
-            </div>
+            </span>
           </CardTitle>
           <CardDescription>
             {t('clientPortalLanguage.description', {
@@ -282,10 +398,10 @@ const ClientPortalSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            <div className="flex items-center gap-2">
+            <span className="flex items-center gap-2">
               <Palette className="h-5 w-5" />
               {t('clientPortal.branding.title')}
-            </div>
+            </span>
           </CardTitle>
           <CardDescription>
             {t('clientPortal.branding.description')}
@@ -443,6 +559,37 @@ const ClientPortalSettings = () => {
                   </p>
                 </div>
               </div>
+
+              <div>
+                <CustomSelect
+                  id="client-portal-hero-gradient"
+                  label={t('clientPortal.branding.fields.heroGradient', { defaultValue: 'Dashboard hero gradient' })}
+                  options={[
+                    {
+                      value: 'primary-shades',
+                      label: t('clientPortal.branding.heroGradient.primaryShades', {
+                        defaultValue: 'Primary color to primary shade',
+                      }),
+                    },
+                    {
+                      value: 'primary-secondary',
+                      label: t('clientPortal.branding.heroGradient.primarySecondary', {
+                        defaultValue: 'Primary color to secondary color',
+                      }),
+                    },
+                  ]}
+                  value={portalHeroGradient}
+                  onValueChange={(value) => setPortalHeroGradient(value as PortalHeroGradient)}
+                  className="!w-fit"
+                  disabled={brandingLoading || brandingSaving}
+                  data-automation-id="client-portal-hero-gradient-select"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('clientPortal.branding.help.heroGradient', {
+                    defaultValue: 'Controls the welcome banner gradient on the client dashboard.',
+                  })}
+                </p>
+              </div>
             </div>
 
             {/* Preview Selection Buttons */}
@@ -518,6 +665,15 @@ const ClientPortalSettings = () => {
                 const text = isDark ? 'text-slate-300' : 'text-gray-700';
                 const subtext = isDark ? 'text-slate-400' : 'text-gray-500';
                 const sidebarInactiveText = isDark ? '#94a3b8' : '#cbd5e1';
+                const previewPrimary = primaryColor || (isDark ? '#9855EE' : '#8A4DEA');
+                const previewSecondary = secondaryColor || (isDark ? '#53D7FA' : '#40CFF9');
+                const heroGradientEnd = portalHeroGradient === 'primary-secondary'
+                  ? previewSecondary
+                  : primaryColor
+                    ? getPrimaryShadeEnd(previewPrimary, isDark)
+                    : isDark
+                      ? '#B891F5'
+                      : '#6E3DBB';
 
                 return (
                   <div className={`border ${borderCls} rounded-lg overflow-hidden ${pageBg} max-h-[560px] overflow-y-auto`}>
@@ -546,7 +702,9 @@ const ClientPortalSettings = () => {
                             { label: t('clientPortal.dashboardPreview.navTickets', { defaultValue: 'Tickets' }), active: false },
                             { label: t('clientPortal.dashboardPreview.navServiceRequests', { defaultValue: 'Service Requests' }), active: false },
                             { label: t('clientPortal.dashboardPreview.navProjects', { defaultValue: 'Projects' }), active: false },
-                            { label: t('clientPortal.dashboardPreview.navAppointments', { defaultValue: 'Appointments' }), active: false },
+                            ...(appointmentsEnabled
+                              ? [{ label: t('clientPortal.dashboardPreview.navAppointments', { defaultValue: 'Appointments' }), active: false }]
+                              : []),
                             { label: t('clientPortal.dashboardPreview.navDevices', { defaultValue: 'My devices' }), active: false },
                           ].map((item, idx) => (
                             <li key={idx}>
@@ -590,7 +748,7 @@ const ClientPortalSettings = () => {
                           <div
                             className="rounded-lg p-3 text-white"
                             style={{
-                              background: `linear-gradient(135deg, ${primaryColor || '#8B5CF6'}, ${secondaryColor || '#6366F1'})`,
+                              background: `linear-gradient(90deg, ${previewPrimary}, ${heroGradientEnd})`,
                             }}
                           >
                             <div className="text-[10px] uppercase tracking-wider text-white/80">

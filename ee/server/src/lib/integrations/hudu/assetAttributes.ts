@@ -9,6 +9,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { HuduAsset } from './contracts';
 
 export interface HuduFieldAttribute {
@@ -54,8 +55,8 @@ export async function writeHuduAssetAttributes(
   fields: HuduFieldAttribute[],
   syncedAt: string
 ): Promise<number> {
-  return knex('assets')
-    .where({ tenant, asset_id: assetId })
+  return tenantDb(knex, tenant).table('assets')
+    .where({ asset_id: assetId })
     .update({
       attributes: knex.raw(
         `coalesce(attributes, '{}'::jsonb) || ?::jsonb`,

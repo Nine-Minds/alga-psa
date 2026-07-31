@@ -44,6 +44,10 @@ vi.mock('@ee/components/settings/integrations/hudu/HuduAssetLayoutMapManager', (
   default: () => <div data-testid="hudu-asset-layout-map-manager-stub" />,
 }));
 
+vi.mock('@ee/components/settings/integrations/hudu/HuduSyncAutomationManager', () => ({
+  default: () => <div data-testid="hudu-sync-automation-manager-stub" />,
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   // Stable identity: the component memoizes callbacks on `t`.
   const t = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;

@@ -1,9 +1,11 @@
 {
   "tabs": {
     "general": "Em geral",
+    "numbering": "Numeração",
     "quoting": "Citando",
     "tax": "Imposto",
-    "payments": "Pagamentos"
+    "payments": "Pagamentos",
+    "costRates": "Taxas de custo"
   },
   "general": {
     "currency": {
@@ -26,6 +28,10 @@
     "invoiceNumbering": {
       "title": "Numeração da fatura",
       "description": "Personalize como os números das faturas são gerados e exibidos."
+    },
+    "creditNoteNumbering": {
+      "title": "Numeração de notas de crédito",
+      "description": "Personalize como os números das notas de crédito são gerados e exibidos."
     },
     "zeroDollar": {
       "title": "Faturas de zero dólar",
@@ -88,23 +94,23 @@
       "fields": {
         "dueDateAction": {
           "label": "Ação de data de vencimento",
-          "help": "Escolha se as datas de vencimento da renovação devem criar chamados ou permanecer apenas na fila por padrão."
+          "help": "Escolha se as datas de vencimento da renovação devem criar tickets ou permanecer apenas na fila por padrão."
         },
         "ticketBoard": {
-          "label": "Quadro de Renovação de Chamados",
+          "label": "Quadro de Renovação de Tickets",
           "placeholderLoading": "Carregando quadros...",
           "placeholderSelect": "Selecione o quadro"
         },
         "ticketStatus": {
-          "label": "Status de renovação do chamado",
+          "label": "Status de renovação do ticket",
           "placeholderLoading": "Carregando status...",
           "placeholderSelect": "Selecione o status",
           "placeholderSelectBoardFirst": "Selecione um quadro primeiro",
-          "help": "Os status de renovação dos chamados têm como escopo o quadro selecionado."
+          "help": "Os status de renovação dos tickets têm como escopo o quadro selecionado."
         }
       },
       "options": {
-        "createTicket": "Criar chamado",
+        "createTicket": "Criar ticket",
         "queueOnly": "Somente fila"
       },
       "states": {
@@ -119,7 +125,7 @@
       },
       "errors": {
         "load": "Falha ao carregar as configurações de automação de renovação",
-        "loadStatuses": "Falha ao carregar status de chamados de renovação",
+        "loadStatuses": "Falha ao carregar status de tickets de renovação",
         "save": "Falha ao salvar as configurações de automação de renovação"
       }
     }
@@ -128,6 +134,10 @@
     "quoteNumbering": {
       "title": "Numeração de cotação",
       "description": "Personalize como os números de cotação são gerados e exibidos."
+    },
+    "salesOrderNumbering": {
+      "title": "Numeração de pedidos de venda",
+      "description": "Personalize como os números dos pedidos de venda são gerados e exibidos."
     }
   },
   "tax": {
@@ -862,6 +872,22 @@
       },
       "description": {
         "label": "Descrição"
+      },
+      "inventory": {
+        "label": "Estoque",
+        "track": "Rastrear estoque",
+        "serialized": "Serializado",
+        "kit": "Kit",
+        "createsAsset": "Cria ativo na entrega",
+        "defaultAssetType": "Tipo de ativo padrão",
+        "reorderPoint": "Ponto de reposição",
+        "reorderQuantity": "Quantidade de reposição",
+        "kitPricingMode": "Modo de preço do kit",
+        "kitPricingSum": "Soma dos componentes",
+        "kitPricingFixed": "Preço fixo"
+      },
+      "barcode": {
+        "label": "Código de barras (UPC/EAN)"
       }
     },
     "options": {
@@ -1191,6 +1217,91 @@
         "title": "Configurações de pagamento",
         "description": "Configure como os links de pagamento funcionam com suas faturas"
       }
+    }
+  },
+  "costRates": {
+    "title": "Taxas de custo",
+    "description": "Gerencie as taxas de custo de mão de obra interna com encargos totais usadas nos relatórios de rentabilidade.",
+    "loading": "Carregando taxas de custo...",
+    "default": {
+      "title": "Taxa de custo padrão do locatário",
+      "current": "Padrão atual: {{rate}} a partir de {{date}}",
+      "missing": "Nenhum padrão do locatário está configurado. Usuários sem substituições ficarão sem custo definido.",
+      "history": "Histórico da taxa padrão",
+      "empty": "Ainda não há taxas padrão."
+    },
+    "empty": {
+      "title": "As taxas de custo não estão configuradas",
+      "description": "Defina primeiro o padrão do locatário para que os relatórios possam custear a mão de obra de usuários sem substituições."
+    },
+    "table": {
+      "currentRate": "Taxa atual",
+      "actions": "Ações",
+      "usesDefault": "Usa o padrão",
+      "uncosted": "Sem custo definido",
+      "status": "Status",
+      "user": "Usuário"
+    },
+    "history": {
+      "empty": "Nenhuma taxa específica por usuário."
+    },
+    "dialog": {
+      "title": "Taxa de custo",
+      "description": "Insira o custo horário de mão de obra com encargos totais na moeda padrão do locatário."
+    },
+    "fields": {
+      "user": {
+        "label": "Usuário",
+        "default": "Padrão do locatário"
+      },
+      "rate": {
+        "label": "Custo por hora"
+      },
+      "effectiveFrom": {
+        "label": "Início da vigência"
+      },
+      "effectiveTo": {
+        "label": "Fim da vigência"
+      }
+    },
+    "actions": {
+      "setDefault": "Definir padrão",
+      "addRate": "Adicionar taxa",
+      "addUserRate": "Adicionar taxa por usuário",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "saving": "Salvando...",
+      "continue": "Continuar"
+    },
+    "warning": {
+      "title": "Existe tempo trabalhado neste período",
+      "description": "Alterar esta taxa mudará a rentabilidade histórica das entradas de tempo dentro do seu período de vigência.",
+      "body": "Continue apenas se esta for uma correção intencional."
+    },
+    "toast": {
+      "saved": "Taxa de custo salva.",
+      "deleted": "Taxa de custo excluída."
+    },
+    "errors": {
+      "load": "Falha ao carregar as taxas de custo",
+      "save": "Falha ao salvar a taxa de custo",
+      "delete": "Falha ao excluir a taxa de custo"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "{{amount}}/h",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "{{start}} - em aberto"
+    },
+    "status": {
+      "current": "Atual",
+      "scheduled": "Agendada",
+      "ended": "Encerrada"
+    },
+    "sections": {
+      "userRates": "Taxas por usuário"
     }
   }
 }

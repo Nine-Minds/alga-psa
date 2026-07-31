@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import { flattenJsonbPayload } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
@@ -42,9 +43,8 @@ export const serviceRequestSubmissionIndexer: EntityIndexer = {
   ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<ServiceRequestSubmissionSearchRow>('service_request_submissions')
+    const row = await createTenantScopedIndexerQuery<ServiceRequestSubmissionSearchRow>(knex, 'service_request_submissions', 'service_request_submissions', tenant)
       .select('submission_id', 'client_id', 'request_name', 'submitted_payload', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .andWhere('submission_id', id)
       .first();
 
@@ -57,9 +57,8 @@ export const serviceRequestSubmissionIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<ServiceRequestSubmissionSearchRow>('service_request_submissions')
+    const query = createTenantScopedIndexerQuery<ServiceRequestSubmissionSearchRow>(knex, 'service_request_submissions', 'service_request_submissions', tenant)
       .select('submission_id', 'client_id', 'request_name', 'submitted_payload', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .orderBy('submission_id', 'asc')
       .limit(limit);
 

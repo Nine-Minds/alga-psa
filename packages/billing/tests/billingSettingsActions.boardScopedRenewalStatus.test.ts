@@ -75,6 +75,10 @@ const mockWithTransaction = vi.fn(async (_knex: unknown, callback: (trx: any) =>
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => mockCreateTenantKnex(...args),
   withTransaction: (...args: unknown[]) => mockWithTransaction(...args),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({

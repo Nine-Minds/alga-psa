@@ -4,13 +4,19 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
-import { withTransaction } from '@alga-psa/db';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { createDefaultTaxSettings } from '@alga-psa/billing/actions';
-import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
-import { NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
+import { createDefaultTaxSettingsInternal } from '@alga-psa/billing/actions';
+import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
+import { isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { ConflictError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
+import {
+  createLocation as createClientLocation,
+  deleteLocation as deleteClientLocation,
+  updateLocation as updateClientLocation,
+} from '@alga-psa/clients/models';
 import {
   CreateClientData,
   UpdateClientData,
@@ -38,11 +44,49 @@ function maybeUserActorFromContext(context: ServiceContext) {
   return { actorType: 'USER' as const, actorUserId: context.userId };
 }
 
+function throwClientLocationApiError(error: unknown): never {
+  if ((error as { code?: string })?.code === '23505') {
+    throw new ConflictError('Another location is already the default for this client');
+  }
+
+  if (error instanceof Error) {
+    if (error.message === 'Client not found') {
+      throw new NotFoundError('Client not found');
+    }
+    if (error.message === 'Location not found') {
+      throw new NotFoundError('Client location not found');
+    }
+    if (error.message === 'A default location must be active') {
+      throw new ValidationError('Validation failed', [
+        { path: ['is_default'], message: error.message },
+      ]);
+    }
+    if (
+      error.message === 'Cannot unset default: no other active location available' ||
+      error.message.startsWith('Cannot delete location: it has associated ')
+    ) {
+      throw new ConflictError(error.message);
+    }
+  }
+
+  throw error;
+}
+
+function scopedTable<Row extends object = Record<string, any>>(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  tableExpression: string
+): Knex.QueryBuilder<any, any> {
+  return tenantDb(conn, tenant).table<Row>(tableExpression) as Knex.QueryBuilder<any, any>;
+}
+
 async function getExistingPublicTables(
   trx: Knex.Transaction,
+  tenantId: string,
   tableNames: string[]
 ): Promise<Set<string>> {
-  const rows = await trx('information_schema.tables')
+  const rows = await tenantDb(trx, tenantId)
+    .unscoped('information_schema.tables', 'schema discovery for optional Entra client cleanup tables')
     .select('table_name')
     .where({ table_schema: 'public' })
     .whereIn('table_name', tableNames);
@@ -65,44 +109,43 @@ async function cleanupEntraReferencesBeforeClientDelete(
     'entra_contact_reconciliation_queue',
     'entra_client_tenant_mappings',
   ];
-  const existingTables = await getExistingPublicTables(trx, tableNames);
+  const existingTables = await getExistingPublicTables(trx, tenantId, tableNames);
   if (existingTables.size === 0) {
     return;
   }
 
   const now = trx.fn.now();
+  const db = tenantDb(trx, tenantId);
 
   if (existingTables.has('entra_sync_run_tenants')) {
-    await trx('entra_sync_run_tenants')
-      .where({ tenant: tenantId, client_id: clientId })
+    await db.table('entra_sync_run_tenants')
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_links')) {
-    await trx('entra_contact_links')
-      .where({ tenant: tenantId, client_id: clientId })
+    await db.table('entra_contact_links')
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_reconciliation_queue')) {
-    await trx('entra_contact_reconciliation_queue')
-      .where({ tenant: tenantId, client_id: clientId })
+    await db.table('entra_contact_reconciliation_queue')
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_client_tenant_mappings')) {
-    const activeMappings = await trx('entra_client_tenant_mappings')
+    const activeMappings = await db.table('entra_client_tenant_mappings')
       .where({
-        tenant: tenantId,
         client_id: clientId,
         is_active: true,
       })
       .select('managed_tenant_id');
 
     if (activeMappings.length > 0) {
-      await trx('entra_client_tenant_mappings')
+      await db.table('entra_client_tenant_mappings')
         .where({
-          tenant: tenantId,
           client_id: clientId,
           is_active: true,
         })
@@ -124,11 +167,11 @@ async function cleanupEntraReferencesBeforeClientDelete(
         updated_at: now,
       }));
 
-      await trx('entra_client_tenant_mappings').insert(unmappedRows);
+      await db.table('entra_client_tenant_mappings').insert(unmappedRows);
     }
 
-    await trx('entra_client_tenant_mappings')
-      .where({ tenant: tenantId, client_id: clientId })
+    await db.table('entra_client_tenant_mappings')
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 }
@@ -160,26 +203,38 @@ export class ClientService extends BaseService<IClient> {
     } = options;
 
     return withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, context.tenant);
       // Build base query with account manager and location joins
-      let dataQuery = trx('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
-        .leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
-        })
-        .where('c.tenant', context.tenant);
+      let dataQuery = db.table('clients as c');
+      db.tenantJoin(dataQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      db.tenantJoinFirstMatching(dataQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
+        type: 'left',
+        rootTenantColumn: 'c.tenant',
+        where: (query, alias) => query.where({
+          [`${alias}.is_default`]: true,
+          [`${alias}.is_active`]: true,
+        }),
+        orderBy: [
+          { column: 'updated_at', order: 'desc' },
+          { column: 'created_at', order: 'desc' },
+          { column: 'location_id', order: 'desc' },
+        ],
+      });
 
-      let countQuery = trx('clients as c')
-        .leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
-        })
-        .where('c.tenant', context.tenant);
+      let countQuery = db.table('clients as c');
+      db.tenantJoinFirstMatching(countQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
+        type: 'left',
+        rootTenantColumn: 'c.tenant',
+        where: (query, alias) => query.where({
+          [`${alias}.is_default`]: true,
+          [`${alias}.is_active`]: true,
+        }),
+        orderBy: [
+          { column: 'updated_at', order: 'desc' },
+          { column: 'created_at', order: 'desc' },
+          { column: 'location_id', order: 'desc' },
+        ],
+      });
 
       // Apply filters
       dataQuery = this.applyClientFilters(dataQuery, filters);
@@ -197,18 +252,19 @@ export class ClientService extends BaseService<IClient> {
       // Select fields
       dataQuery = dataQuery.select(
         'c.*',
+        trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       );
 
       // Execute queries
       const [clients, [{ count }]] = await Promise.all([
         dataQuery,
-        countQuery.count('* as count')
+        countQuery.count('* as count') as unknown as Promise<Array<{ count: string }>>
       ]);
 
       // Add logo URLs
       const clientsWithLogos = await Promise.all(
-        clients.map(async (client: IClient) => {
+        (clients as IClient[]).map(async (client) => {
           const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
           return { ...client, logoUrl };
         })
@@ -228,16 +284,17 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const client = await trx('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
+      const db = tenantDb(trx, context.tenant);
+      const clientQuery = db.table<IClient>('clients as c');
+      db.tenantJoin(clientQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+
+      const client = await clientQuery
         .select(
           'c.*',
+          trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
         )
-        .where({ 'c.client_id': id, 'c.tenant': context.tenant })
+        .where({ 'c.client_id': id })
         .first();
 
       if (!client) {
@@ -250,7 +307,7 @@ export class ClientService extends BaseService<IClient> {
       return {
         ...client,
         logoUrl
-      } as IClient;
+      } as unknown as IClient;
     });
   }
 
@@ -270,8 +327,8 @@ export class ClientService extends BaseService<IClient> {
         properties: data.properties,
         payment_terms: data.payment_terms,
         billing_cycle: data.billing_cycle,
-        credit_balance: 0,
         credit_limit: data.credit_limit,
+        default_currency_code: data.default_currency_code,
         preferred_payment_method: data.preferred_payment_method,
         auto_invoice: data.auto_invoice || false,
         invoice_delivery_method: data.invoice_delivery_method,
@@ -290,7 +347,7 @@ export class ClientService extends BaseService<IClient> {
       };
 
       // Insert into clients table
-      const [client] = await trx('clients').insert(clientData).returning('*');
+      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*');
 
       await ensureDefaultContractForClientIfBillingConfigured(trx, {
         tenant: context.tenant,
@@ -313,7 +370,7 @@ export class ClientService extends BaseService<IClient> {
     // Try to create default tax settings for the client with tenant context (after transaction)
     try {
       await runWithTenant(context.tenant, async () => {
-        await createDefaultTaxSettings(client.client_id);
+        await createDefaultTaxSettingsInternal(client.client_id);
       });
     } catch (taxError) {
       console.warn('Failed to create default tax settings:', taxError);
@@ -347,17 +404,16 @@ export class ClientService extends BaseService<IClient> {
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const client = await knex('clients')
-      .where({ tenant: context.tenant, client_id: id })
+    const client = await scopedTable(knex, context.tenant, 'clients')
+      .where({ client_id: id })
       .select('client_id')
       .first();
     if (!client?.client_id) {
       throw new NotFoundError('Client not found');
     }
 
-    const isDefaultClient = await knex('tenant_companies')
+    const isDefaultClient = await scopedTable(knex, context.tenant, 'tenant_companies')
       .where({
-        tenant: context.tenant,
         client_id: id,
         is_default: true,
       })
@@ -373,8 +429,8 @@ export class ClientService extends BaseService<IClient> {
       await this.cleanupClientNotesDocument(trx, tenantId, id);
       await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, id);
 
-      const deleted = await trx('clients')
-        .where({ tenant: tenantId, client_id: id })
+      const deleted = await scopedTable(trx, tenantId, 'clients')
+        .where({ client_id: id })
         .delete();
       if (!deleted) {
         throw new NotFoundError('Client not found');
@@ -408,14 +464,13 @@ export class ClientService extends BaseService<IClient> {
     clientId: string
   ): Promise<void> {
     await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
-    await this.deleteFromTableIfExists(trx, 'client_billing_settings', { tenant, client_id: clientId });
-    await this.deleteFromTableIfExists(trx, 'client_billing_cycles', { tenant, client_id: clientId });
-    await this.deleteFromTableIfExists(trx, 'client_tax_settings', { tenant, client_id: clientId });
-    await this.deleteFromTableIfExists(trx, 'client_tax_rates', { tenant, client_id: clientId });
-    await this.deleteFromTableIfExists(trx, 'client_locations', { tenant, client_id: clientId });
-    await this.deleteFromTableIfExists(trx, 'client_payment_customers', { tenant, client_id: clientId });
-    await this.deleteFromTableIfExists(trx, 'tag_mappings', {
-      tenant,
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_rates', { client_id: clientId });
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'client_locations', { client_id: clientId });
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'client_payment_customers', { client_id: clientId });
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'tag_mappings', {
       tagged_type: 'client',
       tagged_id: clientId,
     });
@@ -426,8 +481,8 @@ export class ClientService extends BaseService<IClient> {
     tenant: string,
     clientId: string
   ): Promise<void> {
-    const clientRecord = await trx('clients')
-      .where({ client_id: clientId, tenant })
+    const clientRecord = await scopedTable<{ notes_document_id: string | null }>(trx, tenant, 'clients')
+      .where({ client_id: clientId })
       .select('notes_document_id')
       .first();
 
@@ -435,16 +490,13 @@ export class ClientService extends BaseService<IClient> {
       return;
     }
 
-    await this.deleteFromTableIfExists(trx, 'document_block_content', {
-      tenant,
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'document_block_content', {
       document_id: clientRecord.notes_document_id,
     });
-    await this.deleteFromTableIfExists(trx, 'document_associations', {
-      tenant,
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'document_associations', {
       document_id: clientRecord.notes_document_id,
     });
-    await this.deleteFromTableIfExists(trx, 'documents', {
-      tenant,
+    await this.deleteFromTenantTableIfExists(trx, tenant, 'documents', {
       document_id: clientRecord.notes_document_id,
     });
   }
@@ -454,16 +506,16 @@ export class ClientService extends BaseService<IClient> {
     tenant: string,
     clientId: string
   ): Promise<void> {
-    const defaultContracts = await trx('contracts')
+    const db = tenantDb(trx, tenant);
+    const defaultContracts = await db.table('contracts')
       .where({
-        tenant,
         owner_client_id: clientId,
         is_system_managed_default: true,
       })
       .select('contract_id');
 
-    const assignmentsForClient = await trx('client_contracts')
-      .where({ tenant, client_id: clientId })
+    const assignmentsForClient = await db.table('client_contracts')
+      .where({ client_id: clientId })
       .select('client_contract_id', 'contract_id');
 
     const assignmentsById = new Map<string, string>();
@@ -473,8 +525,7 @@ export class ClientService extends BaseService<IClient> {
 
     const invoicedDefaultContractIds = new Set<string>();
     if (assignmentsById.size > 0) {
-      const invoiceRows = await trx('invoice_charges')
-        .where({ tenant })
+      const invoiceRows = await db.table('invoice_charges')
         .whereIn('client_contract_id', [...assignmentsById.keys()])
         .distinct('client_contract_id');
       for (const row of invoiceRows) {
@@ -485,13 +536,13 @@ export class ClientService extends BaseService<IClient> {
       }
     }
 
-    await trx('client_contracts')
-      .where({ tenant, client_id: clientId })
+    await db.table('client_contracts')
+      .where({ client_id: clientId })
       .delete();
 
     for (const contract of defaultContracts) {
-      const countRow = await trx('client_contracts')
-        .where({ tenant, contract_id: contract.contract_id })
+      const countRow = await db.table('client_contracts')
+        .where({ contract_id: contract.contract_id })
         .count<{ count?: string }>('client_contract_id as count')
         .first();
       const assignmentCount = Number(countRow?.count ?? 0);
@@ -500,30 +551,31 @@ export class ClientService extends BaseService<IClient> {
       }
 
       if (invoicedDefaultContractIds.has(contract.contract_id)) {
-        await trx('contracts')
-          .where({ tenant, contract_id: contract.contract_id })
+        await db.table('contracts')
+          .where({ contract_id: contract.contract_id })
           .update({
             status: 'archived',
             is_active: false,
             updated_at: trx.fn.now(),
           });
       } else {
-        await trx('contracts')
-          .where({ tenant, contract_id: contract.contract_id })
+        await db.table('contracts')
+          .where({ contract_id: contract.contract_id })
           .delete();
       }
     }
   }
 
-  private async deleteFromTableIfExists(
+  private async deleteFromTenantTableIfExists(
     trx: Knex.Transaction,
+    tenant: string,
     tableName: string,
     where: Record<string, unknown>
   ): Promise<void> {
     if (!await trx.schema.hasTable(tableName)) {
       return;
     }
-    await trx(tableName).where(where).delete();
+    await scopedTable(trx, tenant, tableName).where(where).delete();
   }
 
   /**
@@ -538,9 +590,9 @@ export class ClientService extends BaseService<IClient> {
   async update(id: string, data: UpdateClientData, context: ServiceContext): Promise<IClient> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
-      const before = await trx('clients')
+      const db = tenantDb(trx, context.tenant);
+      const before = await db.table('clients')
         .where('client_id', id)
-        .where('tenant', context.tenant)
         .first();
 
       if (!before) {
@@ -564,9 +616,8 @@ export class ClientService extends BaseService<IClient> {
       const updatedFieldKeys = Object.keys(updateData);
 
       // Update client
-      const [client] = await trx('clients')
+      const [client] = await db.table('clients')
         .where('client_id', id)
-        .where('tenant', context.tenant)
         .update(updateData)
         .returning('*');
 
@@ -577,22 +628,22 @@ export class ClientService extends BaseService<IClient> {
       // If the client is being set to inactive, update all associated contacts and users
       if (data.is_inactive === true) {
         // Get all contact IDs for this client
-        const contacts = await trx('contacts')
+        const contacts = await db.table('contacts')
           .select('contact_name_id')
-          .where({ client_id: id, tenant: context.tenant });
+          .where({ client_id: id });
 
         const contactIds = contacts.map((c) => c.contact_name_id);
 
         // Deactivate all contacts
-        await trx('contacts')
-          .where({ client_id: id, tenant: context.tenant })
+        await db.table('contacts')
+          .where({ client_id: id })
           .update({ is_inactive: true });
 
         // Deactivate all users associated with these contacts
         if (contactIds.length > 0) {
-          await trx('users')
+          await db.table('users')
             .whereIn('contact_id', contactIds)
-            .andWhere({ tenant: context.tenant, user_type: 'client' })
+            .andWhere({ user_type: 'client' })
             .update({ is_inactive: true });
         }
       }
@@ -708,7 +759,7 @@ export class ClientService extends BaseService<IClient> {
       });
     }
 
-    return result.after;
+    return result.after as IClient;
   }
 
   /**
@@ -718,10 +769,9 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const locations = await trx('client_locations')
+      const locations = await scopedTable<IClientLocation>(trx, context.tenant, 'client_locations')
         .where({
-          client_id: clientId,
-          tenant: context.tenant
+          client_id: clientId
         })
         .orderBy('is_default', 'desc')
         .orderBy('location_name', 'asc');
@@ -738,31 +788,22 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<IClientLocation> {
     const { knex } = await this.getKnex();
-    return withTransaction(knex, async (trx) => {
-      // Verify client exists
-      const client = await trx('clients')
-        .where({ client_id: clientId, tenant: context.tenant })
-        .first();
+    try {
+      return await withTransaction(knex, async (trx) => {
+        // Verify client exists before entering the shared mutation layer.
+        const client = await scopedTable(trx, context.tenant, 'clients')
+          .where({ client_id: clientId })
+          .first();
 
-      if (!client) {
-        throw new NotFoundError('Client not found');
-      }
+        if (!client) {
+          throw new NotFoundError('Client not found');
+        }
 
-      const locationData = {
-        location_id: knex.raw('gen_random_uuid()'),
-        client_id: clientId,
-        ...data,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
-      };
-
-      const [location] = await trx('client_locations')
-        .insert(locationData)
-        .returning('*');
-
-      return location as IClientLocation;
-    });
+        return createClientLocation(trx, context.tenant, clientId, data);
+      });
+    } catch (error) {
+      throwClientLocationApiError(error);
+    }
   }
 
   /**
@@ -774,32 +815,13 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<IClientLocation> {
     const { knex } = await this.getKnex();
-    return withTransaction(knex, async (trx) => {
-      const updateData: any = {
-        ...data,
-        updated_at: knex.raw('now()')
-      };
-
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
-
-      const [location] = await trx('client_locations')
-        .where('location_id', locationId)
-        .where('client_id', clientId)
-        .where('tenant', context.tenant)
-        .update(updateData)
-        .returning('*');
-
-      if (!location) {
-        throw new NotFoundError('Client location not found');
-      }
-
-      return location as IClientLocation;
-    });
+    try {
+      return await withTransaction(knex, (trx) =>
+        updateClientLocation(trx, context.tenant, clientId, locationId, data)
+      );
+    } catch (error) {
+      throwClientLocationApiError(error);
+    }
   }
 
   /**
@@ -810,20 +832,13 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<void> {
     const { knex } = await this.getKnex();
-    return withTransaction(knex, async (trx) => {
-      const result = await trx('client_locations')
-        .where({
-          location_id: locationId,
-          client_id: clientId,
-          tenant: context.tenant
-        })
-        .delete();
-
-      if (result === 0) {
-        throw new NotFoundError('Location not found');
-      }
-
-    });
+    try {
+      await withTransaction(knex, (trx) =>
+        deleteClientLocation(trx, context.tenant, clientId, locationId)
+      );
+    } catch (error) {
+      throwClientLocationApiError(error);
+    }
   }
 
   /**
@@ -833,6 +848,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      const clientsTable = scopedTable(trx, context.tenant, 'clients');
       const [
         totalStats,
         billingCycleStats,
@@ -840,8 +856,7 @@ export class ClientService extends BaseService<IClient> {
         creditStats
       ] = await Promise.all([
         // Total and active/inactive counts
-        trx('clients')
-          .where('tenant', context.tenant)
+        clientsTable.clone()
           .select(
             trx.raw('COUNT(*) as total_clients'),
             trx.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_clients'),
@@ -850,24 +865,21 @@ export class ClientService extends BaseService<IClient> {
           .first(),
 
         // Clients by billing cycle
-        trx('clients')
-          .where('tenant', context.tenant)
+        clientsTable.clone()
           .groupBy('billing_cycle')
           .select('billing_cycle', trx.raw('COUNT(*) as count')),
 
         // Clients by client type
-        trx('clients')
-          .where('tenant', context.tenant)
+        clientsTable.clone()
           .whereNotNull('client_type')
           .groupBy('client_type')
           .select('client_type', trx.raw('COUNT(*) as count')),
 
-        // Credit balance statistics
-        trx('clients')
-          .where('tenant', context.tenant)
+        // Credit balance statistics (derived from credit_tracking)
+        clientsTable.clone()
           .select(
-            trx.raw('SUM(credit_balance) as total_credit_balance'),
-            trx.raw('AVG(credit_balance) as average_credit_balance')
+            trx.raw(`SUM(${availableCreditSubquerySql('clients')}) as total_credit_balance`),
+            trx.raw(`AVG(${availableCreditSubquerySql('clients')}) as average_credit_balance`)
           )
           .first()
       ]);
@@ -923,10 +935,10 @@ export class ClientService extends BaseService<IClient> {
           query.where('c.region_code', value);
           break;
         case 'credit_balance_min':
-          query.where('c.credit_balance', '>=', value);
+          query.whereRaw(`${availableCreditSubquerySql('c')} >= ?`, [value]);
           break;
         case 'credit_balance_max':
-          query.where('c.credit_balance', '<=', value);
+          query.whereRaw(`${availableCreditSubquerySql('c')} <= ?`, [value]);
           break;
         case 'has_credit_limit':
           if (value) {
@@ -1013,21 +1025,20 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
+    const db = tenantDb(trx, context.tenant);
     // Remove existing tag mappings for this client
-    const existingMappings = await trx('tag_mappings')
+    const existingMappings = await db.table('tag_mappings')
       .where({
         tagged_id: clientId,
-        tagged_type: 'client',
-        tenant: context.tenant
+        tagged_type: 'client'
       })
       .select('tag_id');
 
     if (existingMappings.length > 0) {
-      await trx('tag_mappings')
+      await db.table('tag_mappings')
         .where({
           tagged_id: clientId,
-          tagged_type: 'client',
-          tenant: context.tenant
+          tagged_type: 'client'
         })
         .delete();
     }
@@ -1036,9 +1047,8 @@ export class ClientService extends BaseService<IClient> {
     if (tags.length > 0) {
       for (const tagText of tags) {
         // First, ensure the tag definition exists
-        let tagDef = await trx('tag_definitions')
+        let tagDef = await db.table('tag_definitions')
           .where({
-            tenant: context.tenant,
             tag_text: tagText,
             tagged_type: 'client'
           })
@@ -1046,7 +1056,7 @@ export class ClientService extends BaseService<IClient> {
 
         if (!tagDef) {
           // Create the tag definition
-          const [newTagDef] = await trx('tag_definitions')
+          const [newTagDef] = await db.table('tag_definitions')
             .insert({
               tenant: context.tenant,
               tag_text: tagText,
@@ -1057,11 +1067,16 @@ export class ClientService extends BaseService<IClient> {
           tagDef = newTagDef;
         }
 
+        const tagId = tagDef?.tag_id;
+        if (!tagId) {
+          throw new Error('Tag definition upsert completed without returning a tag ID.');
+        }
+
         // Create the mapping
-        await trx('tag_mappings')
+        await db.table('tag_mappings')
           .insert({
             tenant: context.tenant,
-            tag_id: tagDef.tag_id,
+            tag_id: tagId,
             tagged_id: clientId,
             tagged_type: 'client',
             created_by: context.userId,

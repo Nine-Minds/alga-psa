@@ -9,7 +9,7 @@
 
 import { Knex } from 'knex';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { QueryBuilder } from 'server/src/lib/reports/builders/QueryBuilder';
 import {
   ReportDefinition,
@@ -71,11 +71,20 @@ export interface UpdateReportInput {
   is_active?: boolean;
 }
 
+type CustomReportRow = Omit<CustomReport, 'report_definition' | 'display_config'> & {
+  report_definition: ReportDefinition | string;
+  display_config: Record<string, unknown> | string | null;
+};
+
 export class PlatformReportService {
   private masterTenantId: string;
 
   constructor(masterTenantId: string) {
     this.masterTenantId = masterTenantId;
+  }
+
+  private customReports(conn: Knex | Knex.Transaction) {
+    return tenantDb(conn, this.masterTenantId).table<CustomReportRow>('custom_reports');
   }
 
   /**
@@ -84,9 +93,7 @@ export class PlatformReportService {
   async listReports(options?: { category?: string; activeOnly?: boolean }): Promise<CustomReport[]> {
     const knex = await getAdminConnection();
 
-    let query = knex('custom_reports')
-      .where('tenant', this.masterTenantId)
-      .select('*');
+    let query = this.customReports(knex).select('*');
 
     if (options?.category) {
       query = query.where('category', options.category);
@@ -115,11 +122,8 @@ export class PlatformReportService {
   async getReport(reportId: string): Promise<CustomReport | null> {
     const knex = await getAdminConnection();
 
-    const row = await knex('custom_reports')
-      .where({
-        tenant: this.masterTenantId,
-        report_id: reportId,
-      })
+    const row = await this.customReports(knex)
+      .where({ report_id: reportId })
       .first();
 
     if (!row) return null;
@@ -144,7 +148,7 @@ export class PlatformReportService {
 
     const knex = await getAdminConnection();
 
-    const [row] = await knex('custom_reports')
+    const [row] = await this.customReports(knex)
       .insert({
         tenant: this.masterTenantId,
         name: input.name,
@@ -191,11 +195,8 @@ export class PlatformReportService {
     }
     if (input.is_active !== undefined) updateData.is_active = input.is_active;
 
-    const [row] = await knex('custom_reports')
-      .where({
-        tenant: this.masterTenantId,
-        report_id: reportId,
-      })
+    const [row] = await this.customReports(knex)
+      .where({ report_id: reportId })
       .update(updateData)
       .returning('*');
 
@@ -218,11 +219,8 @@ export class PlatformReportService {
   async deleteReport(reportId: string): Promise<boolean> {
     const knex = await getAdminConnection();
 
-    const count = await knex('custom_reports')
-      .where({
-        tenant: this.masterTenantId,
-        report_id: reportId,
-      })
+    const count = await this.customReports(knex)
+      .where({ report_id: reportId })
       .update({
         is_active: false,
         updated_at: new Date(),

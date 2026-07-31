@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { WorkflowTaskStatus, type TaskHistoryEntry } from '@alga-psa/workflows/persistence';
+import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskStatus';
+import type { TaskHistoryEntry } from '@alga-psa/workflows/persistence';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Simple Spinner component

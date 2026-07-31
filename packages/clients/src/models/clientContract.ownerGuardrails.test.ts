@@ -13,15 +13,21 @@ const createBuilder = () => {
 };
 
 const mockCreateTenantKnex = vi.fn();
+const mockTenantDb = vi.fn((conn: any) => ({
+  table: (table: string) => conn(table),
+  tenantJoin: (query: any) => query,
+}));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mockCreateTenantKnex,
+  tenantDb: mockTenantDb,
 }));
 
 describe('ClientContract ownership guardrails', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    mockTenantDb.mockClear();
   });
 
   it('T015: rejects assigning a non-template contract owned by a different client', async () => {

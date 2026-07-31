@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { RelationshipSqlAdapter } from '@alga-psa/authorization/kernel';
+import { tenantDb } from '@alga-psa/db';
 
 type TicketDbConnection = Knex | Knex.Transaction;
 
@@ -55,8 +56,8 @@ export async function fetchTicketAdditionalUserIds(
   if (ticketIds.length === 0) {
     return map;
   }
-  const rows = await conn('ticket_resources')
-    .where({ tenant })
+  const rows = await tenantDb(conn, tenant)
+    .table('ticket_resources')
     .whereIn('ticket_id', ticketIds)
     .whereNotNull('additional_user_id')
     .select<{ ticket_id: string; additional_user_id: string }[]>('ticket_id', 'additional_user_id');

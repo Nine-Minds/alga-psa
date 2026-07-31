@@ -11,6 +11,14 @@ import ContractDetail from './ContractDetail';
 import { getClientContractByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { IClient, IDocument } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type ViewMode = 'loading' | 'template' | 'client' | 'error';
 
@@ -61,6 +69,11 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
           if (!isMounted) {
             return;
           }
+          if (isReturnedActionError(clientContract)) {
+            setViewMode('error');
+            setError(getErrorMessage(clientContract));
+            return;
+          }
           if (clientContract) {
             setResolvedContractId(clientContract.contract_id);
             if (!contractId) {
@@ -84,6 +97,11 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
         const contract = await getContractById(contractId);
 
         if (!isMounted) {
+          return;
+        }
+        if (isReturnedActionError(contract)) {
+          setViewMode('error');
+          setError(getErrorMessage(contract));
           return;
         }
 

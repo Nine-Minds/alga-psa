@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CsvImporter } from '@/lib/imports/CsvImporter';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 describe('CsvImporter', () => {
   it('parses CSV with headers and trims values', async () => {
@@ -26,19 +26,37 @@ describe('CsvImporter', () => {
 
   it('parses XLSX workbook into records', async () => {
     const importer = new CsvImporter();
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet([
-      ['name', 'asset_type'],
-      ['Server-1', 'server'],
-    ]);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Sheet1');
+    worksheet.addRow(['name', 'asset_type']);
+    worksheet.addRow(['Server-1', 'server']);
 
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
 
-    const records = await importer.parse(buffer as Buffer);
+    const records = await importer.parse(buffer);
 
     expect(records).toHaveLength(1);
     expect(records[0].raw).toEqual({ name: 'Server-1', asset_type: 'server' });
+  });
+
+  it('formats XLSX numbers, dates, and empty cells like text output', async () => {
+    const importer = new CsvImporter();
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Sheet1');
+    worksheet.addRow(['name', 'purchase_count', 'purchased_at', 'notes']);
+    worksheet.addRow(['Server-1', 42, new Date(Date.UTC(2026, 0, 15, 10, 30, 0)), null]);
+
+    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+    const records = await importer.parse(buffer);
+
+    expect(records).toHaveLength(1);
+    expect(records[0].raw).toEqual({
+      name: 'Server-1',
+      purchase_count: '42',
+      purchased_at: '2026-01-15T10:30:00',
+      notes: null,
+    });
   });
 
   it('collects validation errors for empty rows', async () => {

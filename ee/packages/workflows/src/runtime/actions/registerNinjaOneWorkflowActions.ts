@@ -3,6 +3,7 @@ import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/r
 import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { registerIntegrationWorkflowModule, rmmIntegrationAvailability } from '../integrationModules';
+import { workflowTenantTable } from '../../lib/workflowTenantDb';
 
 const loadNinjaOneRuntimeSupport = () => import('./ninjaOneWorkflowRuntimeSupport');
 
@@ -60,8 +61,8 @@ async function requireNinjaOneIntegration(ctx: ActionContext): Promise<{
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  const integration = await knex('rmm_integrations')
-    .where({ tenant: tenantId, provider: 'ninjaone', is_active: true })
+  const integration = await workflowTenantTable(knex, tenantId, 'rmm_integrations')
+    .where({ provider: 'ninjaone', is_active: true })
     .whereNotNull('connected_at')
     .first();
   if (!integration) {
@@ -164,8 +165,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     },
     handler: async (input, ctx) => {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
-      let rows = await knex('assets')
-        .where({ tenant: tenantId, rmm_provider: 'ninjaone' })
+      let rows = await workflowTenantTable(knex, tenantId, 'assets')
+        .where({ rmm_provider: 'ninjaone' })
         .whereNotNull('rmm_device_id')
         .modify((qb: any) => {
           if (input.asset_id) qb.andWhere('asset_id', input.asset_id);
@@ -179,7 +180,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
             });
           }
         })
-        .limit(input.limit);
+        .limit(input.limit ?? 50);
 
       const localDevices = rows.map((row: any) => normalizeNinjaDevice(row, 'local'));
       if (!input.live) {
@@ -365,10 +366,10 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
       if (!input.live) {
-        const rows = await knex('rmm_alerts')
-          .where({ tenant: tenantId, integration_id: integrationId, status: 'active' })
+        const rows = await workflowTenantTable(knex, tenantId, 'rmm_alerts')
+          .where({ integration_id: integrationId, status: 'active' })
           .orderBy('triggered_at', 'desc')
-          .limit(input.limit);
+          .limit(input.limit ?? 50);
         const alerts = rows.map((row: any) => normalizeNinjaAlert(row));
         return { alerts, count: alerts.length };
       }
@@ -403,8 +404,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
       const externalId = input.external_alert_id ?? input.alert_uid;
-      const row = await knex('rmm_alerts')
-        .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: externalId })
+      const row = await workflowTenantTable(knex, tenantId, 'rmm_alerts')
+        .where({ integration_id: integrationId, external_alert_id: externalId })
         .first();
       if (!row) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Alert not found' });
@@ -440,8 +441,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
       const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
       await client.resetAlert(alertId);
-      await knex('rmm_alerts')
-        .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: alertId })
+      await workflowTenantTable(knex, tenantId, 'rmm_alerts')
+        .where({ integration_id: integrationId, external_alert_id: alertId })
         .update({ status: 'acknowledged', updated_at: new Date().toISOString() });
       return {
         acknowledged: true,

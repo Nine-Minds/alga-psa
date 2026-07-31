@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Google Calendar webhook handler error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
+      { error: 'Internal server error', message: 'Google Calendar webhook could not be processed.' },
       { status: 500 }
     );
   }

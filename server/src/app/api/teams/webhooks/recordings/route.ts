@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { NextRequest } from 'next/server';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isEnterpriseEdition, eeUnavailable } from '../../_ceStub';
 import { teamsOptionsResponse } from '../../_eeDelegator';
 import { scheduleImmediateJob } from '@/lib/jobs';
@@ -58,8 +58,7 @@ async function isAuthenticArtifactNotification(
 
   try {
     const { knex } = await createTenantKnex(parsed.tenantId);
-    const row = await knex('teams_integrations')
-      .where({ tenant: parsed.tenantId })
+    const row = await tenantDb(knex, parsed.tenantId).table('teams_integrations')
       .first(
         'meeting_artifact_webhook_secret',
         'recordings_subscription_id',

@@ -4,13 +4,18 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import type { BillingCycleType } from '@alga-psa/types';
-import { CLIENT_CADENCE_SCHEDULE_CONTEXT } from '@alga-psa/shared/billingClients';
+// Import the constant from its specific client-safe module, not the
+// '@alga-psa/shared/billingClients' barrel: the barrel `export *`s server-only
+// data-access modules (which import @alga-psa/db -> knex/secrets), which would
+// pull the server chain into this client component's browser bundle.
+import { CLIENT_CADENCE_SCHEDULE_CONTEXT } from '@alga-psa/shared/billingClients/clientCadenceScheduleContext';
 import {
   createNextBillingCycleAsync,
   getClientBillingCycleAnchorAsync,
@@ -376,7 +381,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
     <div className="mt-8 border-t pt-6" data-automation-id="client-billing-schedule-section">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}</h3>
+          <h3 className="text-lg font-semibold">{t('clientBillingSchedule.title', { defaultValue: 'Billing schedule' })}</h3>
           <Tooltip content={cadenceContext.changeScopeDescription}>
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
@@ -392,7 +397,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           >
             {creatingCycle
               ? t('clientBillingSchedule.createInProgress', { defaultValue: 'Creating...' })
-              : t('clientBillingSchedule.createNextCycle', { defaultValue: 'Create Next Cycle' })}
+              : t('clientBillingSchedule.createNextCycle', { defaultValue: 'Create next cycle' })}
 	          </Button>
 	          <Button
 	            id="client-billing-edit-schedule"
@@ -404,7 +409,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           >
             {loading
               ? t('common.states.loading', { defaultValue: 'Loading...' })
-              : t('clientBillingSchedule.edit', { defaultValue: 'Edit Schedule' })}
+              : t('clientBillingSchedule.edit', { defaultValue: 'Edit schedule' })}
 	          </Button>
 	        </div>
 	      </div>
@@ -419,7 +424,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       <Dialog
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={t('clientBillingSchedule.title', { defaultValue: 'Billing Schedule' })}
+        title={t('clientBillingSchedule.title', { defaultValue: 'Billing schedule' })}
         id="client-billing-schedule-dialog"
         disableFocusTrap
         footer={
@@ -542,11 +547,14 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           {(billingCycle === 'bi-weekly') && (
             <div className="space-y-2">
               <div className="text-sm font-medium">{t('clientBillingSchedule.firstCycleStartDate', { defaultValue: 'First cycle start date (UTC)' })}</div>
-              <Input
+              <DatePicker
                 id="client-billing-anchor-reference-date"
-                type="date"
-                value={anchorDraft.referenceDate ?? ''}
-                onChange={(e) => setAnchorDraft(d => ({ ...d, referenceDate: e.target.value || null }))}
+                label={t('clientBillingSchedule.firstCycleStartDate', { defaultValue: 'First cycle start date (UTC)' })}
+                placeholder={t('clientBillingSchedule.firstCycleStartDate', { defaultValue: 'First cycle start date (UTC)' })}
+                clearable
+                className="w-full"
+                value={dateFromString(anchorDraft.referenceDate ?? '')}
+                onChange={(date) => setAnchorDraft(d => ({ ...d, referenceDate: dateToString(date) || null }))}
               />
               <div className="text-xs text-gray-500">{t('clientBillingSchedule.firstCycleStartHelp', { defaultValue: 'Used to establish stable parity; leave blank for rolling bi-weekly cycles.' })}</div>
             </div>
@@ -579,11 +587,14 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
 
           <div className="space-y-2 border-t pt-3">
             <div className="text-sm font-medium">{t('clientBillingSchedule.historyStartDate', { defaultValue: 'Billing History Start Date (optional)' })}</div>
-            <Input
+            <DatePicker
               id="client-billing-history-start-date"
-              type="date"
-              value={billingHistoryStartDate ?? ''}
-              onChange={(e) => setBillingHistoryStartDate(e.target.value || null)}
+              label={t('clientBillingSchedule.historyStartDate', { defaultValue: 'Billing History Start Date (optional)' })}
+              placeholder={t('clientBillingSchedule.historyStartDate', { defaultValue: 'Billing History Start Date (optional)' })}
+              clearable
+              className="w-full"
+              value={dateFromString(billingHistoryStartDate ?? '')}
+              onChange={(date) => setBillingHistoryStartDate(dateToString(date) || null)}
             />
             <div className="text-xs text-gray-500">
               {t('clientBillingSchedule.historyStartHelp', { defaultValue: 'If set, historical client billing cycles are generated from the containing billing-cycle boundary through today.' })}

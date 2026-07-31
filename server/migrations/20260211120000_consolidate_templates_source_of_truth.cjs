@@ -54,6 +54,8 @@ const { getTemplate: projectTaskPrimary } = require('./utils/templates/email/pro
 const { getTemplate: projectTaskAdditional } = require('./utils/templates/email/projects/projectTaskAssignedAdditional.cjs');
 const { getTemplate: taskUpdated } = require('./utils/templates/email/projects/taskUpdated.cjs');
 const { getTemplate: milestoneCompleted } = require('./utils/templates/email/projects/milestoneCompleted.cjs');
+const { getTemplate: projectMilestoneReady } = require('./utils/templates/email/projects/projectMilestoneReady.cjs');
+const { getTemplate: projectBudgetThresholdReached } = require('./utils/templates/email/projects/projectBudgetThresholdReached.cjs');
 
 // Appointments
 const { getTemplate: apptReceived } = require('./utils/templates/email/appointments/appointmentRequestReceived.cjs');
@@ -106,6 +108,8 @@ const EMAIL_TEMPLATES = [
   projectTaskAdditional,
   taskUpdated,
   milestoneCompleted,
+  projectMilestoneReady,
+  projectBudgetThresholdReached,
   // Appointments
   apptReceived,
   apptApproved,

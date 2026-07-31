@@ -3,12 +3,11 @@ import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { IScheduleEntry, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import {
   buildAppointmentAssignedPayload,
   buildAppointmentCanceledPayload,
@@ -42,10 +41,64 @@ import {
 } from '@alga-psa/workflow-streams';
 import { maybePublishCapacityThresholdReached } from '../lib/capacityThresholdWorkflowEvents';
 import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { resolveAppointmentTeamsMeetingContext } from '../lib/teamsMeetingContent';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
   | { success: false; error: string; entries?: never }
+
+type ScheduleActionError = ActionMessageError | ActionPermissionError;
+
+function scheduleActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message.startsWith('Permission denied')) {
+    return message;
+  }
+
+  if (message === 'Schedule entry not found' || /^Schedule entry .+ not found/.test(message)) {
+    return 'Schedule entry not found.';
+  }
+
+  if (/^Users .+ not found/.test(message)) {
+    return 'One or more assigned users could not be found.';
+  }
+
+  if (message === 'Virtual timestamp is required for future updates') {
+    return 'Select a recurrence occurrence before updating future schedule entries.';
+  }
+
+  return fallback;
+}
+
+function scheduleActionErrorFrom(error: unknown): ScheduleActionError | null {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message.startsWith('Permission denied')) {
+    return permissionError(message);
+  }
+
+  if (message === 'Schedule entry not found' || /^Schedule entry .+ not found/.test(message)) {
+    return actionError('Schedule entry not found.');
+  }
+
+  if (/^Users .+ not found/.test(message)) {
+    return actionError('One or more assigned users could not be found.');
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('The selected schedule entry is invalid. Please refresh and try again.');
+  }
+
+  return null;
+}
 
 async function getTicketIdForAppointmentRequest(
   db: Knex,
@@ -53,8 +106,8 @@ async function getTicketIdForAppointmentRequest(
   appointmentRequestId: string
 ): Promise<string | undefined> {
   const row = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx('appointment_requests')
-      .where({ tenant, appointment_request_id: appointmentRequestId })
+    return await (tenantDb(trx, tenant) as any).table('appointment_requests')
+      .where({ appointment_request_id: appointmentRequestId })
       .select('ticket_id')
       .first();
   });
@@ -130,7 +183,7 @@ export const getScheduleEntries = withAuth(async (
     return { success: true, entries: filteredEntries };
   } catch (error) {
     console.error('Error fetching schedule entries:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch schedule entries';
+    const message = scheduleActionErrorMessage(error, 'Failed to fetch schedule entries');
     return { success: false, error: message };
   }
 });
@@ -313,10 +366,100 @@ export const addScheduleEntry = withAuth(async (
     return { success: true, entry: createdEntry };
   } catch (error) {
     console.error('Error creating schedule entry:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create schedule entry';
+    const message = scheduleActionErrorMessage(error, 'Failed to create schedule entry');
     return { success: false, error: message };
   }
 });
+
+/**
+ * Keeps an appointment's linked Teams meeting in sync when the schedule entry
+ * is rescheduled directly on the calendar (drag/edit) — not just through the
+ * appointment-request reschedule action. PATCHes the Graph event with the new
+ * times plus refreshed subject/attendees so attendees receive an updated
+ * calendar invite, then moves the online_meetings row. Best-effort and
+ * post-commit (never rolls back the schedule change); returns a warning string
+ * when the Graph update could not be applied.
+ */
+async function syncTeamsMeetingForRescheduledEntry(
+  db: Knex,
+  tenant: string,
+  updatedEntry: IScheduleEntry,
+): Promise<string | undefined> {
+  if (updatedEntry.work_item_type !== 'appointment_request' || !updatedEntry.work_item_id) {
+    return undefined;
+  }
+
+  const scopedDb = tenantDb(db, tenant) as any;
+  const request = await scopedDb.table('appointment_requests')
+    .where({ appointment_request_id: updatedEntry.work_item_id, tenant })
+    .first();
+  if (!request) {
+    return undefined;
+  }
+
+  const onlineMeeting = await scopedDb.table('online_meetings')
+    .where({ appointment_request_id: request.appointment_request_id })
+    .first();
+
+  const provider = onlineMeeting?.provider ?? request.online_meeting_provider;
+  const providerMeetingId = onlineMeeting?.provider_meeting_id ?? request.online_meeting_id;
+  const liveStatuses = ['scheduled', 'recording_pending', 'recording_ready', 'ended', 'no_recording'];
+  const meetingIsLive = onlineMeeting ? liveStatuses.includes(onlineMeeting.status) : true;
+  if (provider !== 'teams' || !providerMeetingId || !meetingIsLive) {
+    return undefined;
+  }
+
+  const startDate = new Date(updatedEntry.scheduled_start as unknown as string);
+  const endDate = new Date(updatedEntry.scheduled_end as unknown as string);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return undefined;
+  }
+
+  const context = await resolveAppointmentTeamsMeetingContext({
+    trx: db,
+    tenant,
+    request: {
+      appointment_request_id: request.appointment_request_id,
+      service_id: request.service_id,
+      is_authenticated: request.is_authenticated,
+      contact_id: request.contact_id,
+      requester_email: request.requester_email,
+      requester_name: request.requester_name,
+      description: request.description,
+      schedule_entry_id: updatedEntry.entry_id,
+    },
+  });
+
+  const teamsMeetingService = await resolveTeamsMeetingService();
+  const outcome = await teamsMeetingService.updateTeamsMeetingWithResult({
+    tenantId: tenant,
+    meetingId: providerMeetingId,
+    eventId: onlineMeeting?.provider_event_id ?? null,
+    startDateTime: startDate.toISOString(),
+    endDateTime: endDate.toISOString(),
+    subject: context.subject,
+    attendees: context.attendees,
+    bodyHtml: context.bodyHtml,
+    appointmentRequestId: request.appointment_request_id,
+  });
+
+  if (outcome.status === 'skipped') {
+    // Tenant not configured for Teams meetings — the local move stands; no invite change.
+    return undefined;
+  }
+
+  if (outcome.status === 'failed') {
+    return 'Appointment moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+  }
+
+  if (onlineMeeting) {
+    await scopedDb.table('online_meetings')
+      .where({ meeting_id: onlineMeeting.meeting_id })
+      .update({ start_time: startDate, end_time: endDate, updated_at: new Date() });
+  }
+
+  return undefined;
+}
 
 export const updateScheduleEntry = withAuth(async (
   user,
@@ -377,6 +520,8 @@ export const updateScheduleEntry = withAuth(async (
       return { success: false, error: 'Permission denied to update this schedule entry.' };
     }
     // --- End Permission Check ---
+
+    let teamsMeetingWarning: string | undefined;
 
     // Ensure work_item_type is preserved if not explicitly updated
     if (entry.work_item_id && !entry.work_item_type && existingEntry.work_item_type) {
@@ -474,6 +619,15 @@ export const updateScheduleEntry = withAuth(async (
                 timezone,
               }),
             });
+
+            // Keep the linked Teams meeting in sync with the calendar move so
+            // attendees get an updated invite (best-effort, post-commit).
+            try {
+              teamsMeetingWarning = await syncTeamsMeetingForRescheduledEntry(db, tenant, updatedEntry);
+            } catch (teamsError) {
+              console.error('[ScheduleActions] Failed to sync Teams meeting on reschedule', teamsError);
+              teamsMeetingWarning = 'Appointment moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+            }
           }
 
           const previousAssigneeId = getSingleUserAssigneeId(existingEntry);
@@ -618,10 +772,10 @@ export const updateScheduleEntry = withAuth(async (
       }
     }
 
-    return { success: true, entry: updatedEntry };
+    return { success: true, entry: updatedEntry, teamsMeetingWarning };
   } catch (error) {
     console.error('Error updating schedule entry:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update schedule entry';
+    const message = scheduleActionErrorMessage(error, 'Failed to update schedule entry');
     return { success: false, error: message };
   }
 });
@@ -674,7 +828,7 @@ export const deleteScheduleEntry = withAuth(async (
     const appointmentRequestRow =
       existingEntry.work_item_type === 'appointment_request' && existingEntry.work_item_id
         ? await withTransaction(db, async (trx: Knex.Transaction) => {
-            return await trx('appointment_requests')
+            return await (tenantDb(trx, tenant) as any).table('appointment_requests')
               .where({
                 appointment_request_id: existingEntry.work_item_id,
                 tenant,
@@ -684,20 +838,19 @@ export const deleteScheduleEntry = withAuth(async (
         : null;
     const onlineMeetingRow = appointmentRequestRow
       ? await withTransaction(db, async (trx: Knex.Transaction) => {
-          return await trx('online_meetings')
+          return await (tenantDb(trx, tenant) as any).table('online_meetings')
             .where({
               appointment_request_id: appointmentRequestRow.appointment_request_id,
-              tenant,
             })
             .first();
         })
       : null;
 
     const result = await deleteEntityWithValidation('schedule_entry', masterEntryId, db, tenant, async (trx, tenantId) => {
+      const scopedDb = tenantDb(trx, tenantId) as any;
       // Clean up schedule conflicts referencing this entry
-      await trx('schedule_conflicts')
-        .where({ tenant: tenantId })
-        .where(function() {
+      await scopedDb.table('schedule_conflicts')
+        .where(function(this: any) {
           this.where('entry_id_1', masterEntryId).orWhere('entry_id_2', masterEntryId);
         })
         .del();
@@ -718,6 +871,7 @@ export const deleteScheduleEntry = withAuth(async (
 
     if (appointmentRequestRow) {
       await withTransaction(db, async (trx: Knex.Transaction) => {
+        const scopedDb = tenantDb(trx, tenant) as any;
         const nextUpdate: Record<string, unknown> = {
           schedule_entry_id: null,
           online_meeting_provider: null,
@@ -731,14 +885,14 @@ export const deleteScheduleEntry = withAuth(async (
           nextUpdate.declined_reason = 'Cancelled by MSP';
         }
 
-        await trx('appointment_requests')
+        await scopedDb.table('appointment_requests')
           .where({
             appointment_request_id: appointmentRequestRow.appointment_request_id,
             tenant,
           })
           .update(nextUpdate);
 
-        await trx('online_meetings')
+        await scopedDb.table('online_meetings')
           .where({
             appointment_request_id: appointmentRequestRow.appointment_request_id,
             tenant,
@@ -843,7 +997,7 @@ export const deleteScheduleEntry = withAuth(async (
     };
   } catch (error) {
     console.error('Error deleting schedule entry:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete schedule entry';
+    const message = scheduleActionErrorMessage(error, 'Failed to delete schedule entry');
     return {
       success: false,
       error: message,
@@ -866,56 +1020,59 @@ export const getScheduleEntryById = withAuth(async (
   user,
   { tenant },
   entryId: string
-): Promise<IScheduleEntry | null> => {
+): Promise<IScheduleEntry | null | ScheduleActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant) as any;
 
-    // Get the schedule entry
-    const entry = await trx('schedule_entries')
-      .where({
-        entry_id: entryId,
-        tenant
-      })
-      .first();
+      // Get the schedule entry
+      const entry = await scopedDb.table('schedule_entries')
+        .where({
+          entry_id: entryId,
+          tenant
+        })
+        .first();
 
-    if (!entry) {
-      return null;
-    }
+      if (!entry) {
+        return null;
+      }
 
-    // Get assigned users
-    const assignees = await trx('schedule_entry_assignees')
-      .where({
-        entry_id: entryId,
-        tenant
-      })
-      .select('user_id');
+      // Get assigned users
+      const assignees = await scopedDb.table('schedule_entry_assignees')
+        .where({
+          entry_id: entryId,
+          tenant
+        })
+        .select('user_id');
 
-    const assignedUserIds = assignees.map(a => a.user_id);
+      const assignedUserIds = assignees.map((a: any) => a.user_id);
 
-    // Combine entry with assigned users
-    const scheduleEntry: IScheduleEntry = {
-      ...entry,
-      assigned_user_ids: assignedUserIds || []
-    };
-
-    // Check if entry is private and user is not assigned to it
-    if (scheduleEntry.is_private && !assignedUserIds.includes(user.user_id)) {
-      // Return limited information for private entries
-      return {
-        ...scheduleEntry,
-        title: "Busy",
-        notes: "",
-        work_item_id: null,
-        work_item_type: "ad_hoc"
+      // Combine entry with assigned users
+      const scheduleEntry: IScheduleEntry = {
+        ...entry,
+        assigned_user_ids: assignedUserIds || []
       };
-    }
+
+      // Check if entry is private and user is not assigned to it
+      if (scheduleEntry.is_private && !assignedUserIds.includes(user.user_id)) {
+        // Return limited information for private entries
+        return {
+          ...scheduleEntry,
+          title: "Busy",
+          notes: "",
+          work_item_id: null,
+          work_item_type: "ad_hoc"
+        };
+      }
 
       return scheduleEntry;
     });
   } catch (error) {
     console.error('Error fetching schedule entry by ID:', error);
-    throw new Error('Failed to fetch schedule entry');
+    const expected = scheduleActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 

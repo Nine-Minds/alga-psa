@@ -12,9 +12,16 @@ const testState = vi.hoisted(() => ({
   withTransactionMock: vi.fn(),
 }));
 
+// The query actions now enforce MSP RBAC (#2743): the acting user must be an
+// internal user and hold the contact permissions — satisfy both in the mock.
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
-    action({ user_id: testState.userId, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
+    action(
+      { user_id: testState.userId, tenant: testState.tenant, user_type: 'internal' },
+      { tenant: testState.tenant },
+      ...args
+    ),
+  hasPermission: vi.fn(async () => true),
 }));
 
 vi.mock('@alga-psa/db', async () => {

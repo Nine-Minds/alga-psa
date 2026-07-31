@@ -4,12 +4,17 @@
 import React from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import '@testing-library/jest-dom';
 
 // The component reads the edition at render time; force EE so Microsoft
 // providers stay visible/editable in these tests.
+const prevEditionPublic = process.env.NEXT_PUBLIC_EDITION;
 process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+afterAll(() => {
+  if (prevEditionPublic === undefined) delete process.env.NEXT_PUBLIC_EDITION;
+  else process.env.NEXT_PUBLIC_EDITION = prevEditionPublic;
+});
 
 // Mock the server actions module the component actually imports
 // (deep path, not the @alga-psa/integrations/actions barrel).
@@ -319,7 +324,7 @@ describe('EmailProviderConfiguration', () => {
     render(<EmailProviderConfiguration />);
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load email providers')).toBeInTheDocument();
     });
   });
 

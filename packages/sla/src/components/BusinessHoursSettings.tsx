@@ -298,7 +298,7 @@ export function BusinessHoursSettings() {
       await fetchSchedules();
     } catch (err) {
       console.error('Error saving schedule:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save schedule');
+      setError('Failed to save schedule');
     } finally {
       setIsSavingSchedule(false);
     }

@@ -1,17 +1,43 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { tenantDb } from '@alga-psa/db';
 import { generateManualInvoice, updateManualInvoice } from '@alga-psa/billing/actions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { ensureDefaultBillingSettings } from '../../../../../test-utils/billingTestHelpers';
+import {
+  ensureDefaultBillingSettings,
+  createTestService as createTestServiceShared,
+  clearServiceTypeCache
+} from '../../../../../test-utils/billingTestHelpers';
 import { expectNotFound } from '../../../../../test-utils/errorUtils';
 import type { ITransaction } from '../../../../interfaces/billing.interfaces';
 
+// generateManualInvoice returns { success, invoice } | { success: false, error }
+// (ManualInvoiceResult); these tests predate that shape. Unwrap success and
+// surface failures as throws so downstream assertions keep reading the invoice.
+
+async function updateManualInvoiceOrThrow(invoiceId: string, request: any): Promise<any> {
+  const result: any = await updateManualInvoice(invoiceId, request);
+  if (!result || result.success !== true) {
+    throw new Error(result?.error ?? 'updateManualInvoice failed');
+  }
+  return result.invoice;
+}
+
+async function generateManualInvoiceOrThrow(request: any): Promise<any> {
+  const result: any = await generateManualInvoice(request);
+  if (!result || result.success !== true) {
+    throw new Error(result?.error ?? 'generateManualInvoice failed');
+  }
+  return result.invoice;
+}
+
+
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -24,10 +50,14 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
@@ -38,7 +68,8 @@ vi.mock('@alga-psa/core/logger', () => ({
   }
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -48,7 +79,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -64,11 +96,12 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
-    publishEvent: vi.fn()
+    publishEvent: vi.fn(),
   }),
-  toStreamEvent: (event: unknown) => event
+  toStreamEvent: (event: unknown) => event,
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
@@ -87,9 +120,23 @@ const {
 } = TestContext.createHelpers();
 
 let context: TestContext;
-let serviceTypeCache: Record<string, string> = {};
 let clientTaxSettingsColumns: Record<string, unknown> | null = null;
 let clientTaxRatesColumns: Record<string, unknown> | null = null;
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string
+) {
+  return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
+}
+
+function schemaTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string,
+  reason = 'columnInfo reads schema metadata, not tenant rows'
+) {
+  return tenantDb(context.db, '__test_schema__').unscoped<Row>(tableExpression, reason);
+}
 
 beforeAll(async () => {
   // Initialize test context and set up mocks
@@ -121,8 +168,8 @@ beforeAll(async () => {
 beforeEach(async () => {
   context = await resetContext();
 
-  // Clear service type cache when context is reset to prevent using stale IDs from previous tenant
-  serviceTypeCache = {};
+  // Clear the shared helper's service type cache to prevent stale IDs across resets
+  clearServiceTypeCache();
 
   setupCommonMocks({
     tenantId: context.tenantId,
@@ -141,78 +188,21 @@ afterEach(async () => {
 });
 
 /**
- * Helper to create a test service
+ * Helper to create a test service. Delegates to the shared schema-aware helper
+ * (billingTestHelpers.createTestService); the previous local copy queried
+ * service_types.billing_method, which newer schemas dropped.
  */
 async function createTestService(overrides = {}) {
-  const serviceId = uuidv4();
-  const billingMethod = (overrides as { billing_method?: 'fixed' | 'hourly' | 'usage' }).billing_method ?? 'fixed';
-  const serviceTypeId = await ensureServiceType(billingMethod);
-
-  const serviceData: Record<string, unknown> = {
-    service_id: serviceId,
-    tenant: context.tenantId,
-    service_name: (overrides as { service_name?: string }).service_name ?? 'Test Service',
-    billing_method: billingMethod,
-    default_rate: (overrides as { default_rate?: number }).default_rate ?? 1000,
-    unit_of_measure: (overrides as { unit_of_measure?: string }).unit_of_measure ?? 'each',
-    custom_service_type_id: (overrides as { custom_service_type_id?: string }).custom_service_type_id ?? serviceTypeId,
-    description: (overrides as { description?: string }).description ?? 'Test Service Description',
-    category_id: (overrides as { category_id?: string | null }).category_id ?? null,
-    tax_rate_id: (overrides as { tax_rate_id?: string | null }).tax_rate_id ?? null
-  };
-
-  await context.db('service_catalog').insert(serviceData);
-
-  const taxRegion = (overrides as { tax_region?: string }).tax_region;
-  if (taxRegion) {
-    await assignServiceTaxRate(serviceId, taxRegion);
+  const { tax_region, ...rest } = overrides as Record<string, unknown>;
+  const serviceId = await createTestServiceShared(context, rest as any);
+  if (tax_region) {
+    await assignServiceTaxRate(serviceId, tax_region as string);
   }
-
   return serviceId;
 }
 
-async function ensureServiceType(billingMethod: 'fixed' | 'hourly' | 'usage' = 'fixed') {
-  if (serviceTypeCache[billingMethod]) {
-    return serviceTypeCache[billingMethod];
-  }
-
-  const columns = await context.db('service_types').columnInfo();
-  const tenantColumn = columns.tenant ? 'tenant' : columns.tenant_id ? 'tenant_id' : null;
-
-  if (!tenantColumn) {
-    throw new Error('Unable to determine tenant column for service_types table');
-  }
-
-  const existingType = await context.db('service_types')
-    .where({ [tenantColumn]: context.tenantId, billing_method: billingMethod })
-    .first('id');
-
-  if (existingType?.id) {
-    serviceTypeCache[billingMethod] = existingType.id;
-    return existingType.id;
-  }
-
-  const typeId = uuidv4();
-  const typeData: Record<string, unknown> = {
-    id: typeId,
-    name: billingMethod === 'fixed' ? 'Fixed Service Type' : 'Per Unit Service Type',
-    billing_method: billingMethod,
-    is_active: true,
-    description: 'Auto-generated service type for manual invoice tests',
-    [tenantColumn]: context.tenantId
-  };
-
-  if (columns.order_number) {
-    typeData.order_number = 1;
-  }
-
-  await context.db('service_types').insert(typeData);
-  serviceTypeCache[billingMethod] = typeId;
-  return typeId;
-}
-
 async function assignServiceTaxRate(serviceId: string, region: string, options: { onlyUnset?: boolean } = {}) {
-  const taxRate = await context.db('tax_rates')
+  const taxRate = await tenantTable(context, 'tax_rates')
     .where({ tenant: context.tenantId, region_code: region })
     .orderBy('start_date', 'desc')
     .first();
@@ -221,7 +211,7 @@ async function assignServiceTaxRate(serviceId: string, region: string, options: 
     return;
   }
 
-  const query = context.db('service_catalog')
+  const query = tenantTable(context, 'service_catalog')
     .where({ tenant: context.tenantId });
 
   if (serviceId !== '*') {
@@ -240,7 +230,7 @@ async function assignServiceTaxRate(serviceId: string, region: string, options: 
  */
 async function setupTaxConfiguration() {
   const taxRateId = uuidv4();
-  await context.db('tax_regions')
+  await tenantTable(context, 'tax_regions')
     .insert({
       tenant: context.tenantId,
       region_code: 'US-NY',
@@ -250,7 +240,7 @@ async function setupTaxConfiguration() {
     .onConflict(['tenant', 'region_code'])
     .ignore();
 
-  await context.db('tax_rates').insert({
+  await tenantTable(context, 'tax_rates').insert({
     tax_rate_id: taxRateId,
     tenant: context.tenantId,
     region_code: 'US-NY',
@@ -270,7 +260,7 @@ async function setupTaxConfiguration() {
 async function upsertClientTaxSettings(taxRateId: string) {
   try {
     if (!clientTaxSettingsColumns) {
-      clientTaxSettingsColumns = await context.db('client_tax_settings').columnInfo();
+      clientTaxSettingsColumns = await schemaTable(context, 'client_tax_settings').columnInfo();
     }
   } catch (error) {
     clientTaxSettingsColumns = null;
@@ -280,7 +270,7 @@ async function upsertClientTaxSettings(taxRateId: string) {
     return;
   }
 
-  const clientExists = await context.db('clients')
+  const clientExists = await tenantTable(context, 'clients')
     .where({ tenant: context.tenantId, client_id: context.clientId })
     .first();
 
@@ -298,7 +288,7 @@ async function upsertClientTaxSettings(taxRateId: string) {
     baseData.tax_rate_id = taxRateId;
   }
 
-  await context.db('client_tax_settings')
+  await tenantTable(context, 'client_tax_settings')
     .insert(baseData)
     .onConflict(['tenant', 'client_id'])
     .merge(baseData);
@@ -307,7 +297,7 @@ async function upsertClientTaxSettings(taxRateId: string) {
 async function upsertClientDefaultTaxRate(taxRateId: string) {
   try {
     if (!clientTaxRatesColumns) {
-      clientTaxRatesColumns = await context.db('client_tax_rates').columnInfo();
+      clientTaxRatesColumns = await schemaTable(context, 'client_tax_rates').columnInfo();
     }
   } catch (error) {
     clientTaxRatesColumns = null;
@@ -317,7 +307,7 @@ async function upsertClientDefaultTaxRate(taxRateId: string) {
     return;
   }
 
-  const clientExists = await context.db('clients')
+  const clientExists = await tenantTable(context, 'clients')
     .where({ tenant: context.tenantId, client_id: context.clientId })
     .first();
 
@@ -343,11 +333,11 @@ async function upsertClientDefaultTaxRate(taxRateId: string) {
     rateData.client_tax_rate_id = uuidv4();
   }
 
-  await context.db('client_tax_rates')
+  await tenantTable(context, 'client_tax_rates')
     .where({ tenant: context.tenantId, client_id: context.clientId })
     .delete();
 
-  await context.db('client_tax_rates').insert(rateData);
+  await tenantTable(context, 'client_tax_rates').insert(rateData);
 }
 
 describe('Manual Invoice Generation', () => {
@@ -356,7 +346,7 @@ describe('Manual Invoice Generation', () => {
       const serviceId = await createTestService();
       await setupTaxConfiguration();
 
-      const result = await generateManualInvoice({
+      const result = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [{
           service_id: serviceId,
@@ -368,7 +358,7 @@ describe('Manual Invoice Generation', () => {
 
       expect(result).toMatchObject({
         client_id: context.clientId,
-        invoice_number: expect.stringMatching(/^TIC\d{6}$/),
+        invoice_number: expect.stringMatching(/^INV-\d{6}$/),
         status: 'draft'
       });
 
@@ -382,7 +372,7 @@ describe('Manual Invoice Generation', () => {
       const service2Id = await createTestService({ service_name: 'Second Service' });
       await setupTaxConfiguration();
 
-      const result = await generateManualInvoice({
+      const result = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [
           {
@@ -409,7 +399,7 @@ describe('Manual Invoice Generation', () => {
       const serviceId = await createTestService();
       await setupTaxConfiguration();
 
-      const result = await generateManualInvoice({
+      const result = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [
           {
@@ -464,7 +454,7 @@ describe('Manual Invoice Generation', () => {
       const invalidClientId = uuidv4();
       
       await expectNotFound(
-        () => generateManualInvoice({
+        () => generateManualInvoiceOrThrow({
           clientId: invalidClientId,
           items: [{
             service_id: serviceId,
@@ -481,7 +471,7 @@ describe('Manual Invoice Generation', () => {
       const invalidServiceId = uuidv4();
       
       await expectNotFound(
-        () => generateManualInvoice({
+        () => generateManualInvoiceOrThrow({
           clientId: context.clientId,
           items: [{
             service_id: invalidServiceId,
@@ -501,11 +491,11 @@ describe('Manual Invoice Generation', () => {
       const taxRateId = await setupTaxConfiguration();
 
       // Update tax rate to a different percentage
-      await context.db('tax_rates')
+      await tenantTable(context, 'tax_rates')
         .where({ tax_rate_id: taxRateId })
         .update({ tax_percentage: 10 });
 
-      const result = await generateManualInvoice({
+      const result = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [{
           service_id: serviceId,
@@ -524,11 +514,11 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
   
       // Make client tax exempt
-      await context.db('clients')
+      await tenantTable(context, 'clients')
         .where({ client_id: context.clientId })
         .update({ is_tax_exempt: true });
   
-      const result = await generateManualInvoice({
+      const result = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [{
           service_id: serviceId,
@@ -549,7 +539,7 @@ describe('Manual Invoice Generation', () => {
       
       // Set up tax configuration for both regions
       const taxRateNyId = uuidv4();
-      await context.db('tax_regions')
+      await tenantTable(context, 'tax_regions')
         .insert([
           {
             tenant: context.tenantId,
@@ -567,7 +557,7 @@ describe('Manual Invoice Generation', () => {
         .onConflict(['tenant', 'region_code'])
         .ignore();
 
-      await context.db('tax_rates').insert([{
+      await tenantTable(context, 'tax_rates').insert([{
          tax_rate_id: taxRateNyId,
          tenant: context.tenantId,
          region_code: 'US-NY',
@@ -587,11 +577,11 @@ describe('Manual Invoice Generation', () => {
       await assignServiceTaxRate(serviceCA, 'US-CA');
       
       // First remove any existing tax settings for this client
-      await context.db('client_tax_rates')
+      await tenantTable(context, 'client_tax_rates')
         .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await context.db('client_tax_settings')
+      await tenantTable(context, 'client_tax_settings')
         .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
@@ -599,7 +589,7 @@ describe('Manual Invoice Generation', () => {
       await upsertClientDefaultTaxRate(taxRateNyId);
       
       // Generate an invoice with one item from each service
-      const result = await generateManualInvoice({
+      const result = await generateManualInvoiceOrThrow({
          clientId: context.clientId,
          items: [
            {
@@ -632,7 +622,7 @@ describe('Manual Invoice Generation', () => {
       const serviceId = await createTestService();
       await setupTaxConfiguration();
 
-      const result = await generateManualInvoice({
+      const result = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [{
           service_id: serviceId,
@@ -653,7 +643,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_generated',
         status: 'completed',
-        amount: 1089 // Including tax
+        amount: '1089' // Including tax (pg numeric -> string)
       });
     });
   });
@@ -665,7 +655,7 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
 
       // 2. Create initial invoice with one item
-      const initialInvoice = await generateManualInvoice({
+      const initialInvoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [{
           service_id: serviceId,
@@ -686,7 +676,7 @@ describe('Manual Invoice Generation', () => {
       
       // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
       const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-      await context.db('invoices')
+      await tenantTable(context, 'invoices')
         .where({ invoice_id: invoiceId })
         .update({
           invoice_date: today,
@@ -694,7 +684,7 @@ describe('Manual Invoice Generation', () => {
         });
       
       // 5. Update the invoice with new items
-      const updatedInvoice = await updateManualInvoice(invoiceId, {
+      const updatedInvoice = await updateManualInvoiceOrThrow(invoiceId, {
         clientId: context.clientId,
         items: [
           // Include the original item
@@ -739,7 +729,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: 2178 // Updated amount including tax
+        amount: '2178' // Updated amount including tax (pg numeric -> string)
       });
     });
 
@@ -749,7 +739,7 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
 
       // 2. Create initial invoice with one item
-      const initialInvoice = await generateManualInvoice({
+      const initialInvoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [{
           service_id: serviceId,
@@ -764,7 +754,7 @@ describe('Manual Invoice Generation', () => {
 
       // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
       const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-      await context.db('invoices')
+      await tenantTable(context, 'invoices')
         .where({ invoice_id: invoiceId })
         .update({
           invoice_date: today,
@@ -772,7 +762,7 @@ describe('Manual Invoice Generation', () => {
         });
 
       // 5. Update the invoice with a mix of items including a discount
-      const updatedInvoice = await updateManualInvoice(invoiceId, {
+      const updatedInvoice = await updateManualInvoiceOrThrow(invoiceId, {
         clientId: context.clientId,
         items: [
           // Include the original item
@@ -827,7 +817,7 @@ describe('Manual Invoice Generation', () => {
       
       // 2. Set up multi-region tax configuration
       const taxRateNyId = uuidv4();
-      await context.db('tax_regions')
+      await tenantTable(context, 'tax_regions')
         .insert([
           {
             tenant: context.tenantId,
@@ -845,7 +835,7 @@ describe('Manual Invoice Generation', () => {
         .onConflict(['tenant', 'region_code'])
         .ignore();
 
-      await context.db('tax_rates').insert([{
+      await tenantTable(context, 'tax_rates').insert([{
         tax_rate_id: taxRateNyId,
         tenant: context.tenantId,
         region_code: 'US-NY',
@@ -865,11 +855,11 @@ describe('Manual Invoice Generation', () => {
       await assignServiceTaxRate(serviceCA, 'US-CA');
       
       // First remove any existing tax settings for this client
-      await context.db('client_tax_rates')
+      await tenantTable(context, 'client_tax_rates')
         .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await context.db('client_tax_settings')
+      await tenantTable(context, 'client_tax_settings')
         .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
@@ -877,7 +867,7 @@ describe('Manual Invoice Generation', () => {
       await upsertClientDefaultTaxRate(taxRateNyId);
       
       // 3. Create initial invoice with NY service
-      const initialInvoice = await generateManualInvoice({
+      const initialInvoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [{
           service_id: serviceNY,
@@ -892,7 +882,7 @@ describe('Manual Invoice Generation', () => {
       
       // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
       const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-      await context.db('invoices')
+      await tenantTable(context, 'invoices')
         .where({ invoice_id: invoiceId })
         .update({
           invoice_date: today,
@@ -900,7 +890,7 @@ describe('Manual Invoice Generation', () => {
         });
       
       // 5. Update invoice by adding a CA service item
-      const updatedInvoice = await updateManualInvoice(invoiceId, {
+      const updatedInvoice = await updateManualInvoiceOrThrow(invoiceId, {
         clientId: context.clientId,
         items: [
           // Include the original NY item
@@ -948,7 +938,7 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
 
       // 2. Create initial invoice with one item
-      const initialInvoice = await generateManualInvoice({
+      const initialInvoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [{
           service_id: serviceId,
@@ -969,7 +959,7 @@ describe('Manual Invoice Generation', () => {
       
       // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
       const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-      await context.db('invoices')
+      await tenantTable(context, 'invoices')
         .where({ invoice_id: invoiceId })
         .update({
           invoice_date: today,
@@ -977,7 +967,7 @@ describe('Manual Invoice Generation', () => {
         });
       
       // 5. Update the invoice by modifying the existing item (changing quantity and rate)
-      const updatedInvoice = await updateManualInvoice(invoiceId, {
+      const updatedInvoice = await updateManualInvoiceOrThrow(invoiceId, {
         clientId: context.clientId,
         items: [
           // Same item but with modified quantity and rate
@@ -1021,7 +1011,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: 3267 // Updated amount including tax (with tax rounded up)
+        amount: '3267' // Updated amount including tax, rounded up (pg numeric -> string)
       });
     });
     
@@ -1032,7 +1022,7 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
 
       // 2. Create initial invoice with multiple items
-      const initialInvoice = await generateManualInvoice({
+      const initialInvoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [
           {
@@ -1061,7 +1051,7 @@ describe('Manual Invoice Generation', () => {
       
       // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
       const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-      await context.db('invoices')
+      await tenantTable(context, 'invoices')
         .where({ invoice_id: invoiceId })
         .update({
           invoice_date: today,
@@ -1069,7 +1059,7 @@ describe('Manual Invoice Generation', () => {
         });
       
       // 5. Update the invoice by removing one item (the second service)
-      const updatedInvoice = await updateManualInvoice(invoiceId, {
+      const updatedInvoice = await updateManualInvoiceOrThrow(invoiceId, {
         clientId: context.clientId,
         items: [
           // Only include the first item, effectively removing the second item
@@ -1109,7 +1099,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: 1089 // Updated amount after item removal
+        amount: '1089' // Updated amount after item removal (pg numeric -> string)
       });      
     });
 
@@ -1130,7 +1120,7 @@ describe('Manual Invoice Generation', () => {
       
       // Set up tax configuration for NY and CA regions
       const taxRateNyId = uuidv4();
-      await context.db('tax_regions')
+      await tenantTable(context, 'tax_regions')
         .insert([
           {
             tenant: context.tenantId,
@@ -1148,7 +1138,7 @@ describe('Manual Invoice Generation', () => {
         .onConflict(['tenant', 'region_code'])
         .ignore();
 
-      await context.db('tax_rates').insert([{
+      await tenantTable(context, 'tax_rates').insert([{
         tax_rate_id: taxRateNyId,
         tenant: context.tenantId,
         region_code: 'US-NY',
@@ -1166,15 +1156,15 @@ describe('Manual Invoice Generation', () => {
 
       await assignServiceTaxRate(taxableServiceId, 'US-NY');
       await assignServiceTaxRate(caServiceId, 'US-CA');
-      await context.db('service_catalog')
+      await tenantTable(context, 'service_catalog')
         .where({ tenant: context.tenantId, service_id: nonTaxableServiceId })
         .update({ tax_rate_id: null });
 
-      await context.db('client_tax_rates')
+      await tenantTable(context, 'client_tax_rates')
         .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await context.db('client_tax_settings')
+      await tenantTable(context, 'client_tax_settings')
         .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
@@ -1182,7 +1172,7 @@ describe('Manual Invoice Generation', () => {
       await upsertClientDefaultTaxRate(taxRateNyId);
 
       // 2. Create initial invoice with a mix of taxable and non-taxable items
-      const initialInvoice = await generateManualInvoice({
+      const initialInvoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [
           // Taxable NY service
@@ -1219,7 +1209,7 @@ describe('Manual Invoice Generation', () => {
       
       // Format dates for Temporal compatibility
       const today = new Date().toISOString().split('T')[0];
-      await context.db('invoices')
+      await tenantTable(context, 'invoices')
         .where({ invoice_id: invoiceId })
         .update({
           invoice_date: today,
@@ -1227,7 +1217,7 @@ describe('Manual Invoice Generation', () => {
         });
       
       // 4. First adjustment: Change tax region of the taxable item
-      const regionChangeInvoice = await updateManualInvoice(invoiceId, {
+      const regionChangeInvoice = await updateManualInvoiceOrThrow(invoiceId, {
         clientId: context.clientId,
         items: [
           // Change the tax region by using the CA service instead
@@ -1258,7 +1248,7 @@ describe('Manual Invoice Generation', () => {
       expect(regionChangeTaxableItem?.tax_amount).toBe(73);
       
       // 6. Second adjustment: Convert non-taxable item to taxable, and vice versa
-      const taxStatusChangeInvoice = await updateManualInvoice(invoiceId, {
+      const taxStatusChangeInvoice = await updateManualInvoiceOrThrow(invoiceId, {
         clientId: context.clientId,
         items: [
           // Change previously taxable item to use non-taxable service
@@ -1292,7 +1282,7 @@ describe('Manual Invoice Generation', () => {
       expect(nowTaxableItem?.tax_amount).toBe(45);
       
       // 8. Third adjustment: Add a discount that affects tax calculation
-      const discountAdjustmentInvoice = await updateManualInvoice(invoiceId, {
+      const discountAdjustmentInvoice = await updateManualInvoiceOrThrow(invoiceId, {
         clientId: context.clientId,
         items: [
           // Keep the taxable item
@@ -1342,10 +1332,10 @@ describe('Manual Invoice Generation', () => {
       
       // Find the adjustment transaction for the final discount update by the expected amount
       const discountAdjustment = transactions.find((transaction: ITransaction) =>
-        transaction.type === 'invoice_adjustment' && transaction.amount === 1678);
+        transaction.type === 'invoice_adjustment' && Number(transaction.amount) === 1678);
       expect(discountAdjustment).toBeDefined();
       expect((discountAdjustment as ITransaction).type).toBe('invoice_adjustment');
-      expect((discountAdjustment as ITransaction).amount).toBe(1678);
+      expect(Number((discountAdjustment as ITransaction).amount)).toBe(1678);
     });    
   });
 });

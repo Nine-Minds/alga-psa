@@ -6,7 +6,7 @@ import {
   ensureWorkflowScheduleStateTable,
   resetWorkflowRuntimeTables
 } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { createTenantKnex, getCurrentTenantId, tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth';
 import {
   createWorkflowDefinitionAction,
@@ -101,6 +101,10 @@ const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 let db: Knex;
 let tenantId: string;
 let userId: string;
+
+function tenantTable(tenant: string, table: string) {
+  return tenantDb(db, tenant).table(table);
+}
 
 async function createDraftWorkflow(params: { steps: any[]; payloadSchemaRef?: string; trigger?: any; name?: string }) {
   const definition = {
@@ -278,7 +282,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
     expect(signaledRunIds).toContain(runB);
 
     // Wait/run projection state is owned by Temporal and remains untouched.
-    const waits = await db('workflow_run_waits').whereIn('run_id', [runA, runB]);
+    const waits = await tenantTable(tenantId, 'workflow_run_waits').whereIn('run_id', [runA, runB]);
     expect(waits.every((wait: any) => wait.status === 'WAITING')).toBe(true);
   });
 
@@ -300,9 +304,9 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
     expect(result.status).toBe('resumed');
     expect(result.runId).toBe(runId);
 
-    const wait = await db('workflow_run_waits').where({ run_id: runId }).first();
+    const wait = await tenantTable(tenantId, 'workflow_run_waits').where({ run_id: runId }).first();
     const runAfter = await WorkflowRunModelV2.getById(db, runId);
-    const eventRow = await db('workflow_runtime_events')
+    const eventRow = await tenantTable(tenantId, 'workflow_runtime_events')
       .where({ event_name: 'PING' })
       .orderBy('created_at', 'desc')
       .first();
@@ -345,7 +349,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
         })
       );
 
-      const eventRow = await db('workflow_runtime_events')
+      const eventRow = await tenantTable(tenantId, 'workflow_runtime_events')
         .where({ event_name: 'PING' })
         .orderBy('created_at', 'desc')
         .first();
@@ -381,7 +385,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
       })
     );
 
-    const wait = await db('workflow_run_waits').where({ run_id: runId }).first();
+    const wait = await tenantTable(tenantId, 'workflow_run_waits').where({ run_id: runId }).first();
     expect(wait?.status).toBe('WAITING');
   });
 
@@ -414,7 +418,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
       })
     );
 
-    const waitAfter = await db('workflow_run_waits').where({ run_id: runId, wait_id: wait.wait_id }).first();
+    const waitAfter = await tenantTable(tenantId, 'workflow_run_waits').where({ run_id: runId, wait_id: wait.wait_id }).first();
     expect(waitAfter?.status).toBe('WAITING');
   });
 
@@ -449,7 +453,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
     await cancelWorkflowRunAction({ runId, reason: 'test cancel' });
     expect(cancelWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith({ runId });
 
-    const waits = await db('workflow_run_waits').where({ run_id: runId });
+    const waits = await tenantTable(tenantId, 'workflow_run_waits').where({ run_id: runId });
     expect(waits.every((wait: any) => wait.status === 'CANCELED')).toBe(true);
 
     const result = await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} });
@@ -468,7 +472,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
 
     await cancelWorkflowRunAction({ runId, reason: 'test cancel' });
 
-    const waits = await db('workflow_run_waits').where({ run_id: runId });
+    const waits = await tenantTable(tenantId, 'workflow_run_waits').where({ run_id: runId });
     expect(waits.length).toBe(2);
     expect(waits.every((wait: any) => wait.status === 'CANCELED')).toBe(true);
   });
@@ -489,7 +493,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
         })
       });
 
-    const waits = await db('workflow_run_waits').where({ run_id: runId });
+    const waits = await tenantTable(tenantId, 'workflow_run_waits').where({ run_id: runId });
     const runAfter = await WorkflowRunModelV2.getById(db, runId);
     expect(waits.every((wait: any) => wait.status === 'WAITING')).toBe(true);
     expect(runAfter?.status).toBe('WAITING');
@@ -516,7 +520,7 @@ describe('workflow runtime v2 temporal run control integration tests', () => {
     const runAfter = await WorkflowRunModelV2.getById(db, runId);
     expect(runAfter?.status).toBe('RUNNING');
 
-    const waitAfter = await db('workflow_run_waits').where({ wait_id: wait.wait_id }).first();
+    const waitAfter = await tenantTable(tenantId, 'workflow_run_waits').where({ wait_id: wait.wait_id }).first();
     expect(waitAfter?.status).toBe('RESOLVED');
 
     expect(signalWorkflowRuntimeV2QuotaResumeMock).toHaveBeenCalledTimes(1);

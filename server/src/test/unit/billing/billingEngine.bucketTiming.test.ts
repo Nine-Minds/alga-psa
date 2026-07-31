@@ -169,13 +169,18 @@ describe("BillingEngine bucket timing", () => {
     );
 
     expect(bucketUsageBuilder.where).toHaveBeenNthCalledWith(
-      2,
+      1,
+      "bucket_usage.tenant",
+      "test_tenant",
+    );
+    expect(bucketUsageBuilder.where).toHaveBeenNthCalledWith(
+      3,
       "period_start",
       ">=",
       "2025-02-01T00:00:00Z",
     );
     expect(bucketUsageBuilder.where).toHaveBeenNthCalledWith(
-      3,
+      4,
       "period_end",
       "<=",
       "2025-03-01T00:00:00Z",

@@ -2,7 +2,7 @@
 
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
@@ -83,6 +83,26 @@ function appendJoinUrlToNotes(notes: string | null | undefined, joinUrl: string)
   return `${baseNotes}\n\nJoin Teams Meeting: ${joinUrl}`;
 }
 
+function teamsSchedulingActionErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (
+    message === 'startDateTime is required' ||
+    message === 'startDateTime must be a valid date/time' ||
+    message === 'endDateTime is required' ||
+    message === 'endDateTime must be a valid date/time' ||
+    message === 'Online Meeting interaction type is not configured'
+  ) {
+    return message;
+  }
+
+  if (/^Users .+ not found/.test(message)) {
+    return 'One or more assigned users could not be found.';
+  }
+
+  return 'Failed to schedule Teams meeting.';
+}
+
 export const scheduleTeamsMeeting = withAuth(async (
   user,
   { tenant },
@@ -140,7 +160,8 @@ export const scheduleTeamsMeeting = withAuth(async (
 
     try {
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const onlineMeetingType = await trx('system_interaction_types')
+        const scopedDb = tenantDb(trx, tenant);
+        const onlineMeetingType = await scopedDb.table('system_interaction_types')
           .where({ type_name: 'Online Meeting' })
           .first('type_id');
 
@@ -206,7 +227,7 @@ export const scheduleTeamsMeeting = withAuth(async (
 
         const now = new Date();
         const meetingId = uuidv4();
-        await trx('online_meetings').insert({
+        await scopedDb.table('online_meetings').insert({
           meeting_id: meetingId,
           tenant,
           provider: 'teams',
@@ -279,7 +300,7 @@ export const scheduleTeamsMeeting = withAuth(async (
     console.error('[scheduleTeamsMeeting] Error scheduling Teams meeting:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to schedule Teams meeting.',
+      error: teamsSchedulingActionErrorMessage(error),
     };
   }
 });

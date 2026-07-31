@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 type SurveyTokenServiceModule = typeof import('@alga-psa/surveys/actions/surveyTokenService');
@@ -54,6 +55,19 @@ describe('Survey Token Service integration', () => {
   let invitationId: string;
 
   const requiredTables = ['tenants', 'clients', 'contacts', 'tickets', 'survey_templates', 'survey_invitations'];
+
+  function tenantTable(table: string) {
+    return tenantDb(db, tenantId).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, tenantId).unscoped('tenants', 'survey token service test fixture creates and removes tenant rows');
+  }
+
+  function schemaTable(table: string) {
+    return tenantDb(db, '__survey_token_schema__').unscoped(table, 'survey token service test reads schema metadata');
+  }
+
   beforeAll(async () => {
     try {
       db = await createTestDbConnection();
@@ -109,13 +123,13 @@ describe('Survey Token Service integration', () => {
       return;
     }
 
-    await db('survey_invitations').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('survey_responses').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('survey_templates').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('tickets').where({ tenant: tenantId, ticket_id: ticketId }).delete().catch(() => undefined);
-    await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete().catch(() => undefined);
-    await db('clients').where({ tenant: tenantId, client_id: clientId }).delete().catch(() => undefined);
-    await db('tenants').where({ tenant: tenantId }).delete().catch(() => undefined);
+    await tenantTable('survey_invitations').delete().catch(() => undefined);
+    await tenantTable('survey_responses').delete().catch(() => undefined);
+    await tenantTable('survey_templates').delete().catch(() => undefined);
+    await tenantTable('tickets').where({ ticket_id: ticketId }).delete().catch(() => undefined);
+    await tenantTable('contacts').where({ contact_name_id: contactId }).delete().catch(() => undefined);
+    await tenantTable('clients').where({ client_id: clientId }).delete().catch(() => undefined);
+    await tenantRows().where({ tenant: tenantId }).delete().catch(() => undefined);
     currentTenantId = null;
 
   });
@@ -189,7 +203,7 @@ describe('Survey Token Service integration', () => {
       return cached;
     }
 
-    const info = await db(table).columnInfo();
+    const info = await schemaTable(table).columnInfo();
     columnCache.set(table, info);
     return info;
   }
@@ -211,12 +225,12 @@ describe('Survey Token Service integration', () => {
       tenantRow.company_name = 'Integration Tenant';
     }
 
-    await db('tenants').insert(tenantRow);
+    await tenantRows().insert(tenantRow);
   }
 
   async function insertClient() {
     const now = new Date();
-    await db('clients').insert({
+    await tenantTable('clients').insert({
       tenant: tenantId,
       client_id: clientId,
       client_name: 'Integration Client',
@@ -251,7 +265,7 @@ describe('Survey Token Service integration', () => {
       contactRow.company_id = clientId;
     }
 
-    await db('contacts').insert(contactRow);
+    await tenantTable('contacts').insert(contactRow);
   }
 
   async function insertTicket() {
@@ -287,7 +301,7 @@ describe('Survey Token Service integration', () => {
       ticketRow.company_id = clientId;
     }
 
-    await db('tickets').insert(ticketRow);
+    await tenantTable('tickets').insert(ticketRow);
   }
 
   async function insertTemplate() {
@@ -307,7 +321,7 @@ describe('Survey Token Service integration', () => {
       updated_at: new Date(),
     };
 
-    await db('survey_templates').insert(templateRow);
+    await tenantTable('survey_templates').insert(templateRow);
   }
 
   async function createInvitation(options: { tokenExpiresAt: Date; promptText: string; templateName: string }) {
@@ -339,9 +353,9 @@ describe('Survey Token Service integration', () => {
       invitationToken.contact_id = contactId;
     }
 
-    await db('survey_invitations').insert(invitationToken);
+    await tenantTable('survey_invitations').insert(invitationToken);
 
-    await db('survey_templates')
+    await tenantTable('survey_templates')
       .where({ tenant: tenantId, template_id: templateId })
       .update({
         template_name: options.templateName,
@@ -349,7 +363,7 @@ describe('Survey Token Service integration', () => {
         updated_at: now,
       });
 
-    const invitationRow = await db('survey_invitations')
+    const invitationRow = await tenantTable('survey_invitations')
       .where({ invitation_id: invitationId, tenant: tenantId })
       .first();
 

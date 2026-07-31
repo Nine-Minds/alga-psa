@@ -26,7 +26,8 @@
       "sendReminder": "Enviar lembrete",
       "sendToClient": "Enviar para o cliente",
       "setAsDefault": "Definir como padrão",
-      "submitForApproval": "Enviar para aprovação"
+      "submitForApproval": "Enviar para aprovação",
+      "done": "Concluído"
     },
     "badges": {
       "standard": "Padrão"
@@ -42,7 +43,7 @@
       "items": "Unid",
       "name": "Nome",
       "quoteDate": "Data da cotação",
-      "quoteNumber": "Citar #",
+      "quoteNumber": "Cotação #",
       "source": "Fonte",
       "status": "Status",
       "title": "Título",
@@ -74,7 +75,7 @@
     }
   },
   "quotesTab": {
-    "title": "Citações",
+    "title": "Cotações",
     "actions": {
       "quoteActions": "Ações de cotação"
     },
@@ -89,7 +90,7 @@
       "client": "Cliente"
     },
     "empty": {
-      "byCategory": "Não há citações nesta categoria.",
+      "byCategory": "Não há cotações nesta categoria.",
       "title": "Nenhuma cotação encontrada",
       "description": "Crie uma cotação para começar."
     },
@@ -150,18 +151,19 @@
       "moreActions": "Mais ações",
       "cancel": "Cancelar",
       "previewPdf": "Visualizar PDF",
-      "backToQuotes": "Voltar para citações",
-      "backToTemplates": "Voltar aos modelos de cotação"
+      "backToQuotes": "Voltar para cotações",
+      "backToTemplates": "Voltar aos modelos de cotação",
+      "convertToSalesOrder": "Converter em pedido de venda"
     },
     "headings": {
       "editQuote": "Editar cotação",
       "editTemplate": "Editar modelo de cotação",
       "newQuote": "Nova cotação",
       "newTemplate": "Novo modelo de cotação",
-      "quote": "Citar",
-      "quoteWithNumber": "orçamento {{quoteNumber}}",
-      "quoteWithNumberAndVersion": "orçamento {{quoteNumber}} v{{version}}",
-      "templateQuoteFallback": "orçamento de modelo"
+      "quote": "Cotação",
+      "quoteWithNumber": "Cotação {{quoteNumber}}",
+      "quoteWithNumberAndVersion": "Cotação {{quoteNumber}} v{{version}}",
+      "templateQuoteFallback": "Cotação modelo"
     },
     "fields": {
       "additionalEmails": "Endereços de e-mail adicionais (separados por vírgula)",
@@ -181,15 +183,15 @@
       "useDefaultLayout": "Usar layout padrão"
     },
     "alerts": {
-      "accepted": "Orçamento aceito",
+      "accepted": "Cotação aceita",
       "converted": "Cotação convertida",
       "convertedDescription": "Esta cotação foi convertida em um contrato e/ou fatura.",
-      "quote": "Citar",
-      "rejected": "orçamento rejeitada"
+      "quote": "Cotação",
+      "rejected": "Cotação rejeitada"
     },
     "dialogs": {
       "approval": {
-        "approveDescription": "Aprove este orçamento para que possa ser enviado ao cliente.",
+        "approveDescription": "Aprove esta cotação para que possa ser enviada ao cliente.",
         "approveTitle": "Aprovar cotação",
         "approveComment": "Comentário (opcional)",
         "approveCommentPlaceholder": "Adicione uma nota opcional...",
@@ -229,22 +231,23 @@
       "notFound": "Cotação não encontrada",
       "save": "Falha ao salvar cotação",
       "saveFailed": "Falha ao salvar cotação",
-      "workflowAction": "Falha ao {{action}}"
+      "workflowAction": "Falha ao {{action}}",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Carregando formulário de cotação...",
     "notices": {
-      "approved": "Orçamento aprovado e pronto para envio.",
-      "cancelled": "Orçamento cancelado.",
+      "approved": "Cotação aprovada e pronta para envio.",
+      "cancelled": "Cotação cancelada.",
       "createdDraftContract": "Criou minuta de contrato {{name}}.",
       "createdDraftContractAndInvoice": "Criou minuta de contrato {{contractName}} e minuta de fatura {{invoiceName}}.",
       "createdDraftInvoice": "Projeto de fatura criado {{name}}.",
       "reminderSent": "Lembrete de cotação enviado.",
       "requestedChanges": "A cotação voltou ao rascunho com as alterações solicitadas.",
-      "resent": "orçamento ressentida.",
-      "sent": "Orçamento enviado ao cliente.",
-      "submittedForApproval": "Orçamento submetido para aprovação interna."
+      "resent": "Cotação reenviada.",
+      "sent": "Cotação enviada ao cliente.",
+      "submittedForApproval": "Cotação submetida para aprovação interna."
     },
-    "readOnlyNotice": "Esta orçamento é somente leitura. Para fazer alterações, crie uma nova revisão.",
+    "readOnlyNotice": "Esta cotação é somente leitura. Para fazer alterações, crie uma nova revisão.",
     "validation": {
       "clientRequired": "O cliente é obrigatório",
       "titleRequired": "O título é obrigatório, a menos que seja criado a partir do modelo"
@@ -260,7 +263,7 @@
     "breadcrumb": {
       "billing": "Faturamento",
       "quoteTemplates": "Modelos de cotação",
-      "quotes": "Citações",
+      "quotes": "Cotações",
       "newQuote": "Nova cotação"
     },
     "subtitle": {
@@ -269,16 +272,16 @@
       "expires": "Expira {{date}}"
     },
     "banners": {
-      "acceptedTitle": "Orçamento aceito",
+      "acceptedTitle": "Cotação aceita",
       "acceptedBy": "Aceito por: {{name}}",
       "acceptedOn": "Aceito em: {{date}}",
-      "rejectedTitle": "orçamento rejeitada",
+      "rejectedTitle": "Cotação rejeitada",
       "rejectedOn": "Rejeitado em: {{date}}",
       "rejectedReason": "Razão: {{reason}}",
       "convertedTitle": "Cotação convertida",
       "convertedDescription": "Esta cotação foi convertida em um contrato e/ou fatura."
     },
-    "noticeTitle": "Citar",
+    "noticeTitle": "Cotação",
     "essentials": {
       "title": "Fundamentos",
       "subtitle": "Mostrado ao cliente no documento de cotação.",
@@ -346,12 +349,13 @@
   "quoteDetail": {
     "title": "Detalhes da cotação",
     "actions": {
-      "backToQuotes": "Voltar para citações",
+      "backToQuotes": "Voltar para cotações",
       "openConvertedContract": "Contrato Convertido Aberto",
       "openConvertedInvoice": "Abrir fatura convertida",
       "preview": "Visualização",
       "saveAsTemplate": "Salvar como modelo",
-      "back": "Voltar"
+      "back": "Voltar",
+      "openConvertedSalesOrder": "Convertido em {{number}}"
     },
     "sections": {
       "activityLog": "Registro de atividades",
@@ -370,7 +374,7 @@
     },
     "dialogs": {
       "approval": {
-        "approveDescription": "Aprove este orçamento para que possa ser enviado ao cliente. Você pode adicionar um comentário opcional.",
+        "approveDescription": "Aprove esta cotação para que possa ser enviada ao cliente. Você pode adicionar um comentário opcional.",
         "changesDescription": "Devolva esta cotação ao rascunho com as alterações solicitadas. Descreva o que precisa ser revisado."
       },
       "send": {
@@ -378,11 +382,11 @@
       }
     },
     "status": {
-      "accepted": "Orçamento aceito",
+      "accepted": "Cotação aceita",
       "acceptedBy": "Aceito por:",
       "acceptedOn": "Aceito em:",
       "reason": "Razão:",
-      "rejected": "orçamento rejeitada",
+      "rejected": "Cotação rejeitada",
       "rejectedOn": "Rejeitado em:"
     },
     "empty": {
@@ -413,25 +417,26 @@
       "saveAsTemplate": "Falha ao salvar cotação como modelo",
       "send": "Falha ao enviar cotação",
       "sendReminder": "Falha ao enviar lembrete de cotação",
-      "submitForApproval": "Falha ao enviar orçamento para aprovação"
+      "submitForApproval": "Falha ao enviar cotação para aprovação"
     },
     "labels": {
       "phase": "Fase: {{phase}}",
-      "templateQuote": "orçamento de modelo",
+      "templateQuote": "Cotação modelo",
       "customItem": "Item personalizado",
       "optional": "Opcional",
       "recurring": "Recorrente"
     },
     "loading": "Carregando detalhes da cotação...",
     "notices": {
-      "approved": "Orçamento aprovado e pronto para envio.",
+      "approved": "Cotação aprovada e pronta para envio.",
       "reminderSent": "Lembrete de cotação enviado aos destinatários de cobrança configurados.",
       "requestedChanges": "A cotação voltou ao rascunho com as alterações solicitadas.",
       "resent": "Cotação reenviada para os destinatários de cobrança configurados.",
-      "sent": "Orçamento enviado ao cliente.",
-      "submittedForApproval": "Orçamento submetido para aprovação interna.",
+      "sent": "Cotação enviada ao cliente.",
+      "submittedForApproval": "Cotação submetida para aprovação interna.",
       "templateAssigned": "Modelo de documento atribuído.",
-      "templateCleared": "Modelo de documento desmarcado (usando o padrão)."
+      "templateCleared": "Modelo de documento desmarcado (usando o padrão).",
+      "createdSalesOrder": "Pedido de venda em rascunho {{number}} criado. As linhas de produto serão faturadas na entrega."
     },
     "preview": {
       "loading": "Carregando visualização..."
@@ -447,6 +452,9 @@
       "groupHeading": "Localização",
       "unassigned": "Itens sem localização",
       "subtotal": "Subtotal de localização"
+    },
+    "availability": {
+      "onHand": "Em estoque: {{count}}"
     }
   },
   "quoteLineItems": {
@@ -500,7 +508,7 @@
       },
       "fixed": "Desconto fixo",
       "fullQuoteSubtotal": "Aplica-se ao subtotal da cotação completa",
-      "fullQuote": "orçamento completa",
+      "fullQuote": "Cotação completa",
       "item": "Item específico",
       "percentage": "Desconto percentual",
       "service": "Serviço específico",
@@ -549,7 +557,10 @@
       "contact": "Contato",
       "internal": "Interno"
     },
-    "removeAriaLabel": "Remover {{email}}"
+    "removeAriaLabel": "Remover {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Converter cotação",
@@ -567,6 +578,10 @@
       "both": {
         "label": "Contrato + Fatura",
         "description": "Cria um rascunho de contrato (para itens recorrentes) e um rascunho de fatura (para itens únicos)."
+      },
+      "salesOrder": {
+        "label": "Pedido de venda (linhas de produto)",
+        "description": "Move as linhas de produto avulsas para um pedido de venda em rascunho que é faturado na entrega. Essas linhas são excluídas da fatura em rascunho, para que nada seja cobrado em duplicidade."
       }
     },
     "sections": {
@@ -597,26 +612,33 @@
       "invoiceCreated": "Uma fatura foi criada.",
       "remainingItems": "Você pode converter os itens restantes.",
       "title": "Conversão Parcial",
-      "description": "Alguns registros desta orçamento já existem."
+      "description": "Alguns registros desta cotação já existem."
     },
     "actions": {
       "contract": "Criar rascunho de contrato",
       "convertQuote": "Converter cotação",
       "invoice": "Criar rascunho de fatura",
       "both": "Crie ambos os registros",
-      "converting": "Convertendo..."
+      "converting": "Convertendo...",
+      "salesOrder": "Criar pedido de venda"
     },
     "errors": {
       "convert": "Falha ao converter cotação",
       "load": "Falha ao carregar a visualização da conversão",
       "title": "Erro"
+    },
+    "salesOrder": {
+      "successTitle": "Pedido de venda {{number}} criado",
+      "successBody": "As linhas de produto serão faturadas na entrega.",
+      "openSalesOrders": "Abrir pedidos de venda",
+      "note": "As linhas de produto avulsas passam para um pedido de venda em rascunho (faturado na entrega) e são excluídas de qualquer conversão em fatura de rascunho, para que nada seja cobrado em duplicidade."
     }
   },
   "quoteApproval": {
     "title": "Aprovações de cotação",
     "description": "Revise as cotações que aguardam a aprovação do gerente antes de serem enviadas aos clientes.",
     "actions": {
-      "backToQuotes": "Voltar para citações"
+      "backToQuotes": "Voltar para cotações"
     },
     "settings": {
       "label": "Aprovação necessária antes do envio",

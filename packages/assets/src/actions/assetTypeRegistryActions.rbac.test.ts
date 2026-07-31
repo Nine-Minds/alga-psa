@@ -13,7 +13,10 @@ const h = vi.hoisted(() => {
   let idCounter = 0;
 
   const matches = (row: Row, where: Record<string, any>) =>
-    Object.entries(where).every(([k, v]) => row[k] === v);
+    Object.entries(where).every(([k, v]) => {
+      const key = k.includes('.') ? k.split('.').pop()! : k;
+      return row[key] === v;
+    });
 
   class QB {
     private whereClauses: Array<Record<string, any>> = [];
@@ -25,8 +28,12 @@ const h = vi.hoisted(() => {
       return dbState[this.table];
     }
 
-    where(where: Record<string, any>) {
-      this.whereClauses.push(where);
+    where(where: Record<string, any> | string, value?: any) {
+      if (typeof where === 'string') {
+        this.whereClauses.push({ [where]: value });
+      } else {
+        this.whereClauses.push(where);
+      }
       return this;
     }
 
@@ -113,6 +120,9 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knexMock, tenant: 'tenant_a' })),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: 'asset_type_registry' | 'assets') => conn(table).where(`${table}.tenant`, tenant),
+  }),
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(h.knexMock)),
 }));
 
@@ -136,13 +146,17 @@ beforeEach(() => {
 describe('asset type registry action RBAC (T307)', () => {
   it('getAssetTypes requires asset.read', async () => {
     h.permissionState.read = false;
-    await expect(getAssetTypes()).rejects.toThrow('Permission denied: Cannot read asset types');
+    await expect(getAssetTypes()).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot read asset types',
+    });
     expect(hasPermissionMock).toHaveBeenCalledWith(h.mockUser, 'asset', 'read');
   });
 
   it('getAssetType requires asset.read', async () => {
     h.permissionState.read = false;
-    await expect(getAssetType('workstation')).rejects.toThrow('Permission denied: Cannot read asset types');
+    await expect(getAssetType('workstation')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot read asset types',
+    });
   });
 
   it('reads succeed with asset.read even without asset.update', async () => {
@@ -170,25 +184,25 @@ describe('asset type registry action RBAC (T307)', () => {
 
   it('createAssetTypeAction requires system settings update (asset permissions alone are not enough)', async () => {
     h.permissionState.systemUpdate = false;
-    await expect(createAssetTypeAction({ name: 'Door Access' })).rejects.toThrow(
-      'Permission denied: Cannot manage asset types'
-    );
+    await expect(createAssetTypeAction({ name: 'Door Access' })).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot manage asset types',
+    });
     expect(hasPermissionMock).toHaveBeenCalledWith(h.mockUser, 'system_settings', 'update');
     expect(h.dbState.asset_type_registry).toHaveLength(0);
   });
 
   it('updateAssetTypeAction requires system settings update', async () => {
     h.permissionState.systemUpdate = false;
-    await expect(updateAssetTypeAction('door_access', { name: 'Doors' })).rejects.toThrow(
-      'Permission denied: Cannot manage asset types'
-    );
+    await expect(updateAssetTypeAction('door_access', { name: 'Doors' })).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot manage asset types',
+    });
   });
 
   it('deleteAssetTypeAction requires system settings update', async () => {
     h.permissionState.systemUpdate = false;
-    await expect(deleteAssetTypeAction('door_access')).rejects.toThrow(
-      'Permission denied: Cannot manage asset types'
-    );
+    await expect(deleteAssetTypeAction('door_access')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot manage asset types',
+    });
   });
 
   it('authorized create returns a typed success envelope', async () => {

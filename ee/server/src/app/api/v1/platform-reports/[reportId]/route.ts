@@ -126,7 +126,7 @@ export async function GET(
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform reports.' },
           { status: 403 }
         );
       }
@@ -187,7 +187,7 @@ async function handlePut(
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform reports.' },
           { status: 403 }
         );
       }
@@ -195,7 +195,7 @@ async function handlePut(
       // Report permission errors (blocklist violations)
       if (error.name === 'ReportPermissionError') {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Report update was blocked by the report security policy.' },
           { status: 400 }
         );
       }
@@ -308,7 +308,7 @@ async function handleDelete(
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform reports.' },
           { status: 403 }
         );
       }

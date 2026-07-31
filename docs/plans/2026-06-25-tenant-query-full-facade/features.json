@@ -1,0 +1,32 @@
+[
+  {
+    "id": "F001",
+    "description": "Add table metadata for tenant, global, and admin table access categories.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Add a tenantDb facade with table, scoped, subquery, tenantJoin, and unscoped entry points.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Preserve createTenantScopedQuery compatibility while sharing alias parsing with the facade.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Export the facade and metadata helpers from @alga-psa/db.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Migrate the first representative app slice from a local tenantScopedTable helper to tenantDb.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Record batch validation and migration progress in /tmp/act-migration.md.",
+    "implemented": true
+  }
+]

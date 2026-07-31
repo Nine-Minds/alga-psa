@@ -3,6 +3,11 @@ import { useState, useCallback } from 'react';
 import { getAsset, getAssetSummaryMetrics, getAvailableAssetFacts } from '@alga-psa/assets/actions/assetActions';
 import { getAssetRmmData, refreshAssetRmmData } from '@alga-psa/assets/actions/rmmActions';
 import { toast } from 'react-hot-toast';
+import { unwrapAssetActionResult } from '@alga-psa/assets/actions/assetActionErrors';
+
+async function unwrapAssetFetcher<T>(resultPromise: Promise<T>): Promise<T> {
+  return unwrapAssetActionResult(await resultPromise);
+}
 
 export function useAssetDetail(assetId: string) {
   const {
@@ -10,13 +15,13 @@ export function useAssetDetail(assetId: string) {
     error: assetError,
     isLoading: assetLoading,
     mutate: mutateAsset,
-  } = useSWR(assetId ? ['asset', assetId] : null, ([_, id]) => getAsset(id));
+  } = useSWR(assetId ? ['asset', assetId] : null, ([_, id]) => unwrapAssetFetcher(getAsset(id)));
 
   const {
     data: metrics,
     error: metricsError,
     isLoading: metricsLoading,
-  } = useSWR(assetId ? ['asset', assetId, 'summary'] : null, ([_, id]) => getAssetSummaryMetrics(id));
+  } = useSWR(assetId ? ['asset', assetId, 'summary'] : null, ([_, id]) => unwrapAssetFetcher(getAssetSummaryMetrics(id)));
 
   const {
     data: rmmData,
@@ -28,7 +33,7 @@ export function useAssetDetail(assetId: string) {
     data: assetFacts,
     error: assetFactsError,
     isLoading: assetFactsLoading,
-  } = useSWR(assetId ? ['asset', assetId, 'facts'] : null, ([_, id]) => getAvailableAssetFacts(id));
+  } = useSWR(assetId ? ['asset', assetId, 'facts'] : null, ([_, id]) => unwrapAssetFetcher(getAvailableAssetFacts(id)));
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -40,7 +45,7 @@ export function useAssetDetail(assetId: string) {
         setIsRefreshing(true);
         const [updatedData, updatedAsset] = await Promise.all([
           refreshAssetRmmData(assetId),
-          getAsset(assetId),
+          unwrapAssetFetcher(getAsset(assetId)),
         ]);
 
         await mutateRmmData(updatedData, false);
@@ -49,7 +54,7 @@ export function useAssetDetail(assetId: string) {
         toast.success('RMM data refreshed');
       } catch (error) {
         console.error('Error refreshing RMM data:', error);
-        toast.error('Failed to refresh RMM data');
+        toast.error(error instanceof Error ? error.message : 'Failed to refresh RMM data');
       } finally {
         setIsRefreshing(false);
       }

@@ -7,6 +7,9 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from 'react-i18next';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './ticket/TicketNotificationSuppressionControl';
 
 interface BulkChangePriorityDialogProps {
   isOpen: boolean;
@@ -15,7 +18,7 @@ interface BulkChangePriorityDialogProps {
   options: SelectOption[];
   failed: Array<{ ticketId: string; message: string; label?: string }>;
   isSubmitting: boolean;
-  onConfirm: (priorityId: string) => Promise<void>;
+  onConfirm: (priorityId: string, options?: TicketNotificationSuppressionValue) => Promise<void>;
   idPrefix?: string;
 }
 
@@ -31,16 +34,27 @@ export default function BulkChangePriorityDialog({
 }: BulkChangePriorityDialogProps) {
   const { t } = useTranslation(['features/tickets', 'common']);
   const [priorityId, setPriorityId] = useState<string>('');
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+  });
 
   useEffect(() => {
-    if (isOpen) setPriorityId('');
+    if (isOpen) {
+      setPriorityId('');
+      setNotificationSuppression({
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      });
+    }
   }, [isOpen]);
 
   const canConfirm = !!priorityId;
 
   const handleConfirm = async () => {
     if (!priorityId) return;
-    await onConfirm(priorityId);
+    const options = notificationSuppression.suppressContactNotifications ? notificationSuppression : undefined;
+    await (options ? onConfirm(priorityId, options) : onConfirm(priorityId));
   };
 
   return (
@@ -78,6 +92,14 @@ export default function BulkChangePriorityDialog({
             value={priorityId}
             onValueChange={setPriorityId}
             placeholder={t('bulk.priority.placeholder', 'Select a priority')}
+            disabled={isSubmitting}
+          />
+        </div>
+        <div className="mb-4">
+          <TicketNotificationSuppressionControl
+            idPrefix={`${idPrefix}-notification-suppression`}
+            value={notificationSuppression}
+            onChange={setNotificationSuppression}
             disabled={isSubmitting}
           />
         </div>

@@ -1,6 +1,7 @@
 import { getCurrentTenantId } from '../db';
 import { ITicketCategory } from '../../interfaces/ticket.interfaces';
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 const TicketCategory = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<ITicketCategory[]> => {
@@ -9,9 +10,7 @@ const TicketCategory = {
       if (!tenant) {
         throw new Error('No tenant context available');
       }
-      // Add explicit tenant filtering in addition to RLS
-      const categories = await knexOrTrx<ITicketCategory>('categories')
-        .where({ tenant })
+      const categories = await tenantDb(knexOrTrx, tenant).table<ITicketCategory>('categories')
         .select('*');
       return categories;
     } catch (error) {
@@ -26,11 +25,9 @@ const TicketCategory = {
       if (!tenant) {
         throw new Error('No tenant context available');
       }
-      // Add explicit tenant filtering in addition to RLS
-      const [category] = await knexOrTrx<ITicketCategory>('categories')
+      const [category] = await tenantDb(knexOrTrx, tenant).table<ITicketCategory>('categories')
         .where({
-          category_id: id,
-          tenant
+          category_id: id
         });
       
       if (!category) {
@@ -51,11 +48,11 @@ const TicketCategory = {
         throw new Error('No tenant context available');
       }
 
-      // Verify board exists in the current tenant
-      const board = await knexOrTrx('boards')
+      const db = tenantDb(knexOrTrx, tenant);
+
+      const board = await db.table('boards')
         .where({
-          board_id: boardId,
-          tenant
+          board_id: boardId
         })
         .first();
 
@@ -63,10 +60,9 @@ const TicketCategory = {
         throw new Error(`Board with id ${boardId} not found in tenant ${tenant}`);
       }
 
-      const categories = await knexOrTrx<ITicketCategory>('categories')
+      const categories = await db.table<ITicketCategory>('categories')
         .where({
-          board_id: boardId,
-          tenant
+          board_id: boardId
         });
       return categories;
     } catch (error) {
@@ -90,11 +86,11 @@ const TicketCategory = {
         throw new Error('Board ID is required');
       }
 
-      // Verify board exists in the current tenant
-      const board = await knexOrTrx('boards')
+      const db = tenantDb(knexOrTrx, tenant);
+
+      const board = await db.table('boards')
         .where({
-          board_id: category.board_id,
-          tenant
+          board_id: category.board_id
         })
         .first();
 
@@ -103,9 +99,8 @@ const TicketCategory = {
       }
 
       // Check if category with same name exists in the board
-      const existingCategory = await knexOrTrx('categories')
+      const existingCategory = await db.table('categories')
         .where({
-          tenant,
           category_name: category.category_name,
           board_id: category.board_id
         })
@@ -121,8 +116,7 @@ const TicketCategory = {
         tenant
       };
 
-      // Insert with explicit tenant
-      const [insertedCategory] = await knexOrTrx<ITicketCategory>('categories')
+      const [insertedCategory] = await db.table<ITicketCategory>('categories')
         .insert(categoryData)
         .returning('*');
 
@@ -144,11 +138,11 @@ const TicketCategory = {
         throw new Error('No tenant context available');
       }
 
-      // Verify category exists in the current tenant
-      const existingCategory = await knexOrTrx('categories')
+      const db = tenantDb(knexOrTrx, tenant);
+
+      const existingCategory = await db.table('categories')
         .where({
-          category_id: id,
-          tenant
+          category_id: id
         })
         .first();
 
@@ -158,10 +152,9 @@ const TicketCategory = {
 
       // If board_id is being updated, verify the new board exists in the current tenant
       if (category.board_id && category.board_id !== existingCategory.board_id) {
-        const newBoard = await knexOrTrx('boards')
+        const newBoard = await db.table('boards')
           .where({
-            board_id: category.board_id,
-            tenant
+            board_id: category.board_id
           })
           .first();
 
@@ -172,9 +165,8 @@ const TicketCategory = {
 
       // If name is being updated, check for duplicates in the same board
       if (category.category_name) {
-        const duplicateCategory = await knexOrTrx('categories')
+        const duplicateCategory = await db.table('categories')
           .where({
-            tenant,
             category_name: category.category_name,
             board_id: category.board_id || existingCategory.board_id
           })
@@ -189,11 +181,9 @@ const TicketCategory = {
       // Ensure tenant cannot be changed
       delete category.tenant;
 
-      // Update with explicit tenant check
-      const [updatedCategory] = await knexOrTrx<ITicketCategory>('categories')
+      const [updatedCategory] = await db.table<ITicketCategory>('categories')
         .where({
-          category_id: id,
-          tenant
+          category_id: id
         })
         .update(category)
         .returning('*');
@@ -216,11 +206,11 @@ const TicketCategory = {
         throw new Error('No tenant context available');
       }
 
-      // Verify category exists in the current tenant
-      const category = await knexOrTrx('categories')
+      const db = tenantDb(knexOrTrx, tenant);
+
+      const category = await db.table('categories')
         .where({
-          category_id: id,
-          tenant
+          category_id: id
         })
         .first();
 
@@ -229,9 +219,8 @@ const TicketCategory = {
       }
 
       // Check if category has subcategories
-      const hasSubcategories = await knexOrTrx('categories')
+      const hasSubcategories = await db.table('categories')
         .where({
-          tenant,
           parent_category: id
         })
         .first();
@@ -241,13 +230,11 @@ const TicketCategory = {
       }
 
       // Check if category is in use by tickets using a proper tenant-aware query
-      const inUseCount = await knexOrTrx('tickets')
+      const inUseCount = await tenantDb(knexOrTrx, tenant).table('tickets')
         .where(function() {
           this.where({
-            tenant,
             category_id: id
           }).orWhere({
-            tenant,
             subcategory_id: id
           });
         })
@@ -258,11 +245,9 @@ const TicketCategory = {
         throw new Error(`Cannot delete ticket category that is in use by tickets in tenant ${tenant}`);
       }
 
-      // Add explicit tenant check in deletion
-      const deletedCount = await knexOrTrx<ITicketCategory>('categories')
+      const deletedCount = await db.table<ITicketCategory>('categories')
         .where({
-          category_id: id,
-          tenant
+          category_id: id
         })
         .del();
 

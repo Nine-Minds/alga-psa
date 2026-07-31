@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import type { WebhookProcessingResult } from '@alga-psa/types';
 
 async function loadEnterprisePayments(): Promise<{
@@ -292,8 +293,12 @@ async function handleLicenseOrderWebhook(
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const knex = await getAdminConnection();
 
-    // Resolve the submission first — it carries the authoritative tenant + client_id.
-    const submission = await knex('service_request_submissions')
+    // Intentional admin lookup: tenant is derived from the submission.
+    const submission = await tenantDb(knex, '__license_order_submission_discovery__')
+      .unscoped(
+        'service_request_submissions',
+        'tenant discovery from license order submission webhook'
+      )
       .where({ submission_id: submissionId })
       .first('submitted_payload', 'tenant', 'client_id');
 
@@ -307,7 +312,7 @@ async function handleLicenseOrderWebhook(
     // Idempotency via payment_webhook_events (unique on tenant+provider+external id).
     // Temporal's workflow id (license-issue:{paymentIntentId}) is the exactly-once
     // backstop; this insert prevents redundant pre-workflow work.
-    const inserted = await knex('payment_webhook_events')
+    const inserted = await tenantDb(knex, tenant).table('payment_webhook_events')
       .insert({
         tenant,
         provider_type: 'stripe',
@@ -328,7 +333,7 @@ async function handleLicenseOrderWebhook(
     }
 
     // Client name → license customer (table is `clients`, PK client_id).
-    const client = await knex('clients').where({ client_id: clientId, tenant }).first('client_name');
+    const client = await tenantDb(knex, tenant).table('clients').where({ client_id: clientId }).first('client_name');
     const customer = (client?.client_name as string | undefined) ?? 'Unknown';
 
     // Start the issuance Temporal workflow (idempotent via workflow id)

@@ -1,17 +1,12 @@
 {
   "page": {
-    "title": "Gestión de créditos",
-    "creditsOverview": "Vista general de créditos",
-    "overviewDescription": "Gestiona los créditos y las transferencias de tu cliente",
-    "overviewDescriptionWithExpiration": "Gestiona los créditos de tu cliente, incluidas las fechas de vencimiento, y las transferencias",
-    "expirationSummary": "Resumen de vencimiento de créditos",
-    "expirationSummaryDescription": "Resumen de los créditos que vencen pronto",
-    "usageTrends": "Tendencias de uso del crédito",
-    "usageTrendsDescription": "Patrones históricos de uso del crédito"
+    "title": "Gestión de créditos"
   },
   "columns": {
     "creditId": "ID del crédito",
     "client": "Cliente",
+    "balance": "Saldo",
+    "balanceOf": "de {{amount}}",
     "created": "Creado el",
     "description": "Descripción",
     "context": "Contexto",
@@ -20,34 +15,31 @@
     "expires": "Vence el",
     "status": "Estado",
     "actions": "Acciones",
-    "discrepancy": "Diferencia",
-    "detected": "Detectado el",
-    "expectedBalance": "Saldo esperado",
-    "actualBalance": "Saldo real",
     "amountAvailable": "Importe disponible",
     "expiration": "Vencimiento",
     "select": "Seleccionar"
   },
+  "filters": {
+    "allClients": "Todos los clientes",
+    "allStatuses": "Todos los estados"
+  },
   "status": {
     "active": "Activo",
     "expired": "Vencido",
-    "expiringSoon": "Vence pronto ({{days}} días)",
-    "open": "Abierto",
-    "inReview": "En revisión",
-    "resolved": "Resuelto",
     "never": "Nunca",
-    "na": "N/D"
+    "na": "N/D",
+    "depleted": "Agotado",
+    "expiringSoonShort": "Vence pronto",
+    "expiringSoon_one": "Vence en {{count}} día",
+    "expiringSoon_other": "Vence en {{count}} días"
   },
   "actions": {
     "view": "Ver",
     "edit": "Editar",
     "expire": "Vencer",
-    "resolve": "Resolver",
     "addCredit": "Añadir crédito",
     "cancel": "Cancelar",
-    "backToCredits": "Volver a créditos",
     "viewAllCredits": "Ver todos los créditos",
-    "runReconciliation": "Ejecutar conciliación",
     "running": "Ejecutando...",
     "reset": "Restablecer",
     "applyCredit": "Aplicar crédito",
@@ -55,84 +47,27 @@
     "select": "Seleccionar",
     "selected": "Seleccionado",
     "saveChanges": "Guardar cambios",
-    "saving": "Guardando..."
-  },
-  "tabs": {
-    "activeCredits": "Créditos activos",
-    "allCredits": "Todos los créditos",
-    "expiredCredits": "Créditos vencidos"
+    "saving": "Guardando...",
+    "transfer": "Transferir"
   },
   "settings": {
-    "title": "Configuración de vencimiento de créditos",
-    "creditExpiration": "Vencimiento del crédito:",
-    "enabled": "Habilitado",
-    "disabled": "Deshabilitado",
-    "expirationPeriod": "Periodo de vencimiento:",
-    "daysUnit": "{{count}} días",
-    "notificationDays": "Días de notificación:",
-    "none": "Ninguno"
-  },
-  "charts": {
-    "expirationSummary": "Resumen de vencimiento de créditos",
-    "expirationSummaryDescription": "Resumen de los créditos que vencen pronto",
-    "usageTrends": "Tendencias de uso del crédito",
-    "usageTrendsDescription": "Patrones históricos de uso del crédito",
-    "lessThan7Days": "< 7 días",
-    "lessThan30Days": "< 30 días",
-    "lessThan90Days": "< 90 días",
-    "greaterThan90Days": "> 90 días",
-    "creditsIssued": "Créditos emitidos",
-    "creditsApplied": "Créditos aplicados",
-    "creditsExpired": "Créditos vencidos",
-    "statusDistribution": "Distribución por estado",
-    "statusDistributionDescription": "Resumen de los estados de los informes de conciliación",
-    "discrepancyTrends": "Tendencias de diferencias",
-    "discrepancyTrendsDescription": "Tendencias mensuales de las diferencias de créditos",
-    "numberOfDiscrepancies": "Número de diferencias",
-    "totalAmount": "Importe total",
-    "months": {
-      "jan": "Ene.",
-      "feb": "Feb.",
-      "mar": "Mar.",
-      "apr": "Abr.",
-      "may": "May.",
-      "jun": "Jun."
-    }
+    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "captionEnabled": "Vencimiento del crédito: {{days}} días",
+    "captionDisabled": "Vencimiento del crédito: desactivado",
+    "captionReminders": "recordatorios {{reminders}} días antes",
+    "editInSettings": "Editar en Configuración de facturación"
   },
   "stats": {
     "totalActiveCredits": "Total de créditos activos",
     "expiringIn30Days": "Vencen en 30 días",
     "totalCreditsApplied": "Total de créditos aplicados",
-    "totalCreditsExpired": "Total de créditos vencidos",
-    "totalDiscrepancies": "Total de diferencias",
-    "totalDiscrepancyAmount": "Importe total de las diferencias",
-    "openIssues": "Incidencias abiertas"
+    "totalCreditsExpired": "Total de créditos vencidos"
   },
   "management": {
     "title": "Gestión de créditos",
-    "recentCredits": "Créditos recientes",
-    "recentCreditsDescription": "Consulta y gestiona los créditos de tu cliente. Los créditos siguen siendo artefactos financieros, y los periodos de servicio recurrentes solo aparecen cuando la factura de origen tenía cobertura canónica.",
-    "addCreditPlaceholder": "Aquí se implementaría el formulario del importe del crédito y sus detalles.",
-    "loadErrorPrefix": "Error al cargar los créditos:",
-    "noDataReturned": "El servidor no devolvió datos",
-    "noCreditsFound": "No se encontraron créditos"
-  },
-  "reconciliation": {
-    "title": "Panel de conciliación de créditos",
-    "selectClient": "Seleccionar cliente",
-    "status": "Estado",
-    "allStatuses": "Todos los estados",
-    "fromDate": "Desde",
-    "toDate": "Hasta",
-    "reconciliationReports": "Informes de conciliación",
-    "reconciliationReportsDescription": "Consulta y gestiona las discrepancias de saldo de créditos",
-    "validationResult": "La validación se completó: se encontraron {{balanceCount}} discrepancias de saldo y {{trackingCount}} problemas de seguimiento.",
-    "tabs": {
-      "all": "Todos",
-      "open": "Abierto",
-      "inReview": "En revisión",
-      "resolved": "Resuelto"
-    }
+    "noCreditsFound": "No se encontraron créditos",
+    "noMatchingCredits": "Ningún crédito coincide con estos filtros",
+    "loadFailed": "No se pudieron cargar los créditos. Inténtalo de nuevo."
   },
   "application": {
     "title": "Aplicar crédito",
@@ -160,17 +95,67 @@
     "creditOrderNote": "Los créditos se aplican por fecha de vencimiento (primero los más antiguos)"
   },
   "expirationDialog": {
-    "title": "Modificar vencimiento del crédito",
-    "description": "Actualiza la fecha de vencimiento de este crédito.",
-    "creditAmount": "Importe del crédito:",
-    "remainingAmount": "Importe restante:",
+    "title": "Editar fecha de vencimiento",
+    "creditAmount": "Original",
+    "remainingAmount": "Restante",
     "created": "Creado el:",
-    "currentExpiration": "Vencimiento actual:",
+    "currentExpiration": "Vencimiento actual",
     "noExpiration": "Sin vencimiento",
-    "removeExpiration": "Quitar fecha de vencimiento",
     "newExpirationDate": "Nueva fecha de vencimiento",
     "pastDateError": "La fecha de vencimiento no puede estar en el pasado",
-    "updateError": "Se produjo un error al actualizar la fecha de vencimiento"
+    "updateError": "Se produjo un error al actualizar la fecha de vencimiento",
+    "updateSuccess": "Vencimiento del crédito actualizado",
+    "clearHint": "Borra la fecha para eliminar el vencimiento."
+  },
+  "viewDialog": {
+    "title": "Detalles del crédito",
+    "loadFailed": "No se pudieron cargar los detalles del crédito.",
+    "invoice": "Factura",
+    "transactions": "Transacciones relacionadas",
+    "transactionType": "Tipo",
+    "date": "Fecha",
+    "amount": "Importe",
+    "noTransactions": "No se encontraron transacciones relacionadas."
+  },
+  "expireDialog": {
+    "title": "Vencer crédito",
+    "reasonLabel": "Motivo (opcional)",
+    "reasonPlaceholder": "Explica por qué se vence este crédito...",
+    "success": "Crédito vencido",
+    "error": "Se produjo un error al vencer el crédito",
+    "expiring": "Venciendo...",
+    "confirm": "Vencer crédito",
+    "creditAmount": "Original",
+    "remainingAmount": "Restante",
+    "warning": "El cliente pierde el restante de {{amount}}. No puedes deshacer esto."
+  },
+  "transferDialog": {
+    "title": "Transferir crédito",
+    "description": "Transfiere crédito de este cliente a otro.",
+    "fields": {
+      "targetClient": "Al cliente",
+      "amount": "Importe",
+      "reason": "Motivo (opcional)"
+    },
+    "placeholders": {
+      "reason": "¿Por qué se transfiere este crédito?"
+    },
+    "hints": {
+      "amount": "Hasta {{amount}} disponible"
+    },
+    "impact": {
+      "current": "Restante actual",
+      "after": "Restante tras la transferencia"
+    },
+    "errors": {
+      "selectClient": "Selecciona un cliente para la transferencia",
+      "validAmount": "Introduce un importe mayor que cero",
+      "exceedsRemaining": "La transferencia no puede superar el restante de {{amount}}"
+    },
+    "success": "Crédito transferido",
+    "error": "Se produjo un error al transferir el crédito",
+    "transferring": "Transfiriendo...",
+    "confirm": "Transferir crédito"
   },
   "context": {
     "lineageMissing": "Linaje faltante",
@@ -181,5 +166,30 @@
     "recurringLineagePreserved": "Se conservó el linaje del origen recurrente",
     "financialOnly": "Solo financiero",
     "noRecurringServicePeriod": "Sin periodo de servicio recurrente"
+  },
+  "addCredit": {
+    "description": "El crédito está disponible para el cliente de inmediato.",
+    "fields": {
+      "client": "Cliente",
+      "amount": "Importe",
+      "description": "Descripción (opcional)",
+      "expirationDate": "Fecha de vencimiento (opcional)"
+    },
+    "placeholders": {
+      "amount": "Introduzca el importe",
+      "description": "Motivo del crédito",
+      "expirationDate": "Seleccione la fecha de vencimiento"
+    },
+    "hints": {
+      "expirationDate": "Déjalo en blanco para usar el vencimiento predeterminado."
+    },
+    "submitting": "Añadiendo...",
+    "success": "Crédito añadido correctamente",
+    "errors": {
+      "allFieldsRequired": "Seleccione un cliente e introduzca un importe",
+      "validAmount": "Introduzca un importe válido",
+      "loadClientsFailed": "No se pudieron cargar los clientes. Inténtelo de nuevo.",
+      "submitFailed": "No se pudo añadir el crédito. Inténtelo de nuevo."
+    }
   }
 }

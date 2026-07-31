@@ -17,11 +17,14 @@ import { projectPhaseIndexer } from './project_phase';
 import { projectTaskCommentIndexer } from './project_task_comment';
 import { projectTaskIndexer } from './project_task';
 import { projectIndexer } from './project';
+import { purchaseOrderIndexer } from './purchaseOrder';
 import { scheduleEntryIndexer } from './schedule_entry';
 import { serviceCatalogIndexer } from './service_catalog';
 import { serviceRequestDefinitionIndexer } from './service_request_definition';
 import { serviceRequestSubmissionIndexer } from './service_request_submission';
+import { salesOrderIndexer } from './salesOrder';
 import { statusIndexer } from './status';
+import { stockUnitIndexer } from './stockUnit';
 import { tagIndexer } from './tag';
 import { ticketCommentIndexer } from './ticket_comment';
 import { ticketIndexer } from './ticket';
@@ -55,6 +58,9 @@ export const ceIndexers: EntityIndexer[] = [
   projectPhaseIndexer,
   projectTaskIndexer,
   projectTaskCommentIndexer,
+  salesOrderIndexer,
+  purchaseOrderIndexer,
+  stockUnitIndexer,
   scheduleEntryIndexer,
   timeEntryIndexer,
   workflowTaskIndexer,

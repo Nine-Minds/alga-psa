@@ -56,6 +56,9 @@ function makeQueryBuilder(firstResult: unknown) {
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+  }),
 }));
 
 vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
@@ -304,6 +307,9 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           const builder: any = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn((criteria: Record<string, unknown>) => {
+              if (!('rfc_message_id' in criteria)) {
+                return builder;
+              }
               rfcMessageId = String(criteria.rfc_message_id ?? '');
               rfcLookups.push(rfcMessageId);
               return builder;

@@ -11,7 +11,9 @@ import {
   Calendar,
   CalendarClock,
   CheckCircle,
+  ClipboardList,
   Clock,
+  Coins,
   CreditCard,
   Download,
   FileBarChart,
@@ -21,6 +23,7 @@ import {
   FlaskConical,
   Globe,
   Gauge,
+  Ghost,
   Handshake,
   HelpCircle,
   Home,
@@ -29,9 +32,11 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   ListTodo,
+  ListChecks,
   ListTree,
   Mail,
   MapPin,
+  Megaphone,
   Monitor,
   Package,
   Percent,
@@ -41,6 +46,7 @@ import {
   ReceiptText,
   Rocket,
   Settings,
+  Share2,
   Shield,
   SlidersHorizontal,
   SquareDashedKanban,
@@ -49,11 +55,13 @@ import {
   UserCog,
   Users,
   Star,
-  Ticket
+  Target,
+  Ticket,
+  BadgeCheck
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
-export type NavMode = 'main' | 'settings' | 'billing' | 'extensions';
+export type NavMode = 'main' | 'settings' | 'billing' | 'extensions' | 'inventory';
 
 export interface MenuItem {
   name: string;
@@ -63,6 +71,7 @@ export interface MenuItem {
   subItems?: MenuItem[];
   requiredFeature?: TIER_FEATURES;
   underConstruction?: boolean;
+  requiresSelfHost?: boolean;
 }
 
 export interface NavigationSection {
@@ -121,6 +130,26 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/clients'
       },
       {
+        name: 'Opportunities',
+        translationKey: 'nav.opportunities',
+        icon: Target,
+        href: '/msp/opportunities'
+      },
+      {
+        name: 'Marketing',
+        translationKey: 'nav.marketing.label',
+        icon: Megaphone,
+        subItems: [
+          { name: 'Calendar', translationKey: 'nav.marketing.calendar', icon: Calendar, href: '/msp/marketing/calendar' },
+          { name: 'Posts', translationKey: 'nav.marketing.posts', icon: Share2, href: '/msp/marketing/posts' },
+          { name: 'Content', translationKey: 'nav.marketing.content', icon: FileText, href: '/msp/marketing/content' },
+          { name: 'Campaigns', translationKey: 'nav.marketing.campaigns', icon: Target, href: '/msp/marketing/campaigns' },
+          { name: 'Sequences', translationKey: 'nav.marketing.sequences', icon: Mail, href: '/msp/marketing/sequences' },
+          { name: 'Forms', translationKey: 'nav.marketing.forms', icon: ClipboardList, href: '/msp/marketing/forms' },
+          { name: 'Channels', translationKey: 'nav.marketing.channels', icon: AtSign, href: '/msp/marketing/channels' }
+        ]
+      },
+      {
         name: 'Contacts',
         translationKey: 'nav.contacts',
         icon: Users,
@@ -140,6 +169,12 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.assets',
         icon: Monitor,
         href: '/msp/assets'
+      },
+      {
+        name: 'Inventory',
+        translationKey: 'nav.inventory.label',
+        icon: Package,
+        href: '/msp/inventory'
       },
       {
         name: 'Reports',
@@ -226,17 +261,18 @@ export const bottomMenuItems: MenuItem[] = [
 
 // Settings navigation sections - used when sidebar is in 'settings' mode
 // These correspond to the settings tabs in SettingsPage
-// LEVERAGE: pattern settings-tabs-twice — the settings tab set is defined twice (here, and in SettingsPage.tsx's allTabs builder); the two lists drift. The EE+flag-gated 'mcp-server' tab exists there but is missing here, so it never appears in the side menu. This nav config also has no EE/feature-flag gating primitive (only product + tier), so a gated tab can't be expressed as data. Both lists should derive from one gated registry (cf. providerRegistry.ts requiresEnterprise + featureFlagKey).
+// LEVERAGE: pattern settings-tabs-twice — the settings tab set is defined twice (here, and in SettingsPage.tsx's allTabs builder); the two lists drift. The EE-gated 'mcp-server' tab exists there but is missing here, so it never appears in the side menu. This nav config also has no EE gating primitive (only product + tier), so a gated tab can't be expressed as data. Both lists should derive from one gated registry (cf. providerRegistry.ts requiresEnterprise).
 export const settingsNavigationSections: NavigationSection[] = [
   {
     title: 'Organization & Access',
     translationKey: 'settings.sections.organizationAccess',
     items: [
       { name: 'General', translationKey: 'settings.tabs.general', icon: Settings, href: '/msp/settings?tab=general' },
-      { name: 'Users', translationKey: 'settings.tabs.users', icon: UserCog, href: '/msp/settings?tab=users' },
+      { name: 'Users', translationKey: 'settings.tabs.users', icon: UserCog, href: '/msp/settings/users' },
       { name: 'Teams', translationKey: 'settings.tabs.teams', icon: Users, href: '/msp/settings?tab=teams' },
-      { name: 'Language', translationKey: 'settings.tabs.language', icon: Globe, href: '/msp/settings?tab=language' },
-      { name: 'Client Portal', translationKey: 'settings.tabs.clientPortal', icon: AtSign, href: '/msp/settings?tab=client-portal' },
+      { name: 'Language', translationKey: 'settings.tabs.language', icon: Globe, href: '/msp/settings/language' },
+      { name: 'Client Portal', translationKey: 'settings.tabs.clientPortal', icon: AtSign, href: '/msp/settings/client-portal' },
+      { name: 'License', translationKey: 'settings.tabs.license', icon: BadgeCheck, href: '/msp/licenses', requiresSelfHost: true },
     ]
   },
   {
@@ -245,16 +281,17 @@ export const settingsNavigationSections: NavigationSection[] = [
     items: [
       { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
-      { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings?tab=projects' },
-      { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings?tab=interactions' },
+      { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
+      { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings/interactions' },
+      { name: 'Opportunities', translationKey: 'settings.tabs.opportunities', icon: Target, href: '/msp/settings/opportunities' },
     ]
   },
   {
     title: 'Time & Billing',
     translationKey: 'settings.sections.timeBilling',
     items: [
-      { name: 'Time Entry', translationKey: 'settings.tabs.timeEntry', icon: Clock, href: '/msp/settings?tab=time-entry' },
-      { name: 'Billing', translationKey: 'settings.tabs.billing', icon: CreditCard, href: '/msp/settings?tab=billing' },
+      { name: 'Time Entry', translationKey: 'settings.tabs.timeEntry', icon: Clock, href: '/msp/settings/time-entry' },
+      { name: 'Billing', translationKey: 'settings.tabs.billing', icon: CreditCard, href: '/msp/settings/billing' },
     ]
   },
   {
@@ -262,16 +299,16 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.communication',
     items: [
       { name: 'Notifications', translationKey: 'settings.tabs.notifications', icon: Bell, href: '/msp/settings?tab=notifications' },
-      { name: 'Email', translationKey: 'settings.tabs.email', icon: Mail, href: '/msp/settings?tab=email' },
+      { name: 'Email', translationKey: 'settings.tabs.email', icon: Mail, href: '/msp/settings/email' },
     ]
   },
   {
     title: 'Data & Integration',
     translationKey: 'settings.sections.dataIntegration',
     items: [
-      { name: 'Secrets', translationKey: 'settings.tabs.secrets', icon: KeyRound, href: '/msp/settings?tab=secrets' },
-      { name: 'Import/Export', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings?tab=import-export' },
-      { name: 'Integrations', translationKey: 'settings.tabs.integrations', icon: Plug, href: '/msp/settings?tab=integrations' },
+      { name: 'Secrets', translationKey: 'settings.tabs.secrets', icon: KeyRound, href: '/msp/settings/secrets' },
+      { name: 'Import/Export', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings/import-export' },
+      { name: 'Integrations', translationKey: 'settings.tabs.integrations', icon: Plug, href: '/msp/settings/integrations' },
       { name: 'Extensions', translationKey: 'settings.tabs.extensions', icon: Puzzle, href: '/msp/settings?tab=extensions' },
     ]
   },
@@ -280,6 +317,57 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.experimental',
     items: [
       { name: 'Experimental Features', translationKey: 'settings.tabs.experimentalFeatures', icon: FlaskConical, href: '/msp/settings?tab=experimental-features' },
+    ]
+  },
+];
+
+// Inventory navigation sections - used when sidebar is in 'inventory' mode
+export const inventoryNavigationSections: NavigationSection[] = [
+  {
+    title: 'Overview',
+    translationKey: 'nav.inventory.sections.overview',
+    items: [
+      { name: 'Dashboard', translationKey: 'nav.inventoryDashboard', icon: Gauge, href: '/msp/inventory' },
+    ]
+  },
+  {
+    title: 'Stock',
+    translationKey: 'nav.inventory.sections.stock',
+    items: [
+      { name: 'Stock', translationKey: 'nav.inventoryStock', icon: Package, href: '/msp/inventory/stock' },
+      { name: 'Stock Locations', translationKey: 'nav.inventoryLocations', icon: MapPin, href: '/msp/inventory/locations' },
+      { name: 'Stock Units', translationKey: 'nav.inventoryUnits', icon: Layers3, href: '/msp/inventory/units' },
+      { name: 'Transfers', translationKey: 'nav.inventoryTransfers', icon: FileOutput, href: '/msp/inventory/transfers' },
+      { name: 'Cycle Counts', translationKey: 'nav.inventoryCounts', icon: ListChecks, href: '/msp/inventory/counts' },
+      { name: 'Write-offs', translationKey: 'nav.inventoryWriteOffs', icon: FileOutput, href: '/msp/inventory/write-offs' },
+    ]
+  },
+  {
+    title: 'Purchasing',
+    translationKey: 'nav.inventory.sections.purchasing',
+    items: [
+      { name: 'Vendors', translationKey: 'nav.inventoryVendors', icon: Handshake, href: '/msp/inventory/vendors' },
+      { name: 'Purchase Orders', translationKey: 'nav.inventoryPurchaseOrders', icon: Receipt, href: '/msp/inventory/purchase-orders' },
+      { name: 'Vendor Bills', translationKey: 'nav.inventoryVendorBills', icon: Receipt, href: '/msp/inventory/vendor-bills' },
+    ]
+  },
+  {
+    title: 'Sales & Fulfillment',
+    translationKey: 'nav.inventory.sections.salesFulfillment',
+    items: [
+      { name: 'Sales Orders', translationKey: 'nav.inventorySalesOrders', icon: ReceiptText, href: '/msp/inventory/sales-orders' },
+      { name: 'Document Layouts', translationKey: 'nav.inventoryDocumentLayouts', icon: LayoutTemplate, href: '/msp/document-templates/sales-order' },
+      { name: 'RMA', translationKey: 'nav.inventoryRma', icon: ListTree, href: '/msp/inventory/rma' },
+      { name: 'Loaners', translationKey: 'nav.inventoryLoaners', icon: Timer, href: '/msp/inventory/loaners' },
+      { name: 'Kits', translationKey: 'nav.inventoryKits', icon: Package, href: '/msp/inventory/kits' },
+    ]
+  },
+  {
+    title: 'Analytics',
+    translationKey: 'nav.inventory.sections.analytics',
+    items: [
+      { name: 'Margin', translationKey: 'nav.inventoryMargin', icon: Percent, href: '/msp/inventory/margin' },
+      { name: 'Ghost Usage', translationKey: 'nav.inventoryGhostUsage', icon: Ghost, href: '/msp/inventory/ghost-usage' },
     ]
   },
 ];
@@ -313,6 +401,7 @@ export const billingNavigationSections: NavigationSection[] = [
       { name: 'Invoice Layouts', translationKey: 'nav.billing.invoiceLayouts', icon: ReceiptText, href: '/msp/billing?tab=invoice-templates' },
       { name: 'Billing Cycles', translationKey: 'nav.billing.billingCycles', icon: CalendarClock, href: '/msp/billing?tab=billing-cycles' },
       { name: 'Service Periods', translationKey: 'nav.billing.servicePeriods', icon: CalendarClock, href: '/msp/billing?tab=service-periods' },
+      { name: 'Credits', translationKey: 'nav.billing.credits', icon: Coins, href: '/msp/billing/credits' },
     ]
   },
   {

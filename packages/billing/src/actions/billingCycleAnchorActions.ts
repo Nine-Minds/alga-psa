@@ -1,7 +1,7 @@
 'use server'
 
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 
 import type { BillingCycleType } from '@alga-psa/types';
@@ -18,6 +18,12 @@ import {
 } from '../lib/billing/billingCycleAnchors';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import {
   CLIENT_CADENCE_SCHEDULE_CONTEXT,
   type ClientCadenceScheduleContext
@@ -45,30 +51,32 @@ export type ClientBillingCycleAnchorConfig = {
   cadenceContext: ClientCadenceScheduleContext;
 };
 
+type BillingCycleAnchorActionError = ActionMessageError | ActionPermissionError;
+
 export const getClientBillingCycleAnchor = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<ClientBillingCycleAnchorConfig> => {
+): Promise<ClientBillingCycleAnchorConfig | BillingCycleAnchorActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
   if (!tenant) {
-    throw new Error('No tenant found');
+    return actionError('No tenant context. Please refresh and try again.');
   }
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients')
-      .where({ tenant, client_id: clientId })
+    const client = await tenantDb(trx, tenant).table('clients')
+      .where({ client_id: clientId })
       .first()
       .select('billing_cycle');
     if (!client) {
-      throw new Error('Client not found');
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
     }
 
-    const settings = await trx('client_billing_settings')
-      .where({ tenant, client_id: clientId })
+    const settings = await tenantDb(trx, tenant).table('client_billing_settings')
+      .where({ client_id: clientId })
       .first()
       .select(
         'billing_cycle_anchor_day_of_month',
@@ -107,24 +115,31 @@ export const updateClientBillingCycleAnchor = withAuth(async (
   user,
   { tenant },
   input: UpdateClientBillingCycleAnchorInput
-): Promise<{ success: true }> => {
+): Promise<{ success: true } | BillingCycleAnchorActionError> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex } = await createTenantKnex();
   if (!tenant) {
-    throw new Error('No tenant found');
+    return actionError('No tenant context. Please refresh and try again.');
   }
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Anchor edits go through the same shared layer as cycle changes so the
-    // scalar, anchor, cycle windows, and service-period ledger never drift.
-    await applyClientCadenceChange(trx, tenant, {
-      clientId: input.clientId,
-      billingCycle: input.billingCycle,
-      anchor: input.anchor,
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Anchor edits go through the same shared layer as cycle changes so the
+      // scalar, anchor, cycle windows, and service-period ledger never drift.
+      await applyClientCadenceChange(trx, tenant, {
+        clientId: input.clientId,
+        billingCycle: input.billingCycle,
+        anchor: input.anchor,
+      });
     });
-  });
+  } catch (error) {
+    if (error instanceof Error && /client.*not found/i.test(error.message)) {
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    throw error;
+  }
 
   return { success: true };
 });
@@ -145,8 +160,15 @@ export const previewBillingPeriodsForSchedule = withAuth(async (
   billingCycle: BillingCycleType,
   anchor: BillingCycleAnchorSettingsInput,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<BillingCyclePeriodPreviewResult> => {
-  validateAnchorSettingsForCycle(billingCycle, anchor);
+): Promise<BillingCyclePeriodPreviewResult | BillingCycleAnchorActionError> => {
+  try {
+    validateAnchorSettingsForCycle(billingCycle, anchor);
+  } catch (error) {
+    if (error instanceof Error) {
+      return actionError(error.message);
+    }
+    throw error;
+  }
   const normalized = normalizeAnchorSettingsForCycle(billingCycle, anchor);
 
   const count = Math.max(1, Math.min(options.count ?? 3, 12));
@@ -177,13 +199,13 @@ export const previewClientBillingPeriods = withAuth(async (
   { tenant },
   clientId: string,
   options: { count?: number; referenceDate?: ISO8601String } = {}
-): Promise<BillingCyclePeriodPreviewResult> => {
+): Promise<BillingCyclePeriodPreviewResult | BillingCycleAnchorActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
   if (!tenant) {
-    throw new Error('No tenant found');
+    return actionError('No tenant context. Please refresh and try again.');
   }
 
   const count = Math.max(1, Math.min(options.count ?? 3, 12));
@@ -192,16 +214,16 @@ export const previewClientBillingPeriods = withAuth(async (
   );
 
   const config = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await trx('clients')
-      .where({ tenant, client_id: clientId })
+    const client = await tenantDb(trx, tenant).table('clients')
+      .where({ client_id: clientId })
       .first()
       .select('billing_cycle');
     if (!client) {
-      throw new Error('Client not found');
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
     }
 
-    const settings = await trx('client_billing_settings')
-      .where({ tenant, client_id: clientId })
+    const settings = await tenantDb(trx, tenant).table('client_billing_settings')
+      .where({ client_id: clientId })
       .first()
       .select(
         'billing_cycle_anchor_day_of_month',

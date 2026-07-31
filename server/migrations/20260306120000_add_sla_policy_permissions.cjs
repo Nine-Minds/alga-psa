@@ -6,8 +6,17 @@
  * Technician (read) roles.
  */
 
+const MIGRATION_TENANT = 'migration:20260306120000_add_sla_policy_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for SLA policy permission backfill';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 exports.up = async function up(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   const permissionDefs = [
     { resource: 'sla_policy', action: 'create', msp: true, client: false, description: 'Create SLA policies' },
@@ -23,14 +32,16 @@ exports.up = async function up(knex) {
   };
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
+
     // Upsert permissions
     for (const def of permissionDefs) {
-      const existing = await knex('permissions')
+      const existing = await db.table('permissions')
         .where({ tenant, resource: def.resource, action: def.action, msp: true })
         .first('permission_id');
 
       if (!existing) {
-        await knex('permissions').insert({
+        await db.table('permissions').insert({
           tenant,
           resource: def.resource,
           action: def.action,
@@ -42,21 +53,21 @@ exports.up = async function up(knex) {
     }
 
     // Grant to Admin role (all sla_policy permissions)
-    const adminRole = await knex('roles')
+    const adminRole = await db.table('roles')
       .where({ tenant, role_name: 'Admin', msp: true })
       .first('role_id');
 
     if (adminRole) {
-      const allPerms = await knex('permissions')
+      const allPerms = await db.table('permissions')
         .where({ tenant, resource: 'sla_policy', msp: true })
         .select('permission_id');
 
       for (const { permission_id } of allPerms) {
-        const exists = await knex('role_permissions')
+        const exists = await db.table('role_permissions')
           .where({ tenant, role_id: adminRole.role_id, permission_id })
           .first('tenant');
         if (!exists) {
-          await knex('role_permissions').insert({
+          await db.table('role_permissions').insert({
             tenant,
             role_id: adminRole.role_id,
             permission_id,
@@ -67,22 +78,22 @@ exports.up = async function up(knex) {
 
     // Grant to Project Manager and Technician
     for (const [roleName, actions] of Object.entries(roleActions)) {
-      const role = await knex('roles')
+      const role = await db.table('roles')
         .where({ tenant, role_name: roleName, msp: true })
         .first('role_id');
       if (!role) continue;
 
-      const perms = await knex('permissions')
+      const perms = await db.table('permissions')
         .where({ tenant, resource: 'sla_policy', msp: true })
         .whereIn('action', actions)
         .select('permission_id');
 
       for (const { permission_id } of perms) {
-        const exists = await knex('role_permissions')
+        const exists = await db.table('role_permissions')
           .where({ tenant, role_id: role.role_id, permission_id })
           .first('tenant');
         if (!exists) {
-          await knex('role_permissions').insert({
+          await db.table('role_permissions').insert({
             tenant,
             role_id: role.role_id,
             permission_id,
@@ -94,22 +105,25 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   const actions = ['create', 'read', 'update', 'delete'];
 
   for (const { tenant } of tenants) {
-    const permissionIds = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionIds = await db.table('permissions')
       .where({ tenant, resource: 'sla_policy' })
       .whereIn('action', actions)
       .pluck('permission_id');
 
     if (permissionIds.length > 0) {
-      await knex('role_permissions')
+      await db.table('role_permissions')
         .where({ tenant })
         .whereIn('permission_id', permissionIds)
         .del();
 
-      await knex('permissions')
+      await db.table('permissions')
         .where({ tenant, resource: 'sla_policy' })
         .whereIn('action', actions)
         .del();

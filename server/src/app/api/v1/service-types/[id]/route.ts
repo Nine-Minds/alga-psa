@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { hasPermission } from '@/lib/auth/rbac';
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { withApiKeyAuth } from '@/lib/api/middleware/apiAuthMiddleware';
 import {
   createSuccessResponse,
@@ -32,8 +33,8 @@ export async function GET(
       throw new ForbiddenError('Permission denied: Cannot read service types');
     }
 
-    const serviceType = await knex('service_types as st')
-      .where({ 'st.id': id, 'st.tenant': tenant })
+    const serviceType = await tenantDb(knex, tenant).table('service_types as st')
+      .where({ 'st.id': id })
       .select(
         'st.id',
         'st.tenant',

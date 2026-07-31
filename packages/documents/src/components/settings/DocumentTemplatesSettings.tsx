@@ -25,7 +25,7 @@ import {
   removeDefaultFolders,
   loadSuggestedDefaults,
   IDefaultFolder,
-} from '@alga-psa/documents/actions';
+} from '../../actions/defaultFolderActions';
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
   ticket: 'Ticket',

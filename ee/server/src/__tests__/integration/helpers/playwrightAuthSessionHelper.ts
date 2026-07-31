@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import {
   createTestTenant,
   type TenantTestData,
@@ -342,8 +343,9 @@ export async function ensureRoleHasPermission(
   roleName: string,
   permissionTuples: TenantPermissionTuple[]
 ): Promise<void> {
-  const role = await db('roles')
-    .where({ tenant: tenantId, role_name: roleName })
+  const scopedDb = tenantDb(db, tenantId);
+  const role = await scopedDb.table('roles')
+    .where({ role_name: roleName })
     .first();
 
   if (!role) {
@@ -351,8 +353,8 @@ export async function ensureRoleHasPermission(
   }
 
   for (const { resource, action } of permissionTuples) {
-    let permission = await db('permissions')
-      .where({ tenant: tenantId, resource, action })
+    let permission = await scopedDb.table('permissions')
+      .where({ resource, action })
       .first();
 
     if (!permission) {
@@ -365,23 +367,22 @@ export async function ensureRoleHasPermission(
         client: false,
         created_at: new Date(),
       };
-      await db('permissions').insert(permission);
+      await scopedDb.table('permissions').insert(permission);
     } else if (!permission.msp) {
-      await db('permissions')
+      await scopedDb.table('permissions')
         .where({ permission_id: permission.permission_id })
         .update({ msp: true });
     }
 
-    const existingLink = await db('role_permissions')
+    const existingLink = await scopedDb.table('role_permissions')
       .where({
-        tenant: tenantId,
         role_id: role.role_id,
         permission_id: permission.permission_id,
       })
       .first();
 
     if (!existingLink) {
-      await db('role_permissions').insert({
+      await scopedDb.table('role_permissions').insert({
         tenant: tenantId,
         role_id: role.role_id,
         permission_id: permission.permission_id,
@@ -395,7 +396,7 @@ export async function markOnboardingComplete(
   tenantId: string,
   completedAt: Date = new Date()
 ): Promise<void> {
-  await db('tenant_settings')
+  await tenantDb(db, tenantId).table('tenant_settings')
     .insert({
       tenant: tenantId,
       onboarding_completed: true,
@@ -437,8 +438,8 @@ export async function prepareTenantForPlaywright(
   }
 
   if (experimentalFeatures) {
-    const existing = await db('tenant_settings')
-      .where({ tenant: tenantId })
+    const scopedDb = tenantDb(db, tenantId);
+    const existing = await scopedDb.table('tenant_settings')
       .first();
 
     const existingSettings =
@@ -458,7 +459,7 @@ export async function prepareTenantForPlaywright(
       },
     };
 
-    await db('tenant_settings')
+    await scopedDb.table('tenant_settings')
       .insert({
         tenant: tenantId,
         onboarding_completed: false,

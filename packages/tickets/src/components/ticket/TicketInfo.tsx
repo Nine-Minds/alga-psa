@@ -22,9 +22,9 @@ import { format, setHours, setMinutes } from 'date-fns';
 import { TagManager } from '@alga-psa/tags/components';
 import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
+import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '../../actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History, CheckCircle } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -46,8 +46,21 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TicketLiveConflictState } from './ticketLiveFields';
-import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { usePageSaveShortcut, usePanelSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './TicketNotificationSuppressionControl';
 
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface TicketInfoProps {
   id: string; // Made required since it's needed for reflection registration
@@ -58,7 +71,10 @@ interface TicketInfoProps {
   boardOptions: { value: string; label: string }[];
   priorityOptions: { value: string; label: string }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
-  onSaveChanges?: (changes: Record<string, unknown>) => Promise<boolean>;
+  onSaveChanges?: (
+    changes: Record<string, unknown>,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean>;
   onUpdateDescription?: (content: string) => Promise<boolean>;
   isSubmitting?: boolean;
   users?: IUserWithRoles[];
@@ -76,10 +92,12 @@ interface TicketInfoProps {
   itilCategory?: string;
   itilSubcategory?: string;
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+  onResolveAndClose?: () => void;
+  resolveAndCloseDisabled?: boolean;
   additionalAgents?: { user_id: string; name: string }[];
   responseStateTrackingEnabled?: boolean;
   teams?: ITeam[];
-  onAssignTeam?: (teamId: string) => Promise<void>;
+  onAssignTeam?: (teamId: string, options?: TicketNotificationSuppressionValue) => Promise<void>;
   onRemoveTeamAssignment?: () => Promise<void>;
   onClipboardImageUploaded?: () => Promise<void> | void;
   uploadTicketAttachmentAction?: (
@@ -129,6 +147,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilCategory,
   itilSubcategory,
   renderProjectTaskActions,
+  onResolveAndClose,
+  resolveAndCloseDisabled = false,
   additionalAgents,
   responseStateTrackingEnabled = true,
   teams = [],
@@ -174,6 +194,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+  });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
@@ -459,6 +483,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           const data = await getTicketCategoriesByBoard(boardIdToFetch);
 
           if (fetchingBoardIdRef.current === boardIdToFetch) {
+            if (isReturnedActionError(data)) {
+              console.warn('Failed to fetch pending board config:', getErrorMessage(data));
+              setPendingCategories([]);
+              setPendingBoardConfig(null);
+              setIsLoadingBoardConfig(false);
+              return;
+            }
             if (data && data.categories) {
               const categoriesArray = Array.isArray(data.categories) ? data.categories : [];
               setPendingCategories(categoriesArray);
@@ -505,13 +536,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Categories are managed through the regular onCategoryChange handler
 
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
-    parseTicketRichTextContent(ticket.attributes?.description as string | undefined)
+    parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined)
   );
 
   const discardDescriptionEdit = useCallback(() => {
     const originalDescription =
       originalDescriptionRef.current ??
-      parseTicketRichTextContent(ticket.attributes?.description as string | undefined);
+      parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined);
     setDescriptionContent(originalDescription);
     setHasDescriptionContentChanged(false);
     setIsEditingDescription(false);
@@ -536,7 +567,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
 
     const parsedDescription = parseTicketRichTextContent(
-      ticket.attributes?.description as string | undefined
+      ticket.attributes?.description as string | object | undefined
     );
     setDescriptionContent(parsedDescription);
     originalDescriptionRef.current = parsedDescription;
@@ -557,6 +588,17 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         if (ticket.board_id) {
           // Fetch categories for the specific board
           const data = await getTicketCategoriesByBoard(ticket.board_id);
+          if (isReturnedActionError(data)) {
+            console.warn('Failed to fetch ticket categories:', getErrorMessage(data));
+            setCategories([]);
+            setBoardConfig({
+              category_type: 'custom',
+              priority_type: 'custom',
+              display_itil_impact: false,
+              display_itil_urgency: false,
+            });
+            return;
+          }
           // Ensure data is properly resolved and categories is an array
           if (data && data.categories) {
             // Extra safety check - ensure it's actually an array
@@ -578,6 +620,17 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         } else {
           // If no board, fetch all categories and use custom categories
           const fetchedCategories = await getTicketCategories();
+          if (isReturnedActionError(fetchedCategories)) {
+            console.warn('Failed to fetch ticket categories:', getErrorMessage(fetchedCategories));
+            setCategories([]);
+            setBoardConfig({
+              category_type: 'custom',
+              priority_type: 'custom',
+              display_itil_impact: false,
+              display_itil_urgency: false,
+            });
+            return;
+          }
           // Ensure fetchedCategories is an array
           if (Array.isArray(fetchedCategories)) {
             setCategories(fetchedCategories);
@@ -882,9 +935,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }
       }
 
+      const saveOptions = notificationSuppression.suppressContactNotifications
+        ? notificationSuppression
+        : undefined;
+
       // Assign team if pending (fires server action for member expansion)
       if (pendingTeamId && onAssignTeam) {
-        await onAssignTeam(pendingTeamId);
+        await onAssignTeam(pendingTeamId, saveOptions);
         setPendingTeamId(null);
       }
 
@@ -895,7 +952,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       }
 
       if (onSaveChanges) {
-        const success = await onSaveChanges(allChanges);
+        const success = saveOptions
+          ? await onSaveChanges(allChanges, saveOptions)
+          : await onSaveChanges(allChanges);
         if (success) {
           setOriginalTicketValues(prev => ({
             ...prev,
@@ -904,6 +963,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           }));
           setPendingChanges({});
           setPendingItilChanges({});
+          setNotificationSuppression({
+            suppressContactNotifications: false,
+            suppressInternalNotifications: false,
+          });
           setPendingBoardConfig(null);
           setPendingCategories(null);
           if (isEditingDescription) {
@@ -933,6 +996,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }));
         setPendingChanges({});
         setPendingItilChanges({});
+        setNotificationSuppression({
+          suppressContactNotifications: false,
+          suppressInternalNotifications: false,
+        });
         setPendingBoardConfig(null);
         setPendingCategories(null);
         if (isEditingDescription) {
@@ -950,10 +1017,17 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [finalizeSavedDescription, hasActiveLiveConflict, hasUnsavedChanges, isEditingDescription, onAssignTeam, onItilFieldChange, onRemoveTeamAssignment, onSaveChanges, onSelectChange, pendingChanges, pendingItilChanges, pendingTeamId, pendingTeamRemoval, persistDescriptionChanges, requiresDestinationStatusSelection, ticket.title, titleValue]);
+  }, [finalizeSavedDescription, hasActiveLiveConflict, hasUnsavedChanges, isEditingDescription, notificationSuppression, onAssignTeam, onItilFieldChange, onRemoveTeamAssignment, onSaveChanges, onSelectChange, pendingChanges, pendingItilChanges, pendingTeamId, pendingTeamRemoval, persistDescriptionChanges, requiresDestinationStatusSelection, ticket.title, titleValue]);
 
+  // Inside a drawer (e.g. the bento "All fields" drawer) the panel scope
+  // suppresses page.save, so the save shortcut registers as panel.submit there.
+  const insideDrawer = useInsideDrawer();
+  const canSaveViaShortcut = hasUnsavedChanges && !requiresDestinationStatusSelection && !hasActiveLiveConflict;
   usePageSaveShortcut(handleSaveChanges, {
-    enabled: hasUnsavedChanges && !requiresDestinationStatusSelection && !hasActiveLiveConflict,
+    enabled: !insideDrawer && canSaveViaShortcut,
+  });
+  usePanelSubmitShortcut(handleSaveChanges, {
+    enabled: insideDrawer && canSaveViaShortcut,
   });
 
   // Handler for discarding all pending changes
@@ -961,6 +1035,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setTitleValue(ticket.title);
     setPendingChanges({});
     setPendingItilChanges({});
+    setNotificationSuppression({
+      suppressContactNotifications: false,
+      suppressInternalNotifications: false,
+    });
     setPendingBoardConfig(null);
     setPendingCategories(null);
     setPendingTeamId(null);
@@ -1595,60 +1673,60 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           <thead>
                             <tr>
                               <th className="px-2 py-1 text-left text-gray-600 border-b"></th>
-                              <th className="px-2 py-1 text-center text-gray-600 border-b">High<br/>Urgency (1)</th>
-                              <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-High<br/>Urgency (2)</th>
-                              <th className="px-2 py-1 text-center text-gray-600 border-b">Medium<br/>Urgency (3)</th>
-                              <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-Low<br/>Urgency (4)</th>
-                              <th className="px-2 py-1 text-center text-gray-600 border-b">Low<br/>Urgency (5)</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b whitespace-pre-line">{t('itil.urgencyAxis.1', 'High\nUrgency (1)')}</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b whitespace-pre-line">{t('itil.urgencyAxis.2', 'Medium-High\nUrgency (2)')}</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b whitespace-pre-line">{t('itil.urgencyAxis.3', 'Medium\nUrgency (3)')}</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b whitespace-pre-line">{t('itil.urgencyAxis.4', 'Medium-Low\nUrgency (4)')}</th>
+                              <th className="px-2 py-1 text-center text-gray-600 border-b whitespace-pre-line">{t('itil.urgencyAxis.5', 'Low\nUrgency (5)')}</th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
-                              <td className="px-2 py-1 text-center bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-semibold">Critical (1)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.1', 'High Impact (1)')}</td>
+                              <td className="px-2 py-1 text-center bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-semibold">{t('itil.priorityLevels.1', 'Critical (1)')}</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
                             </tr>
                             <tr>
-                              <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.2', 'Medium-High Impact (2)')}</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
                             </tr>
                             <tr>
-                              <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.3', 'Medium Impact (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">{t('itil.priorityLevels.2', 'High (2)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
                             </tr>
                             <tr>
-                              <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">Planning (5)</td>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.4', 'Medium-Low Impact (4)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
                             </tr>
                             <tr>
-                              <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">Planning (5)</td>
-                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">Planning (5)</td>
+                              <td className="px-2 py-1 text-gray-600 border-r font-medium">{t('itil.impactAxis.5', 'Low Impact (5)')}</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">{t('itil.priorityLevels.3', 'Medium (3)')}</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">{t('itil.priorityLevels.4', 'Low (4)')}</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">{t('itil.priorityLevels.5', 'Planning (5)')}</td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
                       <div className="mt-2 text-xs text-gray-600">
-                        <p><strong>Impact:</strong> How many users/business functions are affected?</p>
-                        <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+                        <p><strong>{t('itil.impact', 'Impact')}:</strong> {t('itil.impactHelp', 'How many users/business functions are affected?')}</p>
+                        <p><strong>{t('itil.urgency', 'Urgency')}:</strong> {t('itil.urgencyHelp', 'How quickly does this need to be resolved?')}</p>
                       </div>
                     </div>
                   )}
@@ -1956,8 +2034,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           </div>
 
           {/* Save Changes Button - matching contracts behavior */}
-          <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
+          <div className="flex flex-wrap items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
+            {onResolveAndClose ? (
+              <Button
+                id={`${id}-resolve-and-close-button`}
+                type="button"
+                variant="soft"
+                onClick={onResolveAndClose}
+                disabled={workflowLocked || isFieldFrozen('status_id') || resolveAndCloseDisabled}
+                className="flex items-center"
+              >
+                <CheckCircle className="mr-1 h-4 w-4" />
+                {t('info.resolveAndClose', 'Resolve and close')}
+              </Button>
+            ) : null}
             {ticket.ticket_id && onOpenEmailNotificationLogs ? (
               <Tooltip content={t('info.openEmailNotificationLogs', 'View email notification logs')}>
                 <Button
@@ -1987,6 +2078,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <History className="w-4 h-4" />
                 </Button>
               </Tooltip>
+            ) : null}
+            {hasUnsavedChanges ? (
+              <TicketNotificationSuppressionControl
+                idPrefix={`${id}-save-bar`}
+                value={notificationSuppression}
+                onChange={setNotificationSuppression}
+                disabled={isSaving}
+                className="min-w-[260px]"
+              />
             ) : null}
             <div className="flex-1" />
             <Button

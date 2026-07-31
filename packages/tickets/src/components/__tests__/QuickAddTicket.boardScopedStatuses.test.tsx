@@ -62,7 +62,23 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getTicketStatuses: (...args: unknown[]) => getTicketStatusesMock(...args),
 }));
 
+vi.mock('@alga-psa/reference-data/actions/status-actions/statusActions', () => ({
+  getTicketStatuses: (...args: unknown[]) => getTicketStatusesMock(...args),
+}));
+
 vi.mock('@alga-psa/tickets/actions', () => ({
+  getTicketCategoriesByBoard: vi.fn().mockResolvedValue({
+    categories: [],
+    boardConfig: {
+      category_type: 'custom',
+      priority_type: 'custom',
+      display_itil_impact: false,
+      display_itil_urgency: false,
+    },
+  }),
+}));
+
+vi.mock('../../actions/ticketCategoryActions', () => ({
   getTicketCategoriesByBoard: vi.fn().mockResolvedValue({
     categories: [],
     boardConfig: {
@@ -80,9 +96,37 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
+  getCurrentUser: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
+  getUserAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/searchUsersForMentions', () => ({
+  searchUsersForMentions: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: vi.fn().mockResolvedValue([]),
   getTeamAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/teamActions', () => ({
+  getTeams: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/avatarActions', () => ({
+  getTeamAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/teamActionErrors', () => ({
+  isTeamActionError: () => false,
+}));
+
+vi.mock('../../actions/teamAssignmentActions', () => ({
+  assignTeamToTicket: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
@@ -91,7 +135,20 @@ vi.mock('@alga-psa/ui/hooks', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string, options?: Record<string, unknown>) => {
+    t: (
+      _key: string,
+      fallbackOrOptions?: string | Record<string, unknown>,
+      maybeOptions?: Record<string, unknown>,
+    ) => {
+      // i18next's `t` accepts either `t(key, fallbackString, options)` or
+      // `t(key, optionsObject)` where the options object carries `defaultValue`.
+      const fallback =
+        typeof fallbackOrOptions === 'string'
+          ? fallbackOrOptions
+          : (fallbackOrOptions?.defaultValue as string | undefined);
+      const options =
+        typeof fallbackOrOptions === 'string' ? maybeOptions : fallbackOrOptions;
+
       if (!fallback) {
         return _key;
       }
@@ -232,6 +289,14 @@ vi.mock('@alga-psa/ui/components/Spinner', () => ({
 
 vi.mock('@alga-psa/tags/components', () => ({
   QuickAddTagPicker: () => <div data-testid="tag-picker" />,
+}));
+
+vi.mock('@alga-psa/tags/components/QuickAddTagPicker', () => ({
+  QuickAddTagPicker: () => <div data-testid="tag-picker" />,
+}));
+
+vi.mock('@alga-psa/tags/actions/tagActions', () => ({
+  createTagsForEntity: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({

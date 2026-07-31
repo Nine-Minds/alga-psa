@@ -11,7 +11,8 @@
       "resyncing": "55555 {{providerName}} 55555",
       "resyncError": "55555",
       "resyncStarted": "55555 {{providerName}} 55555",
-      "enterpriseOnly": "55555"
+      "enterpriseOnly": "55555",
+      "loadProvidersError": "55555"
     },
     "editDrawer": {
       "title": "55555",
@@ -143,6 +144,7 @@
     },
     "badges": {
       "disabled": "55555",
+      "paused": "55555",
       "connected": "55555",
       "disconnected": "55555",
       "error": "55555",
@@ -166,15 +168,29 @@
       "reconnectOauth": "55555",
       "resyncing": "55555",
       "resyncMailbox": "55555",
+      "pause": "55555",
+      "resume": "55555",
       "delete": "55555"
     },
+    "feedback": {
+      "paused": "55555",
+      "resumed": "55555",
+      "pauseError": "55555"
+    },
+    "pausedHelp": "55555",
     "fields": {
       "status": "55555",
       "lastSync": "55555",
+      "lastIngested": "55555",
+      "delivery": "55555",
       "created": "55555",
       "subscription": "55555",
       "defaults": "55555",
       "error": "55555"
+    },
+    "delivery": {
+      "polling": "55555",
+      "webhook": "55555"
     },
     "values": {
       "active": "55555",
@@ -293,7 +309,8 @@
         "popupBlocked": "55555",
         "closedEarly": "55555",
         "authorizationFailed": "55555",
-        "popupFailed": "55555"
+        "popupFailed": "55555",
+        "configureFailed": "55555"
       },
       "messages": {
         "setupIncomplete": "55555 {{error}} 55555",
@@ -707,7 +724,8 @@
       "refreshStatusFailed": "55555",
       "domainRemovalScheduled": "55555",
       "domainRemovalScheduledWithClear": "55555",
-      "removeDomainFailed": "55555"
+      "removeDomainFailed": "55555",
+      "testOutboundFailed": "55555"
     },
     "tabs": {
       "inboundEmail": "55555",
@@ -741,11 +759,27 @@
         "usernamePlaceholder": "55555",
         "passwordLabel": "55555",
         "passwordPlaceholder": "55555",
+        "authHint": "55555",
         "fromLabel": "55555",
         "fromPlaceholder": "55555",
         "fromHelp": "55555",
+        "security": {
+          "title": "55555",
+          "secure": "55555",
+          "requireTls": "55555",
+          "verifyCert": "55555",
+          "verifyCertHint": "55555"
+        },
         "savingButton": "55555",
-        "saveButton": "55555"
+        "saveButton": "55555",
+        "test": {
+          "title": "55555",
+          "description": "55555",
+          "recipientLabel": "55555",
+          "recipientPlaceholder": "55555",
+          "testingButton": "55555",
+          "runButton": "55555"
+        }
       },
       "ticketingFrom": {
         "title": "55555",
@@ -764,6 +798,9 @@
         "customPlaceholder": "55555 {{domain}} 55555",
         "customSmtpHelp": "55555",
         "customManagedHelp": "55555 {{domain}} 55555",
+        "nameLabel": "55555",
+        "namePlaceholder": "55555",
+        "nameHelp": "55555",
         "warningTitle": "55555",
         "errorTitle": "55555",
         "clearButton": "55555",
@@ -843,7 +880,7 @@
       "valueLabel": "55555",
       "copyHostAriaLabel": "55555",
       "copyFqdnAriaLabel": "55555",
-      "hostHint": "55555"
+      "hostHint": "55555 {{domain}} 55555 {{domain}} 55555 {{domain}} 55555"
     }
   },
   "inboundRules": {

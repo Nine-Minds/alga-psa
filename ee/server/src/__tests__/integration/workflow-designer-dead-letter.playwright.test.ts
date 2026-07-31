@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
@@ -13,6 +15,16 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+const WORKFLOW_DEAD_LETTER_TEST_BOUNDARY_TENANT = '__workflow_designer_dead_letter_test_boundary__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedWorkflowTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, WORKFLOW_DEAD_LETTER_TEST_BOUNDARY_TENANT).unscoped(table, reason);
+}
 
 const ADMIN_PERMISSIONS = [
   {
@@ -45,6 +57,7 @@ type RunSeed = {
 };
 
 type RunStepSeed = {
+  tenantId: string;
   runId: string;
   stepId: string;
   stepPath: string;
@@ -57,7 +70,11 @@ type RunStepSeed = {
 
 async function createWorkflowDefinition(db: ReturnType<typeof createTestDbConnection>, name: string, version = 1): Promise<WorkflowSeed> {
   const workflowId = uuidv4();
-  const tenantId = (await db('tenants').select('tenant').first())?.tenant;
+  const tenantId = (await unscopedWorkflowTable(
+    db,
+    'tenants',
+    'workflow designer dead-letter test seed resolves the active Playwright tenant'
+  ).select('tenant').first())?.tenant;
   if (!tenantId) throw new Error('tenant_id is required to seed workflow definition');
   const now = new Date().toISOString();
   const definition = {
@@ -69,7 +86,7 @@ async function createWorkflowDefinition(db: ReturnType<typeof createTestDbConnec
     steps: [],
   };
 
-  await db('workflow_definitions').insert({
+  await tenantTable(db, tenantId, 'workflow_definitions').insert({
     workflow_id: workflowId,
     tenant: tenantId,
     name,
@@ -82,8 +99,9 @@ async function createWorkflowDefinition(db: ReturnType<typeof createTestDbConnec
     created_at: now,
     updated_at: now,
   });
-  await db('workflow_definition_versions').insert({
+  await tenantTable(db, tenantId, 'workflow_definition_versions').insert({
     version_id: uuidv4(),
+    tenant: tenantId,
     workflow_id: workflowId,
     version,
     definition_json: definition,
@@ -98,7 +116,7 @@ async function createWorkflowDefinition(db: ReturnType<typeof createTestDbConnec
 }
 
 async function createWorkflowRun(db: ReturnType<typeof createTestDbConnection>, run: RunSeed): Promise<void> {
-  await db('workflow_runs').insert({
+  await tenantTable(db, run.tenantId, 'workflow_runs').insert({
     run_id: run.runId,
     workflow_id: run.workflowId,
     workflow_version: run.version,
@@ -114,8 +132,9 @@ async function createWorkflowRun(db: ReturnType<typeof createTestDbConnection>, 
 }
 
 async function createWorkflowRunStep(db: ReturnType<typeof createTestDbConnection>, step: RunStepSeed): Promise<void> {
-  await db('workflow_run_steps').insert({
+  await tenantTable(db, step.tenantId, 'workflow_run_steps').insert({
     step_id: step.stepId,
+    tenant: step.tenantId,
     run_id: step.runId,
     step_path: step.stepPath,
     definition_step_id: step.definitionStepId,
@@ -148,6 +167,7 @@ async function seedDeadLetterRun(
     tenantId,
   });
   await createWorkflowRunStep(db, {
+    tenantId,
     runId,
     stepId: uuidv4(),
     stepPath: 'root.steps[0]',
@@ -339,14 +359,14 @@ test.describe('Workflow Designer UI - error handling', () => {
     const tenantId = tenantData.tenant.tenantId;
     try {
       await openDeadLetterTab(page, tenantId);
-      const adminRole = await db('roles')
+      const adminRole = await tenantTable(db, tenantId, 'roles')
         .where({ tenant: tenantId, role_name: 'Admin' })
         .first();
-      const adminPermission = await db('permissions')
+      const adminPermission = await tenantTable(db, tenantId, 'permissions')
         .where({ tenant: tenantId, resource: 'workflow', action: 'admin' })
         .first();
       if (adminRole && adminPermission) {
-        await db('role_permissions')
+        await tenantTable(db, tenantId, 'role_permissions')
           .where({
             tenant: tenantId,
             role_id: adminRole.role_id,

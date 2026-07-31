@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface StatusSearchRow {
@@ -55,9 +56,8 @@ export const statusIndexer: EntityIndexer = {
   // name through `status_id = ?` makes Postgres fail the cast before the OR
   // can match on name.
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<StatusSearchRow>('statuses')
+    const row = await createTenantScopedIndexerQuery<StatusSearchRow>(knex, 'statuses', 'statuses', tenant)
       .select('name', 'is_closed', 'created_at')
-      .where('tenant', tenant)
       .andWhere('status_type', 'ticket')
       .andWhere(UUID_RE.test(id) ? 'status_id' : 'name', id)
       .orderBy('name', 'asc')
@@ -72,10 +72,9 @@ export const statusIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<StatusSearchRow>('statuses')
+    const query = createTenantScopedIndexerQuery<StatusSearchRow>(knex, 'statuses', 'statuses', tenant)
       .distinctOn('name')
       .select('name', 'is_closed', 'created_at')
-      .where('tenant', tenant)
       .andWhere('status_type', 'ticket')
       .orderBy('name', 'asc')
       .limit(limit);

@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
@@ -20,6 +21,10 @@ let enteredByUserId: string;
 let fallbackClientId: string;
 let actionRegistry: any;
 
+function tenantTable(table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     if (!db) throw new Error('Test DB not initialized');
@@ -29,7 +34,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 }));
 
 async function createRoutingBoardVariant(namePrefix: string): Promise<string> {
-  const sourceBoard = await db('boards')
+  const sourceBoard = await tenantTable('boards')
     .where({ tenant: tenantId, board_id: boardId })
     .first<any>();
   if (!sourceBoard) {
@@ -37,19 +42,27 @@ async function createRoutingBoardVariant(namePrefix: string): Promise<string> {
   }
 
   const newBoardId = uuidv4();
-  const {
-    board_id: _sourceBoardId,
-    created_at: _sourceCreatedAt,
-    updated_at: _sourceUpdatedAt,
-    ...sourceRest
-  } = sourceBoard;
+  const { board_id: _sourceBoardId, ...sourceRest } = sourceBoard;
 
-  await db('boards').insert({
+  await tenantTable('boards').insert({
     ...sourceRest,
     board_id: newBoardId,
     board_name: `${namePrefix}-${newBoardId.slice(0, 6)}`,
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
+  });
+
+  // Ticket statuses are board-scoped; clone the source status onto the
+  // variant board so ticket creation passes status/board validation.
+  const sourceStatus = await tenantTable('statuses')
+    .where({ tenant: tenantId, status_id: statusId })
+    .first<any>();
+  if (!sourceStatus) {
+    throw new Error('Expected source status for routing variant');
+  }
+  const { status_id: _sourceStatusId, ...sourceStatusRest } = sourceStatus;
+  await tenantTable('statuses').insert({
+    ...sourceStatusRest,
+    status_id: uuidv4(),
+    board_id: newBoardId,
   });
 
   return newBoardId;
@@ -60,15 +73,23 @@ async function createInboundDefaults(params: {
   descriptionPrefix: string;
   clientId?: string | null;
 }): Promise<string> {
+  // Statuses belong to a board; the defaults' status must match its board.
+  const boardStatus = await tenantTable('statuses')
+    .where({ tenant: tenantId, board_id: params.boardId, status_type: 'ticket' })
+    .first<{ status_id: string }>('status_id');
+  if (!boardStatus?.status_id) {
+    throw new Error('Expected ticket status for defaults board');
+  }
+
   const defaultsId = uuidv4();
-  await db('inbound_ticket_defaults').insert({
+  await tenantTable('inbound_ticket_defaults').insert({
     id: defaultsId,
     tenant: tenantId,
     short_name: `${params.descriptionPrefix}-${defaultsId.slice(0, 6)}`,
     display_name: `${params.descriptionPrefix}-${defaultsId.slice(0, 6)}`,
     description: `${params.descriptionPrefix} defaults`,
     board_id: params.boardId,
-    status_id: statusId,
+    status_id: boardStatus.status_id,
     priority_id: priorityId,
     client_id: params.clientId ?? null,
     entered_by: enteredByUserId,
@@ -90,7 +111,7 @@ async function createProviderWithDefaults(params: { mailboxPrefix: string }) {
     clientId: fallbackClientId,
   });
 
-  await db('email_providers').insert({
+  await tenantTable('email_providers').insert({
     id: providerId,
     tenant: tenantId,
     provider_type: 'google',
@@ -98,7 +119,6 @@ async function createProviderWithDefaults(params: { mailboxPrefix: string }) {
     mailbox,
     is_active: true,
     status: 'connected',
-    vendor_config: JSON.stringify({}),
     inbound_ticket_defaults_id: providerDefaultsId,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
@@ -125,29 +145,31 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
   beforeAll(async () => {
     db = await createTestDbConnection();
 
-    const tenant = await db('tenants').first<{ tenant: string }>('tenant');
+    const tenant = await tenantDb(db, '__test_discovery__')
+      .unscoped('tenants', 'test discovery of seeded tenant for inbound context destination routing')
+      .first<{ tenant: string }>('tenant');
     if (!tenant?.tenant) throw new Error('Expected seeded tenant');
     tenantId = tenant.tenant;
 
-    const client = await db('clients').where({ tenant: tenantId }).first<{ client_id: string }>('client_id');
+    const client = await tenantTable('clients').where({ tenant: tenantId }).first<{ client_id: string }>('client_id');
     if (!client?.client_id) throw new Error('Expected seeded client');
     fallbackClientId = client.client_id;
 
-    const board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+    const board = await tenantTable('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
     if (!board?.board_id) throw new Error('Expected seeded board');
     boardId = board.board_id;
 
-    const status = await db('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket' })
+    const status = await tenantTable('statuses')
+      .where({ tenant: tenantId, status_type: 'ticket', board_id: boardId })
       .first<{ status_id: string }>('status_id');
     if (!status?.status_id) throw new Error('Expected seeded ticket status');
     statusId = status.status_id;
 
-    const priority = await db('priorities').where({ tenant: tenantId }).first<{ priority_id: string }>('priority_id');
+    const priority = await tenantTable('priorities').where({ tenant: tenantId }).first<{ priority_id: string }>('priority_id');
     if (!priority?.priority_id) throw new Error('Expected seeded priority');
     priorityId = priority.priority_id;
 
-    const user = await db('users').where({ tenant: tenantId }).first<{ user_id: string }>('user_id');
+    const user = await tenantTable('users').where({ tenant: tenantId }).first<{ user_id: string }>('user_id');
     if (!user?.user_id) throw new Error('Expected seeded user');
     enteredByUserId = user.user_id;
 
@@ -178,8 +200,8 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
 
     const { providerId, providerDefaultsId } = await createProviderWithDefaults({ mailboxPrefix: 'ctx-contact-override' });
     cleanup.push(async () => {
-      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
+      await tenantTable('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
     });
 
     const overrideBoardId = await createRoutingBoardVariant('ctx-contact-override-board');
@@ -188,21 +210,22 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       descriptionPrefix: 'ctx-contact-override',
     });
     cleanup.push(async () => {
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: overrideDefaultsId }).delete();
-      await db('boards').where({ tenant: tenantId, board_id: overrideBoardId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: overrideDefaultsId }).delete();
+      await tenantTable('statuses').where({ tenant: tenantId, board_id: overrideBoardId }).delete();
+      await tenantTable('boards').where({ tenant: tenantId, board_id: overrideBoardId }).delete();
     });
 
     const contactClientId = uuidv4();
     const contactId = uuidv4();
     const senderEmail = `ctx-contact-override-${uuidv4().slice(0, 6)}@example.com`;
-    await db('clients').insert({
+    await tenantTable('clients').insert({
       tenant: tenantId,
       client_id: contactClientId,
       client_name: `Context Contact Override Client ${uuidv4().slice(0, 6)}`,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
-    await db('contacts').insert({
+    await tenantTable('contacts').insert({
       tenant: tenantId,
       contact_name_id: contactId,
       full_name: 'Context Contact Override',
@@ -214,8 +237,8 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       updated_at: db.fn.now(),
     });
     cleanup.push(async () => {
-      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
-      await db('clients').where({ tenant: tenantId, client_id: contactClientId }).delete();
+      await tenantTable('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+      await tenantTable('clients').where({ tenant: tenantId, client_id: contactClientId }).delete();
     });
 
     const output = await action.handler(
@@ -235,8 +258,8 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
 
     const { providerId, providerDefaultsId } = await createProviderWithDefaults({ mailboxPrefix: 'ctx-client-default' });
     cleanup.push(async () => {
-      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
+      await tenantTable('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
     });
 
     const clientDefaultBoardId = await createRoutingBoardVariant('ctx-client-default-board');
@@ -245,14 +268,15 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       descriptionPrefix: 'ctx-client-default',
     });
     cleanup.push(async () => {
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: clientDefaultDefaultsId }).delete();
-      await db('boards').where({ tenant: tenantId, board_id: clientDefaultBoardId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: clientDefaultDefaultsId }).delete();
+      await tenantTable('statuses').where({ tenant: tenantId, board_id: clientDefaultBoardId }).delete();
+      await tenantTable('boards').where({ tenant: tenantId, board_id: clientDefaultBoardId }).delete();
     });
 
     const destinationClientId = uuidv4();
     const contactId = uuidv4();
     const senderEmail = `ctx-client-default-${uuidv4().slice(0, 6)}@example.com`;
-    await db('clients').insert({
+    await tenantTable('clients').insert({
       tenant: tenantId,
       client_id: destinationClientId,
       client_name: `Context Client Default ${uuidv4().slice(0, 6)}`,
@@ -260,7 +284,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
-    await db('contacts').insert({
+    await tenantTable('contacts').insert({
       tenant: tenantId,
       contact_name_id: contactId,
       full_name: 'Context Client Default Contact',
@@ -271,8 +295,8 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       updated_at: db.fn.now(),
     });
     cleanup.push(async () => {
-      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
-      await db('clients').where({ tenant: tenantId, client_id: destinationClientId }).delete();
+      await tenantTable('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+      await tenantTable('clients').where({ tenant: tenantId, client_id: destinationClientId }).delete();
     });
 
     const output = await action.handler(
@@ -292,8 +316,8 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
 
     const { providerId, providerDefaultsId } = await createProviderWithDefaults({ mailboxPrefix: 'ctx-domain-default' });
     cleanup.push(async () => {
-      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
+      await tenantTable('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
     });
 
     const domainDefaultBoardId = await createRoutingBoardVariant('ctx-domain-default-board');
@@ -302,13 +326,14 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       descriptionPrefix: 'ctx-domain-default',
     });
     cleanup.push(async () => {
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: domainDefaultDefaultsId }).delete();
-      await db('boards').where({ tenant: tenantId, board_id: domainDefaultBoardId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: domainDefaultDefaultsId }).delete();
+      await tenantTable('statuses').where({ tenant: tenantId, board_id: domainDefaultBoardId }).delete();
+      await tenantTable('boards').where({ tenant: tenantId, board_id: domainDefaultBoardId }).delete();
     });
 
     const domainClientId = uuidv4();
     const domain = `ctx-routing-${uuidv4().slice(0, 6)}.com`;
-    await db('clients').insert({
+    await tenantTable('clients').insert({
       tenant: tenantId,
       client_id: domainClientId,
       client_name: `Context Domain Default Client ${uuidv4().slice(0, 6)}`,
@@ -317,7 +342,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       updated_at: db.fn.now(),
     });
     const domainMappingId = uuidv4();
-    await db('client_inbound_email_domains').insert({
+    await tenantTable('client_inbound_email_domains').insert({
       tenant: tenantId,
       id: domainMappingId,
       client_id: domainClientId,
@@ -326,8 +351,8 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       updated_at: db.fn.now(),
     });
     cleanup.push(async () => {
-      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
-      await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
+      await tenantTable('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
+      await tenantTable('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
     });
 
     const output = await action.handler(
@@ -347,8 +372,8 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
 
     const { providerId, mailbox, providerDefaultsId } = await createProviderWithDefaults({ mailboxPrefix: 'ctx-parity' });
     cleanup.push(async () => {
-      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
+      await tenantTable('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
     });
 
     const parityBoardId = await createRoutingBoardVariant('ctx-parity-board');
@@ -357,13 +382,14 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       descriptionPrefix: 'ctx-parity',
     });
     cleanup.push(async () => {
-      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: parityDefaultsId }).delete();
-      await db('boards').where({ tenant: tenantId, board_id: parityBoardId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ tenant: tenantId, id: parityDefaultsId }).delete();
+      await tenantTable('statuses').where({ tenant: tenantId, board_id: parityBoardId }).delete();
+      await tenantTable('boards').where({ tenant: tenantId, board_id: parityBoardId }).delete();
     });
 
     const parityClientId = uuidv4();
     const senderEmail = `ctx-parity-${uuidv4().slice(0, 6)}@example.com`;
-    await db('clients').insert({
+    await tenantTable('clients').insert({
       tenant: tenantId,
       client_id: parityClientId,
       client_name: `Context Parity Client ${uuidv4().slice(0, 6)}`,
@@ -372,7 +398,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       updated_at: db.fn.now(),
     });
     const contactId = uuidv4();
-    await db('contacts').insert({
+    await tenantTable('contacts').insert({
       tenant: tenantId,
       contact_name_id: contactId,
       full_name: 'Context Parity Contact',
@@ -383,8 +409,8 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
       updated_at: db.fn.now(),
     });
     cleanup.push(async () => {
-      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
-      await db('clients').where({ tenant: tenantId, client_id: parityClientId }).delete();
+      await tenantTable('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+      await tenantTable('clients').where({ tenant: tenantId, client_id: parityClientId }).delete();
     });
 
     const contextOutput = await action.handler(
@@ -412,7 +438,7 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
 
     expect(inAppResult.outcome).toBe('created');
 
-    const ticket = await db('tickets')
+    const ticket = await tenantTable('tickets')
       .where({ tenant: tenantId, title: subject })
       .first<any>();
     expect(ticket).toBeDefined();
@@ -421,8 +447,19 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
     expect(contextOutput.targetContactId ?? null).toBe(ticket.contact_name_id ?? null);
 
     cleanup.push(async () => {
-      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
-      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      const ticketChildTables = [
+        'email_reply_tokens',
+        'ticket_audit_logs',
+        'sla_audit_log',
+        'sla_notifications_sent',
+        'ticket_auto_close_state',
+        'comment_threads',
+        'comments',
+      ];
+      for (const table of ticketChildTables) {
+        await tenantTable(table).where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      }
+      await tenantTable('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
     });
   });
 });

@@ -1,8 +1,9 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { resolveTicketColumnVisibility, type TicketListColumnKey } from '../lib/ticketColumnCatalog';
 
 export type TicketListSettings = {
@@ -22,7 +23,10 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
   // Prefer dedicated column if present; fallback to nested settings for backward compatibility
   try {
     const { knex } = await createTenantKnex();
-    const row = await knex('tenant_settings').select('ticket_display_settings', 'settings').where({ tenant }).first();
+    const row = await tenantDb(knex, tenant)
+      .table('tenant_settings')
+      .select('ticket_display_settings', 'settings')
+      .first();
     const fromColumn = (row?.ticket_display_settings as any) || {};
     const nested = ((row?.settings as any)?.ticketing?.display) || {};
     const display = Object.keys(fromColumn).length ? fromColumn : nested;
@@ -50,18 +54,18 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
   }
 });
 
-export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, updated: TicketingDisplaySettings): Promise<{ success: boolean }> => {
+export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, updated: TicketingDisplaySettings): Promise<{ success: boolean } | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
   // Check if user has permission to update ticket settings
   if (!await hasPermission(user, 'ticket_settings', 'update', knex)) {
-    throw new Error('Permission denied: Cannot update ticket settings');
+    return permissionError('Permission denied: Cannot update ticket settings');
   }
 
   // Read existing values for both the dedicated column and the legacy nested settings path.
-  const existingRow = await knex('tenant_settings')
+  const existingRow = await tenantDb(knex, tenant)
+    .table('tenant_settings')
     .select('ticket_display_settings', 'settings')
-    .where({ tenant })
     .first();
 
   const currentDisplay = (existingRow?.ticket_display_settings as any) || {};
@@ -87,7 +91,8 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
   // Use a literal timestamp for Citus compatibility
   const now = new Date();
 
-  await knex('tenant_settings')
+  await tenantDb(knex, tenant)
+    .table('tenant_settings')
     .insert({
       tenant,
       ticket_display_settings: JSON.stringify(mergedDisplay),

@@ -17,6 +17,63 @@ const inboundActions = vi.hoisted(() => ({
 
 vi.mock('@/lib/actions/inboundWebhookActions', () => inboundActions);
 
+vi.mock('server/src/lib/api/middleware/apiMiddleware', async () => {
+  const { NextResponse } = await import('next/server');
+
+  class NotFoundError extends Error {
+    statusCode = 404;
+    code = 'NOT_FOUND';
+  }
+
+  const isServerActionErrorResult = (value: unknown) => {
+    const candidate = value as Record<string, unknown>;
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      (typeof candidate.permissionError === 'string' || typeof candidate.actionError === 'string')
+    );
+  };
+
+  const createServerActionErrorResponse = (error: { permissionError?: string; actionError?: string }) => {
+    if (error.permissionError) {
+      return NextResponse.json({
+        error: {
+          code: 'FORBIDDEN',
+          message: error.permissionError,
+        },
+      }, { status: 403 });
+    }
+
+    const message = error.actionError ?? 'Bad request';
+    const status = message.toLowerCase().includes('not found')
+      ? 404
+      : message.toLowerCase().includes('already exists')
+        ? 409
+        : 400;
+
+    return NextResponse.json({
+      error: {
+        code: status === 404 ? 'NOT_FOUND' : status === 409 ? 'CONFLICT' : 'BAD_REQUEST',
+        message,
+      },
+    }, { status });
+  };
+
+  const handleApiError = (error: any) => NextResponse.json({
+    error: {
+      code: error.code ?? 'INTERNAL_ERROR',
+      message: error.message ?? 'An unexpected error occurred',
+    },
+  }, { status: error.statusCode ?? 500 });
+
+  return {
+    NotFoundError,
+    createServerActionErrorResponse,
+    handleApiError,
+    isServerActionErrorResult,
+  };
+});
+
 const webhookFixture = {
   inboundWebhookId: 'webhook-1',
   tenant: 'tenant-a',
@@ -412,28 +469,19 @@ describe('inbound webhook REST API routes', () => {
   });
 
   it('returns server-action authorization failures without adding a parallel auth path', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    inboundActions.listInboundWebhooks.mockRejectedValue(
-      Object.assign(new Error('Forbidden'), {
-        name: 'ForbiddenError',
-        statusCode: 403,
+    inboundActions.listInboundWebhooks.mockResolvedValue({
+      permissionError: 'Permission denied: inbound_webhook:read permission required',
+    });
+
+    const route = await import('@/app/api/v1/inbound-webhooks/route');
+    const response = await route.GET();
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      error: {
         code: 'FORBIDDEN',
-      }),
-    );
-
-    try {
-      const route = await import('@/app/api/v1/inbound-webhooks/route');
-      const response = await route.GET();
-
-      expect(response.status).toBe(403);
-      await expect(response.json()).resolves.toEqual({
-        error: {
-          code: 'FORBIDDEN',
-          message: 'Forbidden',
-        },
-      });
-    } finally {
-      consoleError.mockRestore();
-    }
+        message: 'Permission denied: inbound_webhook:read permission required',
+      },
+    });
   });
 });

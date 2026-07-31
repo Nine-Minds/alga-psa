@@ -1,11 +1,13 @@
 import logger from '@alga-psa/core/logger';
 
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core';
 import { getJobScheduler } from '../jobSchedulerAccessor';
 
 const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;
 const WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE = 10_000;
+const WEBHOOK_DELIVERY_CLEANUP_TENANT = '__webhook_delivery_retention_cleanup__';
+const WEBHOOK_DELIVERY_CLEANUP_REASON = 'webhook delivery retention cleanup scans expired deliveries across tenants';
 
 export async function cleanupWebhookDeliveriesJob(): Promise<{
   success: boolean;
@@ -18,25 +20,28 @@ export async function cleanupWebhookDeliveriesJob(): Promise<{
     let deletedCount = 0;
 
     while (true) {
-      const result = await knex.raw(
-        `
-          WITH doomed AS (
-            SELECT tenant, delivery_id
-            FROM webhook_deliveries
-            WHERE attempted_at < now() - interval '${WEBHOOK_DELIVERY_RETENTION_DAYS} days'
-            ORDER BY attempted_at ASC
-            LIMIT ?
-          )
-          DELETE FROM webhook_deliveries wd
-          USING doomed
-          WHERE wd.tenant = doomed.tenant
-            AND wd.delivery_id = doomed.delivery_id
-          RETURNING wd.delivery_id
-        `,
-        [WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE],
-      );
+      const webhookRetentionDb = tenantDb(knex, WEBHOOK_DELIVERY_CLEANUP_TENANT);
+      const doomedDeliveries = webhookRetentionDb
+        .unscoped('webhook_deliveries', WEBHOOK_DELIVERY_CLEANUP_REASON)
+        .select('tenant', 'delivery_id')
+        .where(
+          'attempted_at',
+          '<',
+          knex.raw("now() - (? * interval '1 day')", [WEBHOOK_DELIVERY_RETENTION_DAYS]),
+        )
+        .orderBy('attempted_at', 'asc')
+        .limit(WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE);
 
-      const batchDeleted = Array.isArray(result?.rows) ? result.rows.length : 0;
+      const deletedRows = await webhookRetentionDb
+        .unscoped('webhook_deliveries as wd', WEBHOOK_DELIVERY_CLEANUP_REASON)
+        .with('doomed', doomedDeliveries)
+        .using(['doomed'])
+        .where('wd.tenant', knex.ref('doomed.tenant'))
+        .where('wd.delivery_id', knex.ref('doomed.delivery_id'))
+        .delete()
+        .returning('wd.delivery_id');
+
+      const batchDeleted = Array.isArray(deletedRows) ? deletedRows.length : 0;
       deletedCount += batchDeleted;
 
       if (batchDeleted < WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE) {

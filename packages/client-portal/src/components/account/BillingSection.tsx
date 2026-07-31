@@ -4,6 +4,7 @@ import { Card } from "@alga-psa/ui/components/Card";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { Table } from "@alga-psa/ui/components/Table";
 import { Button } from "@alga-psa/ui/components/Button";
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
@@ -20,6 +21,12 @@ import {
   type BillingCycle,
   type PaymentMethod
 } from "@alga-psa/client-portal/actions";
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // Validation rules
 const CARD_NUMBER_REGEX = /^[0-9]{16}$/;
@@ -35,6 +42,7 @@ interface ValidationErrors {
 }
 
 export default function BillingSection() {
+  const { money } = useCurrencyFormat();
   const { t: tAccount } = useTranslation('client-portal');
   const { t: tBilling } = useTranslation('features/billing');
   const { t: tCommon } = useTranslation('common');
@@ -71,11 +79,17 @@ export default function BillingSection() {
           getBillingCycles(),
           getPaymentMethods()
         ]);
+        const expectedError = [invoicesData, cyclesData, methodsData].find(isReturnedActionError);
+        if (expectedError) {
+          setError(getErrorMessage(expectedError));
+          return;
+        }
         setInvoices(invoicesData);
         setBillingCycles(cyclesData);
         setPaymentMethods(methodsData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : tAccountBilling('loadError', 'Failed to load billing data'));
+        console.error('Failed to load billing data:', err);
+        setError(tAccountBilling('loadError', 'Failed to load billing data'));
       } finally {
         setIsLoading(false);
       }
@@ -126,14 +140,22 @@ export default function BillingSection() {
       // This is a placeholder - you would integrate with your payment processor here
       const token = await processPaymentDetails(paymentForm);
       
-      await addPaymentMethod({
+      const result = await addPaymentMethod({
         type: 'credit_card',
         token,
         setDefault: paymentForm.setDefault
       });
+      if (isReturnedActionError(result)) {
+        setAddPaymentError(getErrorMessage(result));
+        return;
+      }
 
       // Refresh payment methods
       const updatedMethods = await getPaymentMethods();
+      if (isReturnedActionError(updatedMethods)) {
+        setAddPaymentError(getErrorMessage(updatedMethods));
+        return;
+      }
       setPaymentMethods(updatedMethods);
       
       // Reset form and close dialog
@@ -146,7 +168,8 @@ export default function BillingSection() {
       });
       setIsAddingPayment(false);
     } catch (err) {
-      setAddPaymentError(err instanceof Error ? err.message : tAccountBilling('addPaymentError', 'Failed to add payment method'));
+      console.error('Failed to add payment method:', err);
+      setAddPaymentError(tAccountBilling('addPaymentError', 'Failed to add payment method'));
     } finally {
       setIsProcessing(false);
     }
@@ -154,21 +177,39 @@ export default function BillingSection() {
 
   const handleRemovePayment = async (id: string) => {
     try {
-      await removePaymentMethod(id);
+      const result = await removePaymentMethod(id);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       const updatedMethods = await getPaymentMethods();
+      if (isReturnedActionError(updatedMethods)) {
+        setError(getErrorMessage(updatedMethods));
+        return;
+      }
       setPaymentMethods(updatedMethods);
     } catch (err) {
-      setError(err instanceof Error ? err.message : tAccountBilling('removePaymentError', 'Failed to remove payment method'));
+      console.error('Failed to remove payment method:', err);
+      setError(tAccountBilling('removePaymentError', 'Failed to remove payment method'));
     }
   };
 
   const handleSetDefaultPayment = async (id: string) => {
     try {
-      await setDefaultPaymentMethod(id);
+      const result = await setDefaultPaymentMethod(id);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       const updatedMethods = await getPaymentMethods();
+      if (isReturnedActionError(updatedMethods)) {
+        setError(getErrorMessage(updatedMethods));
+        return;
+      }
       setPaymentMethods(updatedMethods);
     } catch (err) {
-      setError(err instanceof Error ? err.message : tAccountBilling('setDefaultError', 'Failed to set default payment method'));
+      console.error('Failed to set default payment method:', err);
+      setError(tAccountBilling('setDefaultError', 'Failed to set default payment method'));
     }
   };
 
@@ -182,21 +223,13 @@ export default function BillingSection() {
     });
   };
 
-  const formatAmount = (amount: number, currencyCode: string = 'USD') => {
+  // money() takes minor units and formats with the tenant's locale + currency
+  // from CurrencyFormatProvider; amounts here are major units.
+  const formatAmount = (amount: number, currencyCode?: string) => {
     try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(Number(amount));
+      return money(Math.round(Number(amount) * 100), currencyCode);
     } catch (err) {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(0);
+      return money(0);
     }
   };
 

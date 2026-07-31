@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "From Address",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Leave username and password blank if your relay accepts mail without authentication.",
+      "security": {
+        "title": "Connection Security",
+        "secure": "Use implicit TLS (SSL on connect, typically port 465)",
+        "requireTls": "Require STARTTLS upgrade (ports 587 / 25)",
+        "verifyCert": "Verify server certificate",
+        "verifyCertHint": "Turn this off only for a trusted relay on your own network that uses a self-signed certificate."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "Failed to load email settings",
       "saveSettings": "Failed to save settings",
       "addDomain": "Failed to add domain",
-      "verifyDomain": "Failed to verify domain"
+      "verifyDomain": "Failed to verify domain",
+      "testOutbound": "Failed to test outbound email"
+    },
+    "test": {
+      "title": "Test Outbound Email",
+      "description": "Saves the current settings, then verifies the provider connection. Enter an address to also send a test message.",
+      "recipientLabel": "Send test to (optional)",
+      "recipientPlaceholder": "you@example.com",
+      "run": "Test Connection",
+      "testing": "Testing..."
     }
   },
   "microsoft365": {

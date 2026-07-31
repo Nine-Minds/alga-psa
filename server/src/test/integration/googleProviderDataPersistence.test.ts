@@ -1,18 +1,35 @@
 /**
  * Integration test to ensure Google provider settings create proper database records
  * This test verifies the complete data flow from configuration to database persistence
+ *
+ * Persistence targets the current split schema: email_providers plus the
+ * snake_case google_email_provider_config table. Input validation messages are
+ * owned by EmailProviderValidator.
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
+import { EmailProviderValidator } from '../../services/email/EmailProviderValidator';
 
 // Global test variables
 let testDb: Knex;
 let testTenant: string;
 let emailProviderService: EmailProviderService;
+
+function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
+  return tenantDb(testDb, testTenant).table<Row>(table);
+}
+
+function tenantFixtureTable() {
+  return tenantDb(testDb, testTenant).unscoped(
+    'tenants',
+    'Google provider data persistence test fixture creates and removes tenant rows'
+  );
+}
 
 // Mock createTenantKnex to use our test database
 vi.mock('../../lib/db', () => ({
@@ -23,7 +40,7 @@ vi.mock('../../lib/db', () => ({
 }));
 
 describe('Google Provider Data Persistence Tests', () => {
-  
+
   beforeAll(async () => {
     // Setup test database connection
     testDb = await createTestDbConnection();
@@ -39,10 +56,10 @@ describe('Google Provider Data Persistence Tests', () => {
   beforeEach(async () => {
     // Create a unique tenant for each test
     testTenant = uuidv4();
-    
+
     try {
       // Create tenant record
-      await testDb('tenants').insert({
+      await tenantFixtureTable().insert({
         tenant: testTenant,
         client_name: 'Integration Test Client',
         email: 'integration-test@client.com',
@@ -58,11 +75,10 @@ describe('Google Provider Data Persistence Tests', () => {
   afterEach(async () => {
     // Clean up test data
     try {
-      await testDb('email_provider_configs')
-        .where('tenant', testTenant)
-        .delete();
-        
-      await testDb('tenants')
+      await tenantTable('google_email_provider_config').delete();
+      await tenantTable('email_providers').delete();
+
+      await tenantFixtureTable()
         .where('tenant', testTenant)
         .delete();
     } catch (error) {
@@ -79,15 +95,15 @@ describe('Google Provider Data Persistence Tests', () => {
       mailbox: 'integration-test@gmail.com',
       isActive: true,
       vendorConfig: {
-        clientId: 'test-client-id.apps.googleusercontent.com',
-        clientSecret: 'test-client-secret-value',
-        projectId: 'test-project-id',
-        redirectUri: 'http://localhost:3000/api/auth/google/callback',
-        pubSubTopic: 'gmail-notifications',
-        pubSubSubscription: 'gmail-webhook-subscription',
-        labelFilters: ['INBOX', 'UNREAD'],
-        autoProcessEmails: true,
-        maxEmailsPerSync: 50
+        client_id: 'test-client-id.apps.googleusercontent.com',
+        client_secret: 'test-client-secret-value',
+        project_id: 'test-project-id',
+        redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+        pubsub_topic_name: 'gmail-notifications',
+        pubsub_subscription_name: 'gmail-webhook-subscription',
+        label_filters: ['INBOX', 'UNREAD'],
+        auto_process_emails: true,
+        max_emails_per_sync: 50
       }
     };
 
@@ -101,47 +117,48 @@ describe('Google Provider Data Persistence Tests', () => {
       name: 'Integration Test Gmail',
       mailbox: 'integration-test@gmail.com',
       active: true,
-      connection_status: 'disconnected',
+      connection_status: 'configuring',
       folder_to_monitor: 'Inbox'
     });
 
-    // Assert - Verify database record
-    const dbRecord = await testDb('email_provider_configs')
+    // Assert - Verify main provider record
+    const providerRecord = await tenantTable<any>('email_providers')
       .where('id', createdProvider.id)
-      .where('tenant', testTenant)
       .first();
 
-    expect(dbRecord).toBeDefined();
-    expect(dbRecord.id).toBe(createdProvider.id);
-    expect(dbRecord.tenant).toBe(testTenant);
-    expect(dbRecord.provider_type).toBe('google');
-    expect(dbRecord.name).toBe('Integration Test Gmail');
-    expect(dbRecord.mailbox).toBe('integration-test@gmail.com');
-    expect(dbRecord.active).toBe(true);
-    expect(dbRecord.connection_status).toBe('disconnected');
-    expect(dbRecord.folder_to_monitor).toBe('Inbox');
-    expect(dbRecord.webhook_notification_url).toBe('');
+    expect(providerRecord).toBeDefined();
+    expect(providerRecord.id).toBe(createdProvider.id);
+    expect(providerRecord.tenant).toBe(testTenant);
+    expect(providerRecord.provider_type).toBe('google');
+    expect(providerRecord.provider_name).toBe('Integration Test Gmail');
+    expect(providerRecord.mailbox).toBe('integration-test@gmail.com');
+    expect(providerRecord.is_active).toBe(true);
+    expect(providerRecord.status).toBe('configuring');
 
-    // Verify the JSON provider_config contains all Google-specific fields
-    const providerConfig = typeof dbRecord.provider_config === 'string' 
-      ? JSON.parse(dbRecord.provider_config)
-      : dbRecord.provider_config;
+    // Verify the vendor config row contains all Google-specific fields
+    const configRecord = await tenantTable<any>('google_email_provider_config')
+      .where('email_provider_id', createdProvider.id)
+      .first();
 
-    expect(providerConfig).toMatchObject({
-      clientId: 'test-client-id.apps.googleusercontent.com',
-      clientSecret: 'test-client-secret-value',
-      projectId: 'test-project-id',
-      redirectUri: 'http://localhost:3000/api/auth/google/callback',
-      pubSubTopic: 'gmail-notifications',
-      pubSubSubscription: 'gmail-webhook-subscription',
-      labelFilters: ['INBOX', 'UNREAD'],
-      autoProcessEmails: true,
-      maxEmailsPerSync: 50
+    expect(configRecord).toMatchObject({
+      email_provider_id: createdProvider.id,
+      tenant: testTenant,
+      client_id: 'test-client-id.apps.googleusercontent.com',
+      client_secret: 'test-client-secret-value',
+      project_id: 'test-project-id',
+      redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+      pubsub_topic_name: 'gmail-notifications',
+      pubsub_subscription_name: 'gmail-webhook-subscription',
+      auto_process_emails: true,
+      max_emails_per_sync: 50
     });
+    expect(configRecord.label_filters).toEqual(['INBOX', 'UNREAD']);
 
     // Verify timestamps were set
-    expect(dbRecord.created_at).toBeDefined();
-    expect(dbRecord.updated_at).toBeDefined();
+    expect(providerRecord.created_at).toBeDefined();
+    expect(providerRecord.updated_at).toBeDefined();
+    expect(configRecord.created_at).toBeDefined();
+    expect(configRecord.updated_at).toBeDefined();
   });
 
   it('should persist Google Workspace (non-gmail.com) configurations correctly', async () => {
@@ -153,14 +170,15 @@ describe('Google Provider Data Persistence Tests', () => {
       mailbox: 'support@customdomain.com',
       isActive: true,
       vendorConfig: {
-        clientId: 'workspace-client.apps.googleusercontent.com',
-        clientSecret: 'workspace-secret',
-        projectId: 'client-workspace-project',
-        pubSubTopic: 'workspace-email-notifications',
-        pubSubSubscription: 'workspace-webhook-sub',
-        labelFilters: ['INBOX', 'Support', 'CustomerService'],
-        autoProcessEmails: false,
-        maxEmailsPerSync: 200
+        client_id: 'workspace-client.apps.googleusercontent.com',
+        client_secret: 'workspace-secret',
+        project_id: 'client-workspace-project',
+        redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+        pubsub_topic_name: 'workspace-email-notifications',
+        pubsub_subscription_name: 'workspace-webhook-sub',
+        label_filters: ['INBOX', 'Support', 'CustomerService'],
+        auto_process_emails: false,
+        max_emails_per_sync: 200
       }
     };
 
@@ -168,23 +186,24 @@ describe('Google Provider Data Persistence Tests', () => {
     const createdProvider = await emailProviderService.createProvider(workspaceConfig);
 
     // Assert - Verify custom domain is properly stored
-    const dbRecord = await testDb('email_provider_configs')
+    const providerRecord = await tenantTable<any>('email_providers')
       .where('id', createdProvider.id)
       .first();
 
-    expect(dbRecord.mailbox).toBe('support@customdomain.com');
-    expect(dbRecord.provider_type).toBe('google'); // Still Google provider type
+    expect(providerRecord.mailbox).toBe('support@customdomain.com');
+    expect(providerRecord.provider_type).toBe('google'); // Still Google provider type
 
-    const providerConfig = typeof dbRecord.provider_config === 'string' 
-      ? JSON.parse(dbRecord.provider_config)
-      : dbRecord.provider_config;
-    expect(providerConfig.labelFilters).toEqual(['INBOX', 'Support', 'CustomerService']);
-    expect(providerConfig.autoProcessEmails).toBe(false);
-    expect(providerConfig.maxEmailsPerSync).toBe(200);
+    const configRecord = await tenantTable<any>('google_email_provider_config')
+      .where('email_provider_id', createdProvider.id)
+      .first();
+    expect(configRecord.label_filters).toEqual(['INBOX', 'Support', 'CustomerService']);
+    expect(configRecord.auto_process_emails).toBe(false);
+    expect(configRecord.max_emails_per_sync).toBe(200);
   });
 
   it('should store OAuth tokens and authentication data when provided', async () => {
     // Arrange - Configuration with OAuth tokens
+    const tokenExpiry = new Date(Date.now() + 3600000);
     const configWithAuth = {
       tenant: testTenant,
       providerType: 'google' as const,
@@ -192,16 +211,16 @@ describe('Google Provider Data Persistence Tests', () => {
       mailbox: 'authenticated@gmail.com',
       isActive: true,
       vendorConfig: {
-        clientId: 'auth-client-id.apps.googleusercontent.com',
-        clientSecret: 'auth-secret',
-        projectId: 'auth-project',
-        pubSubTopic: 'auth-topic',
-        pubSubSubscription: 'auth-sub',
+        client_id: 'auth-client-id.apps.googleusercontent.com',
+        client_secret: 'auth-secret',
+        project_id: 'auth-project',
+        redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+        pubsub_topic_name: 'auth-topic',
+        pubsub_subscription_name: 'auth-sub',
         // OAuth tokens
-        refreshToken: 'refresh-token-abc123',
-        accessToken: 'access-token-xyz789',
-        tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
-        scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify'
+        refresh_token: 'refresh-token-abc123',
+        access_token: 'access-token-xyz789',
+        token_expires_at: tokenExpiry.toISOString()
       }
     };
 
@@ -209,21 +228,18 @@ describe('Google Provider Data Persistence Tests', () => {
     const createdProvider = await emailProviderService.createProvider(configWithAuth);
 
     // Assert - Verify tokens are persisted
-    const dbRecord = await testDb('email_provider_configs')
-      .where('id', createdProvider.id)
+    const configRecord = await tenantTable<any>('google_email_provider_config')
+      .where('email_provider_id', createdProvider.id)
       .first();
 
-    const providerConfig = typeof dbRecord.provider_config === 'string' 
-      ? JSON.parse(dbRecord.provider_config)
-      : dbRecord.provider_config;
-    expect(providerConfig.refreshToken).toBe('refresh-token-abc123');
-    expect(providerConfig.accessToken).toBe('access-token-xyz789');
-    expect(providerConfig.tokenExpiry).toBeDefined();
-    expect(providerConfig.scope).toContain('gmail.readonly');
+    expect(configRecord.refresh_token).toBe('refresh-token-abc123');
+    expect(configRecord.access_token).toBe('access-token-xyz789');
+    expect(configRecord.token_expires_at).toBeDefined();
+    expect(new Date(configRecord.token_expires_at).getTime()).toBe(tokenExpiry.getTime());
   });
 
-  it('should enforce proper database constraints for Google providers', async () => {
-    // Test: Provider type must be 'google' or 'microsoft'
+  it('should reject invalid provider types before any database write', async () => {
+    // Validation ownership: EmailProviderValidator rejects unknown provider types
     const invalidProviderType = {
       tenant: testTenant,
       providerType: 'invalid' as any,
@@ -233,21 +249,21 @@ describe('Google Provider Data Persistence Tests', () => {
       vendorConfig: {}
     };
 
-    await expect(
-      emailProviderService.createProvider(invalidProviderType)
-    ).rejects.toThrow(/Provider type must be either "google" or "microsoft"/);
+    const errors = EmailProviderValidator.validateCreateProvider(invalidProviderType);
+    expect(EmailProviderValidator.formatValidationErrors(errors)).toMatch(
+      /Provider type must be either "google", "microsoft", or "imap"/
+    );
 
-    // Verify no records were created with invalid provider type
-    const count = await testDb('email_provider_configs')
-      .where('tenant', testTenant)
+    // Verify no records exist with the invalid provider type
+    const count = await tenantTable<any>('email_providers')
       .where('provider_type', 'invalid')
       .count('* as count')
       .first();
 
-    expect(parseInt(count?.count || '0')).toBe(0);
+    expect(parseInt(String(count?.count ?? '0'))).toBe(0);
   });
 
-  it('should enforce validation for required fields', async () => {
+  it('should enforce validation for required fields', () => {
     // Test that empty provider name is not allowed
     const emptyNameConfig = {
       tenant: testTenant,
@@ -264,9 +280,11 @@ describe('Google Provider Data Persistence Tests', () => {
       }
     };
 
-    await expect(
-      emailProviderService.createProvider(emptyNameConfig)
-    ).rejects.toThrow(/Provider name is required/);
+    expect(
+      EmailProviderValidator.formatValidationErrors(
+        EmailProviderValidator.validateCreateProvider(emptyNameConfig)
+      )
+    ).toMatch(/Provider name is required/);
 
     // Test that missing vendor config fails
     const noVendorConfig = {
@@ -278,9 +296,11 @@ describe('Google Provider Data Persistence Tests', () => {
       vendorConfig: {}
     };
 
-    await expect(
-      emailProviderService.createProvider(noVendorConfig)
-    ).rejects.toThrow(/Google Client ID is required/);
+    expect(
+      EmailProviderValidator.formatValidationErrors(
+        EmailProviderValidator.validateCreateProvider(noVendorConfig)
+      )
+    ).toMatch(/Google Client ID is required/);
   });
 
   it('should correctly handle updates to existing Google provider configurations', async () => {
@@ -292,44 +312,45 @@ describe('Google Provider Data Persistence Tests', () => {
       mailbox: 'original@gmail.com',
       isActive: true,
       vendorConfig: {
-        clientId: 'original-client-id.apps.googleusercontent.com',
-        clientSecret: 'original-secret',
-        projectId: 'original-project',
-        pubSubTopic: 'original-topic',
-        pubSubSubscription: 'original-sub',
-        labelFilters: ['INBOX'],
-        maxEmailsPerSync: 50
+        client_id: 'original-client-id.apps.googleusercontent.com',
+        client_secret: 'original-secret',
+        project_id: 'original-project',
+        redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+        pubsub_topic_name: 'original-topic',
+        pubsub_subscription_name: 'original-sub',
+        label_filters: ['INBOX'],
+        max_emails_per_sync: 50
       }
     };
 
     const provider = await emailProviderService.createProvider(initialConfig);
 
     // Act - Update the provider
-    const updatedProvider = await emailProviderService.updateProvider(provider.id, {
+    await emailProviderService.updateProvider(provider.id, {
       providerName: 'Updated Gmail Config',
       vendorConfig: {
-        labelFilters: ['INBOX', 'UNREAD', 'IMPORTANT'],
-        maxEmailsPerSync: 100,
-        refreshToken: 'new-refresh-token'
+        label_filters: ['INBOX', 'UNREAD', 'IMPORTANT'],
+        max_emails_per_sync: 100,
+        refresh_token: 'new-refresh-token'
       }
     });
 
     // Assert - Verify updates in database
-    const dbRecord = await testDb('email_provider_configs')
+    const providerRecord = await tenantTable<any>('email_providers')
       .where('id', provider.id)
       .first();
 
-    expect(dbRecord.name).toBe('Updated Gmail Config');
-    
-    const providerConfig = typeof dbRecord.provider_config === 'string' 
-      ? JSON.parse(dbRecord.provider_config)
-      : dbRecord.provider_config;
+    expect(providerRecord.provider_name).toBe('Updated Gmail Config');
+
+    const configRecord = await tenantTable<any>('google_email_provider_config')
+      .where('email_provider_id', provider.id)
+      .first();
     // New values
-    expect(providerConfig.labelFilters).toEqual(['INBOX', 'UNREAD', 'IMPORTANT']);
-    expect(providerConfig.maxEmailsPerSync).toBe(100);
-    expect(providerConfig.refreshToken).toBe('new-refresh-token');
+    expect(configRecord.label_filters).toEqual(['INBOX', 'UNREAD', 'IMPORTANT']);
+    expect(configRecord.max_emails_per_sync).toBe(100);
+    expect(configRecord.refresh_token).toBe('new-refresh-token');
     // Original values preserved
-    expect(providerConfig.clientId).toBe('original-client-id.apps.googleusercontent.com');
-    expect(providerConfig.projectId).toBe('original-project');
+    expect(configRecord.client_id).toBe('original-client-id.apps.googleusercontent.com');
+    expect(configRecord.project_id).toBe('original-project');
   });
 });

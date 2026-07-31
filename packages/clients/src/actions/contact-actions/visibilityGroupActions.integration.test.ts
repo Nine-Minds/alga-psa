@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility';
+import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility.server';
+
+// Integration-style flow tests: comfortably sub-second locally, but loaded CI
+// runners have blown the 5s default (run 29615580963).
+vi.setConfig({ testTimeout: 20_000 });
 
 const hasPermissionAsyncMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
@@ -8,6 +12,10 @@ const withTransactionMock = vi.fn();
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any) => ({
+    table: (table: string) => conn(table),
+    tenantJoin: (query: any) => query.join?.() ?? query,
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -114,9 +122,9 @@ function createVisibilityTrx(state: VisibilityState) {
                 .filter((row) => {
                   const board = state.boards.find((candidate) => candidate.board_id === row.board_id);
                   return (
-                    row.tenant === filters['cvgb.tenant'] &&
+                    (!filters['cvgb.tenant'] || row.tenant === filters['cvgb.tenant']) &&
                     row.group_id === filters['cvgb.group_id'] &&
-                    board?.tenant === filters['cvgb.tenant']
+                    (!filters['cvgb.tenant'] || board?.tenant === filters['cvgb.tenant'])
                   );
                 })
                 .map((row) => ({ board_id: row.board_id })),
@@ -173,17 +181,14 @@ describe('contactActions visibility group integration', () => {
     const updatedVisibility = await getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1');
     expect(updatedVisibility.visibilityGroupId).toBe('group-2');
     expect(updatedVisibility.visibleBoardIds).toEqual(['board-2']);
-  });
+  }, 15_000);
 
   it('T001: MSP board loading returns active tenant boards without requiring board client ownership', async () => {
-    const boardsWhereMock = vi.fn(() => ({
-      andWhere: vi.fn(() => ({
-        select: vi.fn().mockResolvedValue([
-          { board_id: 'board-1', board_name: 'General Support' },
-          { board_id: 'board-2', board_name: 'Projects' },
-        ]),
-      })),
-    }));
+    const boardsSelectMock = vi.fn().mockResolvedValue([
+      { board_id: 'board-1', board_name: 'General Support' },
+      { board_id: 'board-2', board_name: 'Projects' },
+    ]);
+    const boardsAndWhereMock = vi.fn(() => ({ select: boardsSelectMock }));
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (innerTrx: any) => Promise<unknown>) =>
       callback(
@@ -198,7 +203,7 @@ describe('contactActions visibility group integration', () => {
 
           if (table === 'boards') {
             return {
-              where: boardsWhereMock,
+              andWhere: boardsAndWhereMock,
             };
           }
 
@@ -210,7 +215,7 @@ describe('contactActions visibility group integration', () => {
     const { getClientPortalVisibilityBoardsByClient } = await import('./contactActions');
     const boards = await getClientPortalVisibilityBoardsByClient('contact-1');
 
-    expect(boardsWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+    expect(boardsAndWhereMock).toHaveBeenCalledWith('is_inactive', false);
     expect(boards).toEqual([
       { board_id: 'board-1', board_name: 'General Support' },
       { board_id: 'board-2', board_name: 'Projects' },

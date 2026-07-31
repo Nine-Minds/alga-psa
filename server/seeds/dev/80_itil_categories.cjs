@@ -5,13 +5,17 @@
  * @returns { Promise<void> }
  */
 const { randomUUID } = require('crypto');
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
 exports.seed = async function(knex) {
-  const tenant = await knex('tenants').first();
-  if (!tenant) {
-    console.log('No tenant found, skipping ITIL categories seed');
+  const context = await getFirstTenantSeedContext(knex, {
+    skipMessage: 'No tenant found, skipping ITIL categories seed',
+  });
+  if (!context) {
     return;
   }
+
+  const { db, tenantId } = context;
 
   const parentColumn = (await knex.schema.hasColumn('categories', 'parent_category_uuid'))
     ? 'parent_category_uuid'
@@ -25,8 +29,7 @@ exports.seed = async function(knex) {
   }
 
   // Check if we already have ITIL categories for this tenant
-  const existingItilCategories = await knex('categories')
-    .where('tenant', tenant.tenant)
+  const existingItilCategories = await db.table('categories')
     .where('is_from_itil_standard', true)
     .select('*');
 
@@ -38,13 +41,11 @@ exports.seed = async function(knex) {
   // Determine which board/id we should associate the ITIL categories with.
   // Prefer an ITIL specific board if it already exists, otherwise fall back
   // to the tenant's default board so we can satisfy the non-null constraint.
-  const itilBoard = await knex('boards')
-    .where('tenant', tenant.tenant)
+  const itilBoard = await db.table('boards')
     .where('board_name', 'ITIL Support')
     .first();
 
-  const defaultBoard = itilBoard || await knex('boards')
-    .where('tenant', tenant.tenant)
+  const defaultBoard = itilBoard || await db.table('boards')
     .orderBy('display_order')
     .first();
 
@@ -53,8 +54,7 @@ exports.seed = async function(knex) {
     return;
   }
 
-  const createdByUser = await knex('users')
-    .where('tenant', tenant.tenant)
+  const createdByUser = await db.table('users')
     .orderBy('created_at')
     .first();
 
@@ -79,8 +79,7 @@ exports.seed = async function(knex) {
     const newId = randomUUID();
 
     // Check if already exists in tenant categories
-    const existing = await knex('categories')
-      .where('tenant', tenant.tenant)
+    const existing = await db.table('categories')
       .where('category_name', stdCategory.category_name)
       .whereNull('parent_category')
       .where('board_id', defaultBoard.board_id)
@@ -89,7 +88,7 @@ exports.seed = async function(knex) {
     if (!existing) {
       const insertData = {
         category_id: newId,
-        tenant: tenant.tenant,
+        tenant: tenantId,
         category_name: stdCategory.category_name,
         parent_category: null,
         board_id: defaultBoard.board_id,
@@ -99,14 +98,14 @@ exports.seed = async function(knex) {
         created_at: knex.fn.now(),
       };
 
-      await knex('categories').insert(insertData);
+      await db.table('categories').insert(insertData);
 
       parentIdMap[stdCategory.id] = newId;
     } else {
       parentIdMap[stdCategory.id] = existing.category_id;
 
       if (!existing.is_from_itil_standard) {
-        await knex('categories')
+        await db.table('categories')
           .where('category_id', existing.category_id)
           .update({
             is_from_itil_standard: true
@@ -127,8 +126,7 @@ exports.seed = async function(knex) {
     }
 
     // Check if already exists in tenant categories
-    const existing = await knex('categories')
-      .where('tenant', tenant.tenant)
+    const existing = await db.table('categories')
       .where('category_name', stdCategory.category_name)
       .where('parent_category', parentId)
       .where('board_id', defaultBoard.board_id)
@@ -137,7 +135,7 @@ exports.seed = async function(knex) {
     if (!existing) {
       const insertData = {
         category_id: randomUUID(),
-        tenant: tenant.tenant,
+        tenant: tenantId,
         category_name: stdCategory.category_name,
         parent_category: parentId,
         board_id: defaultBoard.board_id,
@@ -147,9 +145,9 @@ exports.seed = async function(knex) {
         created_at: knex.fn.now(),
       };
 
-      await knex('categories').insert(insertData);
+      await db.table('categories').insert(insertData);
     } else if (!existing.is_from_itil_standard) {
-      await knex('categories')
+      await db.table('categories')
         .where('category_id', existing.category_id)
         .update({
           is_from_itil_standard: true

@@ -9,7 +9,7 @@ describe('default-contract lazy backfill and reconciliation wiring', () => {
   it('F057: default-contract ensure remains lazy and gated on billing-settings presence', () => {
     const source = readRepo('shared/billingClients/defaultContract.ts');
     expect(source).toContain('ensureDefaultContractForClientIfBillingConfigured');
-    expect(source).toContain("knexOrTrx('client_billing_settings')");
+    expect(source).toContain("tenantDb(knexOrTrx, params.tenant).table('client_billing_settings')");
     expect(source).toContain('if (!billingSettings?.client_id) {');
     expect(source).toContain('return { ensured: false };');
     expect(source).toContain('const result = await ensureDefaultContractForClient(knexOrTrx, params);');

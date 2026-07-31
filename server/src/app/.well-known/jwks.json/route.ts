@@ -15,9 +15,6 @@ export async function GET(_req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE });
   }
-  const { getPublicJwks, isAuthServerEnabled } = await import('@product/mcp/entry');
-  if (!(await isAuthServerEnabled())) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE });
-  }
+  const { getPublicJwks } = await import('@product/mcp/entry');
   return NextResponse.json(await getPublicJwks(), { headers: NO_STORE });
 }

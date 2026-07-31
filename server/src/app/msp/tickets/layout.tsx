@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { TicketsRouteProvider } from '@alga-psa/tickets/components/TicketsRouteProvider';
+import WorkspaceRouteLayout from '../_components/WorkspaceRouteLayout';
 
 interface TicketsLayoutProps {
   children: ReactNode;
@@ -8,9 +9,11 @@ interface TicketsLayoutProps {
 
 export default function TicketsLayout({ children, modal }: TicketsLayoutProps) {
   return (
-    <TicketsRouteProvider>
-      {children}
-      {modal}
-    </TicketsRouteProvider>
+    <WorkspaceRouteLayout>
+      <TicketsRouteProvider>
+        {children}
+        {modal}
+      </TicketsRouteProvider>
+    </WorkspaceRouteLayout>
   );
 }

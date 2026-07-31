@@ -1,9 +1,12 @@
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
+import { tenantDb } from '@alga-psa/db';
 import { computeDomain as sharedComputeDomain } from '@alga-psa/shared/extensions/domain.js';
 import type { Knex } from 'knex';
 import { KubeConfig, CustomObjectsApi } from '@kubernetes/client-node';
 import { ApiException } from '@kubernetes/client-node/dist/gen/apis/exception.js';
 import { ApplicationFailure } from '@temporalio/activity';
+
+const EXTENSION_DOMAIN_INSTALL_DISCOVERY_TENANT = '__extension_domain_install_discovery__';
 
 export interface ComputeDomainInput {
   tenantId: string;
@@ -76,7 +79,11 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
             await retryOnAdminReadOnly(
               async () => {
                 const knex: Knex = await getAdminConnection();
-                await knex('tenant_extension_install')
+                await tenantDb(knex, EXTENSION_DOMAIN_INSTALL_DISCOVERY_TENANT)
+                  .unscoped(
+                    'tenant_extension_install',
+                    'extension domain normalization updates by runner domain before tenant is known'
+                  )
                   .where({ runner_domain: domainName })
                   .update({ runner_domain: newDomain, updated_at: knex.fn.now() });
               },
@@ -315,7 +322,12 @@ export async function updateInstallStatus(input: UpdateInstallStatusInput): Prom
         update.runner_domain = runnerDomainToSet;
       }
 
-      let q = knex('tenant_extension_install').update(update);
+      let q = tenantDb(knex, EXTENSION_DOMAIN_INSTALL_DISCOVERY_TENANT)
+        .unscoped(
+          'tenant_extension_install',
+          'extension domain status update resolves installs by id or runner domain before tenant is known'
+        )
+        .update(update);
 
       if (input.installId) {
         q = q.where({ id: input.installId });

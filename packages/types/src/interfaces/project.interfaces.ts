@@ -10,6 +10,7 @@ export interface IClientPortalConfig {
   show_phase_completion?: boolean;      // Show task completion % per phase
   show_tasks?: boolean;                 // Show individual tasks
   show_budget_hours?: boolean;          // Show project-level budget/spent hours card
+  show_billing?: boolean;               // Show read-only project billing summary
   visible_task_fields?: string[];       // Which task fields/features to show
 }
 
@@ -18,6 +19,7 @@ export const DEFAULT_CLIENT_PORTAL_CONFIG: IClientPortalConfig = {
   show_phase_completion: false,
   show_tasks: false,
   show_budget_hours: false,
+  show_billing: false,
   visible_task_fields: ['task_name', 'due_date', 'status']
 };
 
@@ -111,6 +113,7 @@ export interface IProjectPhase extends TenantEntity {
   description: string | null;
   start_date: Date | null;
   end_date: Date | null;
+  completed_at?: Date | string | null;
   status: string;
   order_number: number;
   order_key?: string;

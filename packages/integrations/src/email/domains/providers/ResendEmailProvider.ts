@@ -111,7 +111,7 @@ export class ResendEmailProvider implements IEmailProvider {
         data: error.response?.data,
       });
       throw new EmailProviderError(
-        `Resend initialization failed: ${error.message}`,
+        'Resend initialization failed. Check the API key and sender domain settings.',
         this.providerId,
         this.providerType,
         false
@@ -192,7 +192,7 @@ export class ResendEmailProvider implements IEmailProvider {
           success: false,
           providerId: this.providerId,
           providerType: this.providerType,
-          error: error.message,
+          error: 'Resend rejected the message. Check sender domain and recipient settings.',
           metadata: {
             to: message.to.map((recipient) => recipient.email),
           },
@@ -216,7 +216,7 @@ export class ResendEmailProvider implements IEmailProvider {
       });
       return {
         healthy: false,
-        details: error.message,
+        details: 'Resend health check failed. Check the API key and sender domain settings.',
       };
     }
   }

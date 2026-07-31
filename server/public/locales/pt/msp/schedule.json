@@ -32,7 +32,7 @@
   "calendar": {
     "legend": {
       "types": {
-        "ticket": "Chamado",
+        "ticket": "Ticket",
         "projectTask": "Tarefa do projeto",
         "nonBillableCategory": "Categoria não faturável",
         "adHoc": "Entrada ad hoc",
@@ -124,16 +124,21 @@
   "requests": {
     "errors": {
       "load": "Falha ao carregar solicitações de agendamento",
-      "ticketNotFound": "Chamado não encontrado",
-      "loadTicket": "Falha ao carregar o chamado",
+      "ticketNotFound": "Ticket não encontrado",
+      "loadTicket": "Falha ao carregar o ticket",
       "assignTechnicianRequired": "Por favor atribua um técnico",
       "approve": "Falha ao aprovar a solicitação",
       "declineReasonRequired": "Forneça um motivo para recusar",
-      "decline": "Falha ao recusar a solicitação"
+      "decline": "Falha ao recusar a solicitação",
+      "reschedule": "Falha ao reagendar o compromisso",
+      "rescheduleDateRequired": "Escolha uma nova data e hora",
+      "generateTeamsMeeting": "Falha ao criar a reunião do Microsoft Teams"
     },
     "feedback": {
       "approved": "Solicitação de agendamento aprovada",
-      "declined": "Solicitação de agendamento recusada"
+      "declined": "Solicitação de agendamento recusada",
+      "rescheduled": "Compromisso reagendado",
+      "teamsMeetingGenerated": "Reunião do Microsoft Teams criada"
     },
     "filters": {
       "statusLabel": "Filtrar por status",
@@ -154,7 +159,7 @@
       "loading": "Carregando solicitações...",
       "empty": "Nenhuma solicitação {{status}} encontrada",
       "duration": "{{count}} minutos",
-      "ticketFallback": "Chamado #{{ticket}}",
+      "ticketFallback": "Ticket #{{ticket}}",
       "fallbacks": {
         "publicRequest": "Solicitação pública"
       }
@@ -177,12 +182,14 @@
         "duration": "Duração",
         "teamsMeeting": "Reunião de equipes",
         "status": "Status",
-        "linkedTicket": "Chamado vinculado",
+        "linkedTicket": "Ticket vinculado",
         "description": "Descrição"
       },
       "actions": {
-        "joinTeamsMeeting": "Participe da reunião de equipes"
-      }
+        "joinTeamsMeeting": "Participe da reunião de equipes",
+        "generateTeamsMeeting": "Criar reunião do Teams"
+      },
+      "teamsMeetingMissing": "Este compromisso aprovado ainda não tem um link de reunião do Teams."
     },
     "approval": {
       "title": "Detalhes de aprovação",
@@ -191,16 +198,22 @@
         "finalDateTime": "Data e hora finais",
         "generateTeamsMeeting": "Gerar link de reunião do Microsoft Teams",
         "internalNotes": "Notas internas (opcional)",
-        "linkedTicket": "Link para chamado (opcional)"
+        "linkedTicket": "Link para ticket (opcional)"
       },
       "placeholders": {
         "assignedTechnician": "Selecione o técnico",
         "internalNotes": "Adicione quaisquer notas internas...",
-        "linkedTicket": "Insira o ID do chamado para vincular..."
+        "linkedTicket": "Insira o ID do ticket para vincular..."
       },
       "actions": {
         "approve": "Aprovar",
         "decline": "Declínio"
+      },
+      "teamsMeetingFailure": {
+        "title": "Não foi possível criar a reunião do Microsoft Teams",
+        "description": "O compromisso não foi aprovado. Tente criar a reunião novamente ou aprove sem reunião e crie uma mais tarde.",
+        "retry": "Tentar novamente",
+        "approveWithout": "Aprovar sem reunião"
       }
     },
     "decline": {
@@ -213,6 +226,18 @@
       },
       "actions": {
         "confirm": "Confirmar recusa",
+        "cancel": "Cancelar"
+      }
+    },
+    "reschedule": {
+      "title": "Reagendar",
+      "teamsNote": "Os participantes receberão um convite atualizado da reunião do Microsoft Teams.",
+      "fields": {
+        "newDateTime": "Nova data e hora"
+      },
+      "actions": {
+        "open": "Reagendar compromisso",
+        "confirm": "Confirmar reagendamento",
         "cancel": "Cancelar"
       }
     }
@@ -632,6 +657,9 @@
       "single": "Somente este evento",
       "future": "Este e eventos futuros",
       "all": "Todos os eventos"
+    },
+    "errors": {
+      "loadWorkItem": "Failed to load work item."
     }
   },
   "actions": {

@@ -1,6 +1,7 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
-import { withTransaction } from '@alga-psa/db';
+import { documentPreviewErrorMessage } from './previewErrors';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
 /**
@@ -43,8 +44,8 @@ export class TextDocumentHandler extends BaseDocumentHandler {
 
       // Get document content from database
       const docContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('document_content')
-          .where({ document_id: document.document_id, tenant })
+        return await tenantDb(trx, tenant).table('document_content')
+          .where({ document_id: document.document_id })
           .first();
       });
 
@@ -82,7 +83,7 @@ export class TextDocumentHandler extends BaseDocumentHandler {
       console.error(`[TextDocumentHandler] Error generating preview for document ${document.document_id}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate text document preview'
+        error: documentPreviewErrorMessage(error, 'Failed to generate text document preview')
       };
     }
   }
@@ -98,8 +99,8 @@ export class TextDocumentHandler extends BaseDocumentHandler {
     try {
       // Get document content from database
       const docContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('document_content')
-          .where({ document_id: document.document_id, tenant })
+        return await tenantDb(trx, tenant).table('document_content')
+          .where({ document_id: document.document_id })
           .first();
       });
 

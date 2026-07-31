@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 import { getIndexer } from '@alga-psa/search';
 import { deleteSearchDoc, upsertSearchDoc } from '@alga-psa/search/upsert';
@@ -48,9 +48,8 @@ export async function searchVisibleUserReindexHandler(
   let skipped = 0;
 
   while (true) {
-    const query = knex<SearchVisibilityRow>('app_search_index')
+    const query = tenantDb(knex, tenantId).table<SearchVisibilityRow>('app_search_index')
       .select('object_type', 'object_id')
-      .where('tenant', tenantId)
       .whereRaw('?::uuid = ANY(visible_to_user_ids)', [userId])
       .orderBy('object_type', 'asc')
       .orderBy('object_id', 'asc')

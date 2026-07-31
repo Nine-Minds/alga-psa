@@ -45,7 +45,11 @@ function describeAxiosError(error: unknown): Record<string, unknown> {
   return { message: error instanceof Error ? error.message : String(error) };
 }
 
-const QBO_TOKEN_ENDPOINT = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+// Env overrides exist so test environments can point at the QBO emulator
+// (packages/emulators/qbo), mirroring MICROSOFT_GRAPH_BASE_URL for Graph.
+const QBO_TOKEN_ENDPOINT =
+  process.env.QBO_OAUTH_TOKEN_URL?.trim() || 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+const QBO_API_BASE_OVERRIDE = process.env.QBO_API_BASE_URL?.trim() || null;
 const QBO_SANDBOX_API_BASE = 'https://sandbox-quickbooks.api.intuit.com/v3/company';
 const QBO_PRODUCTION_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
 const TOKEN_EXPIRY_BUFFER_SECONDS = 300;
@@ -302,6 +306,13 @@ export async function upsertStoredQboCredentials(tenantId: string, credentials: 
   await notifyQboConnectionChanged(tenantId);
 }
 
+/**
+ * Testing note: don't mock this class method-by-method for multi-step tests.
+ * A stateful in-memory QBO implementing this surface (SyncTokens, duplicate
+ * names, balances, CDC replay) lives at
+ * packages/billing/src/services/accountingSync/testing/qboSimulator.ts —
+ * see the README next to it for wiring.
+ */
 export class QboClientService {
   private tenantId: string;
   private realmId: string;
@@ -422,6 +433,9 @@ export class QboClientService {
   }
 
   private getApiBaseUrl(): string {
+    if (QBO_API_BASE_OVERRIDE) {
+      return QBO_API_BASE_OVERRIDE;
+    }
     return this.isProductionEnvironment() ? QBO_PRODUCTION_API_BASE : QBO_SANDBOX_API_BASE;
   }
 

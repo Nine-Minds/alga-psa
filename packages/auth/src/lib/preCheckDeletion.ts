@@ -1,8 +1,8 @@
 'use server';
 
 import type { DeletionValidationResult } from '@alga-psa/types';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { getDeletionConfig, validateDeletion } from '@alga-psa/core';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
 import { getCurrentUser } from './getCurrentUser';
 import { hasPermission } from './rbac';
 
@@ -84,10 +84,9 @@ export async function preCheckDeletion(
     };
 
     if (entityType === 'status') {
-      const status = await trx('statuses')
+      const status = await tenantDb(trx, tenant).table('statuses')
         .select('status_type')
         .where({
-          tenant,
           status_id: entityId
         })
         .first<{ status_type?: string }>();

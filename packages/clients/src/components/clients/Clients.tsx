@@ -23,12 +23,11 @@ import {
   getAllClientsPaginated,
   deleteClient,
   validateClientDeletion,
-  importClientsFromCSV,
   exportClientsToCSV,
   markClientInactiveWithContacts,
   markClientActiveWithContacts,
 } from '@alga-psa/clients/actions';
-import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -52,11 +51,19 @@ import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
 const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
 const CLIENTS_PRINT_PAGE_SIZE = 5000;
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const formatClientPrintAddress = (client: IClient): string => {
   return [
@@ -103,6 +110,7 @@ interface ClientResultsProps {
   searchTerm: string;
   filterStatus: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
+  lifecycleFilter: 'all' | 'prospect' | 'active' | 'former';
   selectedTags: string[];
   viewMode: 'grid' | 'list';
   selectedClients: string[];
@@ -130,6 +138,7 @@ const ClientResults = memo(({
   searchTerm,
   filterStatus,
   clientTypeFilter,
+  lifecycleFilter,
   selectedTags,
   viewMode,
   selectedClients,
@@ -180,6 +189,7 @@ const ClientResults = memo(({
           statusFilter: filterStatus,
           searchTerm: searchTerm || undefined,
           clientTypeFilter,
+          lifecycleFilter,
           selectedTags,
           loadLogos: true,
           sortBy,
@@ -198,7 +208,7 @@ const ClientResults = memo(({
     };
 
     loadClients();
-  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags, sortBy, sortDirection]);
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, lifecycleFilter, selectedTags, sortBy, sortDirection]);
 
   // Fetch tags when clients change
   useEffect(() => {
@@ -216,19 +226,27 @@ const ClientResults = memo(({
         ]);
 
         const newClientTags: Record<string, ITag[]> = {};
-        clientTags.forEach(tag => {
-          if (!newClientTags[tag.tagged_id]) {
-            newClientTags[tag.tagged_id] = [];
-          }
-          newClientTags[tag.tagged_id].push(tag);
-        });
+        if (isTagActionError(clientTags)) {
+          console.error('Error fetching client tags:', clientTags);
+        } else {
+          clientTags.forEach(tag => {
+            if (!newClientTags[tag.tagged_id]) {
+              newClientTags[tag.tagged_id] = [];
+            }
+            newClientTags[tag.tagged_id].push(tag);
+          });
+        }
 
         setLocalClientTags(newClientTags);
-        setAllUniqueTags(allTags);
+        const safeAllTags = isTagActionError(allTags) ? [] : allTags;
+        if (isTagActionError(allTags)) {
+          console.error('Error fetching all client tags:', allTags);
+        }
+        setAllUniqueTags(safeAllTags);
         
         // Notify parent component about loaded tags
         if (onClientTagsLoaded) {
-          onClientTagsLoaded(newClientTags, allTags);
+          onClientTagsLoaded(newClientTags, safeAllTags);
         }
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -418,6 +436,7 @@ const Clients: React.FC = () => {
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [lifecycleFilter, setLifecycleFilter] = useState<'all' | 'prospect' | 'active' | 'former'>('active');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
@@ -569,9 +588,10 @@ const Clients: React.FC = () => {
       searchTerm !== '' || 
       filterStatus !== 'active' || 
       clientTypeFilter !== 'all' || 
+      lifecycleFilter !== 'active' ||
       selectedTags.length > 0;
     setIsFiltered(hasFilters);
-  }, [searchTerm, filterStatus, clientTypeFilter, selectedTags]);
+  }, [searchTerm, filterStatus, clientTypeFilter, lifecycleFilter, selectedTags]);
 
   // Tags will be loaded by ClientResults component
 
@@ -979,6 +999,7 @@ const Clients: React.FC = () => {
     setSearchTerm('');
     setFilterStatus('active');
     setClientTypeFilter('all');
+    setLifecycleFilter('active');
     setSelectedTags([]);
     setCurrentPage(1);
     setIsFiltered(false);
@@ -1139,6 +1160,10 @@ const Clients: React.FC = () => {
       }
       
       const csvData = await exportClientsToCSV(clientsToExport);
+      if (isReturnedActionError(csvData)) {
+        toast.error(getErrorMessage(csvData));
+        return;
+      }
       
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
       
@@ -1171,6 +1196,10 @@ const Clients: React.FC = () => {
         clientsToPrint.map((client) => client.client_id),
         'client'
       );
+      if (isTagActionError(tags)) {
+        console.error('Error hydrating print client tags:', tags);
+        return;
+      }
       const nextClientTags: Record<string, ITag[]> = {};
       tags.forEach((tag) => {
         if (!nextClientTags[tag.tagged_id]) {
@@ -1216,6 +1245,7 @@ const Clients: React.FC = () => {
       statusFilter: filterStatus,
       searchTerm,
       clientTypeFilter,
+      lifecycleFilter,
       selectedTags,
       loadLogos: false,
       sortBy,
@@ -1226,6 +1256,7 @@ const Clients: React.FC = () => {
     setPrintClients(response.clients);
   }, [
     clientTypeFilter,
+    lifecycleFilter,
     filterStatus,
     hydratePrintClientTags,
     loadedClients,
@@ -1315,14 +1346,10 @@ const Clients: React.FC = () => {
     onAfterPrint: () => setPrintClients([]),
   });
 
-  const handleImportComplete = async (clients: IClient[], updateExisting: boolean) => {
-    try {
-      await importClientsFromCSV(clients, updateExisting);
-      setIsImportDialogOpen(false);
-      router.refresh();
-    } catch (error) {
-      console.error('Error importing clients:', error);
-    }
+  const handleImportComplete = async () => {
+    setIsImportDialogOpen(false);
+    await refreshClients();
+    router.refresh();
   };
 
   if (viewMode === null || areClientPreferencesLoading) {
@@ -1465,6 +1492,25 @@ const Clients: React.FC = () => {
 
             <div className="w-48 shrink-0">
               <CustomSelect
+                id="lifecycle-filter"
+                value={lifecycleFilter}
+                onValueChange={(value) => {
+                  setLifecycleFilter(value as 'all' | 'prospect' | 'active' | 'former');
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: 'active', label: t('clientLifecycle.active', { defaultValue: 'Active clients' }) },
+                  { value: 'prospect', label: t('clientLifecycle.prospect', { defaultValue: 'Prospects' }) },
+                  { value: 'former', label: t('clientLifecycle.former', { defaultValue: 'Former clients' }) },
+                  { value: 'all', label: t('clientLifecycle.all', { defaultValue: 'All lifecycle stages' }) }
+                ]}
+                placeholder={t('clientsPage.filterByLifecycle', { defaultValue: 'Filter by lifecycle' })}
+                label={t('clientsPage.lifecycleFilterLabel', { defaultValue: 'Lifecycle Filter' })}
+              />
+            </div>
+
+            <div className="w-48 shrink-0">
+              <CustomSelect
                 id="client-type-filter"
                 value={clientTypeFilter}
                 onValueChange={(value) => {
@@ -1589,6 +1635,7 @@ const Clients: React.FC = () => {
         searchTerm={searchTerm}
         filterStatus={filterStatus}
         clientTypeFilter={clientTypeFilter}
+        lifecycleFilter={lifecycleFilter}
         selectedTags={selectedTags}
         viewMode={viewMode!}
         selectedClients={selectedClients}
@@ -1775,7 +1822,7 @@ const Clients: React.FC = () => {
       <ClientsImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImportComplete={(clients, updateExisting) => void handleImportComplete(clients, updateExisting)}
+        onImportComplete={() => void handleImportComplete()}
       />
       
       {/* Quick View Drawer */}

@@ -26,7 +26,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 - (2026-02-27) Client portal currently shows documents ONLY embedded in tickets (`getClientTicketDocuments`) and project tasks (`getClientTaskDocuments`). No standalone Documents page.
 - (2026-02-27) Client portal nav is in `packages/client-portal/src/components/layout/ClientPortalLayout.tsx`.
 - (2026-02-27) `documentActions.ts` is ~2900 lines — be careful with merge conflicts.
-- (2026-02-27) **Inline Citus distribution pattern** — New tables use `distributeIfCitus(knex, tableName)` helper defined inline in each migration file. Called right after `createTable`. No separate `ee/server/migrations/citus/` files needed. Reference: `server/migrations/20260219000001_create_sla_policies.cjs`. No triggers allowed (Citus constraint).
+- (2026-02-27) **Inline Citus distribution pattern** — New tables use `distributeIfCitus(knex, tableName)` helper defined inline in each migration file. Called right after `createTable`. No separate `ee/server/migrations/citus/` files needed (that folder was in fact never executed by anything and has since been deleted). Reference: `server/migrations/20260219000001_create_sla_policies.cjs`. No triggers allowed (Citus constraint).
 - (2026-02-27) MinIO buckets already have public download access configured in docker-compose test setup.
 - (2026-02-27) `document_associations` entity_type CHECK constraint has been expanded multiple times via migrations — any new entity types need a migration to update the CHECK.
 

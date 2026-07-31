@@ -42,12 +42,14 @@ describe('Invoicing locale smoke', () => {
       'prepayment',
       'contractItems',
       'hub',
+      'invoiceSyncBadge',
       'templateManager',
       'taxBadge',
       'annotations',
       'purchaseOrder',
       'common',
       'designer',
+      'projectBilling',
     ]);
   });
 

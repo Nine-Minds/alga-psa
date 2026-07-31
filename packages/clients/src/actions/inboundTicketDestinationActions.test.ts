@@ -13,6 +13,9 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  }),
 }));
 
 vi.mock('../lib/authHelpers', () => ({
@@ -92,7 +95,7 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
     const { updateClientInboundTicketDestination } = await import('./inboundTicketDestinationActions');
     await expect(
       updateClientInboundTicketDestination('client-1', 'defaults-1')
-    ).rejects.toThrow('Permission denied: Cannot update clients');
+    ).resolves.toEqual({ permissionError: 'Permission denied: Cannot update clients' });
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
@@ -108,7 +111,7 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
     const { updateClientInboundTicketDestination } = await import('./inboundTicketDestinationActions');
     await expect(
       updateClientInboundTicketDestination('client-1', 'defaults-foreign')
-    ).rejects.toThrow('Inbound ticket destination was not found for this tenant');
+    ).resolves.toEqual({ actionError: 'Inbound ticket destination was not found for this tenant' });
 
     expect(calls.some((entry) => entry.table === 'inbound_ticket_defaults' && entry.op === 'first')).toBe(true);
     expect(calls.some((entry) => entry.table === 'clients' && entry.op === 'returning')).toBe(false);
@@ -120,7 +123,7 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
     const { updateContactInboundTicketDestination } = await import('./inboundTicketDestinationActions');
     await expect(
       updateContactInboundTicketDestination('contact-1', 'defaults-1')
-    ).rejects.toThrow('Permission denied: Cannot update contacts');
+    ).resolves.toEqual({ permissionError: 'Permission denied: Cannot update contacts' });
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
@@ -136,7 +139,7 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
     const { updateContactInboundTicketDestination } = await import('./inboundTicketDestinationActions');
     await expect(
       updateContactInboundTicketDestination('contact-1', 'defaults-foreign')
-    ).rejects.toThrow('Inbound ticket destination was not found for this tenant');
+    ).resolves.toEqual({ actionError: 'Inbound ticket destination was not found for this tenant' });
 
     expect(calls.some((entry) => entry.table === 'inbound_ticket_defaults' && entry.op === 'first')).toBe(true);
     expect(calls.some((entry) => entry.table === 'contacts' && entry.op === 'returning')).toBe(false);

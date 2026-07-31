@@ -15,7 +15,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Link, Lock, Plus, ExternalLink, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -67,6 +72,10 @@ interface TicketDetails {
   title: string;
   status_name?: string;
   closed_at?: Date | null;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export interface TaskTicketLinksRef {
@@ -189,6 +198,11 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         assignedToMe: true
       };
       const tickets = await getTicketsForList(filters);
+      if (isReturnedActionError(tickets)) {
+        handleError(getErrorMessage(tickets));
+        setAvailableTickets([]);
+        return;
+      }
       setAvailableTickets(tickets || []);
       setTicketsLoaded(true);
     } catch (error) {
@@ -225,7 +239,12 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         getAllPriorities('ticket').catch(() => [])
       ]);
 
-      setCategories(fetchedCategories || []);
+      if (isReturnedActionError(fetchedCategories)) {
+        handleError(getErrorMessage(fetchedCategories));
+        setCategories([]);
+      } else {
+        setCategories(fetchedCategories || []);
+      }
       setBoards(fetchedBoards || []);
       const fetchedStatuses: IStatus[] = statuses || [];
       
@@ -274,6 +293,10 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       if (taskId && initialLinks) {
         try {
           const links = await getTaskTicketLinksAction(taskId);
+          if (isReturnedActionError(links)) {
+            handleError(links);
+            return;
+          }
           if (mounted) {
             setTaskTicketLinks(links || []);
             onLinksChange?.(links || []);
@@ -374,7 +397,11 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     
     try {
       if (taskId) {
-        await addTicketLinkAction(projectId, taskId, selectedTicketId, phaseId);
+        const result = await addTicketLinkAction(projectId, taskId, selectedTicketId, phaseId);
+        if (isReturnedActionError(result)) {
+          handleError(result);
+          return;
+        }
         
         // Find the selected ticket in available tickets
         const selectedTicketDetails = availableTickets.find(t => t.ticket_id === selectedTicketId);
@@ -451,7 +478,11 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
   const onDeleteLink = async (linkId: string) => {
     try {
       if (taskId) {
-        await deleteTaskTicketLinkAction(linkId);
+        const result = await deleteTaskTicketLinkAction(linkId);
+        if (isReturnedActionError(result)) {
+          handleError(result);
+          return;
+        }
         
         // Update state directly instead of fetching all links again
         const newLinks = (taskTicketLinks || []).filter(link => link.link_id !== linkId);
@@ -481,7 +512,11 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     }
     try {
       if (shouldLinkNewTicket && taskId) {
-        await addTicketLinkAction(projectId, taskId, ticket.ticket_id, phaseId);
+        const result = await addTicketLinkAction(projectId, taskId, ticket.ticket_id, phaseId);
+        if (isReturnedActionError(result)) {
+          handleError(result);
+          return;
+        }
 
         // Create a new link object instead of fetching all links again
         const newLink: IProjectTicketLinkWithDetails = {

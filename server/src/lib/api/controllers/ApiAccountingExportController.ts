@@ -20,9 +20,11 @@ import {
 import { AppError } from '@alga-psa/core';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { runWithTenant, createTenantKnex } from '../../db';
+import { tenantDb } from '@alga-psa/db';
 import {
   AuthenticatedApiRequest,
   ForbiddenError,
+  NotImplementedError,
   handleApiError
 } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
@@ -34,21 +36,31 @@ const PREVIEW_LINE_LIMIT = 50;
 
 type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
+function isAccountingExportActionFailure(
+  value: unknown
+): value is { success: false; code: string; message: string } {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as { success?: unknown; code?: unknown; message?: unknown };
+  return candidate.success === false &&
+    typeof candidate.code === 'string' &&
+    typeof candidate.message === 'string';
+}
+
 const noopService: BaseService = {
   async list(_options: ListOptions): Promise<{ data: any[]; total: number }> {
-    throw new Error('Accounting export controller does not use base list service');
+    throw new NotImplementedError('Accounting export controller does not support base list operations');
   },
   async getById(): Promise<any> {
-    throw new Error('Accounting export controller does not use base get service');
+    throw new NotImplementedError('Accounting export controller does not support base get operations');
   },
   async create(): Promise<any> {
-    throw new Error('Accounting export controller does not use base create service');
+    throw new NotImplementedError('Accounting export controller does not support base create operations');
   },
   async update(): Promise<any> {
-    throw new Error('Accounting export controller does not use base update service');
+    throw new NotImplementedError('Accounting export controller does not support base update operations');
   },
   async delete(): Promise<void> {
-    throw new Error('Accounting export controller does not use base delete service');
+    throw new NotImplementedError('Accounting export controller does not support base delete operations');
   }
 };
 
@@ -109,6 +121,26 @@ export class ApiAccountingExportController extends ApiBaseController {
             ...body,
             created_by: body.created_by ?? apiRequest.context.userId
           });
+
+          if (isActionPermissionError(batch)) {
+            return NextResponse.json(
+              { error: 'forbidden', message: batch.permissionError },
+              { status: 403 }
+            );
+          }
+          if (isAccountingExportActionFailure(batch)) {
+            const status = batch.code === 'ACCOUNTING_EXPORT_DUPLICATE' ||
+              batch.code === 'ACCOUNTING_EXPORT_EMPTY_BATCH'
+              ? 409
+              : batch.code === 'ACCOUNTING_EXPORT_UNEXPECTED'
+                ? 500
+                : 400;
+            return NextResponse.json(
+              { error: batch.code, message: batch.message },
+              { status }
+            );
+          }
+
           return NextResponse.json(batch, { status: 201 });
         } catch (error) {
           if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_DUPLICATE') {
@@ -288,11 +320,12 @@ export class ApiAccountingExportController extends ApiBaseController {
             { status: 400 }
           );
         }
+        const db = tenantDb(knex, tenant);
 
         if (batchId) {
-          const batch = await knex('accounting_export_batches')
+          const batch = await db.table('accounting_export_batches')
             .select('batch_id', 'adapter_type', 'target_realm', 'status')
-            .where({ tenant, batch_id: batchId })
+            .where({ batch_id: batchId })
             .first();
 
           if (!batch) {
@@ -309,12 +342,12 @@ export class ApiAccountingExportController extends ApiBaseController {
             );
           }
 
-          const lineInvoiceIds = await knex('accounting_export_lines')
-            .distinct('invoice_id')
-            .where({ tenant, batch_id: batchId })
-            .whereNotNull('invoice_id');
+          const lineInvoiceIds = await db.table('accounting_export_lines')
+            .distinct('document_id')
+            .where({ batch_id: batchId })
+            .whereNotNull('document_id');
 
-          const invoiceIds = lineInvoiceIds.map((row: any) => row.invoice_id).filter(Boolean);
+          const invoiceIds = lineInvoiceIds.map((row: any) => row.document_id).filter(Boolean);
           if (invoiceIds.length === 0) {
             return NextResponse.json({
               success: true,
@@ -326,9 +359,8 @@ export class ApiAccountingExportController extends ApiBaseController {
             });
           }
 
-          const deletedCount = await knex('tenant_external_entity_mappings')
+          const deletedCount = await db.table('tenant_external_entity_mappings')
             .where({
-              tenant,
               integration_type: adapterType,
               alga_entity_type: 'invoice'
             })
@@ -362,9 +394,9 @@ export class ApiAccountingExportController extends ApiBaseController {
             );
           }
 
-          const invoice = await knex('invoices')
+          const invoice = await db.table('invoices')
             .select('invoice_id')
-            .where({ tenant, invoice_number: invoiceNumber })
+            .where({ invoice_number: invoiceNumber })
             .first();
 
           if (!invoice?.invoice_id) {
@@ -377,9 +409,8 @@ export class ApiAccountingExportController extends ApiBaseController {
           invoiceId = invoice.invoice_id;
         }
 
-        const deletedCount = await knex('tenant_external_entity_mappings')
+        const deletedCount = await db.table('tenant_external_entity_mappings')
           .where({
-            tenant,
             integration_type: adapterType,
             alga_entity_type: 'invoice',
             alga_entity_id: invoiceId
@@ -407,8 +438,19 @@ export class ApiAccountingExportController extends ApiBaseController {
       return await runWithTenant(apiRequest.context.tenant, async () => {
         await this.authorize(apiRequest, 'update');
 
-        const body = (await apiRequest.json()) as { lines: CreateExportLineInput[] };
-        const lines = await appendAccountingExportLines(params.batchId, body.lines);
+        const body = (await apiRequest.json()) as { lines: Array<CreateExportLineInput & {
+          invoice_id?: string;
+          invoice_charge_id?: string | null;
+        }> };
+        const normalizedLines = (body.lines ?? []).map((line) => {
+          const { invoice_id, invoice_charge_id, ...rest } = line;
+          return {
+            ...rest,
+            document_id: rest.document_id ?? invoice_id,
+            document_line_id: rest.document_line_id ?? invoice_charge_id ?? null,
+          };
+        }) as CreateExportLineInput[];
+        const lines = await appendAccountingExportLines(params.batchId, normalizedLines);
 
         await AccountingExportValidation.ensureMappingsForBatch(params.batchId);
         return NextResponse.json(lines, { status: 201 });
@@ -469,6 +511,21 @@ export class ApiAccountingExportController extends ApiBaseController {
         try {
           const result = await executeAccountingExportBatch(params.batchId);
 
+          if (isActionPermissionError(result)) {
+            return NextResponse.json({ error: 'forbidden', message: result.permissionError }, { status: 403 });
+          }
+          if (isAccountingExportActionFailure(result)) {
+            const status = result.code === 'ACCOUNTING_EXPORT_INVALID_STATE'
+              ? 409
+              : result.code === 'ACCOUNTING_EXPORT_UNEXPECTED'
+                ? 500
+                : 400;
+            return NextResponse.json(
+              { error: result.code, message: result.message },
+              { status }
+            );
+          }
+
           return NextResponse.json(result);
         } catch (error) {
           if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_INVALID_STATE') {
@@ -511,6 +568,12 @@ export class ApiAccountingExportController extends ApiBaseController {
 
           if (isActionPermissionError(result)) {
             return NextResponse.json({ error: 'forbidden', message: result.permissionError }, { status: 403 });
+          }
+          if (isAccountingExportActionFailure(result)) {
+            return NextResponse.json(
+              { error: result.code, message: result.message },
+              { status: result.code === 'ACCOUNTING_EXPORT_UNEXPECTED' ? 500 : 400 }
+            );
           }
 
           const files = (result.metadata as any)?.files ?? [];

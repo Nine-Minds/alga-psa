@@ -1,14 +1,16 @@
-exports.seed = async function (knex) {
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
 
+exports.seed = async function (knex) {
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
     // First, create tag definitions
-    const tagDefinitions = await knex('tag_definitions').insert([
+    const tagDefinitions = await db.table('tag_definitions').insert([
         {
-            tenant: tenant.tenant,
-            board_id: knex('boards')
+            tenant: tenantId,
+            board_id: db.table('boards')
                 .where({
-                    tenant: tenant.tenant,
                     board_name: 'Urgent Matters'
                 })
                 .select('board_id')
@@ -17,7 +19,7 @@ exports.seed = async function (knex) {
             tagged_type: 'ticket'
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             board_id: null,
             tag_text: 'White Rabbit',
             tagged_type: 'ticket'
@@ -25,18 +27,17 @@ exports.seed = async function (knex) {
     ]).returning(['tenant', 'tag_id', 'tag_text', 'tagged_type']);
 
     // Then, create tag mappings
-    const ticketId = await knex('tickets')
+    const ticketId = await db.table('tickets')
         .where({
-            tenant: tenant.tenant,
             title: 'Missing White Rabbit'
         })
         .select('ticket_id')
         .first();
 
     if (ticketId && tagDefinitions.length > 0) {
-        await knex('tag_mappings').insert(
+        await db.table('tag_mappings').insert(
             tagDefinitions.map(tagDef => ({
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 tag_id: tagDef.tag_id,
                 tagged_id: ticketId.ticket_id,
                 tagged_type: 'ticket'

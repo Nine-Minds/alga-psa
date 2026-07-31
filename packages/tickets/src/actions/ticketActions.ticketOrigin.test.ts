@@ -22,6 +22,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (builder: any, table: string) => builder.leftJoin(table),
+  }),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
 

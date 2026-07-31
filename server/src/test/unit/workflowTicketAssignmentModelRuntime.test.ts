@@ -87,13 +87,13 @@ import { registerTicketActions } from '@shared/workflow/runtime/actions/business
 class FakeJoinClause {
   pairs: Array<{ left: string; right: string }> = [];
 
-  on(left: string, right: string): this {
-    this.pairs.push({ left, right });
+  on(left: string, operatorOrRight: string, maybeRight?: string): this {
+    this.pairs.push({ left, right: maybeRight ?? operatorOrRight });
     return this;
   }
 
-  andOn(left: string, right: string): this {
-    return this.on(left, right);
+  andOn(left: string, operatorOrRight: string, maybeRight?: string): this {
+    return this.on(left, operatorOrRight, maybeRight);
   }
 }
 
@@ -137,9 +137,9 @@ class FakeQueryBuilder {
     return this;
   }
 
-  join(tableName: string, callback: (this: FakeJoinClause) => void): this {
+  join(tableName: string, callback: (this: FakeJoinClause, clause?: FakeJoinClause) => void): this {
     const clause = new FakeJoinClause();
-    callback.call(clause);
+    callback.call(clause, clause);
     this.joinTableName = tableName;
     this.joinPairs = clause.pairs;
     return this;
@@ -262,16 +262,18 @@ class FakeQueryBuilder {
   }
 
   private getColumnValue(row: TableRow, column: string): any {
-    if (column in row) {
-      return row[column];
+    const sourceColumn = this.sourceColumn(column);
+    if (sourceColumn in row) {
+      return row[sourceColumn];
     }
 
-    const segments = column.split('.');
-    return segments.length > 1 ? row[segments[segments.length - 1]] : row[column];
+    const segments = sourceColumn.split('.');
+    return segments.length > 1 ? row[segments[segments.length - 1]] : row[sourceColumn];
   }
 
   private getColumnValueFromTables(leftRow: TableRow, rightRow: TableRow, column: string): any {
-    const [prefix, key] = column.includes('.') ? column.split('.', 2) : [this.tableName, column];
+    const sourceColumn = this.sourceColumn(column);
+    const [prefix, key] = sourceColumn.includes('.') ? sourceColumn.split('.', 2) : [this.tableName, sourceColumn];
     if (prefix === this.tableName) {
       return leftRow[key];
     }
@@ -282,8 +284,17 @@ class FakeQueryBuilder {
   }
 
   private selectKey(column: string): string {
+    const aliasMatch = column.match(/\s+as\s+(.+)$/i);
+    if (aliasMatch) {
+      return aliasMatch[1].trim();
+    }
+
     const parts = column.split('.');
     return parts[parts.length - 1];
+  }
+
+  private sourceColumn(column: string): string {
+    return column.replace(/\s+as\s+.+$/i, '').trim();
   }
 }
 

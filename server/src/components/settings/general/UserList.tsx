@@ -6,8 +6,9 @@ import UserDetails from './UserDetails';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getContactAvatarUrlAction, getUserAvatarUrlAction } from '@alga-psa/user-composition/actions';
-import { deleteUser, getUsersClientInfo } from '@alga-psa/users/actions';
+import { getContactAvatarUrlAction, getUserAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { deleteUser } from '@alga-psa/users/actions/user-actions/userActions';
+import { getUsersClientInfo } from '@alga-psa/users/actions/user-actions/userClientActions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
 import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
@@ -21,6 +22,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface UserListProps {
   users: IUser[];
@@ -114,6 +116,10 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
 
       try {
         const result = await getUsersClientInfo(usersToFetch);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          console.error('Error fetching clients for users', result);
+          return;
+        }
         const map: Record<string, { client_id: string; client_name: string } | null> = {};
         result.forEach((row) => {
           map[row.user_id] = row.client_id

@@ -6,7 +6,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Download, Check, FileSpreadsheet } from 'lucide-react';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { exportProjectTasksToCSV } from '../actions/projectTaskExportActions';
 import type { IProjectPhase } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
@@ -42,6 +49,10 @@ const EXPORT_FIELDS = [
 ];
 
 const ALL_FIELD_KEYS = EXPORT_FIELDS.map(f => f.key);
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
   isOpen,
@@ -121,12 +132,21 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
 
     try {
       const orderedFields = ALL_FIELD_KEYS.filter(k => selectedFields.has(k));
-      const { csv, count } = await exportProjectTasksToCSV(
+      const result = await exportProjectTasksToCSV(
         projectId,
         isSelectionMode ? [] : Array.from(selectedPhaseIds),
         orderedFields,
         isSelectionMode ? Array.from(selectedTaskIds!) : undefined,
       );
+      if (isReturnedActionError(result)) {
+        const message = getErrorMessage(result);
+        setError(message);
+        setStep('configure');
+        handleError(result, message);
+        return;
+      }
+
+      const { csv, count } = result;
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -142,7 +162,7 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
       setExportedCount(count);
       setStep('complete');
     } catch (err) {
-      setError(err instanceof Error ? err.message : exportT('failed', 'Failed to export tasks'));
+      setError(exportT('failed', 'Failed to export tasks'));
       setStep('configure');
       handleError(err, exportT('failed', 'Failed to export tasks'));
     }

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { TestContext } from '../../../test-utils/testContext';
+import { tenantDb } from '@alga-psa/db';
 import {
   createTemplateFromProject,
   applyTemplate,
@@ -10,28 +11,61 @@ import {
 // Mock authentication and permissions
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
+let testDb: () => unknown = () => {
+  throw new Error('Test DB not initialized');
+};
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
-
-vi.mock('@alga-psa/auth', () => ({
-  hasPermission: vi.fn(() => Promise.resolve(true)),
-  getCurrentUser: vi.fn(async () => ({
+// One mock only — duplicate vi.mock calls for the same specifier replace each
+// other, so the exports must live in a single factory.
+vi.mock('@alga-psa/auth', () => {
+  const currentUser = () => ({
     user_id: mockedUserId,
     tenant: mockedTenantId,
     user_type: 'internal',
     roles: []
-  }))
+  });
+  return {
+    getSession: vi.fn(async () => ({
+      user: {
+        id: mockedUserId,
+        tenant: mockedTenantId
+      }
+    })),
+    hasPermission: vi.fn(() => Promise.resolve(true)),
+    getCurrentUser: vi.fn(async () => currentUser()),
+    withAuth: (action: any) => async (...args: any[]) =>
+      action(currentUser(), { tenant: mockedTenantId }, ...args),
+    withOptionalAuth: (action: any) => async (...args: any[]) =>
+      action(currentUser(), { tenant: mockedTenantId }, ...args),
+    withAuthCheck: (action: any) => async (...args: any[]) =>
+      action(currentUser(), ...args),
+  };
+});
+
+// The actions check permissions through the '@alga-psa/auth/rbac' subpath,
+// which resolves to a different module than '@alga-psa/auth'.
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(() => Promise.resolve(true)),
 }));
+
+// Package actions resolve their connection through '@alga-psa/db' (TestContext
+// only spies on server/src/lib/db), so bind it to the active test transaction.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: testDb(), tenant: mockedTenantId })),
+  };
+});
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => Promise.resolve())
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => Promise.resolve()),
+  publishWorkflowEvent: vi.fn(async () => Promise.resolve()),
 }));
 
 describe('Project Templates Integration Tests', () => {
@@ -43,6 +77,10 @@ describe('Project Templates Integration Tests', () => {
   } = TestContext.createHelpers();
 
   let context: TestContext;
+
+  function tenantTable(table: string) {
+    return tenantDb(context.db, context.tenantId).table(table);
+  }
 
   beforeAll(async () => {
     context = await setupContext({
@@ -67,6 +105,7 @@ describe('Project Templates Integration Tests', () => {
 
     mockedTenantId = context.tenantId;
     mockedUserId = context.userId;
+    testDb = () => context.db;
   }, 120000);
 
   afterAll(async () => {
@@ -77,6 +116,7 @@ describe('Project Templates Integration Tests', () => {
     context = await resetContext();
     mockedTenantId = context.tenantId;
     mockedUserId = context.userId;
+    testDb = () => context.db;
   });
 
   afterEach(async () => {
@@ -86,18 +126,26 @@ describe('Project Templates Integration Tests', () => {
   describe('Creating template from project with full structure', () => {
     it('should create template from project with phases, tasks, dependencies, and checklists', async () => {
       // 1. Create a source project with complete structure
-      const [project] = await context.db('projects')
+      // projects.status is a uuid FK to statuses and project_number is NOT NULL
+      const projectStatus = await tenantTable('statuses')
+        .where({ status_type: 'project' })
+        .orderBy('order_number', 'asc')
+        .first();
+      expect(projectStatus).toBeDefined();
+
+      const [project] = await tenantTable('projects')
         .insert({
           tenant: context.tenantId,
           project_name: 'Source Project for Template',
+          project_number: `TPL-${Date.now()}`,
           wbs_code: '1',
           client_id: context.clientId,
-          status: 'active'
+          status: projectStatus.status_id
         })
         .returning('*');
 
       // 2. Create project status mappings
-      const [statusMapping1] = await context.db('project_status_mappings')
+      const [statusMapping1] = await tenantTable('project_status_mappings')
         .insert({
           tenant: context.tenantId,
           project_id: project.project_id,
@@ -110,7 +158,7 @@ describe('Project Templates Integration Tests', () => {
         .returning('*');
 
       // 3. Create phases
-      const [phase1] = await context.db('project_phases')
+      const [phase1] = await tenantTable('project_phases')
         .insert({
           tenant: context.tenantId,
           project_id: project.project_id,
@@ -118,11 +166,12 @@ describe('Project Templates Integration Tests', () => {
           description: 'Initial planning phase',
           wbs_code: '1.1',
           order_key: 'a0',
+          order_number: 1,
           status: 'not_started'
         })
         .returning('*');
 
-      const [phase2] = await context.db('project_phases')
+      const [phase2] = await tenantTable('project_phases')
         .insert({
           tenant: context.tenantId,
           project_id: project.project_id,
@@ -130,12 +179,13 @@ describe('Project Templates Integration Tests', () => {
           description: 'Execution phase',
           wbs_code: '1.2',
           order_key: 'a1',
+          order_number: 2,
           status: 'not_started'
         })
         .returning('*');
 
       // 4. Create tasks
-      const [task1] = await context.db('project_tasks')
+      const [task1] = await tenantTable('project_tasks')
         .insert({
           tenant: context.tenantId,
           phase_id: phase1.phase_id,
@@ -149,7 +199,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      const [task2] = await context.db('project_tasks')
+      const [task2] = await tenantTable('project_tasks')
         .insert({
           tenant: context.tenantId,
           phase_id: phase1.phase_id,
@@ -163,7 +213,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      const [task3] = await context.db('project_tasks')
+      const [task3] = await tenantTable('project_tasks')
         .insert({
           tenant: context.tenantId,
           phase_id: phase2.phase_id,
@@ -171,33 +221,35 @@ describe('Project Templates Integration Tests', () => {
           description: 'Implement the solution',
           estimated_hours: 40,
           wbs_code: '1.2.1',
-          order_key: 'a0',
+          // Unique across phases so the global orderBy('order_key') read below
+          // is deterministic (fractional keys are only unique per phase).
+          order_key: 'a2',
           task_type_key: 'task',
           project_status_mapping_id: statusMapping1.project_status_mapping_id
         })
         .returning('*');
 
-      // 5. Create dependencies
-      await context.db('project_task_dependencies')
+      // 5. Create dependencies (dependency_type CHECK allows 'blocks'/'related_to')
+      await tenantTable('project_task_dependencies')
         .insert([
           {
             tenant: context.tenantId,
             predecessor_task_id: task1.task_id,
             successor_task_id: task2.task_id,
-            dependency_type: 'finish_to_start',
+            dependency_type: 'blocks',
             lead_lag_days: 0
           },
           {
             tenant: context.tenantId,
             predecessor_task_id: task2.task_id,
             successor_task_id: task3.task_id,
-            dependency_type: 'finish_to_start',
+            dependency_type: 'related_to',
             lead_lag_days: 2
           }
         ]);
 
       // 6. Create checklists
-      await context.db('task_checklist_items')
+      await tenantTable('task_checklist_items')
         .insert([
           {
             tenant: context.tenantId,
@@ -236,8 +288,8 @@ describe('Project Templates Integration Tests', () => {
       expect(typeof templateId).toBe('string');
 
       // 8. Verify template was created
-      const template = await context.db('project_templates')
-        .where({ template_id: templateId, tenant: context.tenantId })
+      const template = await tenantTable('project_templates')
+        .where({ template_id: templateId })
         .first();
 
       expect(template).toBeDefined();
@@ -247,8 +299,8 @@ describe('Project Templates Integration Tests', () => {
       expect(template.use_count).toBe(0);
 
       // 9. Verify phases were copied
-      const templatePhases = await context.db('project_template_phases')
-        .where({ template_id: templateId, tenant: context.tenantId })
+      const templatePhases = await tenantTable('project_template_phases')
+        .where({ template_id: templateId })
         .orderBy('order_key');
 
       expect(templatePhases).toHaveLength(2);
@@ -258,22 +310,21 @@ describe('Project Templates Integration Tests', () => {
 
       // 10. Verify tasks were copied
       const phaseIds = templatePhases.map(p => p.template_phase_id);
-      const templateTasks = await context.db('project_template_tasks')
-        .where('tenant', context.tenantId)
+      const templateTasks = await tenantTable('project_template_tasks')
         .whereIn('template_phase_id', phaseIds)
         .orderBy('order_key');
 
       expect(templateTasks).toHaveLength(3);
       expect(templateTasks[0].task_name).toBe('Task 1: Requirements');
-      expect(templateTasks[0].estimated_hours).toBe(10);
+      expect(Number(templateTasks[0].estimated_hours)).toBe(10); // bigint comes back as string
       expect(templateTasks[1].task_name).toBe('Task 2: Design');
-      expect(templateTasks[1].estimated_hours).toBe(15);
+      expect(Number(templateTasks[1].estimated_hours)).toBe(15);
       expect(templateTasks[2].task_name).toBe('Task 3: Implementation');
-      expect(templateTasks[2].estimated_hours).toBe(40);
+      expect(Number(templateTasks[2].estimated_hours)).toBe(40);
 
       // 11. Verify dependencies were copied with correct remapped IDs
-      const templateDeps = await context.db('project_template_dependencies')
-        .where({ template_id: templateId, tenant: context.tenantId });
+      const templateDeps = await tenantTable('project_template_dependencies')
+        .where({ template_id: templateId });
 
       expect(templateDeps).toHaveLength(2);
 
@@ -283,7 +334,7 @@ describe('Project Templates Integration Tests', () => {
         templateTasks.find(t => t.template_task_id === d.successor_task_id)?.task_name === 'Task 2: Design'
       );
       expect(dep1).toBeDefined();
-      expect(dep1!.dependency_type).toBe('finish_to_start');
+      expect(dep1!.dependency_type).toBe('blocks');
       expect(dep1!.lead_lag_days).toBe(0);
 
       const dep2 = templateDeps.find(d =>
@@ -291,13 +342,12 @@ describe('Project Templates Integration Tests', () => {
         templateTasks.find(t => t.template_task_id === d.successor_task_id)?.task_name === 'Task 3: Implementation'
       );
       expect(dep2).toBeDefined();
-      expect(dep2!.dependency_type).toBe('finish_to_start');
+      expect(dep2!.dependency_type).toBe('related_to');
       expect(dep2!.lead_lag_days).toBe(2);
 
       // 12. Verify checklists were copied
       const taskIds = templateTasks.map(t => t.template_task_id);
-      const templateChecklists = await context.db('project_template_checklist_items')
-        .where('tenant', context.tenantId)
+      const templateChecklists = await tenantTable('project_template_checklist_items')
         .whereIn('template_task_id', taskIds)
         .orderBy('order_number');
 
@@ -319,8 +369,8 @@ describe('Project Templates Integration Tests', () => {
       expect(task2Checklists[0].item_name).toBe('Create wireframes');
 
       // 13. Verify status mappings were copied
-      const templateStatusMappings = await context.db('project_template_status_mappings')
-        .where({ template_id: templateId, tenant: context.tenantId })
+      const templateStatusMappings = await tenantTable('project_template_status_mappings')
+        .where({ template_id: templateId })
         .orderBy('display_order');
 
       expect(templateStatusMappings).toHaveLength(1);
@@ -332,7 +382,7 @@ describe('Project Templates Integration Tests', () => {
   describe('Applying template and verifying complete project structure', () => {
     it('should create a complete project from template with correct structure', async () => {
       // 1. Create a template with full structure
-      const [template] = await context.db('project_templates')
+      const [template] = await tenantTable('project_templates')
         .insert({
           tenant: context.tenantId,
           template_name: 'Software Development Template',
@@ -344,7 +394,7 @@ describe('Project Templates Integration Tests', () => {
         .returning('*');
 
       // 2. Create template phases
-      const [templatePhase1] = await context.db('project_template_phases')
+      const [templatePhase1] = await tenantTable('project_template_phases')
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,
@@ -356,7 +406,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      const [templatePhase2] = await context.db('project_template_phases')
+      const [templatePhase2] = await tenantTable('project_template_phases')
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,
@@ -369,7 +419,7 @@ describe('Project Templates Integration Tests', () => {
         .returning('*');
 
       // 3. Create template tasks
-      const [templateTask1] = await context.db('project_template_tasks')
+      const [templateTask1] = await tenantTable('project_template_tasks')
         .insert({
           tenant: context.tenantId,
           template_phase_id: templatePhase1.template_phase_id,
@@ -381,7 +431,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      const [templateTask2] = await context.db('project_template_tasks')
+      const [templateTask2] = await tenantTable('project_template_tasks')
         .insert({
           tenant: context.tenantId,
           template_phase_id: templatePhase1.template_phase_id,
@@ -393,7 +443,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      const [templateTask3] = await context.db('project_template_tasks')
+      const [templateTask3] = await tenantTable('project_template_tasks')
         .insert({
           tenant: context.tenantId,
           template_phase_id: templatePhase2.template_phase_id,
@@ -405,15 +455,16 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      // 4. Create template dependencies
-      await context.db('project_template_dependencies')
+      // 4. Create template dependencies (applyTemplate copies these into
+      // project_task_dependencies, whose CHECK allows 'blocks'/'related_to')
+      await tenantTable('project_template_dependencies')
         .insert([
           {
             tenant: context.tenantId,
             template_id: template.template_id,
             predecessor_task_id: templateTask1.template_task_id,
             successor_task_id: templateTask2.template_task_id,
-            dependency_type: 'finish_to_start',
+            dependency_type: 'blocks',
             lead_lag_days: 1
           },
           {
@@ -421,13 +472,13 @@ describe('Project Templates Integration Tests', () => {
             template_id: template.template_id,
             predecessor_task_id: templateTask2.template_task_id,
             successor_task_id: templateTask3.template_task_id,
-            dependency_type: 'finish_to_start',
+            dependency_type: 'blocks',
             lead_lag_days: 0
           }
         ]);
 
       // 5. Create template checklists
-      await context.db('project_template_checklist_items')
+      await tenantTable('project_template_checklist_items')
         .insert([
           {
             tenant: context.tenantId,
@@ -444,7 +495,7 @@ describe('Project Templates Integration Tests', () => {
         ]);
 
       // 6. Create template status mappings
-      await context.db('project_template_status_mappings')
+      await tenantTable('project_template_status_mappings')
         .insert([
           {
             tenant: context.tenantId,
@@ -473,8 +524,8 @@ describe('Project Templates Integration Tests', () => {
       expect(typeof projectId).toBe('string');
 
       // 8. Verify project was created
-      const project = await context.db('projects')
-        .where({ project_id: projectId, tenant: context.tenantId })
+      const project = await tenantTable('projects')
+        .where({ project_id: projectId })
         .first();
 
       expect(project).toBeDefined();
@@ -482,37 +533,36 @@ describe('Project Templates Integration Tests', () => {
       expect(project.client_id).toBe(context.clientId);
 
       // 9. Verify phases were created
-      const phases = await context.db('project_phases')
-        .where({ project_id: projectId, tenant: context.tenantId })
+      const phases = await tenantTable('project_phases')
+        .where({ project_id: projectId })
         .orderBy('order_key');
 
       expect(phases).toHaveLength(2);
       expect(phases[0].phase_name).toBe('Discovery');
       expect(phases[0].wbs_code).toMatch(/^\d+\.\d+$/); // Format like "1.1"
 
-      // 10. Verify tasks were created
+      // 10. Verify tasks were created (order by wbs_code: phase_id is a random
+      // uuid, so ordering by it first is nondeterministic across runs)
       const phaseIds = phases.map(p => p.phase_id);
-      const tasks = await context.db('project_tasks')
-        .where('tenant', context.tenantId)
+      const tasks = await tenantTable('project_tasks')
         .whereIn('phase_id', phaseIds)
-        .orderBy(['phase_id', 'order_key']);
+        .orderBy('wbs_code');
 
       expect(tasks).toHaveLength(3);
       expect(tasks[0].task_name).toBe('Analyze Requirements');
-      expect(tasks[0].estimated_hours).toBe(8);
+      expect(Number(tasks[0].estimated_hours)).toBe(8); // bigint comes back as string
       expect(tasks[0].wbs_code).toMatch(/^\d+\.\d+\.\d+$/); // Format like "1.1.1"
 
       // 11. Verify dependencies were created with remapped IDs
       const taskIds = tasks.map(t => t.task_id);
-      const dependencies = await context.db('project_task_dependencies')
-        .where('tenant', context.tenantId)
+      const dependencies = await tenantTable('project_task_dependencies')
         .whereIn('predecessor_task_id', taskIds);
 
       expect(dependencies).toHaveLength(2);
 
       // 12. Verify template usage was incremented
-      const updatedTemplate = await context.db('project_templates')
-        .where({ template_id: template.template_id, tenant: context.tenantId })
+      const updatedTemplate = await tenantTable('project_templates')
+        .where({ template_id: template.template_id })
         .first();
 
       expect(updatedTemplate.use_count).toBe(1);
@@ -523,7 +573,7 @@ describe('Project Templates Integration Tests', () => {
   describe('WBS code generation', () => {
     it('should generate correct WBS codes for phases and tasks', async () => {
       // 1. Create template
-      const [template] = await context.db('project_templates')
+      const [template] = await tenantTable('project_templates')
         .insert({
           tenant: context.tenantId,
           template_name: 'WBS Test Template',
@@ -533,7 +583,7 @@ describe('Project Templates Integration Tests', () => {
         .returning('*');
 
       // 2. Create multiple phases
-      const [phase1] = await context.db('project_template_phases')
+      const [phase1] = await tenantTable('project_template_phases')
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,
@@ -543,7 +593,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      const [phase2] = await context.db('project_template_phases')
+      const [phase2] = await tenantTable('project_template_phases')
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,
@@ -554,7 +604,7 @@ describe('Project Templates Integration Tests', () => {
         .returning('*');
 
       // 3. Create multiple tasks per phase
-      await context.db('project_template_tasks')
+      await tenantTable('project_template_tasks')
         .insert([
           {
             tenant: context.tenantId,
@@ -583,34 +633,36 @@ describe('Project Templates Integration Tests', () => {
       });
 
       // 5. Verify WBS codes
-      const project = await context.db('projects')
-        .where({ project_id: projectId, tenant: context.tenantId })
+      const project = await tenantTable('projects')
+        .where({ project_id: projectId })
         .first();
 
       expect(project.wbs_code).toMatch(/^\d+$/); // Project: "1", "2", etc.
 
-      const phases = await context.db('project_phases')
-        .where({ project_id: projectId, tenant: context.tenantId })
+      const phases = await tenantTable('project_phases')
+        .where({ project_id: projectId })
         .orderBy('order_key');
 
       expect(phases[0].wbs_code).toBe(`${project.wbs_code}.1`);
       expect(phases[1].wbs_code).toBe(`${project.wbs_code}.2`);
 
-      const tasks = await context.db('project_tasks')
-        .where('tenant', context.tenantId)
+      const tasks = await tenantTable('project_tasks')
         .whereIn('phase_id', phases.map(p => p.phase_id))
-        .orderBy(['phase_id', 'order_key']);
+        .orderBy('wbs_code');
 
       expect(tasks[0].wbs_code).toBe(`${phases[0].wbs_code}.1`); // e.g., "1.1.1"
+      expect(tasks[0].phase_id).toBe(phases[0].phase_id);
       expect(tasks[1].wbs_code).toBe(`${phases[0].wbs_code}.2`); // e.g., "1.1.2"
+      expect(tasks[1].phase_id).toBe(phases[0].phase_id);
       expect(tasks[2].wbs_code).toBe(`${phases[1].wbs_code}.1`); // e.g., "1.2.1"
+      expect(tasks[2].phase_id).toBe(phases[1].phase_id);
     });
   });
 
   describe('Status mapping copying', () => {
     it('should copy custom status mappings from template to project', async () => {
       // 1. Create template
-      const [template] = await context.db('project_templates')
+      const [template] = await tenantTable('project_templates')
         .insert({
           tenant: context.tenantId,
           template_name: 'Status Mapping Test',
@@ -620,7 +672,7 @@ describe('Project Templates Integration Tests', () => {
         .returning('*');
 
       // 2. Create custom status mappings
-      await context.db('project_template_status_mappings')
+      await tenantTable('project_template_status_mappings')
         .insert([
           {
             tenant: context.tenantId,
@@ -646,7 +698,7 @@ describe('Project Templates Integration Tests', () => {
         ]);
 
       // 3. Create a simple phase
-      await context.db('project_template_phases')
+      await tenantTable('project_template_phases')
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,
@@ -662,8 +714,8 @@ describe('Project Templates Integration Tests', () => {
       });
 
       // 5. Verify status mappings were copied
-      const projectStatusMappings = await context.db('project_status_mappings')
-        .where({ project_id: projectId, tenant: context.tenantId })
+      const projectStatusMappings = await tenantTable('project_status_mappings')
+        .where({ project_id: projectId })
         .orderBy('display_order');
 
       expect(projectStatusMappings).toHaveLength(3);
@@ -676,7 +728,7 @@ describe('Project Templates Integration Tests', () => {
   describe('Template usage statistics', () => {
     it('should track template usage count and last used date', async () => {
       // 1. Create template
-      const [template] = await context.db('project_templates')
+      const [template] = await tenantTable('project_templates')
         .insert({
           tenant: context.tenantId,
           template_name: 'Usage Tracking Template',
@@ -687,7 +739,7 @@ describe('Project Templates Integration Tests', () => {
         .returning('*');
 
       // 2. Create simple structure
-      await context.db('project_template_phases')
+      await tenantTable('project_template_phases')
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,
@@ -705,8 +757,8 @@ describe('Project Templates Integration Tests', () => {
         client_id: context.clientId
       });
 
-      let updatedTemplate = await context.db('project_templates')
-        .where({ template_id: template.template_id, tenant: context.tenantId })
+      let updatedTemplate = await tenantTable('project_templates')
+        .where({ template_id: template.template_id })
         .first();
 
       expect(updatedTemplate.use_count).toBe(1);
@@ -718,8 +770,8 @@ describe('Project Templates Integration Tests', () => {
         client_id: context.clientId
       });
 
-      updatedTemplate = await context.db('project_templates')
-        .where({ template_id: template.template_id, tenant: context.tenantId })
+      updatedTemplate = await tenantTable('project_templates')
+        .where({ template_id: template.template_id })
         .first();
 
       expect(updatedTemplate.use_count).toBe(2);
@@ -727,7 +779,7 @@ describe('Project Templates Integration Tests', () => {
 
     it('should return templates with correct usage statistics', async () => {
       // 1. Create multiple templates with different usage
-      await context.db('project_templates')
+      await tenantTable('project_templates')
         .insert([
           {
             tenant: context.tenantId,
@@ -772,7 +824,7 @@ describe('Project Templates Integration Tests', () => {
   describe('Template retrieval with details', () => {
     it('should retrieve template with all related data', async () => {
       // 1. Create complete template structure
-      const [template] = await context.db('project_templates')
+      const [template] = await tenantTable('project_templates')
         .insert({
           tenant: context.tenantId,
           template_name: 'Complete Template',
@@ -783,7 +835,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      const [phase] = await context.db('project_template_phases')
+      const [phase] = await tenantTable('project_template_phases')
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,
@@ -794,7 +846,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      const [task] = await context.db('project_template_tasks')
+      const [task] = await tenantTable('project_template_tasks')
         .insert({
           tenant: context.tenantId,
           template_phase_id: phase.template_phase_id,
@@ -805,7 +857,7 @@ describe('Project Templates Integration Tests', () => {
         })
         .returning('*');
 
-      await context.db('project_template_checklist_items')
+      await tenantTable('project_template_checklist_items')
         .insert({
           tenant: context.tenantId,
           template_task_id: task.template_task_id,
@@ -813,7 +865,7 @@ describe('Project Templates Integration Tests', () => {
           order_number: 1
         });
 
-      await context.db('project_template_status_mappings')
+      await tenantTable('project_template_status_mappings')
         .insert({
           tenant: context.tenantId,
           template_id: template.template_id,

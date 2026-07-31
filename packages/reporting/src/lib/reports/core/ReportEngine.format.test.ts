@@ -10,6 +10,11 @@ vi.mock('@alga-psa/db', () => {
   return {
     createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'test-tenant' })),
     withTransaction: vi.fn(async (_knex: unknown, fn: (t: unknown) => Promise<unknown>) => fn(trx)),
+    // tenantDb facade injects the tenant `.where(...)`; the stub builder above is
+    // shaped `where -> select -> first` to match the resulting chain.
+    tenantDb: (conn: any, tenant: string) => ({
+      table: (t: string) => conn(t).where({ tenant }),
+    }),
   };
 });
 

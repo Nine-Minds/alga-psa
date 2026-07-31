@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Búsqueda...",
       "noWorkItems": "No se encontraron elementos de trabajo"
-    }
+    },
+    "paymentWarningTitle": "Advertencia de requisito de pago",
+    "paymentWarning": "Se requiere el pago de un hito de facturación del proyecto marcado y aún no se ha confirmado. Confirme el pago antes de continuar el trabajo."
   },
   "workItemList": {
     "meta": {
@@ -448,7 +450,8 @@
     "taskUpdated": "Tarea actualizada correctamente",
     "saveChangesFailed": "Error al guardar los cambios",
     "changesSaved": "Cambios guardados correctamente",
-    "workItemDeleted": "Elemento de trabajo eliminado correctamente"
+    "workItemDeleted": "Elemento de trabajo eliminado correctamente",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Este ticket está agrupado bajo {{number}}. El tiempo del grupo se suele registrar en el ticket maestro.",

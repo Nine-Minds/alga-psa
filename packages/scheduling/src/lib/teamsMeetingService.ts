@@ -14,8 +14,26 @@ export interface CreateTeamsMeetingInput {
   startDateTime: string;
   endDateTime: string;
   attendees?: TeamsMeetingAttendee[];
+  bodyHtml?: string | null;
   appointmentRequestId?: string | null;
 }
+
+export type TeamsMeetingSkipReason = 'ee_disabled' | 'addon_inactive' | 'not_configured' | 'no_organizer';
+
+export type CreateTeamsMeetingOutcome =
+  | { status: 'created'; meeting: CreateTeamsMeetingResult }
+  | { status: 'skipped'; reason: TeamsMeetingSkipReason }
+  | { status: 'failed'; errorCode: string; errorMessage: string };
+
+export type UpdateTeamsMeetingOutcome =
+  | { status: 'updated' }
+  | { status: 'skipped'; reason: TeamsMeetingSkipReason }
+  | { status: 'failed'; errorCode: string; errorMessage: string };
+
+export type DeleteTeamsMeetingOutcome =
+  | { status: 'deleted'; alreadyDeleted: boolean }
+  | { status: 'skipped'; reason: TeamsMeetingSkipReason }
+  | { status: 'failed'; errorCode: string; errorMessage: string };
 
 export interface CreateTeamsMeetingResult {
   joinWebUrl: string;
@@ -31,6 +49,9 @@ export interface UpdateTeamsMeetingInput {
   eventId?: string | null;
   startDateTime: string;
   endDateTime: string;
+  subject?: string | null;
+  attendees?: TeamsMeetingAttendee[] | null;
+  bodyHtml?: string | null;
   appointmentRequestId?: string | null;
 }
 
@@ -68,6 +89,9 @@ export interface TeamsMeetingService {
   createTeamsMeeting: (input: CreateTeamsMeetingInput) => Promise<CreateTeamsMeetingResult | null>;
   updateTeamsMeeting: (input: UpdateTeamsMeetingInput) => Promise<boolean>;
   deleteTeamsMeeting: (input: DeleteTeamsMeetingInput) => Promise<boolean>;
+  createTeamsMeetingWithResult: (input: CreateTeamsMeetingInput) => Promise<CreateTeamsMeetingOutcome>;
+  updateTeamsMeetingWithResult: (input: UpdateTeamsMeetingInput) => Promise<UpdateTeamsMeetingOutcome>;
+  deleteTeamsMeetingWithResult: (input: DeleteTeamsMeetingInput) => Promise<DeleteTeamsMeetingOutcome>;
   fetchMeetingArtifacts: (input: FetchMeetingArtifactsInput) => Promise<TeamsMeetingArtifact[]>;
 }
 
@@ -92,6 +116,15 @@ const noOpTeamsMeetingService: TeamsMeetingService = {
   },
   async deleteTeamsMeeting() {
     return false;
+  },
+  async createTeamsMeetingWithResult() {
+    return { status: 'skipped', reason: 'ee_disabled' };
+  },
+  async updateTeamsMeetingWithResult() {
+    return { status: 'skipped', reason: 'ee_disabled' };
+  },
+  async deleteTeamsMeetingWithResult() {
+    return { status: 'skipped', reason: 'ee_disabled' };
   },
   async fetchMeetingArtifacts() {
     return [];
@@ -127,6 +160,12 @@ export async function resolveTeamsMeetingService(): Promise<TeamsMeetingService>
     createTeamsMeeting: ee.createTeamsMeeting ?? noOpTeamsMeetingService.createTeamsMeeting,
     updateTeamsMeeting: ee.updateTeamsMeeting ?? noOpTeamsMeetingService.updateTeamsMeeting,
     deleteTeamsMeeting: ee.deleteTeamsMeeting ?? noOpTeamsMeetingService.deleteTeamsMeeting,
+    createTeamsMeetingWithResult:
+      ee.createTeamsMeetingWithResult ?? noOpTeamsMeetingService.createTeamsMeetingWithResult,
+    updateTeamsMeetingWithResult:
+      ee.updateTeamsMeetingWithResult ?? noOpTeamsMeetingService.updateTeamsMeetingWithResult,
+    deleteTeamsMeetingWithResult:
+      ee.deleteTeamsMeetingWithResult ?? noOpTeamsMeetingService.deleteTeamsMeetingWithResult,
     fetchMeetingArtifacts: ee.fetchMeetingArtifacts ?? noOpTeamsMeetingService.fetchMeetingArtifacts,
   };
 }

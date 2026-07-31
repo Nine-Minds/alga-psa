@@ -3,9 +3,10 @@
 import React from 'react';
 import toast from 'react-hot-toast';
 
-import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
-import { getDefaultBillingSettings, updateDefaultBillingSettings } from '@alga-psa/billing/actions';
-import type { BillingSettings } from '@alga-psa/billing/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
+import { getDefaultBillingSettings, updateDefaultBillingSettings } from '../../../actions/billingSettingsActions';
+import type { BillingSettings } from '../../../actions/billingSettingsActions';
 import type { IStatus } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -171,7 +172,15 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const result = await updateDefaultBillingSettings(settings);
+      const result = await updateDefaultBillingSettings({
+        defaultRenewalMode: settings.defaultRenewalMode,
+        defaultNoticePeriodDays: settings.defaultNoticePeriodDays,
+        renewalDueDateActionPolicy: settings.renewalDueDateActionPolicy,
+        renewalTicketBoardId: settings.renewalTicketBoardId,
+        renewalTicketStatusId: settings.renewalTicketStatusId,
+        renewalTicketPriority: settings.renewalTicketPriority,
+        renewalTicketAssigneeId: settings.renewalTicketAssigneeId,
+      });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;

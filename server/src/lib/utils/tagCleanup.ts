@@ -5,6 +5,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { TaggedEntityType } from '../../interfaces/tag.interfaces';
 import { getCurrentTenantId } from '../db';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
@@ -25,8 +26,10 @@ export async function deleteEntityTags(
   }
 
   // Collect tag_ids before deleting mappings
-  const mappings = await trx('tag_mappings')
-    .where({ tenant, tagged_id: entityId, tagged_type: entityType })
+  const db = tenantDb(trx, tenant);
+
+  const mappings = await db.table('tag_mappings')
+    .where({ tagged_id: entityId, tagged_type: entityType })
     .select('tag_id');
   const tagIds = [...new Set(mappings.map(m => m.tag_id))];
 
@@ -59,15 +62,16 @@ export async function deleteEntitiesTags(
   }
 
   // Collect tag_ids before deleting mappings
-  const mappings = await trx('tag_mappings')
-    .where({ tenant, tagged_type: entityType })
+  const db = tenantDb(trx, tenant);
+
+  const mappings = await db.table('tag_mappings')
+    .where({ tagged_type: entityType })
     .whereIn('tagged_id', entityIds)
     .select('tag_id');
   const tagIds = [...new Set(mappings.map(m => m.tag_id))];
 
-  const result = await trx('tag_mappings')
+  const result = await db.table('tag_mappings')
     .where({
-      tenant,
       tagged_type: entityType
     })
     .whereIn('tagged_id', entityIds)
@@ -97,9 +101,10 @@ export async function transferEntityTags(
   }
 
   // Get existing tags on target to avoid duplicates
-  const existingTargetTags = await trx('tag_mappings')
+  const db = tenantDb(trx, tenant);
+
+  const existingTargetTags = await db.table('tag_mappings')
     .where({
-      tenant,
       tagged_id: toEntityId,
       tagged_type: entityType
     })
@@ -108,9 +113,8 @@ export async function transferEntityTags(
   const existingTagIds = existingTargetTags.map(t => t.tag_id);
   
   // Update mappings that don't already exist on target
-  const result = await trx('tag_mappings')
+  const result = await db.table('tag_mappings')
     .where({
-      tenant,
       tagged_id: fromEntityId,
       tagged_type: entityType
     })
@@ -120,9 +124,8 @@ export async function transferEntityTags(
     });
   
   // Delete remaining tags from source (duplicates)
-  await trx('tag_mappings')
+  await db.table('tag_mappings')
     .where({
-      tenant,
       tagged_id: fromEntityId,
       tagged_type: entityType
     })
@@ -130,4 +133,3 @@ export async function transferEntityTags(
   
   return result;
 }
-

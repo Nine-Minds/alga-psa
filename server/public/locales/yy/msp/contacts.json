@@ -266,6 +266,47 @@
       "message": "55555 {{count}} 55555"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "55555",
+    "description": "55555",
+    "actions": {
+      "addEmail": "55555"
+    },
+    "emailTypes": {
+      "work": "55555",
+      "personal": "55555",
+      "billing": "55555",
+      "other": "55555",
+      "custom": "55555"
+    },
+    "primary": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "row": {
+      "title": "55555 {{number}} 55555",
+      "secondaryDescription": "55555",
+      "defaultLabel": "55555",
+      "noEmailYet": "55555",
+      "editLabel": "55555",
+      "edit": "55555 {{number}} 55555",
+      "doneLabel": "55555",
+      "done": "55555 {{number}} 55555",
+      "moveUp": "55555 {{number}} 55555",
+      "moveDown": "55555 {{number}} 55555",
+      "remove": "55555 {{number}} 55555"
+    },
+    "fields": {
+      "emailAddress": "55555",
+      "emailPlaceholder": "55555",
+      "emailLabel": "55555",
+      "customEmailLabel": "55555",
+      "customTypePlaceholder": "55555",
+      "customTypeSearchPlaceholder": "55555",
+      "customTypeEmpty": "55555",
+      "customTypeUseValue": "55555 {{value}} 55555"
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "55555",
     "description": "55555",
@@ -323,6 +364,9 @@
     "activeAccess": "55555",
     "noAccess": {
       "title": "55555",
+      "description": "55555"
+    },
+    "noClient": {
       "description": "55555"
     },
     "portalAdmin": {
@@ -406,7 +450,8 @@
         "noLocationEmail": "55555",
         "noBaseUrl": "55555",
         "invitationNotFound": "55555"
-      }
+      },
+      "userNotFound": "55555"
     }
   },
   "quickAddContact": {
@@ -571,13 +616,15 @@
       "name": "55555",
       "email": "55555",
       "phoneNumber": "55555",
-      "actions": "55555"
+      "actions": "55555",
+      "role": "55555"
     },
     "filter": {
       "show": "55555",
       "active": "55555",
       "inactive": "55555",
-      "all": "55555"
+      "all": "55555",
+      "searchPlaceholder": "55555"
     },
     "actions": {
       "openMenu": "55555",
@@ -649,6 +696,13 @@
         "openTicketFailed": "55555",
         "userNotAuthenticated": "55555"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "55555",
+      "saveFailed": "55555",
+      "saveFailedDescription": "55555"
     }
   }
 }

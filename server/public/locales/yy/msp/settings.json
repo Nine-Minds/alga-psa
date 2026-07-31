@@ -54,13 +54,23 @@
     },
     "clients": {
       "title": "55555",
+      "help": "55555",
+      "currentDefault": "55555 {{name}} 55555",
+      "yourCompanyBadge": "55555",
       "table": {
         "name": "55555",
         "default": "55555",
         "actions": "55555"
       },
       "placeholder": "55555",
-      "addClient": "55555"
+      "addClient": "55555",
+      "confirmDialog": {
+        "title": "55555",
+        "message": "55555 {{current}} 55555 {{next}} 55555 {{next}} 55555",
+        "messageInitial": "55555 {{next}} 55555 {{next}} 55555",
+        "confirm": "55555",
+        "cancel": "55555"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "55555",
         "selectClient": "55555",
         "clientNotFound": "55555",
+        "clientAlreadyAdded": "55555",
         "addClient": "55555",
         "removeClient": "55555",
         "setDefaultClient": "55555",
@@ -150,6 +161,7 @@
       "copying": "55555",
       "createUser": "55555",
       "sendInvitation": "55555",
+      "sendTeamInvitation": "55555",
       "cancel": "55555"
     },
     "form": {
@@ -183,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "55555",
-        "withoutPassword": "55555"
+        "withoutPassword": "55555",
+        "withoutPasswordMsp": "55555"
       },
       "requirePasswordChange": "55555"
     },
@@ -208,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "55555",
+        "teamInvitationSent": "55555",
         "clientPortalUserCreated": "55555",
         "copiedVanityLink": "55555",
-        "copiedCanonicalLink": "55555"
+        "copiedCanonicalLink": "55555",
+        "invitationRevoked": "55555"
       },
       "error": {
         "fetchUsers": "55555",
@@ -237,6 +252,7 @@
         "contactNotFound": "55555",
         "contactMissingEmailGeneric": "55555",
         "contactInvalidEmail": "55555",
+        "invalidEmail": "55555",
         "noDefaultClient": "55555",
         "noDefaultLocation": "55555",
         "noLocationEmail": "55555",
@@ -245,8 +261,17 @@
         "roleRequired": "55555",
         "invalidRole": "55555",
         "licenseLimitReached": "55555",
-        "soloPlanLimit": "55555"
+        "soloPlanLimit": "55555",
+        "revokeInvitation": "55555",
+        "invitationNotFound": "55555"
       }
+    },
+    "invitations": {
+      "title": "55555",
+      "description": "55555",
+      "expiresPrefix": "55555",
+      "revoke": "55555",
+      "revoking": "55555"
     }
   },
   "userDetails": {
@@ -267,6 +292,27 @@
       "reportsTo": {
         "label": "55555",
         "placeholder": "55555"
+      },
+      "workSchedule": {
+        "label": "55555",
+        "help": "55555",
+        "setHours": "55555",
+        "clear": "55555",
+        "weeklyTotal": "55555 {{hours}} 55555",
+        "days": {
+          "0": "55555",
+          "1": "55555",
+          "2": "55555",
+          "3": "55555",
+          "4": "55555",
+          "5": "55555",
+          "6": "55555"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
       },
       "lastLogin": "55555",
       "roles": "55555",
@@ -312,7 +358,9 @@
         "passwordTooShort": "55555",
         "passwordChangeFailed": "55555",
         "passwordChangeError": "55555",
-        "permissionDenied": "55555"
+        "permissionDenied": "55555",
+        "invalidCapacity": "55555",
+        "invalidWorkSchedule": "55555"
       }
     },
     "loading": "55555"
@@ -711,13 +759,17 @@
         "inactivityDaysLabel": "55555",
         "warningDaysLabel": "55555",
         "warningDaysPlaceholder": "55555",
+        "suppressContactNotificationsLabel": "55555",
+        "suppressContactNotificationsHelp": "55555",
+        "suppressInternalNotificationsLabel": "55555",
         "ruleEnabledLabel": "55555",
         "removeRule": "55555",
         "messages": {
           "fetchFailed": "55555",
           "autoCloseStatusRequired": "55555",
           "autoCloseDaysInvalid": "55555",
-          "autoCloseWarningInvalid": "55555"
+          "autoCloseWarningInvalid": "55555",
+          "autoCloseSuppressionInvalid": "55555"
         }
       },
       "editor": {
@@ -1038,6 +1090,15 @@
     "openMenu": "55555"
   },
   "clientPortal": {
+    "features": {
+      "title": "55555",
+      "description": "55555",
+      "appointmentsLabel": "55555",
+      "appointmentsHelp": "55555",
+      "appointmentsEnabled": "55555",
+      "appointmentsDisabled": "55555",
+      "updateFailed": "55555"
+    },
     "branding": {
       "title": "55555",
       "description": "55555",
@@ -1048,7 +1109,8 @@
         "primaryColor": "55555",
         "secondaryColor": "55555",
         "supportEmail": "55555",
-        "supportPhone": "55555"
+        "supportPhone": "55555",
+        "heroGradient": "55555"
       },
       "help": {
         "companyName": "55555",
@@ -1056,7 +1118,12 @@
         "primaryColor": "55555",
         "secondaryColor": "55555",
         "supportEmail": "55555",
-        "supportPhone": "55555"
+        "supportPhone": "55555",
+        "heroGradient": "55555"
+      },
+      "heroGradient": {
+        "primaryShades": "55555",
+        "primarySecondary": "55555"
       },
       "preview": "55555",
       "previewDarkMode": "55555",
@@ -1170,6 +1237,17 @@
         "step2": "55555",
         "step3": "55555",
         "canonicalHostFallback": "55555"
+      },
+      "appliance": {
+        "helpText": "55555",
+        "checklistTitle": "55555",
+        "step1Prefix": "55555",
+        "step1Suffix": "55555",
+        "step2": "55555",
+        "step3": "55555",
+        "step4": "55555",
+        "docLinkText": "55555",
+        "neverSeenWarning": "55555 {{domain}} 55555"
       },
       "badges": {
         "pending_dns": "55555",
@@ -1288,7 +1366,7 @@
       },
       "list": {
         "loading": "55555",
-        "templateCount": "55555",
+        "templateCount": "55555 {{templateCount}} 55555",
         "usingCustom": "55555",
         "usingStandard": "55555"
       },
@@ -1322,11 +1400,11 @@
         "reset": "55555"
       },
       "test": {
-        "sentTo": "55555",
+        "sentTo": "55555 {{recipient}} 55555",
         "failed": "55555"
       },
       "view": {
-        "title": "55555"
+        "title": "55555 {{name}} 55555"
       },
       "tabs": {
         "source": "55555",
@@ -1336,7 +1414,7 @@
         "notAvailable": "55555"
       },
       "edit": {
-        "title": "55555"
+        "title": "55555 {{name}} 55555"
       },
       "languages": {
         "en": "55555",
@@ -1780,6 +1858,12 @@
     "loading": {
       "title": "55555",
       "description": "55555"
+    },
+    "status": {
+      "title": "55555",
+      "caption": "55555",
+      "available": "55555",
+      "notConfigured": "55555"
     },
     "autoLink": {
       "title": "55555",

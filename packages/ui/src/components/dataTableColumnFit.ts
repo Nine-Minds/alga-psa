@@ -69,6 +69,14 @@ export const parseColumnWidth = (
     return Math.floor(((percent * layout.percentScale) / 100) * layout.percentBase);
   }
 
+  // A `rem` width used to fall through to the bare-number branch, so '18rem'
+  // silently became 18 pixels and the column collapsed to its minimum — a
+  // plausible input producing a wrong answer with no error.
+  if (trimmed.endsWith('rem')) {
+    const rem = Number.parseFloat(trimmed);
+    return Number.isFinite(rem) ? Math.round(rem * 16) : undefined;
+  }
+
   const numeric = Number.parseFloat(trimmed);
   return Number.isFinite(numeric) ? Math.round(numeric) : undefined;
 };

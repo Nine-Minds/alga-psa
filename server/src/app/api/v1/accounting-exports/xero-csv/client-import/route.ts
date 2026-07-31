@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     logger.error('[XeroCsvClientImport] Error', { error: error.message });
     return NextResponse.json(
-      { error: error.message ?? 'Internal server error' },
+      { error: 'Failed to import Xero CSV client data.' },
       { status: 500 }
     );
   }

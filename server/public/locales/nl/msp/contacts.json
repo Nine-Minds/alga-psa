@@ -266,6 +266,47 @@
       "message": "{{count}} contacten bestaan al. Wil je ze bijwerken met de nieuwe gegevens?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "E-mailadressen",
+    "description": "Voeg een of meer e-mailadressen toe en kies precies één standaardadres.",
+    "actions": {
+      "addEmail": "E-mail toevoegen"
+    },
+    "emailTypes": {
+      "work": "Werk",
+      "personal": "Persoonlijk",
+      "billing": "Facturatie",
+      "other": "Overig",
+      "custom": "Aangepast"
+    },
+    "primary": {
+      "title": "Primair e-mailadres",
+      "description": "Dit blijft het standaardadres dat bij het contact is opgeslagen"
+    },
+    "row": {
+      "title": "Extra e-mailadres {{number}}",
+      "secondaryDescription": "Opgeslagen als niet-standaard e-mailadres",
+      "defaultLabel": "Standaard",
+      "noEmailYet": "Nog geen e-mailadres ingevoerd",
+      "editLabel": "Bewerken",
+      "edit": "Extra e-mailadres {{number}} bewerken",
+      "doneLabel": "Klaar",
+      "done": "Bewerken van extra e-mailadres {{number}} afronden",
+      "moveUp": "Extra e-mailadres {{number}} omhoog verplaatsen",
+      "moveDown": "Extra e-mailadres {{number}} omlaag verplaatsen",
+      "remove": "Extra e-mailadres {{number}} verwijderen"
+    },
+    "fields": {
+      "emailAddress": "E-mailadres",
+      "emailPlaceholder": "naam@voorbeeld.com",
+      "emailLabel": "E-mailtype",
+      "customEmailLabel": "Aangepast e-mailtype",
+      "customTypePlaceholder": "Selecteer of voer een aangepast e-mailtype in",
+      "customTypeSearchPlaceholder": "Zoek of voer een aangepast e-mailtype in...",
+      "customTypeEmpty": "Geen overeenkomende aangepaste e-mailtypen.",
+      "customTypeUseValue": "Gebruik \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Telefoonnummers",
     "description": "Telefoonnummer-editor met typebeheer, validatie, standaardwaarden en extensieondersteuning",
@@ -324,6 +365,9 @@
     "noAccess": {
       "title": "Geen portaaltoegang",
       "description": "Dit contact heeft nog geen toegang tot het klantportaal"
+    },
+    "noClient": {
+      "description": "Wijs dit contact toe aan een klant om portaaltoegang te beheren."
     },
     "portalAdmin": {
       "label": "Portaalbeheerder",
@@ -406,7 +450,8 @@
         "noLocationEmail": "De locatie van de standaardklant moet een contact-e-mailadres hebben geconfigureerd.",
         "noBaseUrl": "Basis-URL is niet geconfigureerd voor portaluitnodigingen.",
         "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt."
-      }
+      },
+      "userNotFound": "Client user not found"
     }
   },
   "quickAddContact": {
@@ -571,13 +616,15 @@
       "name": "Naam",
       "email": "E-mail",
       "phoneNumber": "Telefoonnummer",
-      "actions": "Acties"
+      "actions": "Acties",
+      "role": "Rol"
     },
     "filter": {
       "show": "Toon:",
       "active": "Actieve contacten",
       "inactive": "Inactieve contacten",
-      "all": "Alle contacten"
+      "all": "Alle contacten",
+      "searchPlaceholder": "Contacten zoeken..."
     },
     "actions": {
       "openMenu": "Menu openen",
@@ -603,7 +650,7 @@
     "description": "Uploadmogelijkheid voor profielfoto's van contacten"
   },
   "contactNotesPanel": {
-    "title": "Notities en snelle info",
+    "title": "Notities",
     "description": "Rich-text notitiepaneel met weergave van oude notitie en opslaan/opnieuw proberen-acties",
     "legacy": {
       "initialNote": "Initiële notitie"
@@ -649,6 +696,13 @@
         "openTicketFailed": "Kan ticket niet openen",
         "userNotAuthenticated": "Gebruiker niet geauthenticeerd"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contact bijgewerkt",
+      "saveFailed": "Contact kon niet worden bijgewerkt",
+      "saveFailedDescription": "The contact could not be updated. Please try again."
     }
   }
 }

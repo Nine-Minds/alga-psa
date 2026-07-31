@@ -13,8 +13,10 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils'
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
-import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { enforceTicketCloseRules } from '@alga-psa/tickets/lib/validateTicketClosure';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -26,12 +28,12 @@ import {
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import {
   applyVisibilityBoardFilter,
-  getClientContactVisibilityContext,
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
+import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
+import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -44,20 +46,78 @@ const clientTicketSchema = z.object({
 const VISIBILITY_NOT_FOUND_ERROR =
   'Visibility group assignment is invalid for this contact.';
 
+export type ClientTicketActionError = ActionMessageError | ActionPermissionError;
+export type ClientTicketActionResult<T> = T | ClientTicketActionError;
+
+class ExpectedClientTicketActionError extends Error {
+  constructor(
+    message: string,
+    readonly kind: 'action' | 'permission' = 'action'
+  ) {
+    super(message);
+    this.name = 'ExpectedClientTicketActionError';
+  }
+}
+
+function expectedClientTicketActionError(message: string): ExpectedClientTicketActionError {
+  return new ExpectedClientTicketActionError(message, 'action');
+}
+
+function zodErrorMessage(error: z.ZodError): string {
+  const firstIssue = error.issues[0];
+  if (!firstIssue) {
+    return 'Invalid ticket data';
+  }
+
+  const path = firstIssue.path.join('.');
+  return path ? `${path}: ${firstIssue.message}` : firstIssue.message;
+}
+
+function toClientTicketActionError(error: unknown): ClientTicketActionError | null {
+  if (error instanceof ExpectedClientTicketActionError) {
+    return error.kind === 'permission'
+      ? permissionError(error.message)
+      : actionError(error.message);
+  }
+
+  return null;
+}
+
+function expectedOrThrow(error: unknown, logMessage: string): ClientTicketActionError {
+  const expected = toClientTicketActionError(error);
+  if (expected) {
+    return expected;
+  }
+
+  console.error(logMessage, error);
+  throw error;
+}
+
+function clientPortalUserIdOrError(user: { user_id?: string | null; user_type?: string | null }): string | ClientTicketActionError {
+  if (!user.user_id) {
+    return permissionError('User ID not found in session');
+  }
+
+  if (user.user_type !== 'client') {
+    return permissionError('Access denied: Client portal actions are restricted to client users');
+  }
+
+  return user.user_id;
+}
+
 async function resolvePortalVisibility(
   trx: Knex.Transaction,
   tenant: string,
   userId: string
 ) {
-  const userRecord = await trx('users')
+  const userRecord = await tenantDb(trx, tenant).table('users')
     .where({
-      user_id: userId,
-      tenant
+      user_id: userId
     })
     .first();
 
   if (!userRecord?.contact_id) {
-    throw new Error('User not associated with a contact');
+    throw expectedClientTicketActionError('User not associated with a contact');
   }
 
   const visibility = await getClientContactVisibilityContext(trx, tenant, userRecord.contact_id);
@@ -72,11 +132,10 @@ async function resolveVisibleTicket(
 ) {
   const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
-  const ticket = await trx('tickets as t')
+  const ticket = await tenantDb(trx, tenant).table('tickets as t')
     .select('t.*')
     .where({
       't.ticket_id': ticketId,
-      't.tenant': tenant,
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
@@ -85,21 +144,17 @@ async function resolveVisibleTicket(
     .first();
 
   if (!ticket) {
-    throw new Error('Ticket not found or access denied');
+    throw expectedClientTicketActionError('Ticket not found or access denied');
   }
 
   return ticket;
 }
 
-export const getClientTickets = withAuth(async (user, { tenant }, status: string): Promise<ITicketListItem[]> => {
+export const getClientTickets = withAuth(async (user, { tenant }, status: string): Promise<ClientTicketActionResult<ITicketListItem[]>> => {
   try {
-    if (!user.user_id) {
-      throw new Error('User ID not found in session');
-    }
-
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
     }
 
     // Get the database connection
@@ -107,24 +162,45 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
 
     // Check RBAC permission
     const userForPermission = {
-      user_id: user.user_id,
+      user_id: userId,
       email: user.email,
-      user_type: user.user_type,
+      user_type: 'client',
       is_inactive: false,
       tenant
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
-      throw new Error('Insufficient permissions to view tickets');
+      return permissionError('Insufficient permissions to view tickets');
     }
 
     const parsedStatusFilter = parseTicketStatusFilterValue(status);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
+      const { visibility } = await resolvePortalVisibility(trx, tenant, userId);
+      const scopedDb = tenantDb(trx, tenant);
+      const additionalAgentCountSubquery = scopedDb
+        .table('ticket_resources as tr')
+        .whereRaw('tr.ticket_id = t.ticket_id')
+        .whereNotNull('tr.additional_user_id')
+        .select(trx.raw('COUNT(*)::int'))
+        .as('additional_agent_count');
+      const additionalAgentsSubquery = scopedDb.table('ticket_resources as tr2');
+      scopedDb.tenantJoin(additionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
+      additionalAgentsSubquery
+        .whereRaw('tr2.ticket_id = t.ticket_id')
+        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"))
+        .as('additional_agents');
 
-      let query = trx('tickets as t')
-      .select(
+      let query = scopedDb.table('tickets as t');
+      scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'boards as c', 't.board_id', 'c.board_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'categories as cat', 't.category_id', 'cat.category_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'users as u', 't.entered_by', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'teams as tm', 't.assigned_team_id', 'tm.team_id', { type: 'left' });
+
+      query = query.select(
         't.ticket_id',
         't.ticket_number',
         't.title',
@@ -156,39 +232,10 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
         't.assigned_team_id',
         'tm.team_name as assigned_team_name',
-        db.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
-        db.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
+        additionalAgentCountSubquery,
+        additionalAgentsSubquery.as('additional_agents')
       )
-      .leftJoin('statuses as s', function() {
-        this.on('t.status_id', '=', 's.status_id')
-            .andOn('t.tenant', '=', 's.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', '=', 'p.priority_id')
-            .andOn('t.tenant', '=', 'p.tenant');
-      })
-      .leftJoin('boards as c', function() {
-        this.on('t.board_id', '=', 'c.board_id')
-            .andOn('t.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('categories as cat', function() {
-        this.on('t.category_id', '=', 'cat.category_id')
-            .andOn('t.tenant', '=', 'cat.tenant');
-      })
-      .leftJoin('users as u', function() {
-        this.on('t.entered_by', '=', 'u.user_id')
-            .andOn('t.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('users as au', function() {
-        this.on('t.assigned_to', '=', 'au.user_id')
-            .andOn('t.tenant', '=', 'au.tenant');
-      })
-      .leftJoin('teams as tm', function() {
-        this.on('t.assigned_team_id', 'tm.team_id')
-            .andOn('t.tenant', 'tm.tenant');
-      })
       .where({
-        't.tenant': tenant,
         't.client_id': visibility.clientId
       });
 
@@ -207,32 +254,27 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
-      const tickets = await query.orderBy('t.entered_at', 'desc');
+      const tickets = await query.orderBy('t.entered_at', 'desc') as ITicketListItem[];
 
       return tickets;
-    });
+    }) as any[];
 
-    return result.map((ticket): ITicketListItem => ({
+    return result.map((ticket: any): ITicketListItem => ({
       ...ticket,
       entered_at: ticket.entered_at instanceof Date ? ticket.entered_at.toISOString() : ticket.entered_at,
       updated_at: ticket.updated_at instanceof Date ? ticket.updated_at.toISOString() : ticket.updated_at,
       closed_at: ticket.closed_at instanceof Date ? ticket.closed_at.toISOString() : ticket.closed_at,
     }));
   } catch (error) {
-    console.error('Failed to fetch client tickets:', error);
-    throw error; // Throw the original error to see the actual issue
+    return expectedOrThrow(error, 'Failed to fetch client tickets:');
   }
 });
 
-export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId: string): Promise<ITicketWithDetails> => {
+export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<ITicketWithDetails>> => {
   try {
-    if (!user.user_id) {
-      throw new Error('User ID not found in session');
-    }
-
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
     }
 
     // Get the database connection
@@ -240,23 +282,34 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     // Check RBAC permission
     const userForPermission = {
-      user_id: user.user_id,
+      user_id: userId,
       email: user.email,
-      user_type: user.user_type,
+      user_type: 'client',
       is_inactive: false,
       tenant
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
-      throw new Error('Insufficient permissions to view ticket details');
+      return permissionError('Insufficient permissions to view ticket details');
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
+      const { visibility } = await resolvePortalVisibility(trx, tenant, userId);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Get ticket details with related data
-      const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
-        trx('tickets as t')
+      const ticketAdditionalAgentsSubquery = scopedDb.table('ticket_resources as tr2');
+      scopedDb.tenantJoin(ticketAdditionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
+      ticketAdditionalAgentsSubquery
+        .whereRaw('tr2.ticket_id = t.ticket_id')
+        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"));
+
+      const ticketQuery = scopedDb.table('tickets as t');
+      scopedDb.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketQuery, 'users as u_creator', 't.entered_by', 'u_creator.user_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id', { type: 'left' });
+      ticketQuery
         .select(
           't.*',
           's.name as status_name',
@@ -264,118 +317,125 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'p.color as priority_color',
           'u_creator.user_type as entered_by_user_type',
           'tm.team_name as assigned_team_name',
-          trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
+          ticketAdditionalAgentsSubquery.as('additional_agents')
         )
-        .leftJoin('statuses as s', function() {
-          this.on('t.status_id', '=', 's.status_id')
-              .andOn('t.tenant', '=', 's.tenant');
-        })
-        .leftJoin('priorities as p', function() {
-          this.on('t.priority_id', '=', 'p.priority_id')
-              .andOn('t.tenant', '=', 'p.tenant');
-        })
-        .leftJoin('users as u_creator', function() {
-          this.on('t.entered_by', '=', 'u_creator.user_id')
-              .andOn('t.tenant', '=', 'u_creator.tenant');
-        })
-        .leftJoin('teams as tm', function() {
-          this.on('t.assigned_team_id', 'tm.team_id')
-              .andOn('t.tenant', 'tm.tenant');
-        })
         .where({
           't.ticket_id': ticketId,
-          't.tenant': tenant,
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
           applyVisibilityBoardFilter(ticketQuery, visibility.visibleBoardIds);
         })
-        .first(),
+        .first();
 
-        // Get conversations
-        trx('comments')
+      const documentsQuery = scopedDb.table('documents as d').select('d.*');
+      scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+      documentsQuery.where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'd.is_client_visible': true,
+      });
+
+      // Only derive involved-user ids from comments the contact can actually
+      // see — internal-only commenters must not be enumerated here. Comment
+      // visibility mirrors the thread root (Comment model enforces replies
+      // match thread visibility), so the comment flag alone is sufficient.
+      const commentUserIdsSubquery = scopedDb.table('comments as c')
+        .select('c.user_id')
+        .where('c.ticket_id', ticketId)
+        .where('c.is_internal', false);
+      const assignedUserIdSubquery = scopedDb.table('tickets as assigned_ticket')
+        .select('assigned_ticket.assigned_to')
+        .where('assigned_ticket.ticket_id', ticketId);
+      const additionalUserIdsSubquery = scopedDb.table('ticket_resources as tr')
+        .select('tr.additional_user_id')
+        .where('tr.ticket_id', ticketId);
+
+      const usersQuery = scopedDb.table('users as u')
+        .distinct(
+          'u.user_id',
+          'u.first_name',
+          'u.last_name',
+          'u.email',
+          'u.user_type',
+          'd.file_id as avatar_file_id'
+        );
+      scopedDb.tenantJoin(usersQuery, 'document_associations as da', 'da.entity_id', 'u.user_id', {
+        type: 'left',
+        on: (join) => {
+          join.andOn('da.entity_type', '=', trx.raw('?', ['user']));
+        },
+      });
+      scopedDb.tenantJoin(usersQuery, 'documents as d', 'd.document_id', 'da.document_id', { type: 'left' });
+      usersQuery.where(function(this: Knex.QueryBuilder) {
+        this.whereIn('u.user_id', commentUserIdsSubquery)
+          .orWhereIn('u.user_id', assignedUserIdSubquery)
+          .orWhereIn('u.user_id', additionalUserIdsSubquery);
+      });
+
+      const linkedAssetsQuery = scopedDb.table('asset_associations as aa');
+      scopedDb.tenantJoin(linkedAssetsQuery, 'assets as a', 'aa.asset_id', 'a.asset_id');
+      linkedAssetsQuery
         .where({
-          ticket_id: ticketId,
-          tenant: tenant
+          'aa.entity_id': ticketId,
+          'aa.entity_type': 'ticket',
+          'a.client_id': visibility.clientId,
         })
-        .orderBy('created_at', 'asc'),
+        .select<Array<{
+          asset_id: string;
+          name: string;
+          asset_tag: string | null;
+          asset_type: string | null;
+          relationship_type: string | null;
+        }>>(
+          'a.asset_id',
+          'a.name',
+          'a.asset_tag',
+          'a.asset_type',
+          'aa.relationship_type',
+        );
+
+      // Portal contacts must never receive MSP-internal notes. A comment is
+      // hidden when its own is_internal flag is set or when it belongs to an
+      // internal thread (comment_threads.is_internal carries the thread root's
+      // flag — the same "internal thread" definition the MSP thread tabs use
+      // in buildTicketThreadTabState).
+      const conversationsQuery = scopedDb.table('comments');
+      scopedDb.tenantJoin(conversationsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
+      conversationsQuery
+        .select('comments.*')
+        .where({
+          'comments.ticket_id': ticketId,
+          'comments.is_internal': false,
+        })
+        .where(function (this: Knex.QueryBuilder) {
+          this.whereNull('ct.is_internal')
+            .orWhere('ct.is_internal', false);
+        })
+        .orderBy('comments.created_at', 'asc');
+
+      const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
+        ticketQuery,
+
+        // Get conversations (client-visible comments only)
+        conversationsQuery,
 
         // Get client-visible documents only
-        trx('documents as d')
-        .select('d.*')
-        .join('document_associations as da', function() {
-          this.on('d.document_id', '=', 'da.document_id')
-              .andOn('d.tenant', '=', 'da.tenant');
-        })
-        .where({
-          'da.entity_id': ticketId,
-          'da.entity_type': 'ticket',
-          'd.tenant': tenant,
-          'd.is_client_visible': true,
-        }),
+        documentsQuery,
 
         // Get all users involved in the ticket, including avatar file_id
         // This includes users who have commented OR are assigned to the ticket
-        trx.raw(`
-          SELECT DISTINCT u.user_id, u.first_name, u.last_name, u.email, u.user_type, d.file_id as avatar_file_id
-          FROM users u
-          LEFT JOIN document_associations da ON da.entity_id = u.user_id
-            AND da.tenant = u.tenant
-            AND da.entity_type = 'user'
-          LEFT JOIN documents d ON d.document_id = da.document_id
-            AND d.tenant = u.tenant
-          WHERE u.tenant = ?
-            AND (
-              -- Users who have commented
-              u.user_id IN (
-                SELECT c.user_id FROM comments c
-                WHERE c.ticket_id = ? AND c.tenant = ?
-              )
-              -- Or the assigned agent
-              OR u.user_id = (
-                SELECT t.assigned_to FROM tickets t
-                WHERE t.ticket_id = ? AND t.tenant = ?
-              )
-              -- Or additional agents from ticket_resources
-              OR u.user_id IN (
-                SELECT tr.additional_user_id FROM ticket_resources tr
-                WHERE tr.ticket_id = ? AND tr.tenant = ?
-              )
-            )
-        `, [tenant, ticketId, tenant, ticketId, tenant, ticketId, tenant])
-        .then((result: any) => result.rows),
+        usersQuery,
 
         // Linked assets (asset_associations -> assets) scoped to the requester's client.
-        trx('asset_associations as aa')
-          .innerJoin('assets as a', function joinAssets() {
-            this.on('aa.asset_id', '=', 'a.asset_id').andOn('aa.tenant', '=', 'a.tenant');
-          })
-          .where({
-            'aa.tenant': tenant,
-            'aa.entity_id': ticketId,
-            'aa.entity_type': 'ticket',
-            'a.client_id': visibility.clientId,
-          })
-          .select<Array<{
-            asset_id: string;
-            name: string;
-            asset_tag: string | null;
-            asset_type: string | null;
-            relationship_type: string | null;
-          }>>(
-            'a.asset_id',
-            'a.name',
-            'a.asset_tag',
-            'a.asset_type',
-            'aa.relationship_type',
-          )
+        linkedAssetsQuery
       ]);
 
       return { ticket, conversations, documents, users, linkedAssets };
-    });
+    }) as any;
 
     if (!result.ticket) {
-      throw new Error('Ticket not found');
+      return actionError('Ticket not found or access denied');
     }
 
     // Create user map, including avatar URLs
@@ -394,8 +454,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       else if (userRecord.user_type === 'client') {
         try {
           // First, get the user's contact_id
-          const userDbRecord = await db('users')
-            .where({ user_id: userRecord.user_id, tenant })
+          const userDbRecord = await tenantDb(db, tenant).table('users')
+            .where({ user_id: userRecord.user_id })
             .first();
 
           if (userDbRecord?.contact_id) {
@@ -434,10 +494,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     );
 
     const commentContacts = commentContactIds.length > 0
-      ? await db('contacts')
+      ? await tenantDb(db, tenant).table('contacts')
         .select('contact_name_id', 'full_name', 'email')
         .whereIn('contact_name_id', commentContactIds)
-        .andWhere({ tenant })
       : [];
 
     const contactMap = commentContacts.reduce((acc, contactRecord) => ({
@@ -468,8 +527,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       contactMap
     };
   } catch (error) {
-    console.error('Failed to fetch ticket details:', error);
-    throw new Error('Failed to fetch ticket details');
+    return expectedOrThrow(error, 'Failed to fetch ticket details:');
   }
 });
 
@@ -480,15 +538,15 @@ export const addClientTicketComment = withAuth(async (
   content: string,
   isInternal: boolean = false,
   isResolution: boolean = false
-): Promise<boolean> => {
+): Promise<ClientTicketActionResult<boolean>> => {
+  // Client portal contacts can never create internal notes/threads. Force the
+  // flag server-side — the portal UI always passes false, but server actions
+  // are directly invocable and the caller-supplied value must not be trusted.
+  isInternal = false;
   try {
-    if (!user.user_id) {
-      throw new Error('User ID not found in session');
-    }
-
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
     }
 
     // Get the database connection
@@ -496,27 +554,26 @@ export const addClientTicketComment = withAuth(async (
 
     // Check RBAC permission
     const userForPermission = {
-      user_id: user.user_id,
+      user_id: userId,
       email: user.email,
-      user_type: user.user_type,
+      user_type: 'client',
       is_inactive: false,
       tenant
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
-      throw new Error('Insufficient permissions to add comments');
+      return permissionError('Insufficient permissions to add comments');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
+      const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
-          user_id: user.user_id,
-          tenant: tenant
+          user_id: userId
         })
         .first();
 
       if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
+        throw expectedClientTicketActionError('User not associated with a contact');
       }
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, ticketId);
@@ -538,11 +595,11 @@ export const addClientTicketComment = withAuth(async (
         | { comment_id: string; thread_id: string }
         | undefined;
       if (!clientGeneratedIds?.comment_id || !clientGeneratedIds?.thread_id) {
-        throw new Error('Failed to generate comment/thread identifiers');
+        throw new Error('Database UUID generation did not return comment/thread identifiers.');
       }
       const clientNowIso = new Date().toISOString();
 
-      await trx('comment_threads').insert({
+      await tenantDb(trx, tenant).table('comment_threads').insert({
         tenant,
         thread_id: clientGeneratedIds.thread_id,
         ticket_id: ticketId,
@@ -552,10 +609,10 @@ export const addClientTicketComment = withAuth(async (
         reply_count: 0,
         last_activity_at: clientNowIso,
         created_at: clientNowIso,
-        created_by: user.user_id || null,
+        created_by: userId,
       });
 
-      const [newComment] = await trx('comments').insert({
+      const [newComment] = await tenantDb(trx, tenant).table('comments').insert({
         tenant,
         comment_id: clientGeneratedIds.comment_id,
         thread_id: clientGeneratedIds.thread_id,
@@ -568,19 +625,18 @@ export const addClientTicketComment = withAuth(async (
           responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL,
         }),
         created_at: clientNowIso,
-        user_id: user.user_id,
+        user_id: userId,
         markdown_content: markdownContent
       }).returning('*');
 
       if (!isInternal) {
-        await trx('tickets')
+        await tenantDb(trx, tenant).table('tickets')
           .where({
             ticket_id: ticketId,
-            tenant,
           })
           .update({ response_state: 'awaiting_internal' });
 
-        await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id);
+        await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, userId);
       }
 
       // Publish comment added event
@@ -588,8 +644,10 @@ export const addClientTicketComment = withAuth(async (
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
+          occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
-          userId: user.user_id,
+          commentId: newComment.comment_id,
+          userId,
           comment: {
             id: newComment.comment_id,
             content: content,
@@ -604,7 +662,7 @@ export const addClientTicketComment = withAuth(async (
         ticketId,
         updatedFields: isInternal ? ['comments'] : ['comments', 'response_state'],
         updatedBy: {
-          userId: user.user_id,
+          userId,
           displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
         },
         updatedAt: newComment.created_at instanceof Date ? newComment.created_at.toISOString() : new Date().toISOString(),
@@ -613,8 +671,7 @@ export const addClientTicketComment = withAuth(async (
 
     return true; // Return true to indicate success
   } catch (error) {
-    console.error('Failed to add comment:', error);
-    throw new Error('Failed to add comment');
+    return expectedOrThrow(error, 'Failed to add comment:');
   }
 });
 
@@ -623,15 +680,11 @@ export const updateClientTicketComment = withAuth(async (
   { tenant },
   commentId: string,
   updates: Partial<IComment>
-): Promise<void> => {
+): Promise<ClientTicketActionResult<void>> => {
   try {
-    if (!user.user_id) {
-      throw new Error('User ID not found in session');
-    }
-
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
     }
 
     // Get the database connection
@@ -639,46 +692,49 @@ export const updateClientTicketComment = withAuth(async (
 
     // Check RBAC permission
     const userForPermission = {
-      user_id: user.user_id,
+      user_id: userId,
       email: user.email,
-      user_type: user.user_type,
+      user_type: 'client',
       is_inactive: false,
       tenant
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
-      throw new Error('Insufficient permissions to update comments');
+      return permissionError('Insufficient permissions to update comments');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
+      const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
-          user_id: user.user_id,
-          tenant: tenant
+          user_id: userId
         })
         .first();
 
       if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
+        throw expectedClientTicketActionError('User not associated with a contact');
       }
 
       // Verify the comment belongs to this user
-      const comment = await trx('comments')
+      const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
-          tenant,
-          user_id: user.user_id
+          user_id: userId
         })
         .first();
 
       if (!comment) {
-        throw new Error('Comment not found or not authorized to edit');
+        throw expectedClientTicketActionError('Comment not found or not authorized to edit');
       }
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
-      let updatesWithMarkdown = { ...updates };
+      // Whitelist the editable fields: portal contacts may only revise the
+      // note body. Everything else on IComment (ticket_id, user_id,
+      // author_type, is_internal, is_resolution, ...) is caller-controlled and
+      // must be dropped to prevent mass assignment.
+      const updatesWithMarkdown: { note?: string; markdown_content?: string } = {};
       if (updates.note) {
+        updatesWithMarkdown.note = updates.note;
         try {
           const markdownContent = await convertBlockNoteToMarkdown(updates.note);
           console.log("Converted markdown content for updated client comment:", markdownContent);
@@ -689,10 +745,9 @@ export const updateClientTicketComment = withAuth(async (
         }
       }
 
-      await trx('comments')
+      await tenantDb(trx, tenant).table('comments')
         .where({
-          comment_id: commentId,
-          tenant: tenant
+          comment_id: commentId
         })
         .update({
           ...updatesWithMarkdown,
@@ -705,15 +760,14 @@ export const updateClientTicketComment = withAuth(async (
         ticketId: comment.ticket_id,
         updatedFields: ['comments'],
         updatedBy: {
-          userId: user.user_id,
+          userId,
           displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
         },
         updatedAt: new Date().toISOString(),
       });
     });
   } catch (error) {
-    console.error('Failed to update comment:', error);
-    throw new Error('Failed to update comment');
+    return expectedOrThrow(error, 'Failed to update comment:');
   }
 });
 
@@ -722,15 +776,11 @@ export const updateTicketStatus = withAuth(async (
   { tenant },
   ticketId: string,
   newStatusId: string
-): Promise<void> => {
+): Promise<ClientTicketActionResult<void>> => {
   try {
-    if (!user.user_id) {
-      throw new Error('User ID not found in session');
-    }
-
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
     }
 
     // Get the database connection
@@ -738,27 +788,26 @@ export const updateTicketStatus = withAuth(async (
 
     // Check RBAC permission
     const userForPermission = {
-      user_id: user.user_id,
+      user_id: userId,
       email: user.email,
-      user_type: user.user_type,
+      user_type: 'client',
       is_inactive: false,
       tenant
     } as IUser;
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
-      throw new Error('Insufficient permissions to update ticket status');
+      return permissionError('Insufficient permissions to update ticket status');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
+      const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
-          user_id: user.user_id,
-          tenant: tenant
+          user_id: userId
         })
         .first();
 
       if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
+        throw expectedClientTicketActionError('User not associated with a contact');
       }
 
       const ticket = await resolveVisibleTicket(
@@ -768,17 +817,12 @@ export const updateTicketStatus = withAuth(async (
         ticketId
       );
 
-      if (!ticket) {
-        throw new Error('Ticket not found');
-      }
-
       if (!ticket.board_id) {
-        throw new Error('Ticket does not have a board');
+        throw expectedClientTicketActionError('Ticket does not have a board');
       }
 
-      const statusForBoard = await trx('statuses')
+      const statusForBoard = await tenantDb(trx, tenant).table('statuses')
         .where({
-          tenant,
           status_id: newStatusId,
           status_type: 'ticket',
           board_id: ticket.board_id,
@@ -786,13 +830,13 @@ export const updateTicketStatus = withAuth(async (
         .first('status_id', 'is_closed', 'name');
 
       if (!statusForBoard) {
-        throw new Error('Selected status is not valid for the ticket board');
+        throw expectedClientTicketActionError('Selected status is not valid for the ticket board');
       }
 
       // Get old status for change tracking
       const oldStatusId = ticket.status_id;
-      const oldStatus = await trx('statuses')
-        .where({ tenant, status_id: oldStatusId })
+      const oldStatus = await tenantDb(trx, tenant).table('statuses')
+        .where({ status_id: oldStatusId })
         .first('status_id', 'is_closed');
 
       const isClosing = !!statusForBoard.is_closed && !oldStatus?.is_closed;
@@ -817,7 +861,7 @@ export const updateTicketStatus = withAuth(async (
           bypass: { source: 'client_portal' },
           actor: {
             actorType: TICKET_ACTIVITY_ACTOR.USER,
-            userId: user.user_id,
+            userId,
             displayName: actorDisplayName,
           },
           source: TICKET_ACTIVITY_SOURCE.CLIENT_PORTAL,
@@ -827,24 +871,24 @@ export const updateTicketStatus = withAuth(async (
       // Update the ticket status with full closure semantics: the denormalized
       // is_closed flag and closed_at/closed_by transitions mirror the MSP-side
       // update paths.
-      await trx('tickets')
+      await tenantDb(trx, tenant).table('tickets')
         .where({
-          ticket_id: ticketId,
-          tenant: tenant
+          ticket_id: ticketId
         })
         .update({
           status_id: newStatusId,
           is_closed: !!statusForBoard.is_closed,
-          ...(isClosing ? { closed_at: occurredAt, closed_by: user.user_id } : {}),
+          ...(isClosing ? { closed_at: occurredAt, closed_by: userId } : {}),
           ...(isReopening ? { closed_at: null, closed_by: null } : {}),
           ...(isClosing && ticket.response_state ? { response_state: null } : {}),
           updated_at: occurredAt,
-          updated_by: user.user_id
+          updated_by: userId
         });
 
       const statusChanges = {
         status_id: {
           old: oldStatusId,
+          previous: oldStatusId,
           new: newStatusId
         }
       };
@@ -854,14 +898,14 @@ export const updateTicketStatus = withAuth(async (
           eventType: 'TICKET_CLOSED',
           payload: {
             ticketId: ticketId,
-            userId: user.user_id,
-            closedByUserId: user.user_id,
+            userId,
+            closedByUserId: userId,
             closedAt: occurredAt,
             changes: statusChanges,
           },
           ctx: {
             tenantId: tenant,
-            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+            actor: { actorType: 'USER' as const, actorUserId: userId },
             occurredAt,
           },
           eventName: 'Ticket Closed',
@@ -873,13 +917,13 @@ export const updateTicketStatus = withAuth(async (
           eventType: 'TICKET_REOPENED',
           payload: {
             ticketId: ticketId,
-            userId: user.user_id,
-            reopenedByUserId: user.user_id,
+            userId,
+            reopenedByUserId: userId,
             changes: statusChanges,
           },
           ctx: {
             tenantId: tenant,
-            actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+            actor: { actorType: 'USER' as const, actorUserId: userId },
             occurredAt,
           },
           eventName: 'Ticket Reopened',
@@ -892,8 +936,9 @@ export const updateTicketStatus = withAuth(async (
           eventType: 'TICKET_UPDATED',
           payload: {
             tenantId: tenant,
+            occurredAt,
             ticketId: ticketId,
-            userId: user.user_id,
+            userId,
             changes: statusChanges
           }
         });
@@ -912,7 +957,7 @@ export const updateTicketStatus = withAuth(async (
         entityId: ticketId,
         actor: {
           actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: user.user_id,
+          userId,
           displayName: actorDisplayName,
         },
         source: TICKET_ACTIVITY_SOURCE.CLIENT_PORTAL,
@@ -922,20 +967,15 @@ export const updateTicketStatus = withAuth(async (
     });
 
   } catch (error) {
-    console.error('Failed to update ticket status:', error);
-    throw new Error('Failed to update ticket status');
+    return expectedOrThrow(error, 'Failed to update ticket status:');
   }
 });
 
-export const deleteClientTicketComment = withAuth(async (user, { tenant }, commentId: string): Promise<void> => {
+export const deleteClientTicketComment = withAuth(async (user, { tenant }, commentId: string): Promise<ClientTicketActionResult<void>> => {
   try {
-    if (!user.user_id) {
-      throw new Error('User ID not found in session');
-    }
-
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
     }
 
     // Get the database connection
@@ -943,48 +983,45 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
 
     // Check RBAC permission
     const userForPermission = {
-      user_id: user.user_id,
+      user_id: userId,
       email: user.email,
-      user_type: user.user_type,
+      user_type: 'client',
       is_inactive: false,
       tenant
     } as IUser;
     const canDelete = await hasPermission(userForPermission, 'ticket', 'delete', db);
     if (!canDelete) {
-      throw new Error('Insufficient permissions to delete comments');
+      return permissionError('Insufficient permissions to delete comments');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      const userRecord = await trx('users')
+      const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
-          user_id: user.user_id,
-          tenant: tenant
+          user_id: userId
         })
         .first();
 
       if (!userRecord?.contact_id) {
-        throw new Error('User not associated with a contact');
+        throw expectedClientTicketActionError('User not associated with a contact');
       }
 
       // Verify the comment belongs to this user
-      const comment = await trx('comments')
+      const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
-          tenant,
-          user_id: user.user_id
+          user_id: userId
         })
         .first();
 
       if (!comment) {
-        throw new Error('Comment not found or not authorized to delete');
+        throw expectedClientTicketActionError('Comment not found or not authorized to delete');
       }
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
-      await trx('comments')
+      await tenantDb(trx, tenant).table('comments')
         .where({
-          comment_id: commentId,
-          tenant: tenant
+          comment_id: commentId
         })
         .del();
 
@@ -993,51 +1030,46 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
         ticketId: comment.ticket_id,
         updatedFields: ['comments'],
         updatedBy: {
-          userId: user.user_id,
+          userId,
           displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
         },
         updatedAt: new Date().toISOString(),
       });
     });
   } catch (error) {
-    console.error('Failed to delete comment:', error);
-    throw new Error('Failed to delete comment');
+    return expectedOrThrow(error, 'Failed to delete comment:');
   }
 });
 
-export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticketId: string): Promise<IDocument[]> => {
+export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<IDocument[]>> => {
   try {
-    if (!user.user_id) {
-      throw new Error('User ID not found in session');
-    }
-
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
     }
 
     const db = await getConnection(tenant);
 
     const userForPermission = {
-      user_id: user.user_id,
+      user_id: userId,
       email: user.email,
-      user_type: user.user_type,
+      user_type: 'client',
       is_inactive: false,
       tenant
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
-      throw new Error('Insufficient permissions to view ticket documents');
+      return permissionError('Insufficient permissions to view ticket documents');
     }
 
     const documents = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Verify user has access to this ticket
-      const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
+      const { visibility } = await resolvePortalVisibility(trx, tenant, userId);
 
       // Verify ticket belongs to user's client
-      const ticket = await trx('tickets')
+      const ticket = await tenantDb(trx, tenant).table('tickets')
         .where({
           ticket_id: ticketId,
-          tenant: tenant,
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
@@ -1046,40 +1078,33 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
         .first();
 
       if (!ticket) {
-        throw new Error('Ticket not found or access denied');
+        throw expectedClientTicketActionError('Ticket not found or access denied');
       }
 
       // Get client-visible documents for the ticket
-      return trx('documents as d')
-        .select('d.*')
-        .join('document_associations as da', function() {
-          this.on('d.document_id', '=', 'da.document_id')
-              .andOn('d.tenant', '=', 'da.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const documentsQuery = scopedDb.table('documents as d').select('d.*');
+      scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+
+      return documentsQuery
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
-          'd.tenant': tenant,
           'd.is_client_visible': true,
-        });
+        }) as unknown as Promise<IDocument[]>;
     });
 
     return documents;
   } catch (error) {
-    console.error('Failed to fetch ticket documents:', error);
-    throw new Error('Failed to fetch ticket documents');
+    return expectedOrThrow(error, 'Failed to fetch ticket documents:');
   }
 });
 
-export const createClientTicket = withAuth(async (user, { tenant }, data: FormData): Promise<ITicket> => {
+export const createClientTicket = withAuth(async (user, { tenant }, data: FormData): Promise<ClientTicketActionResult<ITicket>> => {
   try {
-    if (!user.user_id) {
-      throw new Error('User ID not found in session');
-    }
-
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
+    const userId = clientPortalUserIdOrError(user);
+    if (typeof userId !== 'string') {
+      return userId;
     }
 
     // Get the database connection
@@ -1087,66 +1112,73 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
 
     // Check RBAC permission
     const userForPermission = {
-      user_id: user.user_id,
+      user_id: userId,
       email: user.email,
-      user_type: user.user_type,
+      user_type: 'client',
       is_inactive: false,
       tenant
     } as IUser;
     const canCreate = await hasPermission(userForPermission, 'ticket', 'create', db);
     if (!canCreate) {
-      throw new Error('Insufficient permissions to create tickets');
+      return permissionError('Insufficient permissions to create tickets');
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
+      const { visibility } = await resolvePortalVisibility(trx, tenant, userId);
 
       // Validate input data using shared validation approach
-      const validatedData = validateData(clientTicketSchema, {
-        title: data.get('title'),
-        description: data.get('description'),
-        priority_id: data.get('priority_id'),
-        board_id: data.get('board_id')
-          ? data.get('board_id')?.toString()
-          : undefined,
-        asset_id: data.get('asset_id')
-          ? data.get('asset_id')?.toString()
-          : undefined,
-      });
+      const validatedData = (() => {
+        try {
+          return validateData(clientTicketSchema, {
+            title: data.get('title'),
+            description: data.get('description'),
+            priority_id: data.get('priority_id'),
+            board_id: data.get('board_id')
+              ? data.get('board_id')?.toString()
+              : undefined,
+            asset_id: data.get('asset_id')
+              ? data.get('asset_id')?.toString()
+              : undefined,
+          });
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            throw expectedClientTicketActionError(zodErrorMessage(error));
+          }
+          throw error;
+        }
+      })();
 
       const requestedBoardId = validatedData.board_id?.trim() || null;
       let assignedBoardId: string | null = requestedBoardId;
 
       if (visibility.visibleBoardIds !== null && visibility.visibleBoardIds.length === 0) {
-        throw new Error('Selected visibility group does not allow any boards');
+        throw expectedClientTicketActionError('Selected visibility group does not allow any boards');
       }
 
       if (visibility.visibleBoardIds !== null) {
         if (!requestedBoardId) {
           assignedBoardId = visibility.visibleBoardIds[0] || null;
         } else if (!visibility.visibleBoardIds.includes(requestedBoardId)) {
-          throw new Error(VISIBILITY_NOT_FOUND_ERROR);
+          throw expectedClientTicketActionError(VISIBILITY_NOT_FOUND_ERROR);
         }
       }
 
       const resolvedBoard = !assignedBoardId
-        ? await trx('boards')
+        ? await tenantDb(trx, tenant).table('boards')
             .where({
-              tenant,
               is_default: true,
               is_inactive: false
             })
             .first()
-        : await trx('boards')
+        : await tenantDb(trx, tenant).table('boards')
             .where({
-              tenant,
               board_id: assignedBoardId,
               is_inactive: false
             })
             .first();
 
       if (!resolvedBoard) {
-        throw new Error(
+        throw expectedClientTicketActionError(
           assignedBoardId
             ? VISIBILITY_NOT_FOUND_ERROR
             : 'No default board configured for tickets'
@@ -1163,7 +1195,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       );
 
       if (!defaultStatusId) {
-        throw new Error('No default status configured for tickets');
+        throw expectedClientTicketActionError('No default status configured for tickets');
       }
 
       // Convert to TicketModel input format
@@ -1173,7 +1205,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
-        entered_by: user.user_id,
+        entered_by: userId,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,
         board_id: resolvedBoard.board_id,
@@ -1194,16 +1226,15 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         {}, // validation options
         eventPublisher,
         analyticsTracker,
-        user.user_id,
+        userId,
         3 // max retries
       );
 
       // If an asset was selected, link it to the ticket. The asset must already
       // belong to the requester's client; we verify ownership before inserting.
       if (validatedData.asset_id) {
-        const asset = await trx('assets')
+        const asset = await tenantDb(trx, tenant).table('assets')
           .where({
-            tenant,
             asset_id: validatedData.asset_id,
             client_id: visibility.clientId,
           })
@@ -1211,16 +1242,16 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
           .first();
 
         if (!asset) {
-          throw new Error('Selected asset does not belong to this client');
+          throw expectedClientTicketActionError('Selected asset does not belong to this client');
         }
 
-        await trx('asset_associations').insert({
+        await tenantDb(trx, tenant).table('asset_associations').insert({
           tenant,
           asset_id: validatedData.asset_id,
           entity_id: ticketResult.ticket_id,
           entity_type: 'ticket',
           relationship_type: 'affected',
-          created_by: user.user_id,
+          created_by: userId,
           created_at: new Date().toISOString(),
         });
       }
@@ -1233,18 +1264,18 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
             tenantId: tenant,
             ticketId: ticketResult.ticket_id,
             userId: createTicketInput.assigned_to,
-            assignedByUserId: user.user_id
+            assignedByUserId: userId
           }
         });
       }
 
       // Get the full ticket data for return
-      const fullTicket = await trx('tickets')
-        .where({ ticket_id: ticketResult.ticket_id, tenant: tenant })
+      const fullTicket = await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: ticketResult.ticket_id })
         .first();
 
       if (!fullTicket) {
-        throw new Error('Failed to retrieve created ticket');
+        throw new Error('Created client ticket could not be reloaded after insert.');
       }
 
       return fullTicket as ITicket;
@@ -1252,13 +1283,6 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
 
     return result;
   } catch (error) {
-    console.error('Failed to create client ticket:', error);
-    if (error instanceof Error && (
-      error.message === VISIBILITY_NOT_FOUND_ERROR ||
-      error.message === 'Selected visibility group does not allow any boards'
-    )) {
-      throw error;
-    }
-    throw new Error('Failed to create ticket');
+    return expectedOrThrow(error, 'Failed to create client ticket:');
   }
 });

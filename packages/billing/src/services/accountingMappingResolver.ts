@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   AccountingAdapterType,
   CompanyAccountingSyncService,
@@ -13,12 +13,14 @@ export interface MappingResolution {
 }
 
 interface ResolveParams {
+  tenantId?: string;
   adapterType: string;
   serviceId: string;
   targetRealm?: string | null;
 }
 
 interface GenericResolveParams {
+  tenantId?: string;
   adapterType: string;
   entityType: string;
   entityId: string;
@@ -33,21 +35,23 @@ export class AccountingMappingResolver {
 
   constructor(
     private readonly knex: Knex,
-    private readonly companySyncService?: CompanyAccountingSyncService
+    private readonly companySyncService?: CompanyAccountingSyncService,
+    private readonly tenantId?: string | null
   ) {}
 
   static async create(deps: { companySyncService?: CompanyAccountingSyncService } = {}): Promise<AccountingMappingResolver> {
-    const { knex } = await createTenantKnex();
-    return new AccountingMappingResolver(knex, deps.companySyncService);
+    const { knex, tenant } = await createTenantKnex();
+    return new AccountingMappingResolver(knex, deps.companySyncService, tenant ?? null);
   }
 
   async resolveServiceMapping(params: ResolveParams): Promise<MappingResolution | null> {
-    const cacheKey = `${params.adapterType}:${params.targetRealm ?? 'default'}:${params.serviceId}`;
+    const tenantId = this.resolveTenant(params.tenantId);
+    const cacheKey = `${tenantId}:${params.adapterType}:${params.targetRealm ?? 'default'}:${params.serviceId}`;
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey) ?? null;
     }
 
-    const direct = await this.lookupMapping(params.adapterType, 'service', params.serviceId, params.targetRealm);
+    const direct = await this.lookupMapping(params.adapterType, 'service', params.serviceId, tenantId, params.targetRealm);
     if (direct) {
       const result: MappingResolution = {
         external_entity_id: direct.external_entity_id,
@@ -58,13 +62,13 @@ export class AccountingMappingResolver {
       return result;
     }
 
-    const serviceRow = await this.knex('service_catalog')
+    const serviceRow = await tenantDb(this.knex, tenantId).table('service_catalog')
       .select('category_id')
       .where({ service_id: params.serviceId })
       .first();
 
     if (serviceRow?.category_id) {
-      const category = await this.lookupMapping(params.adapterType, 'service_category', serviceRow.category_id, params.targetRealm);
+      const category = await this.lookupMapping(params.adapterType, 'service_category', serviceRow.category_id, tenantId, params.targetRealm);
       if (category) {
         const result: MappingResolution = {
           external_entity_id: category.external_entity_id,
@@ -80,12 +84,13 @@ export class AccountingMappingResolver {
     return null;
   }
 
-  async resolveTaxCodeMapping(params: { adapterType: string; taxRegionId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+  async resolveTaxCodeMapping(params: { tenantId?: string; adapterType: string; taxRegionId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
     if (!params.taxRegionId) {
       return null;
     }
     return this.resolveGenericMapping({
       adapterType: params.adapterType,
+      tenantId: params.tenantId,
       entityType: 'tax_code',
       entityId: params.taxRegionId,
       source: 'tax_code',
@@ -93,12 +98,13 @@ export class AccountingMappingResolver {
     });
   }
 
-  async resolvePaymentTermMapping(params: { adapterType: string; paymentTermId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+  async resolvePaymentTermMapping(params: { tenantId?: string; adapterType: string; paymentTermId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
     if (!params.paymentTermId) {
       return null;
     }
     return this.resolveGenericMapping({
       adapterType: params.adapterType,
+      tenantId: params.tenantId,
       entityType: 'payment_term',
       entityId: params.paymentTermId,
       source: 'payment_term',
@@ -106,12 +112,13 @@ export class AccountingMappingResolver {
     });
   }
 
-  async resolveClientMapping(params: { adapterType: string; clientId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+  async resolveClientMapping(params: { tenantId?: string; adapterType: string; clientId: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
     if (!params.clientId) {
       return null;
     }
     return this.resolveGenericMapping({
       adapterType: params.adapterType,
+      tenantId: params.tenantId,
       entityType: 'client',
       entityId: params.clientId,
       source: 'company',
@@ -158,12 +165,13 @@ export class AccountingMappingResolver {
   }
 
   private async resolveGenericMapping(params: GenericResolveParams): Promise<MappingResolution | null> {
-    const cacheKey = this.buildGenericCacheKey(params);
+    const tenantId = this.resolveTenant(params.tenantId);
+    const cacheKey = this.buildGenericCacheKey({ ...params, tenantId });
     if (this.genericCache.has(cacheKey)) {
       return this.genericCache.get(cacheKey) ?? null;
     }
 
-    const row = await this.lookupMapping(params.adapterType, params.entityType, params.entityId, params.targetRealm);
+    const row = await this.lookupMapping(params.adapterType, params.entityType, params.entityId, tenantId, params.targetRealm);
     if (!row) {
       this.genericCache.set(cacheKey, null);
       return null;
@@ -178,8 +186,8 @@ export class AccountingMappingResolver {
     return result;
   }
 
-  private buildGenericCacheKey(params: GenericResolveParams): string {
-    return `${params.adapterType}:${params.targetRealm ?? 'default'}:${params.entityType}:${params.entityId}`;
+  private buildGenericCacheKey(params: GenericResolveParams & { tenantId: string }): string {
+    return `${params.tenantId}:${params.adapterType}:${params.targetRealm ?? 'default'}:${params.entityType}:${params.entityId}`;
   }
 
   private buildCompanyCacheKey(params: {
@@ -200,9 +208,10 @@ export class AccountingMappingResolver {
     adapterType: string,
     entityType: string,
     entityId: string,
+    tenantId: string,
     targetRealm?: string | null
   ) {
-    const query = this.knex('tenant_external_entity_mappings')
+    const query = tenantDb(this.knex, tenantId).table('tenant_external_entity_mappings')
       .where({
         integration_type: adapterType,
         alga_entity_type: entityType,
@@ -219,6 +228,14 @@ export class AccountingMappingResolver {
     }
 
     return query.first();
+  }
+
+  private resolveTenant(tenantId?: string | null): string {
+    const resolved = tenantId ?? this.tenantId;
+    if (!resolved) {
+      throw new Error('AccountingMappingResolver requires tenant context');
+    }
+    return resolved;
   }
 
   private normalizeAdapterType(adapterType: string): AccountingAdapterType | null {

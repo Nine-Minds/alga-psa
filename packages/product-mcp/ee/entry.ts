@@ -34,4 +34,3 @@ export type { AuthorizePlan, AuthorizeDecision, TokenResult } from '@ee/lib/mcp/
 export { getPublicJwks } from '@ee/lib/mcp/oauth/keys';
 export { listConnectedClients } from '@ee/lib/mcp/oauth/clients';
 export { revokeGrant } from '@ee/lib/mcp/oauth/grants';
-export { isAuthServerEnabled } from '@ee/lib/mcp/oauth/config';

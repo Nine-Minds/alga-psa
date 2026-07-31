@@ -24,8 +24,11 @@ vi.mock('@alga-psa/db', () => ({
     const knex = (table: string) => {
       let filter: Record<string, unknown> | null = null;
       const builder = {
+        // Accumulate conditions like real knex (`.where(a).where(b)` ANDs),
+        // so the tenant filter injected by tenantDb.table survives a second
+        // `.where(...)` for the row-specific predicate.
         where(condition: Record<string, unknown>) {
-          filter = condition;
+          filter = { ...(filter ?? {}), ...condition };
           return builder;
         },
         async first() {
@@ -38,6 +41,9 @@ vi.mock('@alga-psa/db', () => ({
       return builder;
     };
     return knex;
+  }),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
   }),
 }));
 

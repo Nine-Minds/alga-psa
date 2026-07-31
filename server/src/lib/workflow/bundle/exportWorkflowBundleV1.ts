@@ -12,6 +12,7 @@ import {
   WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,
 } from '@alga-psa/workflows/persistence';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 const normalizeBoolean = (value: unknown, defaultValue: boolean): boolean =>
@@ -28,7 +29,7 @@ export const exportWorkflowBundleV1ForWorkflowId = async (knex: Knex, tenantId: 
   const key = record.key;
   assertWorkflowBundleWorkflowKey(key);
 
-  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId);
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId, tenantId);
   const publishedVersions = versions
     .map((row) => ({
       version: row.version,
@@ -86,9 +87,9 @@ export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, tenantId:
     throw new Error('exportWorkflowBundleV1ForWorkflowIds requires at least one workflowId.');
   }
 
-  const records = await knex('workflow_definitions')
+  const db = tenantDb(knex, tenantId);
+  const records = await db.table('workflow_definitions')
     .select('*')
-    .where({ tenant: tenantId })
     .whereIn('workflow_id', uniqueIds);
 
   const foundIds = new Set(records.map((r: any) => r.workflow_id));
@@ -100,7 +101,7 @@ export const exportWorkflowBundleV1ForWorkflowIds = async (knex: Knex, tenantId:
     throw error;
   }
 
-  const versionRows = await knex('workflow_definition_versions')
+  const versionRows = await db.table('workflow_definition_versions')
     .select('workflow_id', 'version', 'definition_json', 'payload_schema_json')
     .whereIn('workflow_id', uniqueIds);
 

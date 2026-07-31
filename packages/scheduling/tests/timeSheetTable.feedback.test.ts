@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot, Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 
@@ -105,6 +105,15 @@ describe('TimeSheetTable feedback markers', () => {
     Object.defineProperty(container, 'offsetWidth', { value: 900, configurable: true });
     document.body.appendChild(container);
     root = createRoot(container);
+  });
+
+  afterEach(() => {
+    // Unmount before the jsdom environment is torn down; otherwise React's
+    // scheduler fires pending work afterwards ("window is not defined").
+    flushSync(() => {
+      root.unmount();
+    });
+    container.remove();
   });
 
   const commonProps = {

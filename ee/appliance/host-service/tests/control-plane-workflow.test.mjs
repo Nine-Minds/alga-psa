@@ -59,7 +59,7 @@ test('T004 control-plane workflow persists setup, release/runtime selection, ini
         'temporal.single-node.yaml': 'temporal: packaged\n',
         'workflow-worker.single-node.yaml': 'image:\n  tag: old\n',
         'email-service.single-node.yaml': 'image:\n  tag: old\n',
-        'temporal-worker.single-node.yaml': 'image:\n  tag: old\n'
+        'temporal-worker.single-node.yaml': 'applicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: old\n'
       }
     };
     const releaseSelection = {

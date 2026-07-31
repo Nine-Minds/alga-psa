@@ -112,6 +112,26 @@ export class BadRequestError extends Error implements ApiError {
   }
 }
 
+export class BadGatewayError extends Error implements ApiError {
+  statusCode = 502;
+  code = 'BAD_GATEWAY';
+
+  constructor(message: string = 'Bad gateway') {
+    super(message);
+    this.name = 'BadGatewayError';
+  }
+}
+
+export class NotImplementedError extends Error implements ApiError {
+  statusCode = 501;
+  code = 'NOT_IMPLEMENTED';
+
+  constructor(message: string = 'Not implemented') {
+    super(message);
+    this.name = 'NotImplementedError';
+  }
+}
+
 export class TooManyRequestsError extends Error implements ApiError {
   statusCode = 429;
   code = 'RATE_LIMITED';
@@ -123,6 +143,83 @@ export class TooManyRequestsError extends Error implements ApiError {
     this.name = 'TooManyRequestsError';
     this.details = details;
   }
+}
+
+export type ServerActionErrorResult =
+  | { readonly permissionError: string }
+  | { readonly actionError: string };
+
+export function isServerActionErrorResult(value: unknown): value is ServerActionErrorResult {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.permissionError === 'string' ||
+    typeof candidate.actionError === 'string'
+  );
+}
+
+function getActionErrorStatus(message: string): number {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('not found')) {
+    return 404;
+  }
+  if (normalized.includes('already exists')) {
+    return 409;
+  }
+  return 400;
+}
+
+export function createServerActionErrorResponse(error: ServerActionErrorResult): NextResponse {
+  if ('permissionError' in error) {
+    return NextResponse.json({
+      error: {
+        code: 'FORBIDDEN',
+        message: error.permissionError,
+      },
+    }, { status: 403 });
+  }
+
+  const status = getActionErrorStatus(error.actionError);
+  return NextResponse.json({
+    error: {
+      code: status === 404 ? 'NOT_FOUND' : status === 409 ? 'CONFLICT' : 'BAD_REQUEST',
+      message: error.actionError,
+    },
+  }, { status });
+}
+
+const APPLICATION_ERROR_STATUS: Record<string, number> = {
+  QBO_AUTH_ERROR: 401,
+  QBO_CONFIG_MISSING: 400,
+  QBO_INVALID_INPUT: 400,
+  QBO_NOT_FOUND: 404,
+  QBO_SETUP_INCOMPLETE: 409,
+  QBO_STALE_OBJECT: 409,
+  QBO_VALIDATION_ERROR: 400,
+  QBO_API_ERROR: 502,
+  QBO_REFRESH_FAILED: 502,
+  XERO_CONNECTION_NOT_FOUND: 404,
+  XERO_NOT_CONFIGURED: 409,
+  XERO_REFRESH_EXPIRED: 401,
+  XERO_UNAUTHORIZED: 401,
+  XERO_VALIDATION_ERROR: 400,
+  XERO_API_ERROR: 502,
+};
+
+function getApplicationErrorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  if (typeof code !== 'string') {
+    return undefined;
+  }
+
+  return APPLICATION_ERROR_STATUS[code];
 }
 
 export async function buildAuthenticatedApiContext(keyRecord: {
@@ -287,7 +384,7 @@ export function withValidation(schema: ZodSchema) {
         return await handler(req, validatedData);
       } catch (error) {
         if (error instanceof ZodError) {
-          throw new ValidationError('Validation failed', error.errors);
+          return handleApiError(new ValidationError('Validation failed', error.errors));
         }
         return handleApiError(error);
       }
@@ -309,7 +406,7 @@ export function withQueryValidation(schema: ZodSchema) {
         return await handler(req, validatedQuery);
       } catch (error) {
         if (error instanceof ZodError) {
-          throw new ValidationError('Query validation failed', error.errors);
+          return handleApiError(new ValidationError('Query validation failed', error.errors));
         }
         return handleApiError(error);
       }
@@ -350,6 +447,17 @@ export function handleApiError(error: any): NextResponse {
       status: explicitStatus,
       headers: error.headers
     });
+  }
+
+  const applicationStatus = getApplicationErrorStatus(error);
+  if (typeof applicationStatus === 'number') {
+    return NextResponse.json({
+      error: {
+        code: error.code,
+        message: error.message,
+        details: redactedDetails
+      }
+    }, { status: applicationStatus });
   }
 
   // Handle Zod validation errors

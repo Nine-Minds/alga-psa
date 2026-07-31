@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "Solicitações de serviço",
-    "description": "Envie uma solicitação estruturada e criaremos um chamado para ela automaticamente.",
+    "description": "Envie uma solicitação estruturada e criaremos um ticket para ela automaticamente.",
     "myRequests": "Minhas solicitações",
     "empty": "Nenhum serviço de solicitação está disponível no momento.",
     "fallbackCategory": "Serviço",
@@ -12,7 +12,7 @@
     "version": "Versão {{version}}",
     "submitted": "Solicitação enviada",
     "requestIdLabel": "ID da solicitação:",
-    "ticketIdLabel": "ID do chamado:",
+    "ticketIdLabel": "ID do ticket:",
     "unableToSubmit": "Não foi possível enviar a solicitação",
     "formTitle": "Formulário de solicitação",
     "noFields": "Nenhum campo configurado.",
@@ -32,7 +32,7 @@
       "submitted": "Enviado",
       "status": "Status",
       "details": "Detalhes",
-      "ticket": "Chamado"
+      "ticket": "Ticket"
     },
     "view": "Visualizar",
     "unknownDate": "Desconhecido",
@@ -41,7 +41,7 @@
       "succeeded": "Sucesso",
       "failed": "Fracassado"
     },
-    "noTicket": "Sem chamado"
+    "noTicket": "Sem ticket"
   },
   "submissionDetail": {
     "backToMyRequests": "Voltar para Meus Pedidos",
@@ -49,7 +49,7 @@
     "statusSection": "Status",
     "submittedAt": "Enviado: {{date}}",
     "executionStatus": "Status de execução: {{status}}",
-    "ticketLabel": "Chamado:",
+    "ticketLabel": "Ticket:",
     "workflowLabel": "Fluxo de trabalho: {{id}}",
     "submittedAnswersTitle": "Respostas enviadas",
     "noResponse": "Sem resposta",
@@ -62,8 +62,8 @@
     "title": "Suas solicitações recentes",
     "viewAll": "Ver tudo",
     "empty": "Nenhuma solicitação enviada ainda.",
-    "ticket": "Chamado #{{number}}",
-    "noTicket": "Ainda não há chamado"
+    "ticket": "Ticket #{{number}}",
+    "noTicket": "Ainda não há ticket"
   },
   "myRequestsAll": {
     "title": "Suas solicitações"

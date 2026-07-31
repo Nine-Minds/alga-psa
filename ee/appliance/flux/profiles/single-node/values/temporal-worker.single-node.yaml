@@ -12,7 +12,20 @@ image:
 temporal:
   address: temporal-frontend.msp.svc.cluster.local:7233
   namespace: default
-  taskQueue: tenant-workflows,portal-domain-workflows,email-domain-workflows
+  # No portal-domain-workflows: the appliance uses the `direct` provisioner
+  # (deploymentProfile: appliance), so portal-domain registration never enqueues
+  # a workflow. Re-add this queue only if a future profile provisions domains via Temporal.
+  taskQueue: tenant-workflows,email-domain-workflows
+
+# Password hashes do not encode their PBKDF2 parameters. The appliance app
+# verifies its existing users with 1,000 iterations, so tenant creation on an
+# appliance must hash with the same value. Hosted temporal-worker deployments
+# keep the chart default (10,000).
+encryption:
+  saltBytes: "12"
+  iterations: "1000"
+  keyLength: "64"
+  algorithm: sha512
 
 db:
   host: pgbouncer.msp.svc.cluster.local
@@ -27,6 +40,18 @@ db:
     key: DB_PASSWORD_SUPERUSER
 
 applicationUrl: http://alga-core.msp.svc.cluster.local:3000
+publicBaseUrl: https://alga.local
+
+extraEnv:
+  - name: REDIS_HOST
+    value: redis.msp.svc.cluster.local
+  - name: REDIS_PORT
+    value: "6379"
+  - name: REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: redis-credentials
+        key: REDIS_PASSWORD
 
 autoscaling:
   enabled: true
@@ -52,8 +77,6 @@ auth:
     name: alga-core-sebastian-secrets
     key: NEXTAUTH_SECRET
 
-portalDomain:
-  certificateNamespace: ""
-  gatewayNamespace: ""
-  secretReplicationEnabled: false
-  baseVirtualService: ""
+# No portalDomain block: the appliance does not provision portal domains via the
+# Temporal worker (Istio/cert-manager are absent). Domains are activated directly
+# by alga-core (deploymentProfile: appliance -> direct provisioner).

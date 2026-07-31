@@ -117,7 +117,7 @@ describe('Contract Model', () => {
       await Contract.delete(knex, 'tenant-1', 'contract-123');
 
       expect(knex).toHaveBeenCalledWith('recurring_service_periods');
-      expect(mocks.where).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+      expect(mocks.where).toHaveBeenCalledWith('recurring_service_periods.tenant', 'tenant-1');
       expect(mocks.whereIn).toHaveBeenCalledWith('obligation_id', ['line-1', 'line-2']);
     });
   });

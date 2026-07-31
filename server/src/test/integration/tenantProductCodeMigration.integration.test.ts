@@ -35,7 +35,10 @@ describe('tenant product_code migration (integration)', () => {
         )
         .first();
 
-      expect(column?.is_nullable).toBe('NO');
+      // Migration 20260505140000 (amended by ec1aa735f3) deliberately skips the
+      // column-level NOT NULL (ALTER ... SET NOT NULL failed on the distributed
+      // tenants table); the CHECK constraint enforces non-null instead.
+      expect(column?.is_nullable).toBe('YES');
       expect(column?.data_type).toBe('text');
       expect(column?.column_default).toContain("'psa'");
 
@@ -51,6 +54,14 @@ describe('tenant product_code migration (integration)', () => {
         .select('product_code')
         .first();
       expect(updated?.product_code).toBe('algadesk');
+
+      // The CHECK constraint carries the NOT NULL guarantee the column no longer
+      // does. Run it in a savepoint so the outer trx stays usable afterwards.
+      await expect(
+        trx.transaction((sp) =>
+          sp('tenants').where({ tenant: anyTenant.tenant }).update({ product_code: null }),
+        ),
+      ).rejects.toThrow();
 
       await expect(
         trx('tenants')

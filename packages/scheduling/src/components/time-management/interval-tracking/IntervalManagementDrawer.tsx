@@ -15,6 +15,7 @@ import TimeEntryDialog from '../time-entry/time-sheet/TimeEntryDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getCurrentTimePeriod } from '../../../actions/timePeriodsActions';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface IntervalManagementDrawerProps {
   isOpen: boolean;
@@ -50,6 +51,11 @@ export function IntervalManagementDrawer({
     const fetchCurrentPeriod = async () => {
       try {
         const period = await getCurrentTimePeriod();
+        if (isActionMessageError(period) || isActionPermissionError(period)) {
+          console.error('Error fetching current time period:', getErrorMessage(period));
+          setCurrentTimePeriod(null);
+          return;
+        }
         setCurrentTimePeriod(period);
         
         // Additional check to ensure we have a valid period
@@ -64,6 +70,10 @@ export function IntervalManagementDrawer({
         if (fetchOrCreateTimeSheet && userId && period.period_id) {
           try {
             const timeSheet = await fetchOrCreateTimeSheet(userId, period.period_id);
+            if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
+              console.error('Error fetching/creating time sheet:', getErrorMessage(timeSheet));
+              return;
+            }
             console.log('Time sheet fetched/created:', timeSheet);
             // Update the timePeriod object to include the time sheet ID for later use
             setCurrentTimePeriod(prev => prev ? {

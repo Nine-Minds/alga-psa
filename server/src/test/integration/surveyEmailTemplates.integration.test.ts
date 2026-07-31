@@ -12,7 +12,13 @@ const SUPPORTED_LOCALES = [
   { code: 'de', subject: 'Wir freuen uns über Ihr Feedback zu Ticket {{ticket_number}}' },
   { code: 'nl', subject: 'We horen graag uw feedback over ticket {{ticket_number}}' },
   { code: 'it', subject: 'Ci farebbe piacere il tuo feedback sul ticket {{ticket_number}}' },
+  { code: 'pt', subject: 'Queremos sua opinião sobre o ticket {{ticket_number}}' },
+  { code: 'pl', subject: 'Chętnie poznamy Twoją opinię o zgłoszeniu {{ticket_number}}' },
 ];
+
+// A locale the product will never ship a template for — 'pt' stopped being a
+// valid fallback probe once the Portuguese templates were released.
+const UNSUPPORTED_LOCALE = 'zz';
 
 describe('Survey email templates', () => {
   let db: Knex;
@@ -68,7 +74,7 @@ describe('Survey email templates', () => {
     expect(french.html).toContain(templateData.rating_buttons_html);
 
     const fallback = await processor.process({
-      locale: 'pt',
+      locale: UNSUPPORTED_LOCALE,
       templateData,
     });
 

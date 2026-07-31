@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Providers Integrations - Master Detail Alternative</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --surface: #ffffff;
+      --line: #d9dee8;
+      --line-strong: #c8d0dd;
+      --text: #111827;
+      --muted: #58657a;
+      --purple: #7c3aed;
+      --purple-soft: #f3edff;
+      --amber: #b45309;
+      --amber-soft: #fff7ed;
+      --red: #b91c1c;
+      --red-soft: #fff1f2;
+      --green: #047857;
+      --green-soft: #ecfdf5;
+      --shadow: 0 1px 2px rgba(15, 23, 42, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .app { min-height: 100vh; display: grid; grid-template-columns: 256px minmax(0,1fr); }
+    .sidebar { background: #0d1320; color: #f8fafc; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 760; }
+    .mark { width: 32px; height: 32px; border-radius: 50%; background: var(--purple); display: grid; place-items: center; }
+    .back { color: #c4b5fd; font-weight: 650; }
+    .search { height: 40px; border: 1px solid #334155; color: #94a3b8; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; }
+    .nav-section { margin-top: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+    .nav-item { height: 40px; display: flex; align-items: center; padding: 0 8px; color: #f8fafc; border-radius: 5px; font-weight: 640; }
+    .nav-item.active { background: #312052; }
+    .main { min-width: 0; display: flex; flex-direction: column; }
+    .topbar { height: 65px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+    .crumb { font-size: 22px; font-weight: 760; }
+    .tenant { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; color: #334155; background: #f8fafc; font-size: 12px; }
+    .content { padding: 24px; min-width: 0; }
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 18px; overflow-x: auto; }
+    .tab { height: 42px; padding: 0 16px; display: flex; align-items: center; color: #637086; border-bottom: 2px solid transparent; font-weight: 620; white-space: nowrap; }
+    .tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+    .page-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 25px; line-height: 1.2; }
+    .sub { color: var(--muted); margin-top: 6px; max-width: 760px; }
+    .workspace {
+      display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; align-items: start;
+    }
+    .list, .detail {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); overflow: hidden;
+    }
+    .list-head, .detail-head {
+      padding: 16px; border-bottom: 1px solid var(--line); background: #fbfdff;
+    }
+    .list-head h2, .detail-head h2 { margin: 0; font-size: 18px; }
+    .provider-row {
+      padding: 14px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; cursor: default;
+    }
+    .provider-row:last-child { border-bottom: 0; }
+    .provider-row { cursor: pointer; }
+    .provider-row:hover { background: #fbfdff; }
+    .provider-row.active { border-left: 3px solid var(--purple); background: var(--purple-soft); padding-left: 13px; }
+    .provider-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 780; }
+    .provider-copy { color: var(--muted); font-size: 12px; }
+    .pill {
+      display: inline-flex; align-items: center; min-height: 24px; border-radius: 999px;
+      padding: 2px 9px; font-size: 12px; font-weight: 760; border: 1px solid transparent; white-space: nowrap;
+    }
+    .pill.warn { color: var(--amber); background: var(--amber-soft); border-color: #fed7aa; }
+    .pill.bad { color: var(--red); background: var(--red-soft); border-color: #fecaca; }
+    .pill.ok { color: var(--green); background: var(--green-soft); border-color: #bbf7d0; }
+    .pill.info { color: #5b21b6; background: var(--purple-soft); border-color: #ddd6fe; }
+    .notice {
+      border: 1px solid #c4b5fd; background: var(--purple-soft); border-radius: 8px;
+      padding: 12px; margin: 12px 16px; display: grid; gap: 8px;
+    }
+    .notice b { display: block; }
+    .notice span { color: #51416e; }
+    .btn {
+      min-height: 36px; border-radius: 6px; border: 1px solid var(--line-strong); background: #fff;
+      color: #1f2a3a; font-weight: 720; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px;
+      white-space: nowrap;
+    }
+    .btn.primary { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .btn.danger { background: #f97316; border-color: #f97316; color: #fff; }
+    .detail-head { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+    .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .detail-body { padding: 16px; display: grid; gap: 16px; }
+    .provider-detail.is-hidden { display: none; }
+    .segment { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; width: max-content; }
+    .seg { min-height: 34px; padding: 0 12px; display: inline-flex; align-items: center; font-weight: 720; border-right: 1px solid var(--line); color: #475569; background: #fff; }
+    .seg:last-child { border-right: 0; }
+    .seg.active { color: var(--purple); background: var(--purple-soft); }
+    .split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .panel-title { padding: 12px 14px; background: #fbfdff; border-bottom: 1px solid var(--line); font-weight: 780; display: flex; justify-content: space-between; gap: 12px; }
+    .panel-body { padding: 14px; display: grid; gap: 14px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px 16px; }
+    .field { display: grid; gap: 6px; }
+    label { color: #172033; font-size: 13px; font-weight: 740; }
+    input, textarea, select {
+      min-height: 36px; width: 100%; border: 1px solid var(--line-strong); border-radius: 6px;
+      padding: 8px 10px; color: #1f2937; background: #fff; font: inherit;
+    }
+    textarea { min-height: 120px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: vertical; }
+    .help { color: var(--muted); font-size: 12px; }
+    .copybox { border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: #fbfdff; }
+    .copybox span { display: block; color: var(--muted); font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+    .switch-line { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .switch { width: 42px; height: 24px; border-radius: 999px; background: #94a3b8; padding: 3px; flex: 0 0 auto; }
+    .switch::after { content: ""; display: block; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+    .table { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .row { display: grid; grid-template-columns: 140px minmax(0,1fr) 130px; gap: 12px; padding: 12px; border-bottom: 1px solid var(--line); align-items: center; }
+    .row:last-child { border-bottom: 0; }
+    .profile { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; }
+    .profile-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .profile h3 { margin: 0; font-size: 16px; }
+    .mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .mini { border: 1px solid var(--line); border-radius: 6px; background: #fbfdff; padding: 8px; min-width: 0; }
+    .mini span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 800; }
+    .mini b { display: block; margin-top: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+    .readiness { border: 1px solid #fecaca; background: var(--red-soft); color: var(--red); border-radius: 6px; padding: 10px 12px; }
+    .sticky-actions { position: sticky; bottom: 0; background: #fbfdff; border-top: 1px solid var(--line); padding: 12px 16px; display: flex; justify-content: space-between; gap: 12px; }
+    @media (max-width: 1220px) {
+      .workspace, .split { grid-template-columns: 1fr; }
+      .form-grid, .mini-grid, .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="mark">A</div>AlgaPSA</div>
+      <div class="back">&lt; Back to Main</div>
+      <div class="search">Search clients, tickets, documents...</div>
+      <div class="nav-section">Organization & Access</div>
+      <div class="nav-item">Users</div>
+      <div class="nav-item">Teams</div>
+      <div class="nav-item">Language</div>
+      <div class="nav-item">Client Portal</div>
+      <div class="nav-section">Data & Integration</div>
+      <div class="nav-item">Secrets</div>
+      <div class="nav-item">Import/Export</div>
+      <div class="nav-item active">Integrations</div>
+      <div class="nav-item">Extensions</div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">Home &gt; General</div>
+        <div class="tenant">dd8cb218-d46d-47f3-be27-8aa50aad5fce</div>
+      </header>
+      <div class="content">
+        <nav class="tabs">
+          <div class="tab">Accounting</div>
+          <div class="tab">RMM</div>
+          <div class="tab">IT Documentation</div>
+          <div class="tab">Communication</div>
+          <div class="tab">Calendar</div>
+          <div class="tab active">Providers</div>
+          <div class="tab">Payments</div>
+        </nav>
+        <div class="page-head">
+          <div>
+            <h1>Provider Credentials</h1>
+            <div class="sub">Set up the provider your tenant uses. Most tenants only need Google or Microsoft.</div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn primary">Open Single Sign-On</button>
+            <button class="btn">Refresh all</button>
+          </div>
+        </div>
+
+        <section class="workspace">
+          <aside class="list">
+            <div class="list-head">
+              <h2>Providers</h2>
+              <div class="sub">Pick one provider path. Use both only when your workflows require both.</div>
+            </div>
+            <div class="provider-row active" data-provider="google" role="button" tabindex="0">
+              <div class="provider-title">Google <span class="pill warn">Needs setup</span></div>
+              <div class="provider-copy">Gmail inbound email and Google Calendar</div>
+            </div>
+            <div class="provider-row" data-provider="microsoft" role="button" tabindex="0">
+              <div class="provider-title">Microsoft <span class="pill warn">Needs attention</span></div>
+              <div class="provider-copy">MSP SSO, Outlook email, calendar sync, Teams</div>
+            </div>
+          </aside>
+
+          <section class="detail">
+            <div class="provider-detail" data-detail="google">
+            <div class="detail-head">
+              <div>
+                <h2>Google</h2>
+                <div class="sub">Tenant-owned Google Cloud credentials for Gmail and Calendar.</div>
+              </div>
+              <div class="detail-actions">
+                <button class="btn">Google Cloud Console</button>
+                <button class="btn">Setup guide</button>
+              </div>
+            </div>
+            <div class="detail-body">
+              <div class="segment">
+                <div class="seg active">Credentials</div>
+                <div class="seg">App registration</div>
+                <div class="seg">Provider reset</div>
+              </div>
+              <div class="split">
+                <div class="panel">
+                  <div class="panel-title">Credentials <span class="pill warn">Required fields missing</span></div>
+                  <div class="panel-body">
+                    <div class="form-grid">
+                      <div class="field">
+                        <label for="project">Google Cloud project ID</label>
+                        <input id="project" placeholder="my-project-id">
+                        <div class="help">Used for Gmail Pub/Sub provisioning.</div>
+                      </div>
+                    </div>
+                    <div class="switch-line">
+                      <div>
+                        <b>Use one Google OAuth client for Gmail and Calendar</b>
+                        <div class="help">Recommended. Provider accounts can still authorize separately.</div>
+                      </div>
+                      <div class="switch" aria-hidden="true"></div>
+                    </div>
+                    <div class="form-grid">
+                      <div class="field">
+                        <label for="gmail-id">Gmail OAuth Client ID</label>
+                        <input id="gmail-id" placeholder="xxxxxxxxx.apps.googleusercontent.com">
+                      </div>
+                      <div class="field">
+                        <label for="gmail-secret">Gmail OAuth Client Secret</label>
+                        <input id="gmail-secret" type="password" placeholder="Enter client secret">
+                      </div>
+                      <div class="field">
+                        <label for="calendar-id">Calendar OAuth Client ID</label>
+                        <input id="calendar-id" placeholder="xxxxxxxxx.apps.googleusercontent.com">
+                      </div>
+                      <div class="field">
+                        <label for="calendar-secret">Calendar OAuth Client Secret</label>
+                        <input id="calendar-secret" type="password" placeholder="Enter client secret">
+                      </div>
+                      <div class="field" style="grid-column:1 / -1">
+                        <label for="service">Pub/Sub service account key JSON</label>
+                        <textarea id="service" placeholder='{"type":"service_account","project_id":"...","private_key_id":"...","private_key":"...","client_email":"..."}'></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <aside class="panel">
+                  <div class="panel-title">App registration values</div>
+                  <div class="panel-body">
+                    <div class="copybox"><span>Gmail redirect URI</span><code>http://localhost:3486/api/auth/google/callback</code></div>
+                    <div class="copybox"><span>Calendar redirect URI</span><code>http://localhost:3486/api/auth/google/calendar/callback</code></div>
+                    <div class="copybox"><span>Gmail scopes</span><code>https://www.googleapis.com/auth/gmail.readonly, https://www.googleapis.com/auth/pubsub</code></div>
+                    <div class="copybox"><span>Calendar scope</span><code>https://www.googleapis.com/auth/calendar</code></div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+            <div class="sticky-actions">
+              <button class="btn">Refresh Google</button>
+              <div>
+                <button class="btn danger">Disconnect Google providers</button>
+                <button class="btn primary">Save Google</button>
+              </div>
+            </div>
+            </div>
+
+            <div class="provider-detail is-hidden" data-detail="microsoft">
+              <div class="detail-head">
+                <div>
+                  <h2>Microsoft</h2>
+                  <div class="sub">Choose the Microsoft profiles used by MSP SSO, Outlook email, calendar sync, and Teams.</div>
+                </div>
+                <div class="detail-actions">
+                  <button class="btn">Microsoft Entra</button>
+                  <button class="btn primary">New profile</button>
+                </div>
+              </div>
+              <div class="detail-body">
+                <div class="segment">
+                  <div class="seg active">Service bindings</div>
+                  <div class="seg">Profiles</div>
+                  <div class="seg">Entra app values</div>
+                </div>
+                <div class="panel">
+                  <div class="panel-title">Service profile bindings <span class="pill warn">2 unbound</span></div>
+                  <div class="panel-body">
+                    <div class="table">
+                      <div class="row"><b>MSP SSO</b><select><option>Smoke Teams Only 20260708</option></select><span class="pill warn">Needs attention</span></div>
+                      <div class="row"><b>Email</b><select><option>Smoke Email Profile 20260708</option></select><span class="pill warn">Needs attention</span></div>
+                      <div class="row"><b>Calendar</b><select><option>Leave unbound</option><option>No enabled profile</option></select><span class="pill bad">Unbound</span></div>
+                      <div class="row"><b>Teams</b><select><option>Leave unbound</option><option>No enabled profile</option></select><span class="pill bad">Unbound</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-title">Profile library <span class="pill warn">2 profiles need secrets</span></div>
+                  <div class="panel-body">
+                    <div class="profile">
+                      <div class="profile-top">
+                        <h3>Smoke Teams Only 20260708 <span class="pill ok">Default</span> <span class="pill warn">Needs attention</span></h3>
+                        <div><button class="btn">Edit</button> <button class="btn danger">Archive</button></div>
+                      </div>
+                      <div class="mini-grid">
+                        <div class="mini"><span>Tenant ID</span><b>common</b></div>
+                        <div class="mini"><span>Client ID</span><b>02c1edbc-10db-4439-b002-1187acf7b268</b></div>
+                        <div class="mini"><span>Services using this profile</span><b>MSP SSO</b></div>
+                      </div>
+                      <div class="readiness">Add a client secret.</div>
+                      <details><summary>Microsoft Entra app values</summary></details>
+                    </div>
+                    <div class="profile">
+                      <div class="profile-top">
+                        <h3>Smoke Email Profile 20260708 <span class="pill warn">Needs attention</span></h3>
+                        <div><button class="btn">Edit</button> <button class="btn">Set default</button> <button class="btn danger">Archive</button></div>
+                      </div>
+                      <div class="mini-grid">
+                        <div class="mini"><span>Tenant ID</span><b>common</b></div>
+                        <div class="mini"><span>Client ID</span><b>f879c391-04fe-4e49-b303-e8e6977a6447</b></div>
+                        <div class="mini"><span>Services using this profile</span><b>Email</b></div>
+                      </div>
+                      <div class="readiness">Add a client secret.</div>
+                      <details><summary>Microsoft Entra app values</summary></details>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="sticky-actions">
+                <button class="btn">Refresh Microsoft</button>
+                <div>
+                  <button class="btn danger">Disconnect Microsoft providers</button>
+                  <button class="btn primary">Save Microsoft</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script>
+    const rows = Array.from(document.querySelectorAll('[data-provider]'));
+    const panes = Array.from(document.querySelectorAll('[data-detail]'));
+
+    function showProvider(provider) {
+      rows.forEach((row) => row.classList.toggle('active', row.dataset.provider === provider));
+      panes.forEach((pane) => pane.classList.toggle('is-hidden', pane.dataset.detail !== provider));
+    }
+
+    rows.forEach((row) => {
+      row.addEventListener('click', () => showProvider(row.dataset.provider));
+      row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          showProvider(row.dataset.provider);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

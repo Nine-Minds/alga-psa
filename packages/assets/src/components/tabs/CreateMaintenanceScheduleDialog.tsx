@@ -9,6 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createMaintenanceSchedule, updateMaintenanceSchedule } from '../../actions/assetActions';
+import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import type {
   MaintenanceType,
   MaintenanceFrequency,
@@ -146,9 +147,9 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
           ...scheduleData,
           is_active: isActive
         };
-        await updateMaintenanceSchedule(schedule.schedule_id, updateData);
+        unwrapAssetActionResult(await updateMaintenanceSchedule(schedule.schedule_id, updateData));
       } else {
-        await createMaintenanceSchedule(scheduleData);
+        unwrapAssetActionResult(await createMaintenanceSchedule(scheduleData));
       }
 
       // Reset form

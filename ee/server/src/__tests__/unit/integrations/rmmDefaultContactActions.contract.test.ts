@@ -56,8 +56,8 @@ describe('RMM default contact action contracts', () => {
   it('T043: deleting a contact unlinks it from any RMM mapping default (backend, not a DB FK)', () => {
     const source = readRepoFile('packages/clients/src/actions/contact-actions/contactActions.tsx');
 
-    expect(source).toContain("trx('rmm_organization_mappings')");
-    expect(source).toContain('.where({ default_contact_id: contactId, tenant: tenantId })');
+    expect(source).toContain("tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)");
+    expect(source).toContain('.where({ default_contact_id: contactId })');
     expect(source).toContain('.update({ default_contact_id: null })');
   });
 });

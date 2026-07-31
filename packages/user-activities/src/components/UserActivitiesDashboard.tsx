@@ -14,7 +14,6 @@ import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { DEFAULT_TABLE_TYPES } from './constants';
 
 export function UserActivitiesDashboard() {
   const { t } = useTranslation('msp/user-activities');
@@ -64,11 +63,13 @@ export function UserActivitiesDashboard() {
   const handleViewAllNotifications = () => handleViewAll([ActivityType.NOTIFICATION]);
 
 
-  // Determine the filters to apply to the table
-  const currentTableFilters: ActivityFiltersType = tableInitialFilters || {
-    types: DEFAULT_TABLE_TYPES,
-    isClosed: false
-  };
+  // Determine the filters to apply to the table.
+  // When no explicit "View All" filters were passed, hand the table an EMPTY object so it
+  // hydrates from the user's saved preferences (due/created dates, client, tags, search, …).
+  // Injecting default types here would make the table's `hasExplicitFilters` true and
+  // permanently bypass that hydration — silently dropping every persisted filter on reload.
+  // The table falls back to its own DEFAULT_FILTERS when the user has no saved preference.
+  const currentTableFilters: ActivityFiltersType = tableInitialFilters || {};
 
   // Table view content - Defined before use and memoized to prevent unnecessary re-renders
   const tableViewContent = useMemo(() => (

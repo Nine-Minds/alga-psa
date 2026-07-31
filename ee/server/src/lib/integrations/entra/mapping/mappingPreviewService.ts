@@ -1,4 +1,5 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { mapEntraManagedTenantRow } from '../entraRowMappers';
 import {
   extractDomainFromEmailOrUrl,
@@ -20,6 +21,8 @@ interface PreviewTenant {
   displayName: string | null;
   primaryDomain: string | null;
   sourceUserCount: number;
+  mappingState?: 'mapped' | 'create_new' | 'skip_for_now' | 'needs_review';
+  mappedClientId?: string | null;
 }
 
 interface PreviewCandidate {
@@ -117,30 +120,38 @@ function buildDomainCandidates(
 export async function buildEntraMappingPreview(
   tenant: string
 ): Promise<EntraMappingPreviewResult> {
-  const { managedTenants, clients, inboundDomains } = await runWithTenant(tenant, async () => {
+  const { managedTenants, clients, inboundDomains, activeMappings } = await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
-
-
-    const [managedTenantRows, clientRows, inboundDomainRows] = await Promise.all([
-      knex('entra_managed_tenants')
-        .where({ tenant })
+    const [managedTenantRows, clientRows, inboundDomainRows, activeMappingRows] = await Promise.all([
+      db.table('entra_managed_tenants')
         .orderByRaw('coalesce(display_name, entra_tenant_id) asc')
         .select('*'),
-      knex('clients')
-        .where({ tenant })
+      db.table('clients')
         .select('client_id', 'client_name', 'url', 'properties', 'billing_email'),
-      knex('client_inbound_email_domains')
-        .where({ tenant })
+      db.table('client_inbound_email_domains')
         .select('client_id', 'domain'),
+      db.table('entra_client_tenant_mappings')
+        .where({ is_active: true })
+        .select('managed_tenant_id', 'client_id', 'mapping_state'),
     ]);
 
     return {
       managedTenants: managedTenantRows,
       clients: clientRows as ClientRow[],
       inboundDomains: inboundDomainRows as Array<{ client_id: string; domain: string }>,
+      activeMappings: activeMappingRows as Array<{
+        managed_tenant_id: string;
+        client_id: string | null;
+        mapping_state: PreviewTenant['mappingState'];
+      }>,
     };
   });
+
+  const activeMappingByTenant = new Map(
+    activeMappings.map((mapping) => [String(mapping.managed_tenant_id), mapping])
+  );
 
   const inboundDomainsByClient = new Map<string, string[]>();
   for (const row of inboundDomains) {
@@ -160,12 +171,15 @@ export async function buildEntraMappingPreview(
 
   for (const rawManagedTenant of managedTenants) {
     const mapped = mapEntraManagedTenantRow(rawManagedTenant as Record<string, unknown>);
+    const activeMapping = activeMappingByTenant.get(mapped.managed_tenant_id);
     const tenantPreview: PreviewTenant = {
       managedTenantId: mapped.managed_tenant_id,
       entraTenantId: mapped.entra_tenant_id,
       displayName: mapped.display_name,
       primaryDomain: mapped.primary_domain,
       sourceUserCount: mapped.source_user_count,
+      mappingState: activeMapping?.mapping_state,
+      mappedClientId: activeMapping?.client_id || null,
     };
 
     const exactMatches = findExactDomainMatches(mapped.primary_domain, exactClients);

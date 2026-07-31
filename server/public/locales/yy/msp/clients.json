@@ -38,7 +38,15 @@
     "no": "55555",
     "yes": "55555"
   },
+  "clientLifecycle": {
+    "prospect": "55555",
+    "active": "55555",
+    "former": "55555",
+    "all": "55555"
+  },
   "clientsPage": {
+    "filterByLifecycle": "55555",
+    "lifecycleFilterLabel": "55555",
     "title": "55555",
     "description": "55555",
     "searchPlaceholder": "55555",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "55555"
   },
   "clientDetails": {
+    "opportunities": "55555",
+    "lifecycleStatus": "55555",
+    "lifecycleStatusHelper": "55555",
     "title": "55555",
     "backToClients": "55555",
     "openInNewTab": "55555",
@@ -278,9 +289,164 @@
     "nameAliasRemoveFailed": "55555",
     "nameAliasRemoved": "55555",
     "nameAliases": "55555",
-    "noNameAliases": "55555"
+    "noNameAliases": "55555",
+    "equipment": "55555",
+    "parentClientSelf": "55555",
+    "parentClientPlaceholder": "55555",
+    "parentClientClear": "55555",
+    "parentClientLegacy": "55555 {{name}} 55555"
+  },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "55555",
+      "documents": "55555",
+      "installBase": "55555",
+      "locations": "55555",
+      "money": "55555",
+      "notes": "55555",
+      "people": "55555",
+      "record": "55555",
+      "service": "55555",
+      "timeline": "55555"
+    },
+    "csatEmpty": "55555",
+    "discardCancel": "55555",
+    "discardConfirm": "55555",
+    "discardMessage": "55555",
+    "discardTitle": "55555",
+    "documents": {
+      "more": "55555 {{count}} 55555",
+      "none": "55555"
+    },
+    "flags": {
+      "clientWaiting": "55555 {{days}} 55555 {{ref}} 55555",
+      "draftInvoices_one": "55555 {{amount}} 55555 {{ref}} 55555",
+      "draftInvoices_other": "55555 {{count}} 55555 {{amount}} 55555 {{ref}} 55555",
+      "rmaOpen_one": "55555 {{days}} 55555",
+      "rmaOpen_other": "55555 {{count}} 55555 {{days}} 55555",
+      "slaAtRisk_one": "55555 {{ref}} 55555",
+      "slaAtRisk_other": "55555 {{count}} 55555 {{ref}} 55555",
+      "slaBreached_one": "55555 {{ref}} 55555",
+      "slaBreached_other": "55555 {{count}} 55555 {{ref}} 55555",
+      "soPartial": "55555 {{ref}} 55555 {{fulfilled}} 55555 {{total}} 55555",
+      "ticketOverdue_one": "55555 {{ref}} 55555 {{days}} 55555",
+      "ticketOverdue_other": "55555 {{count}} 55555 {{ref}} 55555 {{days}} 55555",
+      "ticketUnassigned_one": "55555 {{ref}} 55555",
+      "ticketUnassigned_other": "55555 {{count}} 55555 {{ref}} 55555",
+      "wipAging_one": "55555 {{days}} 55555 {{materials}} 55555",
+      "wipAging_other": "55555 {{count}} 55555 {{days}} 55555 {{materials}} 55555"
+    },
+    "installBase": {
+      "assets": "55555",
+      "assetsLink": "55555",
+      "none": "55555",
+      "rmas": "55555",
+      "sold": "55555",
+      "viewAsset": "55555",
+      "warrantyExpired_one": "55555",
+      "warrantyExpired_other": "55555 {{count}} 55555",
+      "warrantyExpiring_one": "55555",
+      "warrantyExpiring_other": "55555 {{count}} 55555",
+      "warrantyTracked": "55555 {{count}} 55555"
+    },
+    "locations": {
+      "billing": "55555",
+      "manage": "55555",
+      "more": "55555 {{count}} 55555",
+      "none": "55555",
+      "shipping": "55555"
+    },
+    "money": {
+      "activeContracts": "55555",
+      "agingNote": "55555 {{total}} 55555",
+      "billingSetup": "55555",
+      "current": "55555",
+      "draft": "55555",
+      "moreDrafts_one": "55555",
+      "moreDrafts_other": "55555 {{count}} 55555",
+      "nothingOutstanding": "55555",
+      "taxSettings": "55555",
+      "unbilledHours": "55555 {{hours}} 55555",
+      "unbilledMaterials": "55555 {{amount}} 55555",
+      "unbilledWork": "55555"
+    },
+    "notes": {
+      "add": "55555",
+      "lastEdited": "55555 {{days}} 55555",
+      "none": "55555"
+    },
+    "openView": "55555",
+    "people": {
+      "addContact": "55555",
+      "more": "55555 {{count}} 55555",
+      "noContactInfo": "55555",
+      "none": "55555",
+      "primary": "55555"
+    },
+    "pulseError": "55555",
+    "rail": {
+      "close": "55555",
+      "installBase": "55555",
+      "label": "55555",
+      "money": "55555",
+      "more": "55555",
+      "records": "55555",
+      "service": "55555"
+    },
+    "record": {
+      "accountManager": "55555",
+      "additionalInfo": "55555",
+      "clientSince": "55555",
+      "defaultContact": "55555",
+      "edit": "55555",
+      "unset": "55555"
+    },
+    "service": {
+      "newTicket": "55555",
+      "none": "55555",
+      "oldest": "55555",
+      "open": "55555",
+      "overdue": "55555",
+      "overdueTag": "55555",
+      "unassigned": "55555"
+    },
+    "sla": {
+      "atRisk": "55555",
+      "atRiskLeft": "55555 {{left}} 55555",
+      "breached": "55555",
+      "breachedAgo": "55555 {{over}} 55555",
+      "onTrack": "55555",
+      "onTrackLeft": "55555 {{left}} 55555",
+      "paused": "55555"
+    },
+    "timeline": {
+      "daysAgo": "55555 {{count}} 55555",
+      "empty": "55555",
+      "error": "55555",
+      "filterAll": "55555",
+      "filterInteractions": "55555",
+      "filterInventory": "55555",
+      "filterMoney": "55555",
+      "filterService": "55555",
+      "hoursAgo": "55555 {{count}} 55555",
+      "interaction": "55555",
+      "invoiceCreated": "55555",
+      "invoiceFinalized": "55555",
+      "justNow": "55555",
+      "loadMore": "55555",
+      "loading": "55555",
+      "materialAdded": "55555",
+      "quoteActivity": "55555",
+      "rmaClosed": "55555",
+      "rmaOpened": "55555",
+      "soCreated": "55555",
+      "ticketClosed": "55555",
+      "ticketOpened": "55555",
+      "unitDelivered": "55555"
+    }
   },
   "quickAddClient": {
+    "lifecycleStatus": "55555",
     "title": "55555",
     "clientDetails": "55555",
     "clientLocation": "55555",
@@ -328,7 +494,8 @@
     "created": "55555 {{name}} 55555",
     "createAndAddAnother": "55555",
     "createAndView": "55555",
-    "additionalDetails": "55555"
+    "additionalDetails": "55555",
+    "createFailed": "55555"
   },
   "clientCreatedDialog": {
     "title": "55555",
@@ -446,7 +613,8 @@
     "formattingError": "55555",
     "removeAssignmentTitle": "55555",
     "removeAssignmentMessage": "55555",
-    "contracts": "55555"
+    "contracts": "55555",
+    "taxRatesLoadError": "55555"
   },
   "clientBillingSchedule": {
     "title": "55555",
@@ -594,7 +762,8 @@
     "startDate": "55555",
     "startDateRequired": "55555",
     "updateAssignment": "55555",
-    "useTenantRenewalDefaults": "55555"
+    "useTenantRenewalDefaults": "55555",
+    "saveError": "55555"
   },
   "clientContractLineDashboard": {
     "title": "55555",
@@ -616,7 +785,10 @@
     "noActiveBucketPlans": "55555",
     "noHours": "55555",
     "noInvoices": "55555",
-    "noUsage": "55555"
+    "noUsage": "55555",
+    "retry": "55555",
+    "loadError": "55555",
+    "balanceDue": "55555"
   },
   "clientContractLineGuide": {
     "title": "55555",
@@ -895,8 +1067,15 @@
     "email": "55555",
     "clientName": "55555",
     "importCompleteMessage": "55555 {{count}} 55555",
+    "importCompleteWithErrors": "55555",
+    "importResultSummary": "55555 {{created}} 55555 {{updated}} 55555 {{skipped}} 55555 {{failed}} 55555",
+    "skippedExistingMessage": "55555 {{count}} 55555",
+    "error": "55555",
     "updateExistingTitle": "55555",
-    "updateExistingMessage": "55555 {{count}} 55555"
+    "updateExistingMessage": "55555 {{count}} 55555",
+    "invalidRowsBlocked": "55555 {{count}} 55555",
+    "noValidRows": "55555",
+    "serverFailures": "55555 {{failed}} 55555 {{total}} 55555"
   },
   "clientsList": {
     "name": "55555",
@@ -1008,7 +1187,6 @@
     "title": "55555",
     "description": "55555",
     "createDefault": "55555",
-    "goToBillingTaxSettings": "55555",
     "taxExemptStatus": "55555",
     "taxExempt": "55555",
     "taxExemptHelp": "55555",
@@ -1049,12 +1227,13 @@
   "clientNotesPanel": {
     "title": "55555",
     "initialNote": "55555",
-    "lastUpdated": "55555",
+    "lastUpdated": "55555 {{value}} 55555",
     "save": "55555",
     "retry": "55555",
     "loadError": "55555",
     "unknownError": "55555",
-    "loadErrorTitle": "55555"
+    "loadErrorTitle": "55555",
+    "loadErrorDescription": "55555"
   },
   "actions": {
     "cancel": "55555",
@@ -1218,7 +1397,9 @@
         "endRequired": "55555",
         "startRequired": "55555",
         "unavailable": "55555"
-      }
+      },
+      "loadFailed": "55555",
+      "saveFailed": "55555"
     },
     "feed": {
       "addInteraction": "55555",
@@ -1231,7 +1412,9 @@
       "searchPlaceholder": "55555",
       "startDate": "55555",
       "title": "55555",
-      "typePlaceholder": "55555"
+      "typePlaceholder": "55555",
+      "loadFailed": "55555",
+      "typesLoadFailed": "55555"
     },
     "overall": {
       "allContacts": "55555",
@@ -1248,7 +1431,8 @@
       "startTimeLabel": "55555",
       "startTimePlaceholder": "55555",
       "statusPlaceholder": "55555",
-      "title": "55555"
+      "title": "55555",
+      "statusesLoadFailed": "55555"
     }
   },
   "clientDrawer": {
@@ -1267,7 +1451,10 @@
         "serialNumber": "55555",
         "status": "55555",
         "type": "55555",
-        "warrantyEnd": "55555"
+        "warrantyEnd": "55555",
+        "agent": "55555",
+        "patching": "55555",
+        "coverage": "55555"
       },
       "details": {
         "local": "55555",
@@ -1312,7 +1499,9 @@
         "printer": "55555",
         "server": "55555",
         "workstation": "55555"
-      }
+      },
+      "loadError": "55555",
+      "retry": "55555"
     },
     "tickets": {
       "addTicket": "55555",
@@ -1335,6 +1524,36 @@
         "openTicketFailed": "55555",
         "userNotAuthenticated": "55555"
       }
+    }
+  },
+  "clientEquipmentTab": {
+    "retry": "55555",
+    "loadError": "55555",
+    "emptyValue": "55555",
+    "orderNumber": "55555",
+    "status": "55555",
+    "ordered": "55555",
+    "amount": "55555",
+    "product": "55555",
+    "sku": "55555",
+    "serialNumber": "55555",
+    "delivered": "55555",
+    "asset": "55555",
+    "viewAsset": "55555",
+    "rmaNumber": "55555",
+    "opened": "55555",
+    "salesOrders": "55555",
+    "noSalesOrders": "55555",
+    "deliveredUnits": "55555",
+    "noDeliveredEquipment": "55555",
+    "rmas": "55555",
+    "noRmas": "55555"
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "55555",
+      "notFound": "55555",
+      "loadFailed": "55555"
     }
   }
 }

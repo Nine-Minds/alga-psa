@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
+import { buildMicrosoftEmailProviderConfig as resolveMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import type {
   EmailMessageDetails,
   EmailProviderConfig,
@@ -125,8 +127,8 @@ async function getAdminKnex(): Promise<any> {
 }
 
 async function loadProviderRow(knex: any, tenant: string, providerId: string): Promise<any | null> {
-  return knex('email_providers')
-    .where({ tenant, id: providerId })
+  return tenantDb(knex, tenant).table('email_providers')
+    .where({ id: providerId })
     .first();
 }
 
@@ -135,8 +137,8 @@ async function buildMicrosoftProviderConfig(
   tenant: string,
   providerRow: any
 ): Promise<EmailProviderConfig> {
-  const config = await knex('microsoft_email_provider_config')
-    .where({ tenant, email_provider_id: providerRow.id })
+  const config = await tenantDb(knex, tenant).table('microsoft_email_provider_config')
+    .where({ email_provider_id: providerRow.id })
     .first();
   if (!config) {
     throw new Error(`Microsoft provider config not found for provider ${providerRow.id}`);
@@ -175,8 +177,8 @@ async function buildGoogleProviderConfig(
   tenant: string,
   providerRow: any
 ): Promise<EmailProviderConfig> {
-  const config = await knex('google_email_provider_config')
-    .where({ tenant, email_provider_id: providerRow.id })
+  const config = await tenantDb(knex, tenant).table('google_email_provider_config')
+    .where({ email_provider_id: providerRow.id })
     .first();
   if (!config) {
     throw new Error(`Google provider config not found for provider ${providerRow.id}`);
@@ -215,17 +217,17 @@ async function buildGoogleProviderConfig(
 }
 
 async function resolveSystemUserId(knex: any, tenant: string): Promise<string | null> {
-  const inboundDefaults = await knex('inbound_ticket_defaults')
+  const db = tenantDb(knex, tenant);
+  const inboundDefaults = await db.table('inbound_ticket_defaults')
     .select('entered_by')
-    .where({ tenant, is_active: true })
+    .where({ is_active: true })
     .whereNotNull('entered_by')
     .orderBy('updated_at', 'desc')
     .first();
   if (inboundDefaults?.entered_by) return inboundDefaults.entered_by;
 
-  const user = await knex('users')
+  const user = await db.table('users')
     .select('user_id')
-    .where({ tenant })
     .orderBy('created_at', 'asc')
     .first();
   return user?.user_id || null;
@@ -245,8 +247,9 @@ async function claimAttachmentRow(
   }
 ): Promise<{ claimed: true } | { claimed: false; result: Record<string, any> }> {
   const now = new Date();
+  const db = tenantDb(knex, args.tenantId);
   try {
-    await knex('email_processed_attachments').insert({
+    await db.table('email_processed_attachments').insert({
       tenant: args.tenantId,
       provider_id: args.providerId,
       email_id: args.emailId,
@@ -266,9 +269,8 @@ async function claimAttachmentRow(
     }
   }
 
-  const existing = await knex('email_processed_attachments')
+  const existing = await db.table('email_processed_attachments')
     .where({
-      tenant: args.tenantId,
       provider_id: args.providerId,
       email_id: args.emailId,
       attachment_id: args.attachmentId,
@@ -277,9 +279,8 @@ async function claimAttachmentRow(
 
   const status = String(existing?.processing_status || '').toLowerCase();
   if (status === 'failed') {
-    const updated = await knex('email_processed_attachments')
+    const updated = await db.table('email_processed_attachments')
       .where({
-        tenant: args.tenantId,
         provider_id: args.providerId,
         email_id: args.emailId,
         attachment_id: args.attachmentId,
@@ -308,9 +309,8 @@ async function claimAttachmentRow(
       Date.now() - updatedAt.getTime() > STALE_PROCESSING_MS;
 
     if (isStale) {
-      const takeover = await knex('email_processed_attachments')
+      const takeover = await db.table('email_processed_attachments')
         .where({
-          tenant: args.tenantId,
           provider_id: args.providerId,
           email_id: args.emailId,
           attachment_id: args.attachmentId,
@@ -355,9 +355,8 @@ async function markProcessedAttachment(
     errorMessage: string;
   }
 ): Promise<void> {
-  await knex('email_processed_attachments')
+  await tenantDb(knex, args.tenantId).table('email_processed_attachments')
     .where({
-      tenant: args.tenantId,
       provider_id: args.providerId,
       email_id: args.emailId,
       attachment_id: args.attachmentId,
@@ -377,9 +376,9 @@ async function resolveTicketAttachmentFolder(
     createdByUserId: string;
   }
 ): Promise<{ folderPath: string | null; isClientVisible: boolean }> {
-  const existingFolders = await trx('document_folders')
+  const db = tenantDb(trx, args.tenantId);
+  const existingFolders = await db.table('document_folders')
     .where({
-      tenant: args.tenantId,
       entity_id: args.ticketId,
       entity_type: 'ticket',
     })
@@ -395,9 +394,8 @@ async function resolveTicketAttachmentFolder(
     };
   }
 
-  const defaultFolders = await trx('document_default_folders')
+  const defaultFolders = await db.table('document_default_folders')
     .where({
-      tenant: args.tenantId,
       entity_type: 'ticket',
     })
     .select('folder_name', 'folder_path', 'is_client_visible', 'sort_order')
@@ -435,7 +433,7 @@ async function resolveTicketAttachmentFolder(
 
     if (foldersToInsert.length > 0) {
       try {
-        await trx('document_folders').insert(foldersToInsert);
+        await db.table('document_folders').insert(foldersToInsert);
       } catch (error) {
         if (!isUniqueViolation(error)) {
           throw error;
@@ -454,9 +452,8 @@ async function resolveTicketAttachmentFolder(
     }
   }
 
-  const refreshedAttachmentFolder = await trx('document_folders')
+  const refreshedAttachmentFolder = await db.table('document_folders')
     .where({
-      tenant: args.tenantId,
       entity_id: args.ticketId,
       entity_type: 'ticket',
       folder_path: '/Tickets/Attachments',
@@ -521,6 +518,7 @@ async function persistDocumentForBuffer(args: {
 
   try {
     await args.knex.transaction(async (trx: any) => {
+      const trxDb = tenantDb(trx, args.tenantId);
       const ticketFolder = await resolveTicketAttachmentFolder(trx, {
         tenantId: args.tenantId,
         ticketId: args.ticketId,
@@ -528,7 +526,7 @@ async function persistDocumentForBuffer(args: {
       });
       const isClientVisible = args.clientVisibleOverride ?? ticketFolder.isClientVisible;
 
-      await trx('external_files').insert({
+      await trxDb.table('external_files').insert({
         tenant: args.tenantId,
         file_id: fileId,
         file_name: String(storagePath).split('/').pop(),
@@ -541,7 +539,7 @@ async function persistDocumentForBuffer(args: {
         updated_at: now,
       });
 
-      await trx('documents').insert({
+      await trxDb.table('documents').insert({
         tenant: args.tenantId,
         document_id: documentId,
         document_name: safeFileName,
@@ -559,7 +557,7 @@ async function persistDocumentForBuffer(args: {
         is_client_visible: isClientVisible,
       });
 
-      await trx('document_associations').insert({
+      await trxDb.table('document_associations').insert({
         tenant: args.tenantId,
         association_id: uuidv4(),
         document_id: documentId,
@@ -568,9 +566,8 @@ async function persistDocumentForBuffer(args: {
         created_at: now,
       });
 
-      await trx('email_processed_attachments')
+      await trxDb.table('email_processed_attachments')
         .where({
-          tenant: args.tenantId,
           provider_id: args.providerId,
           email_id: args.emailId,
           attachment_id: args.attachmentId,
@@ -618,7 +615,9 @@ async function downloadAttachmentBuffer(args: {
     const { MicrosoftGraphAdapter } = await import(
       '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter'
     );
-    const providerConfig = await buildMicrosoftProviderConfig(args.knex, args.tenantId, providerRow);
+    const providerConfig = await resolveMicrosoftEmailProviderConfig(
+      await buildMicrosoftProviderConfig(args.knex, args.tenantId, providerRow)
+    );
     const adapter = new MicrosoftGraphAdapter(providerConfig);
     await adapter.connect();
     const downloaded = await adapter.downloadAttachmentBytes(args.emailId, args.providerAttachmentId);
@@ -666,7 +665,9 @@ async function downloadOriginalMime(args: {
     const { MicrosoftGraphAdapter } = await import(
       '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter'
     );
-    const providerConfig = await buildMicrosoftProviderConfig(args.knex, args.tenantId, providerRow);
+    const providerConfig = await resolveMicrosoftEmailProviderConfig(
+      await buildMicrosoftProviderConfig(args.knex, args.tenantId, providerRow)
+    );
     const adapter = new MicrosoftGraphAdapter(providerConfig);
     await adapter.connect();
     return adapter.downloadMessageSource(args.emailId);

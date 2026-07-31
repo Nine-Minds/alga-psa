@@ -51,17 +51,10 @@ async function addContractForeignKeys(knex) {
   try {
     console.log('  Ensuring client_contracts → contracts FK');
     await knex.schema.alterTable('client_contracts', (table) => {
-      if (isCitus) {
-        table.foreign(['tenant', 'contract_id'])
-          .references(['tenant', 'contract_id'])
-          .inTable('contracts')
-          .onDelete('CASCADE');
-      } else {
-        table.foreign('contract_id')
-          .references('contract_id')
-          .inTable('contracts')
-          .onDelete('CASCADE');
-      }
+      table.foreign(['tenant', 'contract_id'])
+        .references(['tenant', 'contract_id'])
+        .inTable('contracts')
+        .onDelete('CASCADE');
     });
   } catch (error) {
     console.log(`    ⚠ client_contracts → contracts FK may already exist: ${error.message}`);
@@ -93,17 +86,10 @@ async function addContractForeignKeys(knex) {
   try {
     console.log('  Ensuring contract_line_mappings → contracts FK');
     await knex.schema.alterTable('contract_line_mappings', (table) => {
-      if (isCitus) {
-        table.foreign(['tenant', 'contract_id'])
-          .references(['tenant', 'contract_id'])
-          .inTable('contracts')
-          .onDelete('CASCADE');
-      } else {
-        table.foreign('contract_id')
-          .references('contract_id')
-          .inTable('contracts')
-          .onDelete('CASCADE');
-      }
+      table.foreign(['tenant', 'contract_id'])
+        .references(['tenant', 'contract_id'])
+        .inTable('contracts')
+        .onDelete('CASCADE');
     });
   } catch (error) {
     console.log(`    ⚠ contract_line_mappings → contracts FK may already exist: ${error.message}`);

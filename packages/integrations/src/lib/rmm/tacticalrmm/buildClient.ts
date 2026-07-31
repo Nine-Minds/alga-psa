@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
 
@@ -18,8 +18,8 @@ export async function buildTacticalClientForTenant(tenant: string): Promise<Tact
   const { knex } = await createTenantKnex();
   const secretProvider = await getSecretProviderInstance();
 
-  const integration = await knex('rmm_integrations')
-    .where({ tenant, provider: PROVIDER })
+  const integration = await tenantDb(knex, tenant).table('rmm_integrations')
+    .where({ provider: PROVIDER })
     .first(['instance_url', 'settings']);
 
   const authMode = (integration?.settings?.auth_mode as 'api_key' | 'knox' | undefined) || 'api_key';

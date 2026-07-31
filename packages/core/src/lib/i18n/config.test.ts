@@ -20,12 +20,12 @@ describe('filterPseudoLocales', () => {
     expect(result).not.toContain('yy');
   });
 
-  it('keeps preview locales (pt) selectable in development only', () => {
-    expect(PREVIEW_LOCALES).toContain('pt');
+  it('exposes pt as a production locale (no longer preview-gated)', () => {
+    expect(PREVIEW_LOCALES).not.toContain('pt');
     vi.stubEnv('NODE_ENV', 'development');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toContain('pt');
     vi.stubEnv('NODE_ENV', 'production');
-    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).not.toContain('pt');
+    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toContain('pt');
   });
 
   it('strips incomplete locales in both modes', () => {
@@ -46,7 +46,7 @@ describe('filterPseudoLocales', () => {
   it('keeps production locales untouched', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toEqual([
-      'en', 'fr', 'es', 'de', 'nl', 'it', 'pl',
+      'en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt',
     ]);
   });
 });

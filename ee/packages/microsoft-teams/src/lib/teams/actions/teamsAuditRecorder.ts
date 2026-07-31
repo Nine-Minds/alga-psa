@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 export type TeamsAuditSurface = 'bot' | 'message_extension' | 'quick_action' | 'tab';
 export type TeamsAuditResultStatus = 'success' | 'failure';
@@ -91,7 +91,7 @@ export async function writeTeamsAuditEvent(input: WriteTeamsAuditEventInput): Pr
       error_code: normalizeOptionalString(input.errorCode),
     };
 
-    await knex('teams_audit_events').insert(row);
+    await tenantDb(knex, scopedTenant).table('teams_audit_events').insert(row);
   } catch (error) {
     logger.warn('[TeamsAuditRecorder] Failed to persist Teams action audit event', {
       tenant: input.tenant,

@@ -1,6 +1,6 @@
 import Projects from '@alga-psa/projects/components/Projects';
 import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/actions/projectActions';
-import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import type { IClient, IProject, ITag } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
@@ -36,12 +36,20 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     .map(project => project.project_id)
     .filter((id): id is string => typeof id === 'string' && id.length > 0);
 
-  const [projectTagsList, allProjectTags] = await Promise.all([
+  const [projectTagsResult, allProjectTagsResult] = await Promise.all([
     projectIds.length > 0
       ? findTagsByEntityIds(projectIds, 'project').catch(() => [] as ITag[])
       : Promise.resolve([] as ITag[]),
     findAllTagsByType('project').catch(() => [] as ITag[]),
   ]);
+  const projectTagsList = isTagActionError(projectTagsResult) ? [] : projectTagsResult;
+  const allProjectTags = isTagActionError(allProjectTagsResult) ? [] : allProjectTagsResult;
+  if (isTagActionError(projectTagsResult)) {
+    console.error('[ProjectsPage] Failed to load project tags:', projectTagsResult);
+  }
+  if (isTagActionError(allProjectTagsResult)) {
+    console.error('[ProjectsPage] Failed to load all project tags:', allProjectTagsResult);
+  }
 
   const initialProjectTags: Record<string, ITag[]> = {};
   for (const tag of projectTagsList) {
@@ -61,6 +69,9 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     if (params.status === 'all' || params.status === 'active' || params.status === 'inactive') {
       initialFilters.status = params.status;
     }
+  }
+  if (params?.projectStatus && typeof params.projectStatus === 'string') {
+    initialFilters.projectStatus = params.projectStatus;
   }
   if (params?.clientId && typeof params.clientId === 'string') {
     initialFilters.clientId = params.clientId;

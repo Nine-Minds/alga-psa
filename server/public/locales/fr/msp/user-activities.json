@@ -143,7 +143,21 @@
       "title": "Élément ponctuel",
       "toggleDoneError": "Échec de la mise à jour de l'élément."
     },
-    "enterpriseOnly": "Les tâches de workflow sont une fonctionnalité Enterprise."
+    "enterpriseOnly": "Les tâches de workflow sont une fonctionnalité Enterprise.",
+    "nextAction": "Prochaine action",
+    "overdueSince": "En retard depuis le {{date}}",
+    "dueOn": "Échéance le {{date}}",
+    "stage": "Étape",
+    "confidence": "Confiance",
+    "owner": "Propriétaire",
+    "expectedClose": "Clôture prévue",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Matériel",
+    "contact": "Contact",
+    "linkedQuotes": "Devis liés",
+    "openOpportunity": "Ouvrir l'opportunité",
+    "opportunityNotFound": "Opportunité introuvable."
   },
   "groupedView": {
     "addGroup": "Ajouter un groupe",
@@ -209,12 +223,14 @@
           "priorityPlaceholder": "Sélectionner une priorité...",
           "allPriorities": "Toutes les priorités",
           "dueDateRange": "Plage de dates d'échéance",
+          "createdDateRange": "Plage de dates de création",
           "showClosedTasks": "Afficher les tâches fermées"
         },
         "actions": {
           "reset": "Réinitialiser",
           "cancel": "Annuler",
-          "apply": "Appliquer les filtres"
+          "apply": "Appliquer les filtres",
+          "clearDates": "Effacer"
         }
       }
     },
@@ -252,12 +268,14 @@
           "priorityPlaceholder": "Sélectionner une priorité...",
           "allPriorities": "Toutes les priorités",
           "dueDateRange": "Plage de dates d'échéance",
+          "createdDateRange": "Plage de dates de création",
           "showClosedTickets": "Afficher les tickets fermés"
         },
         "actions": {
           "reset": "Réinitialiser",
           "cancel": "Annuler",
-          "apply": "Appliquer les filtres"
+          "apply": "Appliquer les filtres",
+          "clearDates": "Effacer"
         }
       }
     },
@@ -297,13 +315,15 @@
           "priorityMedium": "Moyenne",
           "priorityLow": "Faible",
           "dueDateRange": "Plage de dates d'échéance",
+          "createdDateRange": "Plage de dates de création",
           "showClosedTasks": "Afficher les tâches fermées",
           "includeHiddenTasks": "Inclure les tâches masquées"
         },
         "actions": {
           "reset": "Réinitialiser",
           "cancel": "Annuler",
-          "apply": "Appliquer les filtres"
+          "apply": "Appliquer les filtres",
+          "clearDates": "Effacer"
         }
       },
       "listDrawer": {
@@ -441,6 +461,7 @@
       "search": "Rechercher",
       "client": "Client",
       "dueDateShort": "Échéance",
+      "createdShort": "Créé",
       "tags": "Étiquettes",
       "tagsSelected": "{{count}} étiquettes",
       "tasksCompact": "Tâches",
@@ -470,7 +491,9 @@
     },
     "actions": {
       "reset": "Réinitialiser",
-      "clearClient": "Effacer le filtre client"
+      "clearClient": "Effacer le filtre client",
+      "clearDueDate": "Effacer le filtre de date d'échéance",
+      "clearCreatedDate": "Effacer le filtre de date de création"
     },
     "statusClosedSuffix": " (fermé)",
     "summary": {

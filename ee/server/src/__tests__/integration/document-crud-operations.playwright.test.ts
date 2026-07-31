@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,6 +24,10 @@ const QUICK_PNG_BASE64 =
 
 test.describe('Document CRUD operations', () => {
   let context: E2ETestContext;
+
+  function tenantTable(tenantId: string, table: string) {
+    return tenantDb(context.db, tenantId).table(table);
+  }
 
   test.beforeAll(async () => {
     context = new E2ETestContext({
@@ -68,7 +73,7 @@ test.describe('Document CRUD operations', () => {
     const documentId = uuidv4();
     const fileName = `delete-test-${Date.now()}.png`;
 
-    await context.db('documents').insert({
+    await tenantTable(tenantId, 'documents').insert({
       document_id: documentId,
       document_name: fileName,
       tenant: tenantId,
@@ -95,7 +100,7 @@ test.describe('Document CRUD operations', () => {
     });
 
     // Verify document exists in database before deletion
-    let dbDoc = await context.db('documents')
+    let dbDoc = await tenantTable(tenantId, 'documents')
       .where({ tenant: tenantId, document_id: documentId })
       .first();
     expect(dbDoc).toBeDefined();
@@ -122,7 +127,7 @@ test.describe('Document CRUD operations', () => {
     await documentHeading.waitFor({ state: 'hidden', timeout: 10_000 });
 
     // Verify document is deleted from database
-    dbDoc = await context.db('documents')
+    dbDoc = await tenantTable(tenantId, 'documents')
       .where({ tenant: tenantId, document_name: fileName })
       .first();
 
@@ -170,7 +175,7 @@ test.describe('Document CRUD operations', () => {
       });
     }
 
-    await context.db('documents').insert(testDocs);
+    await tenantTable(tenantId, 'documents').insert(testDocs);
     console.log('[Pagination Test] ✓ Created 15 documents');
 
     // Navigate to documents page
@@ -480,7 +485,7 @@ test.describe('Document CRUD operations', () => {
     await expect(documentHeading).toBeVisible({ timeout: 10_000 });
 
     // Verify document was created in database
-    const dbDoc = await context.db('documents')
+    const dbDoc = await tenantTable(tenantId, 'documents')
       .where({ tenant: tenantId, document_name: docName })
       .first();
 
@@ -488,7 +493,7 @@ test.describe('Document CRUD operations', () => {
     expect(dbDoc.document_name).toBe(docName);
 
     // Verify document has content (if stored in document_content table)
-    const docContent = await context.db('document_content')
+    const docContent = await tenantTable(tenantId, 'document_content')
       .where({ document_id: dbDoc.document_id })
       .first();
 
@@ -496,7 +501,7 @@ test.describe('Document CRUD operations', () => {
     if (docContent) {
       console.log('Document content found in document_content table');
     } else {
-      const blockContent = await context.db('document_block_content')
+      const blockContent = await tenantTable(tenantId, 'document_block_content')
         .where({ document_id: dbDoc.document_id })
         .first();
 

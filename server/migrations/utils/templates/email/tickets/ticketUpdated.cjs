@@ -178,7 +178,7 @@ const COPY = {
     category: 'Kategoria',
     location: 'Lokalizacja',
     changesLabel: 'Podsumowanie zgłoszenia',
-    changesVar: '{{ticket.summary}}',
+    changesVar: '{{{ticket.changes}}}',
     viewButton: 'Zobacz zgłoszenie',
     footer: 'Powered by Alga PSA',
     textHeader: 'Zgłoszenie zaktualizowane',
@@ -187,15 +187,14 @@ const COPY = {
     textRequester: 'Zgłaszający',
     textChanges: 'Podsumowanie',
     textView: 'Zobacz zgłoszenie',
-    /* PL uses {{ticket.updatedAt}} · {{ticket.updatedBy}} in the "Updated By" row */
-    updatedByVar: '{{ticket.updatedAt}} &middot; {{ticket.updatedBy}}',
+    updatedByVar: '{{ticket.updatedBy}}',
   },
 };
-SUBJECTS.pt = 'Chamado atualizado • {{ticket.title}} ({{ticket.priority}})';
+SUBJECTS.pt = 'Ticket atualizado • {{ticket.title}} ({{ticket.priority}})';
 COPY.pt = {
-  headerLabel: 'Chamado atualizado',
-  intro: 'Um chamado para <strong>{{ticket.clientName}}</strong> foi atualizado. Revise as alterações abaixo.',
-  badgePrefix: 'Chamado #',
+  headerLabel: 'Ticket atualizado',
+  intro: 'Um ticket para <strong>{{ticket.clientName}}</strong> foi atualizado. Revise as alterações abaixo.',
+  badgePrefix: 'Ticket #',
   priority: 'Prioridade',
   status: 'Status',
   updatedBy: 'Atualizado por',
@@ -206,14 +205,14 @@ COPY.pt = {
   location: 'Localização',
   changesLabel: 'Alterações realizadas',
   changesVar: '{{{ticket.changes}}}',
-  viewButton: 'Ver chamado',
+  viewButton: 'Ver ticket',
   footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
-  textHeader: 'Chamado atualizado',
+  textHeader: 'Ticket atualizado',
   textUpdatedBy: 'Atualizado por',
   textAssigned: 'Atribuído a',
   textRequester: 'Solicitante',
   textChanges: 'Alterações realizadas',
-  textView: 'Ver chamado',
+  textView: 'Ver ticket',
 };
 
 /* eslint-enable max-len */

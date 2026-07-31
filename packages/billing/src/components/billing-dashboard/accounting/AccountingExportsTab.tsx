@@ -5,20 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import {
-  cancelAccountingExportBatch,
-  createAccountingExportBatch,
-  executeAccountingExportBatch,
-  getAccountingExportBatch,
-  listAccountingExportBatches,
-  getAccountingSyncHealth
-} from '@alga-psa/billing/actions';
+import { cancelAccountingExportBatch, createAccountingExportBatch, executeAccountingExportBatch, getAccountingExportBatch, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
+import type { AccountingExportActionError } from '@alga-psa/billing/actions/accountingExportActions';
+import { getAccountingSyncHealth } from '@alga-psa/billing/actions/accountingSyncActions';
 
 type AccountingExportStatus =
   | 'pending'
@@ -50,7 +47,7 @@ type AccountingExportBatch = {
 type AccountingExportLine = {
   line_id: string;
   batch_id: string;
-  invoice_id: string;
+  document_id: string;
   amount_cents: number;
   currency_code: string;
   status: 'pending' | 'ready' | 'delivered' | 'posted' | 'failed';
@@ -75,6 +72,16 @@ type BatchDetail = {
   errors: AccountingExportError[];
 };
 
+function isAccountingExportActionError(value: unknown): value is AccountingExportActionError {
+  const candidate = value as Partial<AccountingExportActionError> | null;
+  return Boolean(
+    candidate &&
+    candidate.success === false &&
+    typeof candidate.code === 'string' &&
+    typeof candidate.message === 'string'
+  );
+}
+
 function formatIso(iso: string | null | undefined): string {
   if (!iso) return '-';
   const dt = new Date(iso);
@@ -85,6 +92,7 @@ function formatIso(iso: string | null | undefined): string {
 const DEFAULT_ADAPTERS = [
   { id: 'quickbooks_csv', label: 'QuickBooks CSV' },
   { id: 'xero_csv', label: 'Xero CSV' },
+  { id: 'xero', label: 'Xero' },
   { id: 'quickbooks_online', label: 'QuickBooks Online' },
   { id: 'quickbooks_desktop', label: 'QuickBooks Desktop' }
 ] as const;
@@ -232,6 +240,10 @@ export default function AccountingExportsTab(): React.JSX.Element {
         handleError(batchResult.permissionError);
         return;
       }
+      if (isAccountingExportActionError(batchResult)) {
+        handleError(batchResult.message);
+        return;
+      }
       const batch = batchResult as unknown as AccountingExportBatch;
       toast.success(t('accountingExports.toast.created', {
         defaultValue: 'Accounting export batch created',
@@ -255,6 +267,12 @@ export default function AccountingExportsTab(): React.JSX.Element {
         handleError(result.permissionError);
         return;
       }
+      if (isAccountingExportActionError(result)) {
+        await loadBatches();
+        await loadBatchDetail(batchId);
+        handleError(result.message);
+        return;
+      }
       toast.success(t('accountingExports.toast.executing', {
         defaultValue: 'Batch execution started',
       }));
@@ -272,6 +290,10 @@ export default function AccountingExportsTab(): React.JSX.Element {
       const result = await cancelAccountingExportBatch(batchId);
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
+        return;
+      }
+      if (isAccountingExportActionError(result)) {
+        handleError(result.message);
         return;
       }
       toast.success(t('accountingExports.toast.cancelled', {
@@ -449,22 +471,28 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 <Label htmlFor="accounting-export-start-date">
                   {t('accountingExports.createDialog.fields.startDate', { defaultValue: 'Start Date' })}
                 </Label>
-                <Input
+                <DatePicker
                   id="accounting-export-start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  label={t('accountingExports.createDialog.fields.startDate', { defaultValue: 'Start Date' })}
+                  placeholder={t('accountingExports.createDialog.fields.startDate', { defaultValue: 'Start Date' })}
+                  clearable
+                  className="w-full"
+                  value={dateFromString(startDate)}
+                  onChange={(date) => setStartDate(dateToString(date))}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accounting-export-end-date">
                   {t('accountingExports.createDialog.fields.endDate', { defaultValue: 'End Date' })}
                 </Label>
-                <Input
+                <DatePicker
                   id="accounting-export-end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  label={t('accountingExports.createDialog.fields.endDate', { defaultValue: 'End Date' })}
+                  placeholder={t('accountingExports.createDialog.fields.endDate', { defaultValue: 'End Date' })}
+                  clearable
+                  className="w-full"
+                  value={dateFromString(endDate)}
+                  onChange={(date) => setEndDate(dateToString(date))}
                 />
               </div>
             </div>

@@ -10,7 +10,7 @@ describe('default-contract cross-package parity wiring', () => {
     const source = readRepo('packages/integrations/src/services/xeroCsvClientSyncService.ts');
     expect(source).toContain('ensureDefaultContractForClientIfBillingConfigured');
     expect(source).toContain('await ensureDefaultContractForClientIfBillingConfigured(trx, {');
-    expect(source).toContain('await trx(\'clients\').insert({');
+    expect(source).toContain('await db.table(\'clients\').insert({');
   });
 
   it('F067: package action layers continue using shared billing-settings ensure helpers', () => {
@@ -32,7 +32,7 @@ describe('default-contract cross-package parity wiring', () => {
 
   it('T018: integration-created clients still rely on first qualifying billing-config touchpoint for default-contract ensure', () => {
     const source = readRepo('packages/integrations/src/services/xeroCsvClientSyncService.ts');
-    expect(source).toContain('await trx(\'clients\').insert({');
+    expect(source).toContain('await db.table(\'clients\').insert({');
     expect(source).toContain('await ensureDefaultContractForClientIfBillingConfigured(trx, {');
     expect(source).toContain('tenant,');
     expect(source).toContain('clientId,');

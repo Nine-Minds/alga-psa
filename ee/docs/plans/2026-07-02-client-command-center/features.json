@@ -1,0 +1,306 @@
+[
+  {
+    "id": "F001",
+    "description": "Contract types file packages/clients/src/lib/commandCenterTypes.ts: ClientPulse, ClientAttentionFlag, ClientTimelineEvent(+Type), ClientTimelinePage, pulse section types (pure types, no runtime imports)",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "getClientPulse action (packages/clients/src/actions/clientPulseActions.ts): withAuth, base gate client:read, returns RBAC-shaped ClientPulse",
+    "implemented": true,
+    "prdRefs": [
+      "D4",
+      "D5"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Pulse service section: open ticket count, oldest-open age days, overdue count, top 3 open tickets by priority with entered_at (ticket:read gated)",
+    "implemented": true,
+    "prdRefs": [
+      "D5"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Pulse money section: AR aging buckets current/30/60/90+ = finalized invoices outstanding (total_amount \u2212 invoice_payments \u2212 credit_applied) bucketed by due_date, in cents with currency code",
+    "implemented": true,
+    "prdRefs": [
+      "D6"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Pulse money section: draft invoice list (id, number, total, created_at) and active contract count (contracts.owner_client_id, status active)",
+    "implemented": true,
+    "prdRefs": [
+      "D7"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Pulse installBase section: managed asset count (asset:read), sold unit count (stock_units client_id + delivered), open RMA count, up to 3 recent delivered units with serial + linked asset_id (inventory:read)",
+    "implemented": true,
+    "prdRefs": [
+      "D5"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Pulse people section: contact count + up to 3 contacts (default contact first) with name/role/email",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F008",
+    "description": "Pulse locations section: all active locations with name, address, default/billing/shipping flags, phone",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F009",
+    "description": "Pulse documents section: total count + 3 most recent (name, updated_at, size) via document_associations (document:read gated)",
+    "implemented": true,
+    "prdRefs": [
+      "D5"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Pulse record section: account manager name, default contact name, inbound email domains, tax region, client since (created_at), is_inactive",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F011",
+    "description": "Attention flag: draft invoices (count, summed cents, newest invoice ref) \u2014 billing:read gated",
+    "implemented": true,
+    "prdRefs": [
+      "D8"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Attention flag: partially fulfilled open sales orders (per-SO lines fulfilled/total from quantity_ordered vs quantity_fulfilled) \u2014 inventory:read gated",
+    "implemented": true,
+    "prdRefs": [
+      "D8"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Attention flag: overdue open tickets (due_date < now, not closed) with count and oldest ref \u2014 ticket:read gated",
+    "implemented": true,
+    "prdRefs": [
+      "D8"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Attention flag: client-waiting tickets \u2014 open tickets whose most recent comment has author_type='client' (days since that comment); emitted only from real client-authored comments",
+    "implemented": true,
+    "prdRefs": [
+      "D6",
+      "D8"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Attention flag: open RMA cases (count, oldest opened_at) \u2014 inventory:read gated",
+    "implemented": true,
+    "prdRefs": [
+      "D8"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "listClientTimeline action (packages/clients/src/actions/clientTimelineActions.ts): withAuth, client:read gate, cursor pagination (occurred_at,id) desc, per-source RBAC filtering, optional type filter",
+    "implemented": true,
+    "prdRefs": [
+      "D9",
+      "D5"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Timeline sources: tickets opened/closed (entered_at/closed_at) and ticket materials added (ticket_materials.created_at with product name)",
+    "implemented": true,
+    "prdRefs": [
+      "D9"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Timeline sources: invoices created + finalized (with number, amount cents)",
+    "implemented": true,
+    "prdRefs": [
+      "D9"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Timeline sources: stock units delivered (product, serial, linked asset), sales orders created, RMAs opened/closed",
+    "implemented": true,
+    "prdRefs": [
+      "D9"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Timeline sources: interactions (interaction_date, type, title) and quote activities (activity_type incl. converted_to_sales_order, quotes joined by client_id)",
+    "implemented": true,
+    "prdRefs": [
+      "D9"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "No note events in timeline (notes are a collaborative doc, not discrete events)",
+    "implemented": true,
+    "prdRefs": [
+      "D6"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Barrel exports: commandCenterTypes + both actions exported from packages/clients (actions index; types importable)",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F023",
+    "description": "ClientCommandCenter component: bento grid layout, receives pulse payload + tab registry, renders only sections present in payload",
+    "implemented": true,
+    "prdRefs": [
+      "D2",
+      "D5"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Command center header: avatar, client name, active/inactive + client-since meta, actions (Edit Client \u2192 details focus, Print, New Ticket \u2192 existing QuickAddTicket)",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F025",
+    "description": "AttentionStrip component: severity-colored flag pills built client-side from structured flags (i18n-ready), each navigating to its ref (invoice \u2192 billing focus/deep link, SO \u2192 SO detail, ticket \u2192 ticket), hidden when no flags",
+    "implemented": true,
+    "prdRefs": [
+      "D8"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Service card: KPIs (open, oldest, overdue) + top open tickets with priority pills, Open \u2197 \u2192 tickets focus view",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F027",
+    "description": "Money card: aging bar chart (CSS bars, real cents, 'recorded payments deducted' subtitle), draft invoice rows linking to invoice deep link, active contracts line, Open \u2197 \u2192 billing dashboard focus",
+    "implemented": true,
+    "prdRefs": [
+      "D6"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Install base card: managed/sold/RMA counts + recent delivered units (serial links to unit timeline, asset link when present), Open \u2197 \u2192 equipment focus",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F029",
+    "description": "People card (contacts preview \u2192 contacts focus), Locations card (reusing location display idioms + Manage \u2192 locations dialog), Documents card (recent 3 \u2192 documents focus), Client record card (record summary + CSAT from existing surveySummary \u2192 details focus)",
+    "implemented": true,
+    "prdRefs": [
+      "D7"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "ClientTimelinePanel: tall card, type-colored markers, structured event rendering with links (ticket/invoice/SO/quote/unit/asset), Load more via cursor, type filter dropdown",
+    "implemented": true,
+    "prdRefs": [
+      "D9"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "FocusViewHost: Drawer (~90vw) hosting any tab registry entry by id, one at a time, with title bar + close; nested-drawer safe (existing InsideDialogContext)",
+    "implemented": true,
+    "prdRefs": [
+      "D2"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "ClientDetails restructure: full-page route renders CommandCenter (tab bar removed); quickView/isInDrawer path keeps existing tab layout unchanged",
+    "implemented": true,
+    "prdRefs": [
+      "D1"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Deep links: ?tab=X opens matching focus view on load (incl. EE Hudu tab ids); opening/closing focus views updates URL via router.replace; unknown ids ignored",
+    "implemented": true,
+    "prdRefs": [
+      "D3"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Empty/zero states: every card renders an explicit honest empty state (no placeholder numbers); cards for missing permissions are absent entirely",
+    "implemented": true,
+    "prdRefs": [
+      "D6"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Automation ids on interactive elements (client-cc-* convention: cards, flags, open buttons, timeline load-more)",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F036",
+    "description": "i18n: all new UI strings via t() with defaultValue, following ClientDetails conventions",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F037",
+    "description": "Focus-drawer view rail: every registry tab listed in the drawer (grouped Service/Money/Install base/Records, unknown tabs under More), active view highlighted, click switches views in place with ?tab= URL hygiene",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F038",
+    "description": "\"All views\" dropdown removed \u2014 the rail is the reachability guarantee",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F039",
+    "description": "Contextual card footer links: Money \u2192 Billing setup + Tax settings; Client record \u2192 Additional info; Install base \u2192 Managed assets (only when Equipment holds the header action)",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F040",
+    "description": "Notes pulse section: plain-text preview of first 2 non-empty BlockNote blocks from clients.notes_document_id via document_block_content; blank saved docs read as no notes (D6)",
+    "implemented": true,
+    "prdRefs": []
+  },
+  {
+    "id": "F041",
+    "description": "Notes card in the grid: preview + edited-Nd-ago meta when notes exist, honest empty state with Add note action otherwise; opens notes focus view",
+    "implemented": true,
+    "prdRefs": []
+  }
+]

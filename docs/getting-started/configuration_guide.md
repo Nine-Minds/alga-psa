@@ -78,16 +78,18 @@ EMAIL_USERNAME=noreply@example.com  # Required: Valid email address
 # EMAIL_PASSWORD managed via Docker secrets
 ```
 
-#### Authentication Settings (NEXTAUTH_*)
+#### Application URL and authentication settings
 ```
 NEXTAUTH_URL=http://localhost:3000  # Required: Valid URL - for production, must match your public domain
+NEXT_PUBLIC_BASE_URL=http://localhost:3000  # Required by prebuilt Compose; use the same public origin
 NEXTAUTH_SESSION_EXPIRES=86400  # Required: Number greater than 0
 # NEXTAUTH_SECRET managed via Docker secrets
 ```
 
-**Important**: For production deployments, `NEXTAUTH_URL` must match your actual public domain:
-- Development: `http://localhost:3000`
-- Production: `https://your-domain.com`
+**Important**: For production deployments, `NEXTAUTH_URL` and
+`NEXT_PUBLIC_BASE_URL` must match your actual public domain:
+- Development: both use `http://localhost:3000`
+- Production: both use `https://your-domain.com`
 
 #### Crypto Settings (CRYPTO_*)
 ```

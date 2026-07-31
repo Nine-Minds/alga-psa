@@ -1,4 +1,5 @@
 import { Knex as KnexType } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { ImportRegistry } from './ImportRegistry';
 import { ImportSource } from './ImportSource';
@@ -48,6 +49,10 @@ const normaliseStatusFilter = (status?: ImportJobStatus | ImportJobStatus[]): Im
   return Array.isArray(status) ? status : [status];
 };
 
+function importSourcesTable(knex: KnexType, tenantId: string) {
+  return tenantDb(knex, tenantId).table<ImportSourceRecord>('import_sources');
+}
+
 /**
  * Orchestrates import source registration, job lifecycle, and basic querying.
  * Phase 1 focuses on persistence and structural concerns.
@@ -72,9 +77,8 @@ export class ImportManager {
    * Ensure all registered importer plugins have a persisted representation for the tenant.
    */
   private async ensureImportersRegistered(tenantId: string, knex: KnexType): Promise<void> {
-    const existingSources = await knex<ImportSourceRecord>('import_sources')
-      .select('source_type')
-      .where({ tenant: tenantId });
+    const existingSources = await importSourcesTable(knex, tenantId)
+      .select('source_type');
 
     const existing = new Map(
       existingSources.map((row) => [row.source_type.toLowerCase(), row.source_type])
@@ -87,12 +91,9 @@ export class ImportManager {
         const metadataDefaults = importer.getMetadata();
 
         if (strategy || metadataDefaults) {
-          const current = await knex<ImportSourceRecord>('import_sources')
+          const current = await importSourcesTable(knex, tenantId)
             .select('metadata', 'duplicate_detection_fields')
-            .where({
-              tenant: tenantId,
-              source_type: existing.get(existingKey)!
-            })
+            .where({ source_type: existing.get(existingKey)! })
             .first();
 
           let fieldsChanged = false;
@@ -125,11 +126,8 @@ export class ImportManager {
           }
 
           if (fieldsChanged || metadataChanged) {
-            await knex<ImportSourceRecord>('import_sources')
-              .where({
-                tenant: tenantId,
-                source_type: existing.get(existingKey)!
-              })
+            await importSourcesTable(knex, tenantId)
+              .where({ source_type: existing.get(existingKey)! })
               .update({
                 duplicate_detection_fields: fieldsChanged ? (strategy?.exactFields ? [...strategy.exactFields] : null) : current?.duplicate_detection_fields ?? null,
                 metadata: metadataChanged ? nextMetadata : current?.metadata ?? null,
@@ -152,13 +150,13 @@ export class ImportManager {
             }
           : baseMetadata;
 
-      await knex('import_sources').insert({
+      await importSourcesTable(knex, tenantId).insert({
         tenant: tenantId,
         source_type: importer.sourceType,
         name: importer.name,
         description: importer.description,
         field_mapping: toTemplate(defaultFieldMapping),
-        duplicate_detection_fields: duplicateStrategy?.exactFields ?? null,
+        duplicate_detection_fields: duplicateStrategy?.exactFields ? [...duplicateStrategy.exactFields] : null,
         is_active: true,
         metadata: combinedMetadata ?? null
       });
@@ -170,9 +168,7 @@ export class ImportManager {
     await this.ensureTenantContext(knex, tenantId);
     await this.ensureImportersRegistered(tenantId, knex);
 
-    const query = knex<ImportSourceRecord>('import_sources')
-      .where({ tenant: tenantId })
-      .orderBy('name', 'asc');
+    const query = importSourcesTable(knex, tenantId).orderBy('name', 'asc');
 
     if (!includeInactive) {
       query.andWhere('is_active', true);
@@ -185,11 +181,8 @@ export class ImportManager {
   async getSourceById(tenantId: string, sourceId: string): Promise<ImportSource | null> {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
-    const record = await knex<ImportSourceRecord>('import_sources')
-      .where({
-        tenant: tenantId,
-        import_source_id: sourceId
-      })
+    const record = await importSourcesTable(knex, tenantId)
+      .where({ import_source_id: sourceId })
       .first();
 
     return record ? ImportSource.fromRecord(record) : null;
@@ -203,19 +196,13 @@ export class ImportManager {
     await this.ensureTenantContext(knex, source.tenant);
     const payload = source.toRecord();
 
-    const existing = await knex<ImportSourceRecord>('import_sources')
-      .where({
-        tenant: payload.tenant,
-        import_source_id: payload.import_source_id
-      })
+    const existing = await importSourcesTable(knex, source.tenant)
+      .where({ import_source_id: payload.import_source_id })
       .first();
 
     if (existing) {
-      const [updated] = await knex<ImportSourceRecord>('import_sources')
-        .where({
-          tenant: payload.tenant,
-          import_source_id: payload.import_source_id
-        })
+      const [updated] = await importSourcesTable(knex, source.tenant)
+        .where({ import_source_id: payload.import_source_id })
         .update({
           source_type: payload.source_type,
           name: payload.name,
@@ -231,7 +218,7 @@ export class ImportManager {
       return ImportSource.fromRecord(updated);
     }
 
-    const [created] = await knex<ImportSourceRecord>('import_sources')
+    const [created] = await importSourcesTable(knex, source.tenant)
       .insert({
         tenant: payload.tenant,
         import_source_id: payload.import_source_id,
@@ -264,8 +251,8 @@ export class ImportManager {
   ): Promise<FieldMappingTemplate | null> {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
-    const [updated] = await knex<ImportSourceRecord>('import_sources')
-      .where({ tenant: tenantId, import_source_id: importSourceId })
+    const [updated] = await importSourcesTable(knex, tenantId)
+      .where({ import_source_id: importSourceId })
       .update({ field_mapping: template, updated_at: knex.fn.now() })
       .returning('*');
 
@@ -278,9 +265,9 @@ export class ImportManager {
   ): Promise<FieldMappingTemplate | null> {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
-    const record = await knex<ImportSourceRecord>('import_sources')
+    const record = await importSourcesTable(knex, tenantId)
       .select('field_mapping')
-      .where({ tenant: tenantId, import_source_id: importSourceId })
+      .where({ import_source_id: importSourceId })
       .first();
 
     return record?.field_mapping ?? null;
@@ -297,7 +284,7 @@ export class ImportManager {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
 
-    const [job] = await knex<ImportJobRecord>('import_jobs')
+    const [job] = await tenantDb(knex, tenantId).table<ImportJobRecord>('import_jobs')
       .insert({
         tenant: tenantId,
         import_source_id: importSourceId,
@@ -325,9 +312,9 @@ export class ImportManager {
   async getPreview(tenantId: string, importJobId: string): Promise<ImportJobRecord['preview_data']> {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
-    const job = await knex<ImportJobRecord>('import_jobs')
+    const job = await tenantDb(knex, tenantId).table<ImportJobRecord>('import_jobs')
       .select('preview_data')
-      .where({ tenant: tenantId, import_job_id: importJobId })
+      .where({ import_job_id: importJobId })
       .first();
     return job?.preview_data ?? null;
   }
@@ -338,8 +325,8 @@ export class ImportManager {
   async executeImport(tenantId: string, importJobId: string): Promise<ImportJobRecord | null> {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
-    const [job] = await knex<ImportJobRecord>('import_jobs')
-      .where({ tenant: tenantId, import_job_id: importJobId })
+    const [job] = await tenantDb(knex, tenantId).table<ImportJobRecord>('import_jobs')
+      .where({ import_job_id: importJobId })
       .update({
         status: 'processing',
         updated_at: knex.fn.now()
@@ -352,8 +339,8 @@ export class ImportManager {
   async getImportStatus(tenantId: string, importJobId: string): Promise<ImportJobRecord | null> {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
-    const job = await knex<ImportJobRecord>('import_jobs')
-      .where({ tenant: tenantId, import_job_id: importJobId })
+    const job = await tenantDb(knex, tenantId).table<ImportJobRecord>('import_jobs')
+      .where({ import_job_id: importJobId })
       .first();
     return job ?? null;
   }
@@ -361,8 +348,7 @@ export class ImportManager {
   async getImportHistory(tenantId: string, filters: ImportFilters = {}): Promise<ImportJobRecord[]> {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
-    let query: ImportJobQuery = knex<ImportJobRecord>('import_jobs')
-      .where({ tenant: tenantId })
+    let query: ImportJobQuery = tenantDb(knex, tenantId).table<ImportJobRecord>('import_jobs')
       .orderBy('created_at', 'desc');
 
     const statuses = normaliseStatusFilter(filters.status);
@@ -377,12 +363,9 @@ export class ImportManager {
     if (filters.sourceType) {
       query = query.whereIn(
         'import_source_id',
-        knex('import_sources')
+        importSourcesTable(knex, tenantId)
           .select('import_source_id')
-          .where({
-            tenant: tenantId,
-            source_type: filters.sourceType
-          })
+          .where({ source_type: filters.sourceType })
       );
     }
 
@@ -408,16 +391,16 @@ export class ImportManager {
   async getImportDetails(tenantId: string, importJobId: string): Promise<ImportJobDetails | null> {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
-    const job = await knex<ImportJobRecord>('import_jobs')
-      .where({ tenant: tenantId, import_job_id: importJobId })
+    const job = await tenantDb(knex, tenantId).table<ImportJobRecord>('import_jobs')
+      .where({ import_job_id: importJobId })
       .first();
 
     if (!job) {
       return null;
     }
 
-    const items = await knex<ImportJobItemRecord>('import_job_items')
-      .where({ tenant: tenantId, import_job_id: importJobId })
+    const items = await tenantDb(knex, tenantId).table<ImportJobItemRecord>('import_job_items')
+      .where({ import_job_id: importJobId })
       .orderBy('created_at', 'asc');
 
     const metrics = {
@@ -474,8 +457,8 @@ export class ImportManager {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
 
-    await knex<ImportJobRecord>('import_jobs')
-      .where({ tenant: tenantId, import_job_id: importJobId })
+    await tenantDb(knex, tenantId).table<ImportJobRecord>('import_jobs')
+      .where({ import_job_id: importJobId })
       .update({
         job_id: jobId,
         status,
@@ -529,8 +512,8 @@ export class ImportManager {
       payload.completed_at = updates.completedAt;
     }
 
-    await knex<ImportJobRecord>('import_jobs')
-      .where({ tenant: tenantId, import_job_id: importJobId })
+    await tenantDb(knex, tenantId).table<ImportJobRecord>('import_jobs')
+      .where({ import_job_id: importJobId })
       .update(payload);
   }
 
@@ -550,7 +533,7 @@ export class ImportManager {
     const knex = await getConnection(tenantId);
     await this.ensureTenantContext(knex, tenantId);
 
-    await knex('import_job_items').insert({
+    await tenantDb(knex, tenantId).table('import_job_items').insert({
       tenant: tenantId,
       import_job_id: importJobId,
       external_id: item.externalId ?? null,

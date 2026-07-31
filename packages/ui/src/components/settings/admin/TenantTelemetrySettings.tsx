@@ -37,7 +37,8 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
       const data = await response.json();
       setSettings(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('telemetry.errors.loadSettings', { defaultValue: 'Failed to load settings' }));
+      console.error('Failed to load telemetry settings:', err);
+      setError(t('telemetry.errors.loadSettings', { defaultValue: 'Failed to load settings' }));
     } finally {
       setLoading(false);
     }
@@ -76,7 +77,8 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
       setSettings(updatedSettings);
       onSettingsUpdate?.(updatedSettings);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('telemetry.errors.saveSettings', { defaultValue: 'Failed to save settings' }));
+      console.error('Failed to save telemetry settings:', err);
+      setError(t('telemetry.errors.saveSettings', { defaultValue: 'Failed to save settings' }));
     } finally {
       setSaving(false);
     }

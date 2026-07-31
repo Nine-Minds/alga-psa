@@ -127,7 +127,7 @@ const pseudoFill = '11111';
 const pseudoLocaleRoot = path.join(localesRoot, pseudoLocale);
 const englishRoot = path.join(localesRoot, 'en');
 
-const locales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const;
+const locales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const;
 
 describe('MSP i18n Phase 0 - config', () => {
   it('T001: UI I18N_CONFIG.ns is ["common"]', () => {

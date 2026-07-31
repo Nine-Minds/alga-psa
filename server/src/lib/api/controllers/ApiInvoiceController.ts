@@ -648,8 +648,8 @@ export class ApiInvoiceController extends ApiBaseController {
               };
               const result = await this.invoiceService.applyCredit(creditData, apiRequest.context);
               results.push({ ...result, invoice_id: invoiceId });
-            } catch (error) {
-              errors.push(`Error applying credit to invoice ${invoiceId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            } catch {
+              errors.push(`Error applying credit to invoice ${invoiceId}: credit application failed.`);
             }
           }
           

@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 
 const countries = [
@@ -13,6 +13,12 @@ const countries = [
 ];
 
 describe('PhoneInput', () => {
+  // RTL auto-cleanup only registers for the first test file in the shared fork,
+  // so clean up explicitly to avoid duplicate renders leaking between tests.
+  afterEach(() => {
+    cleanup();
+  });
+
   it('keeps the local number clean when country metadata catches up after reload', () => {
     const onChange = vi.fn();
     const { container, rerender } = render(

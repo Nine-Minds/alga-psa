@@ -106,10 +106,15 @@ export async function fetchMeetingArtifacts(
         return null;
       }
 
+      // The recordings list resource does NOT expose a `contentUrl`; Graph's
+      // `callRecording` uses `recordingContentUrl`, which is an AMS URL that
+      // does not accept our app bearer token. Address the documented, bearer-
+      // token-friendly content endpoint directly (parallel to transcripts) so
+      // both the download proxy and the store-to-disk path can retrieve it.
       return {
         artifactType: 'recording',
         providerArtifactId,
-        contentUrl: normalizeString(recording.contentUrl) || null,
+        contentUrl: `${baseUrl}/recordings/${encodeURIComponent(providerArtifactId)}/content`,
         createdDateTime: normalizeString(recording.createdDateTime) || null,
       };
     })
@@ -121,15 +126,18 @@ export async function fetchMeetingArtifacts(
       return null;
     }
 
+    const contentUrl = `${baseUrl}/transcripts/${encodeURIComponent(providerArtifactId)}/content`;
     const transcriptContent = await fetchTranscriptContent({
       accessToken,
-      url: `${baseUrl}/transcripts/${encodeURIComponent(providerArtifactId)}/content`,
+      url: contentUrl,
     });
 
     return {
       artifactType: 'transcript' as const,
       providerArtifactId,
-      contentUrl: normalizeString(transcript.contentUrl) || null,
+      // Same fix for symmetry: Graph exposes `transcriptContentUrl`, not
+      // `contentUrl`; point at the content endpoint we already fetch.
+      contentUrl,
       createdDateTime: normalizeString(transcript.createdDateTime) || null,
       transcriptContent,
     };

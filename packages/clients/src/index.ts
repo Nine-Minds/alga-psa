@@ -11,6 +11,7 @@ export { Client } from './models';
 // Schemas
 export {
   ClientPropertiesSchema,
+  ClientLifecycleStatusSchema,
   ClientSchema,
   CreateClientSchema,
   UpdateClientSchema,
@@ -24,6 +25,13 @@ export type {
 
 // Re-export types from @alga-psa/types for convenience
 export type { IClient, CreateClientInput as ICreateClientInput, UpdateClientInput as IUpdateClientInput } from '@alga-psa/types';
+
+// Client data normalization
+export {
+  InvalidClientTypeError,
+  normalizeClientType,
+} from './lib/normalizeClientType';
+export type { NormalizedClientType } from './lib/normalizeClientType';
 
 // Components
 export * from './components';

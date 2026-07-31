@@ -18,7 +18,7 @@ import {
   AccountingExportFileAttachment,
   PendingTaxImportRecord
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { unparseCSV } from '@alga-psa/core';
@@ -58,6 +58,11 @@ type DbClient = {
   client_name: string;
   billing_email?: string | null;
   payment_terms?: string | null;
+};
+
+type InvoiceTaxSourceRow = {
+  invoice_id: string;
+  tax_source: string | null;
 };
 
 /**
@@ -134,6 +139,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'file',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: false, // All-or-nothing file generation
       supportsInvoiceUpdates: false, // CSV export is one-way
       supportsTaxDelegation: true, // Can export without tax
@@ -165,7 +171,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const resolver = await AccountingMappingResolver.create();
 
     // Group lines by invoice
-    const linesByInvoice = this.groupBy(context.lines, (line) => line.invoice_id);
+    const linesByInvoice = this.groupBy(context.lines, (line) => line.document_id);
     const documents: AccountingExportDocument[] = [];
     let invoicesWithExternalTax = 0;
 
@@ -197,13 +203,13 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       let totalTaxCents = 0;
 
       for (const line of exportLines) {
-        if (!line.invoice_charge_id) {
+        if (!line.document_line_id) {
           throw new Error(`QuickBooks CSV adapter: line ${line.line_id} missing invoice_charge_id`);
         }
 
-        const charge = chargesById.get(line.invoice_charge_id);
+        const charge = chargesById.get(line.document_line_id);
         if (!charge) {
-          throw new Error(`QuickBooks CSV adapter: charge ${line.invoice_charge_id} not found`);
+          throw new Error(`QuickBooks CSV adapter: charge ${line.document_line_id} not found`);
         }
 
         if (!charge.service_id) {
@@ -212,6 +218,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
         // Resolve service mapping to get QuickBooks item name
         const serviceMapping = await resolver.resolveServiceMapping({
+          tenantId: context.batch.tenant,
           adapterType: this.type,
           serviceId: charge.service_id,
           targetRealm: context.batch.target_realm
@@ -237,6 +244,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         let taxCode = '';
         if (!shouldExcludeTax && charge.tax_region) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
+            tenantId: context.batch.tenant,
             adapterType: this.type,
             taxRegionId: charge.tax_region,
             targetRealm: context.batch.target_realm
@@ -247,6 +255,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       // Resolve payment terms
       const paymentTermId = client.payment_terms ?? 'net_30';
       const termMapping = await resolver.resolvePaymentTermMapping({
+        tenantId: context.batch.tenant,
         adapterType: this.type,
         paymentTermId,
         targetRealm: context.batch.target_realm
@@ -255,6 +264,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
       // Resolve optional client/customer mapping
       const customerMapping = await resolver.resolveClientMapping({
+        tenantId: context.batch.tenant,
         adapterType: this.type,
         clientId,
         targetRealm: context.batch.target_realm
@@ -431,6 +441,9 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   ): Promise<PendingTaxImportRecord[]> {
     const { knex } = await createTenantKnex();
     const tenantId = context.batch.tenant;
+    if (!tenantId) {
+      throw new Error('Tenant is required to create pending QuickBooks tax import records');
+    }
     const pendingRecords: PendingTaxImportRecord[] = [];
     const now = new Date().toISOString();
 
@@ -451,12 +464,11 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     // Load invoices to check their tax_source setting
     const invoiceIds = Array.from(invoiceRefs.keys());
-    const invoices = await knex('invoices')
+    const invoices = await tenantDb(knex, tenantId).table<InvoiceTaxSourceRow>('invoices')
       .select('invoice_id', 'tax_source')
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
-    const invoiceTaxSources = new Map(invoices.map((inv: { invoice_id: string; tax_source: string | null }) =>
+    const invoiceTaxSources = new Map(invoices.map((inv) =>
       [inv.invoice_id, inv.tax_source]
     ));
 
@@ -493,12 +505,12 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbInvoice>> {
-    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.invoice_id)));
+    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.document_id)));
     if (invoiceIds.length === 0) {
       return new Map();
     }
 
-    const rows = await knex<DbInvoice>('invoices')
+    const rows = await tenantDb(knex, tenantId).table<DbInvoice>('invoices')
       .select(
         'invoice_id',
         'invoice_number',
@@ -510,7 +522,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         'currency_code',
         'tax_source'
       )
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
@@ -522,14 +533,14 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbCharge>> {
     const chargeIds = context.lines
-      .map((line) => line.invoice_charge_id)
+      .map((line) => line.document_line_id)
       .filter((id): id is string => Boolean(id));
 
     if (chargeIds.length === 0) {
       return new Map();
     }
 
-    const rows = await knex<DbCharge>('invoice_charges')
+    const rows = await tenantDb(knex, tenantId).table<DbCharge>('invoice_charges')
       .select(
         'item_id',
         'invoice_id',
@@ -544,7 +555,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         'is_discount',
         'tax_region'
       )
-      .where('tenant', tenantId)
       .whereIn('item_id', chargeIds);
 
     return new Map(rows.map((row) => [row.item_id, row]));
@@ -567,9 +577,8 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       return new Map();
     }
 
-    const clients = await knex<DbClient>('clients')
+    const clients = await tenantDb(knex, tenantId).table<DbClient>('clients')
       .select('client_id', 'client_name', 'billing_email', 'payment_terms')
-      .where('tenant', tenantId)
       .whereIn('client_id', Array.from(clientIds));
 
     return new Map(clients.map((client) => [client.client_id, client]));
@@ -621,6 +630,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     lineId: string
   ): string | undefined {
     const line = context.lines.find((l) => l.line_id === lineId);
-    return line?.invoice_id;
+    return line?.document_id;
   }
 }

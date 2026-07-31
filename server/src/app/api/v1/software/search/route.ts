@@ -17,22 +17,105 @@
 
 import { NextResponse } from 'next/server';
 import { searchSoftwareFleetWide } from '@alga-psa/assets/actions/softwareActions';
+import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
 import type { SoftwareCategory, SoftwareType } from '@alga-psa/types';
+
+const SOFTWARE_CATEGORIES = new Set<string>([
+  'Browser',
+  'Productivity',
+  'Development',
+  'Security',
+  'Communication',
+  'Creative',
+  'Runtime',
+  'Driver',
+]);
+
+const SOFTWARE_TYPES = new Set<string>(['application', 'driver', 'update', 'system']);
+
+function parsePositiveIntParam(
+  value: string | null,
+  name: string,
+  defaultValue: number,
+  maxValue?: number,
+): { value: number } | { error: string } {
+  if (value === null || value === '') {
+    return { value: defaultValue };
+  }
+  if (!/^\d+$/.test(value)) {
+    return { error: `${name} must be a positive integer` };
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    return { error: `${name} must be a positive integer` };
+  }
+  if (maxValue !== undefined && parsed > maxValue) {
+    return { error: `${name} must be between 1 and ${maxValue}` };
+  }
+  return { value: parsed };
+}
+
+function parseOptionalBooleanParam(value: string | null, name: string): { value: boolean | undefined } | { error: string } {
+  if (value === null || value === '') {
+    return { value: undefined };
+  }
+  if (value === 'true') {
+    return { value: true };
+  }
+  if (value === 'false') {
+    return { value: false };
+  }
+  return { error: `${name} must be true or false` };
+}
+
+function assetActionErrorResponse(value: unknown): NextResponse | null {
+  const expectedError = assetActionErrorFrom(value);
+  if (!expectedError) {
+    return null;
+  }
+
+  const message = assetActionErrorMessage(expectedError);
+  const status = 'permissionError' in expectedError ? 403 : 400;
+  return NextResponse.json({ error: message }, { status });
+}
 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const page = parseInt(url.searchParams.get('page') || '1', 10);
-    const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+    const pageParam = parsePositiveIntParam(url.searchParams.get('page'), 'page', 1);
+    if ('error' in pageParam) {
+      return NextResponse.json({ error: pageParam.error }, { status: 400 });
+    }
+    const limitParam = parsePositiveIntParam(url.searchParams.get('limit'), 'limit', 50, 100);
+    if ('error' in limitParam) {
+      return NextResponse.json({ error: limitParam.error }, { status: 400 });
+    }
+
     const search = url.searchParams.get('search') || undefined;
-    const category = url.searchParams.get('category') as SoftwareCategory | null;
-    const software_type = url.searchParams.get('software_type') as SoftwareType | null;
-    const is_managed = url.searchParams.has('is_managed')
-      ? url.searchParams.get('is_managed') === 'true'
-      : undefined;
-    const is_security_relevant = url.searchParams.has('is_security_relevant')
-      ? url.searchParams.get('is_security_relevant') === 'true'
-      : undefined;
+    const categoryParam = url.searchParams.get('category');
+    if (categoryParam && !SOFTWARE_CATEGORIES.has(categoryParam)) {
+      return NextResponse.json({ error: 'category is not valid' }, { status: 400 });
+    }
+    const softwareTypeParam = url.searchParams.get('software_type');
+    if (softwareTypeParam && !SOFTWARE_TYPES.has(softwareTypeParam)) {
+      return NextResponse.json({ error: 'software_type is not valid' }, { status: 400 });
+    }
+
+    const isManagedParam = parseOptionalBooleanParam(url.searchParams.get('is_managed'), 'is_managed');
+    if ('error' in isManagedParam) {
+      return NextResponse.json({ error: isManagedParam.error }, { status: 400 });
+    }
+    const isSecurityRelevantParam = parseOptionalBooleanParam(url.searchParams.get('is_security_relevant'), 'is_security_relevant');
+    if ('error' in isSecurityRelevantParam) {
+      return NextResponse.json({ error: isSecurityRelevantParam.error }, { status: 400 });
+    }
+
+    const page = pageParam.value;
+    const limit = limitParam.value;
+    const category = categoryParam as SoftwareCategory | null;
+    const software_type = softwareTypeParam as SoftwareType | null;
+    const is_managed = isManagedParam.value;
+    const is_security_relevant = isSecurityRelevantParam.value;
     const client_id = url.searchParams.get('client_id') || undefined;
 
     const result = await searchSoftwareFleetWide({
@@ -45,6 +128,11 @@ export async function GET(request: Request) {
       page,
       limit,
     });
+
+    const actionError = assetActionErrorResponse(result);
+    if (actionError) {
+      return actionError;
+    }
 
     return NextResponse.json({
       data: result.results,

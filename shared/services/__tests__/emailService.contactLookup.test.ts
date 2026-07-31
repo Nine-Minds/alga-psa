@@ -15,25 +15,18 @@ vi.mock('../../models/contactModel', () => ({
 import { EmailService } from '../emailService';
 
 type FakeKnex = {
-  (table: string): {
-    select: (..._args: any[]) => {
-      where: (..._args: any[]) => {
-        first: () => Promise<any>;
-      };
-    };
-  };
+  (table: string): any;
 };
 
 function makeKnex(clientRow?: any): FakeKnex {
   return ((table: string) => {
     if (table === 'clients') {
-      return {
-        select: () => ({
-          where: () => ({
-            first: async () => clientRow,
-          }),
-        }),
+      const builder = {
+        where: vi.fn(() => builder),
+        select: vi.fn(() => builder),
+        first: vi.fn(async () => clientRow),
       };
+      return builder;
     }
 
     throw new Error(`Unexpected table ${table}`);

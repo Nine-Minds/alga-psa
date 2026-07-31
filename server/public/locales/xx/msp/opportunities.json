@@ -1,0 +1,414 @@
+{
+  "common": {
+    "back": "11111",
+    "cancel": "11111",
+    "delete": "11111",
+    "edit": "11111",
+    "saveChanges": "11111"
+  },
+  "opportunities": {
+    "board": {
+      "daysQuiet": "11111 {{count}} 11111",
+      "nextDue": "11111 {{date}} 11111",
+      "recentlyClosed": "11111"
+    },
+    "clientTab": {
+      "emptyBody": "11111",
+      "emptyTitle": "11111"
+    },
+    "commitments": {
+      "add": "11111",
+      "coveredByQuote": "11111 {{quote}} 11111",
+      "declined": "11111",
+      "help": "11111",
+      "openCount": "11111 {{count}} 11111",
+      "placeholder": "11111",
+      "resolve": "11111",
+      "status": {
+        "agreement_line": "11111",
+        "declined": "11111",
+        "open": "11111",
+        "project_task": "11111",
+        "quote_line": "11111"
+      },
+      "title": "11111"
+    },
+    "completeDialog": {
+      "due": "11111",
+      "nextAction": "11111",
+      "placeholder": "11111",
+      "submit": "11111",
+      "title": "11111"
+    },
+    "confidence": {
+      "committed": "11111",
+      "high": "11111",
+      "low": "11111",
+      "medium": "11111"
+    },
+    "createDialog": {
+      "client": "11111",
+      "dealTitle": "11111",
+      "due": "11111",
+      "expectedClose": "11111",
+      "nextAction": "11111",
+      "nextActionPlaceholder": "11111",
+      "submit": "11111",
+      "title": "11111",
+      "titlePlaceholder": "11111"
+    },
+    "deleteDialog": {
+      "body": "11111 {{number}} 11111",
+      "title": "11111"
+    },
+    "detail": {
+      "backToList": "11111",
+      "confidence": "11111",
+      "confidenceNote": "11111",
+      "createQuote": "11111",
+      "draftFollowUp": "11111",
+      "due": "11111 {{date}} 11111",
+      "evidence": "11111",
+      "expectedClose": "11111",
+      "hardware": "11111",
+      "linkQuote": "11111",
+      "markLost": "11111",
+      "markWon": "11111",
+      "metadataTitle": "11111",
+      "nextAction": "11111",
+      "nextActionOverdue": "11111",
+      "noQuotes": "11111",
+      "oneTime": "11111",
+      "owner": "11111",
+      "quotes": "11111",
+      "quoteTitle": "11111 {{title}} 11111",
+      "recurring": "11111",
+      "setStageHint": "11111",
+      "timeline": "11111",
+      "unlinkQuote": "11111",
+      "value": "11111",
+      "valuesFromQuote": "11111",
+      "whyNumber": "11111 {{number}} 11111",
+      "whyPeriod": "11111"
+    },
+    "draft": {
+      "body": "11111",
+      "copied": "11111",
+      "copy": "11111",
+      "instructions": "11111",
+      "instructionsPlaceholder": "11111",
+      "loadingRecipient": "11111",
+      "noRecipient": "11111",
+      "recipient": "11111 {{recipient}} 11111",
+      "regenerate": "11111",
+      "send": "11111",
+      "sent": "11111",
+      "subject": "11111",
+      "title": "11111"
+    },
+    "editDialog": {
+      "title": "11111"
+    },
+    "forecast": {
+      "basis": "11111",
+      "calibrated": "11111",
+      "ceiling": "11111",
+      "deal": "11111",
+      "floor": "11111",
+      "floorCol": "11111",
+      "note": "11111",
+      "plusOneTime": "11111 {{amount}} 11111",
+      "weighted": "11111 {{stage}} 11111 {{pct}} 11111",
+      "won": "11111"
+    },
+    "ladder": "11111",
+    "setStage": "11111 {{stage}} 11111",
+    "linkQuoteDialog": {
+      "confirm": "11111",
+      "empty": "11111",
+      "title": "11111"
+    },
+    "list": {
+      "confidence": "11111",
+      "deal": "11111",
+      "mrr": "11111",
+      "nextAction": "11111",
+      "oneTime": "11111",
+      "owner": "11111",
+      "stage": "11111"
+    },
+    "loseDialog": {
+      "lostTo": "11111",
+      "notes": "11111",
+      "notesPlaceholder": "11111",
+      "reasonPlaceholder": "11111",
+      "submit": "11111",
+      "title": "11111"
+    },
+    "lossReason": {
+      "chose_competitor": "11111",
+      "no_budget": "11111",
+      "no_response": "11111",
+      "not_a_fit": "11111",
+      "other": "11111",
+      "price": "11111",
+      "timing": "11111"
+    },
+    "meeting": {
+      "daysAgo": "11111 {{count}} 11111",
+      "done": "11111 {{count}} 11111",
+      "evidenceSays": "11111",
+      "gap": "11111 {{confidence}} 11111 {{stage}} 11111",
+      "keys": "11111",
+      "markReviewed": "11111",
+      "next": "11111",
+      "noAction": "11111",
+      "progress": "11111 {{n}} 11111 {{total}} 11111",
+      "repSays": "11111",
+      "reviewed": "11111",
+      "silence": "11111"
+    },
+    "new": "11111",
+    "onePager": {
+      "average": "11111",
+      "billed": "11111",
+      "month": "11111",
+      "printTitle": "11111 {{client}} 11111",
+      "summary": "11111 {{client}} 11111 {{total}} 11111 {{avg}} 11111",
+      "title": "11111"
+    },
+    "oneTime": "11111",
+    "oneTimeAmount": "11111 {{amount}} 11111",
+    "pageTitle": "11111",
+    "perMonthSuffix": "11111",
+    "prospect": "11111",
+    "queue": {
+      "actions": "11111",
+      "allClear": "11111",
+      "bottom": "11111",
+      "cardsView": "11111",
+      "completeAction": "11111",
+      "completeActionFor": "11111 {{title}} 11111",
+      "daysOverdue": "11111 {{count}} 11111",
+      "daysQuiet": "11111 {{count}} 11111",
+      "doToday": "11111",
+      "goingQuiet": "11111",
+      "greetingAfternoon": "11111 {{name}} 11111",
+      "greetingEvening": "11111 {{name}} 11111",
+      "greetingMorning": "11111 {{name}} 11111",
+      "lesson": {
+        "reviewPipeline": "11111",
+        "viewAssessmentDeals": "11111"
+      },
+      "markLost": "11111",
+      "moneyFound": "11111",
+      "moneyFoundSource": "11111",
+      "needsYou_one": "11111 {{count}} 11111",
+      "needsYou_other": "11111 {{count}} 11111",
+      "nothingDue": "11111",
+      "openDeal": "11111",
+      "openDealNamed": "11111 {{title}} 11111",
+      "reviewDraft": "11111",
+      "snooze": "11111",
+      "snoozeNamed": "11111 {{title}} 11111",
+      "stakesMrr": "11111 {{amount}} 11111",
+      "stakesNrr": "11111 {{amount}} 11111",
+      "table": {
+        "actions": "11111",
+        "client": "11111",
+        "due": "11111",
+        "nextAction": "11111",
+        "value": "11111"
+      },
+      "tableView": "11111",
+      "viewLabel": "11111"
+    },
+    "snapshot": {
+      "actionsDue": "11111",
+      "empty": "11111",
+      "loading": "11111",
+      "mrr": "11111 {{amount}} 11111",
+      "nrr": "11111 {{amount}} 11111",
+      "open": "11111",
+      "openCount": "11111",
+      "opportunityCount_one": "11111 {{count}} 11111",
+      "opportunityCount_other": "11111 {{count}} 11111",
+      "pipelineByStage": "11111",
+      "stalled": "11111",
+      "subtitle": "11111",
+      "title": "11111",
+      "unavailable": "11111"
+    },
+    "stage": {
+      "assessment": "11111",
+      "identified": "11111",
+      "lost": "11111",
+      "proposed": "11111",
+      "qualified": "11111",
+      "verbal": "11111",
+      "won": "11111"
+    },
+    "status": {
+      "lost": "11111",
+      "won": "11111"
+    },
+    "suggestedActions": {
+      "bookAssessment": "11111",
+      "confirmDecisionMaker": "11111",
+      "confirmRequirements": "11111",
+      "confirmStartDate": "11111",
+      "followUpQuote": "11111",
+      "label": "11111",
+      "prepareQuote": "11111",
+      "reviewFindings": "11111",
+      "scheduleDiscovery": "11111",
+      "scheduleProposalReview": "11111",
+      "sendContract": "11111"
+    },
+    "suggestionHow": {
+      "assetAging_one": "11111 {{count}} 11111",
+      "assetAging_other": "11111 {{count}} 11111",
+      "inboundLead": "11111",
+      "renewal": "11111 {{clientName}} 11111",
+      "tmConversion": "11111",
+      "whitespace": "11111 {{clientName}} 11111 {{serviceName}} 11111"
+    },
+    "suggestions": {
+      "accept": "11111",
+      "dismiss": "11111",
+      "emptyBody": "11111",
+      "emptyTitle": "11111",
+      "intro": "11111",
+      "seeNumbers": "11111",
+      "snooze": "11111"
+    },
+    "suggestionTitles": {
+      "assetAging": "11111 {{clientName}} 11111",
+      "inboundLead": "11111 {{clientName}} 11111",
+      "renewal": "11111 {{contractName}} 11111",
+      "tmConversion": "11111 {{clientName}} 11111",
+      "whitespace": "11111 {{clientName}} 11111 {{serviceName}} 11111"
+    },
+    "tabs": {
+      "board": "11111",
+      "forecast": "11111",
+      "meeting": "11111",
+      "pipeline": "11111",
+      "queue": "11111",
+      "suggestions": "11111"
+    },
+    "timeline": {
+      "created": "11111",
+      "empty": "11111"
+    },
+    "toast": {
+      "actionCompleted": "11111",
+      "created": "11111",
+      "deleted": "11111",
+      "lost": "11111",
+      "qualified": "11111",
+      "quoteLinked": "11111",
+      "quoteUnlinked": "11111",
+      "saved": "11111",
+      "snoozed": "11111",
+      "stageSet": "11111 {{stage}} 11111",
+      "suggestionAccepted": "11111",
+      "suggestionDismissed": "11111",
+      "suggestionSnoozed": "11111",
+      "whitespaceSuggestionCreated": "11111",
+      "whitespaceSuggestionDismissed": "11111",
+      "whitespaceSuggestionKnown": "11111",
+      "won": "11111"
+    },
+    "type": {
+      "expansion": "11111",
+      "new_logo": "11111",
+      "project": "11111",
+      "renewal": "11111"
+    },
+    "valuesDialog": {
+      "hardware": "11111",
+      "mrr": "11111",
+      "note": "11111",
+      "nrr": "11111",
+      "title": "11111"
+    },
+    "whitespace": {
+      "adoption": "11111 {{pct}} 11111",
+      "client": "11111",
+      "empty": "11111",
+      "sell": "11111 {{category}} 11111 {{client}} 11111",
+      "subtitle": "11111",
+      "title": "11111"
+    },
+    "why": {
+      "actionDue": {
+        "deadlinePast_one": "11111 {{count}} 11111",
+        "deadlinePast_other": "11111 {{count}} 11111",
+        "dueToday": "11111",
+        "inboundChase_one": "11111",
+        "inboundChase_other": "11111 {{count}} 11111",
+        "pastDue_one": "11111 {{count}} 11111",
+        "pastDue_other": "11111 {{count}} 11111",
+        "proposalAge_one": "11111 {{count}} 11111",
+        "proposalAge_other": "11111 {{count}} 11111",
+        "proposalAgeShort_one": "11111 {{count}} 11111",
+        "proposalAgeShort_other": "11111 {{count}} 11111",
+        "quoteIntro": "11111 {{clientName}} 11111 {{quoteNumber}} 11111"
+      },
+      "assetAging": {
+        "age_one": "11111 {{count}} 11111 {{oldestYears}} 11111",
+        "age_other": "11111 {{count}} 11111 {{oldestYears}} 11111",
+        "quoteRefresh": "11111 {{clientName}} 11111"
+      },
+      "forClient": "11111 {{clientName}} 11111",
+      "goingQuiet": {
+        "nudge": "11111 {{clientName}} 11111",
+        "paperworkMissing": "11111",
+        "quietAge_one": "11111 {{count}} 11111",
+        "quietAge_other": "11111 {{count}} 11111",
+        "verbalAge_one": "11111 {{count}} 11111",
+        "verbalAge_other": "11111 {{count}} 11111"
+      },
+      "inboundLead": {
+        "raisedHand": "11111 {{clientName}} 11111",
+        "source": "11111 {{formName}} 11111"
+      },
+      "lesson": {
+        "assessmentGap_one": "11111 {{count}} 11111",
+        "assessmentGap_other": "11111 {{count}} 11111",
+        "assessmentRate": "11111 {{wonPerFive}} 11111",
+        "quoteVelocity": "11111 {{ratio}} 11111",
+        "quoteVelocityCompared": "11111"
+      },
+      "renewal": {
+        "age_one": "11111 {{count}} 11111",
+        "age_other": "11111 {{count}} 11111",
+        "startNow": "11111"
+      },
+      "tmConversion": {
+        "counted_one": "11111 {{count}} 11111",
+        "counted_other": "11111 {{count}} 11111",
+        "named": "11111 {{clientNames}} 11111",
+        "trailing": "11111"
+      },
+      "whitespace": {
+        "comparable": "11111",
+        "missing": "11111 {{clientName}} 11111 {{serviceName}} 11111"
+      }
+    },
+    "winDialog": {
+      "body": "11111",
+      "bodyProspect": "11111 {{client}} 11111",
+      "confirm": "11111",
+      "convertQuote": "11111",
+      "noConvertQuote": "11111",
+      "noProject": "11111",
+      "projectName": "11111",
+      "projectStart": "11111",
+      "projectStatus": "11111",
+      "projectTemplate": "11111",
+      "title": "11111"
+    }
+  }
+}

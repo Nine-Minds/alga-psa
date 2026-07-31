@@ -534,4 +534,6 @@ export type PublishError = {
   stepId?: string;
   code: string;
   message: string;
+  /** Actionable correction, e.g. `Did you mean "tickets.update_fields"?` */
+  suggestion?: string;
 };

@@ -5,7 +5,7 @@ import {
   createPublicAppointmentRequestSchema,
   CreatePublicAppointmentRequestInput
 } from '@/lib/schemas/appointmentSchemas';
-import { getTenantIdBySlug, resolveEffectiveTimeZone, normalizeIanaTimeZone } from '@alga-psa/db';
+import { getTenantIdBySlug, resolveEffectiveTimeZone, normalizeIanaTimeZone, tenantDb } from '@alga-psa/db';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getConnection } from '@/lib/db/db';
 import { getServicesForPublicBooking } from '@alga-psa/client-portal/services/availabilityService';
@@ -172,9 +172,9 @@ export async function POST(req: NextRequest) {
 
     // Verify tenant exists
     const knex = await getConnection(tenantId);
-    const tenant = await knex('tenants')
-      .where({ tenant: tenantId })
-      .first('tenant', 'client_name');
+    const db = tenantDb(knex, tenantId);
+    const tenant = await db.table('tenants')
+      .first('tenant', 'client_name', 'suspended_at');
 
     if (!tenant) {
       logger.warn('[public-appointment-request] Tenant not found', {
@@ -188,6 +188,24 @@ export async function POST(req: NextRequest) {
           error: 'Invalid tenant'
         },
         { status: 400 }
+      );
+    }
+
+    // Suspended tenants (cancelled, pending deletion) must not accept
+    // bookings: a human submitter would otherwise believe a defunct MSP will
+    // respond. Neutral copy — no tenant-status detail leaked.
+    if (tenant.suspended_at) {
+      logger.info('[public-appointment-request] Rejecting request for suspended tenant', {
+        tenantId,
+        ip: clientIp
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Booking is temporarily unavailable. Please try again later.'
+        },
+        { status: 503 }
       );
     }
 
@@ -221,7 +239,7 @@ export async function POST(req: NextRequest) {
     const appointmentRequestId = uuidv4();
     const now = new Date();
 
-    await knex('appointment_requests').insert({
+    await db.table('appointment_requests').insert({
       appointment_request_id: appointmentRequestId,
       tenant: tenantId,
       client_id: null,
@@ -330,8 +348,8 @@ export async function POST(req: NextRequest) {
 
       // Only notify the resolved set (preferred technician + approvers)
       if (notifyUserIds.size > 0) {
-        const staffUsers = await knex('users')
-          .where({ tenant: tenantId, user_type: 'internal' })
+        const staffUsers = await db.table('users')
+          .where({ user_type: 'internal' })
           .whereIn('user_id', Array.from(notifyUserIds))
           .where(function() {
             this.where('is_inactive', false).orWhereNull('is_inactive');

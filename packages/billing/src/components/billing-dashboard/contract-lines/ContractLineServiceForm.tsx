@@ -30,6 +30,10 @@ import {
   deleteBucketOverlay
 } from '../../../actions/bucketOverlayActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): boolean =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContractLineServiceFormProps {
   planService: IContractLineService;
@@ -96,6 +100,10 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
       try {
         // Fetch contract line to get billing frequency
         const contractLine = await getContractLineById(planService.contract_line_id);
+        if (isReturnedActionError(contractLine)) {
+          setError(getErrorMessage(contractLine));
+          return;
+        }
         if (contractLine) {
           setContractLineBillingFrequency(contractLine.billing_frequency);
           setContractLineMode(mapContractLineTypeToMode(contractLine.contract_line_type));
@@ -103,10 +111,18 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
         // Check if configuration exists
         const config = await getConfigurationForService(planService.contract_line_id, planService.service_id);
+        if (isReturnedActionError(config)) {
+          setError(getErrorMessage(config));
+          return;
+        }
 
         if (config) {
           // Load full configuration details
           const configDetails = await getConfigurationWithDetails(config.config_id);
+          if (isReturnedActionError(configDetails)) {
+            setError(getErrorMessage(configDetails));
+            return;
+          }
           const details: any = configDetails;
 
           setBaseConfig({
@@ -145,6 +161,10 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         if (service && (service.billing_method === 'hourly' || service.billing_method === 'usage')) {
           try {
             const overlay = await getBucketOverlay(planService.contract_line_id, planService.service_id);
+            if (isActionMessageError(overlay) || isActionPermissionError(overlay)) {
+              console.error('Error loading bucket overlay:', getErrorMessage(overlay));
+              return;
+            }
             if (overlay) {
               setBucketOverlay(overlay);
               setInitialBucketOverlay(overlay);
@@ -217,7 +237,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
     try {
       // Update the plan service with the new configuration
-      await updateContractLineService(
+      const updateResult = await updateContractLineService(
         planService.contract_line_id,
         planService.service_id,
         {
@@ -227,13 +247,23 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         },
         rateTiers // Pass the rateTiers state here
       );
+      if (isReturnedActionError(updateResult)) {
+        setError(getErrorMessage(updateResult));
+        setIsSubmitting(false);
+        return;
+      }
 
       // If this is a Fixed configuration, also update the plan fixed config
       if (baseConfig.configuration_type === 'Fixed') {
-        await updateContractLineFixedConfig(
+        const fixedConfigResult = await updateContractLineFixedConfig(
           planService.contract_line_id,
           planFixedConfig
         );
+        if (isReturnedActionError(fixedConfigResult)) {
+          setError(getErrorMessage(fixedConfigResult));
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       // Handle bucket overlay for Hourly and Usage services
@@ -243,19 +273,29 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
 
         if (hasBucketOverlay && bucketOverlay) {
           // Save or update bucket overlay
-          await upsertBucketOverlay(
+          const result = await upsertBucketOverlay(
             planService.contract_line_id,
             planService.service_id,
             bucketOverlay,
             baseConfig.quantity,
             baseConfig.custom_rate
           );
+          if (isActionMessageError(result) || isActionPermissionError(result)) {
+            setError(getErrorMessage(result));
+            setIsSubmitting(false);
+            return;
+          }
         } else if (hadBucketOverlay && !hasBucketOverlay) {
           // Delete bucket overlay if it was removed
-          await deleteBucketOverlay(
+          const result = await deleteBucketOverlay(
             planService.contract_line_id,
             planService.service_id
           );
+          if (isActionMessageError(result) || isActionPermissionError(result)) {
+            setError(getErrorMessage(result));
+            setIsSubmitting(false);
+            return;
+          }
         }
       }
 

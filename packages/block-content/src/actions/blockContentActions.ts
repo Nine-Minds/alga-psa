@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -52,10 +52,10 @@ export const createBlockDocument = withAuth(async (
       order_number: 0,
     };
 
-    await trx('documents').insert(documentData);
+    await tenantDb(trx, tenant).table('documents').insert(documentData);
 
     const contentId = uuidv4();
-    await trx('document_block_content').insert({
+    await tenantDb(trx, tenant).table('document_block_content').insert({
       content_id: contentId,
       document_id: documentId,
       block_data: typeof input.block_data === 'string'
@@ -68,7 +68,7 @@ export const createBlockDocument = withAuth(async (
     });
 
     if (input.entityId && input.entityType) {
-      await trx('document_associations').insert({
+      await tenantDb(trx, tenant).table('document_associations').insert({
         association_id: uuidv4(),
         document_id: documentId,
         entity_id: input.entityId,
@@ -94,8 +94,8 @@ export const getBlockContent = withAuth(async (
 ) => {
   const { knex } = await createTenantKnex();
 
-  const content = await knex('document_block_content')
-    .where({ document_id: documentId, tenant })
+  const content = await tenantDb(knex, tenant).table('document_block_content')
+    .where({ document_id: documentId })
     .select('content_id', 'block_data', 'version_id', 'created_at', 'updated_at')
     .first();
 
@@ -114,8 +114,8 @@ export const updateBlockContent = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const document = await trx('documents')
-      .where({ document_id: documentId, tenant })
+    const document = await tenantDb(trx, tenant).table('documents')
+      .where({ document_id: documentId })
       .first();
 
     if (!document) {
@@ -126,14 +126,14 @@ export const updateBlockContent = withAuth(async (
       ? input.block_data
       : JSON.stringify(input.block_data);
 
-    const existing = await trx('document_block_content')
-      .where({ document_id: documentId, tenant })
+    const existing = await tenantDb(trx, tenant).table('document_block_content')
+      .where({ document_id: documentId })
       .first();
 
     let updatedContent;
     if (existing) {
-      [updatedContent] = await trx('document_block_content')
-        .where({ document_id: documentId, tenant })
+      [updatedContent] = await tenantDb(trx, tenant).table('document_block_content')
+        .where({ document_id: documentId })
         .update({
           block_data: blockDataValue,
           version_id: input.version_id,
@@ -141,7 +141,7 @@ export const updateBlockContent = withAuth(async (
         })
         .returning(['content_id', 'block_data', 'version_id']);
     } else {
-      [updatedContent] = await trx('document_block_content')
+      [updatedContent] = await tenantDb(trx, tenant).table('document_block_content')
         .insert({
           content_id: uuidv4(),
           document_id: documentId,
@@ -154,8 +154,8 @@ export const updateBlockContent = withAuth(async (
         .returning(['content_id', 'block_data', 'version_id']);
     }
 
-    await trx('documents')
-      .where({ document_id: documentId, tenant })
+    await tenantDb(trx, tenant).table('documents')
+      .where({ document_id: documentId })
       .update({ updated_at: trx.fn.now(), edited_by: input.user_id });
 
     return updatedContent;

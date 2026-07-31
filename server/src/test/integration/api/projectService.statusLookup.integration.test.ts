@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { ProjectService } from '@/lib/api/services/ProjectService';
 
@@ -31,18 +32,32 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('project_ticket_links').where({ tenant: tenantId }).del();
-  await db('task_checklist_items').where({ tenant: tenantId }).del();
-  await db('project_tasks').where({ tenant: tenantId }).del();
-  await db('project_status_mappings').where({ tenant: tenantId }).del();
-  await db('project_phases').where({ tenant: tenantId }).del();
-  await db('projects').where({ tenant: tenantId }).del();
-  await db('next_number').where({ tenant: tenantId }).del();
-  await db('statuses').where({ tenant: tenantId }).del();
-  await db('clients').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'project_ticket_links').del();
+  await tenantTable(tenantId, 'task_checklist_items').del();
+  await tenantTable(tenantId, 'project_tasks').del();
+  await tenantTable(tenantId, 'project_status_mappings').del();
+  await tenantTable(tenantId, 'project_phases').del();
+  await tenantTable(tenantId, 'projects').del();
+  await tenantTable(tenantId, 'next_number').del();
+  await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 async function createFixture(): Promise<Fixture> {
@@ -54,7 +69,7 @@ async function createFixture(): Promise<Fixture> {
 
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     client_name: `Project Service Tenant ${tenantId.slice(0, 8)}`,
     email: `tenant-${tenantId.slice(0, 8)}@example.com`,
@@ -62,7 +77,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `project-service-${tenantId.slice(0, 8)}`,
@@ -72,7 +87,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('clients').insert({
+  await tenantTable(tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: `Client ${tenantId.slice(0, 8)}`,
@@ -82,7 +97,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(clientColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('next_number').insert({
+  await tenantTable(tenantId, 'next_number').insert({
     tenant: tenantId,
     entity_type: 'PROJECT',
     last_number: 0,
@@ -91,7 +106,7 @@ async function createFixture(): Promise<Fixture> {
     padding_length: 4,
   });
 
-  await db('statuses').insert([
+  await tenantTable(tenantId, 'statuses').insert([
     {
       tenant: tenantId,
       status_id: defaultStatusId,
@@ -132,10 +147,10 @@ async function createFixture(): Promise<Fixture> {
 describe('project service status lookup integration', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    clientColumns = await db('clients').columnInfo();
-    statusColumns = await db('statuses').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
+    statusColumns = await schemaTable('statuses').columnInfo();
   });
 
   afterEach(async () => {
@@ -171,8 +186,8 @@ describe('project service status lookup integration', () => {
     expect(project.project_id).toBeTruthy();
     expect(project.status).toBe(fixture.defaultStatusId);
 
-    const persisted = await db('projects')
-      .where({ tenant: fixture.tenantId, project_id: project.project_id })
+    const persisted = await tenantTable(fixture.tenantId, 'projects')
+      .where({ project_id: project.project_id })
       .first();
 
     expect(persisted).toBeDefined();
@@ -231,8 +246,8 @@ describe('project service status lookup integration', () => {
     expect(phase.phase_id).toBeTruthy();
     expect(phase.status).toBe('planning');
 
-    const persisted = await db('project_phases')
-      .where({ tenant: fixture.tenantId, phase_id: phase.phase_id })
+    const persisted = await tenantTable(fixture.tenantId, 'project_phases')
+      .where({ phase_id: phase.phase_id })
       .first();
 
     expect(persisted).toBeDefined();

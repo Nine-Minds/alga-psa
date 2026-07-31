@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Badawczy...",
       "noWorkItems": "Nie znaleziono żadnych elementów pracy"
-    }
+    },
+    "paymentWarningTitle": "Ostrzeżenie o wymaganej płatności",
+    "paymentWarning": "Płatność jest wymagana dla oznaczonego etapu rozliczenia projektu i nie została jeszcze potwierdzona. Potwierdź płatność przed kontynuowaniem pracy."
   },
   "workItemList": {
     "meta": {
@@ -452,7 +454,8 @@
     "taskUpdated": "Zadanie zaktualizowane pomyślnie",
     "saveChangesFailed": "Nie udało się zapisać zmian",
     "changesSaved": "Zmiany zapisane pomyślnie",
-    "workItemDeleted": "Element pracy usunięty pomyślnie"
+    "workItemDeleted": "Element pracy usunięty pomyślnie",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "To zgłoszenie jest częścią pakietu {{number}}. Czas pakietu jest zwykle rejestrowany na zgłoszeniu głównym.",

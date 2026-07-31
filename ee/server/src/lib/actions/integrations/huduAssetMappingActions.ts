@@ -5,8 +5,7 @@
  *
  * Sibling of huduMappingActions.ts, but RBAC-gated on the `asset` resource
  * (FR16/FR6/FR10: mapping is a Technician flow — read=view, update=mutate)
- * instead of system_settings. Same EE tier +
- * `hudu-integration` flag chain otherwise.
+ * instead of system_settings. Same EE tier gate otherwise.
  *
  * The Hudu asset list is fetched through the Phase 1 path
  * (getHuduCompanyAssets: per-mapped-company, short server cache) — never a
@@ -17,12 +16,12 @@ import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getHuduCompanyAssets } from './huduDataActions';
-import type { HuduCompanyFetchOptions, HuduLinkedItem } from './huduDataActions';
+import type { HuduCompanyFetchOptions, HuduLinkedItem } from '../../integrations/hudu/huduDataCore';
 import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
 import type { HuduAsset } from '../../integrations/hudu/contracts';
 import { resolveHuduCompanyIdForClient as resolveHuduCompanyIdForClientRow } from '../../integrations/hudu/companyMapping';
@@ -40,6 +39,7 @@ import type {
   HuduAssetMappingMetadata,
   HuduAssetMappingWriteResult,
 } from '../../integrations/hudu/assetMapping';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 export type HuduAssetMappingActionResult<T> =
   | { success: true; data: T }
@@ -100,14 +100,6 @@ function withHuduAssetAccess<TArgs extends unknown[], TResult>(
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
 
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
-
     return handler(user, context as { tenant: string }, ...args);
   });
 }
@@ -117,8 +109,8 @@ function toErrorMessage(error: unknown): string {
 }
 
 async function listMatchableAssets(knex: Knex, tenant: string, clientId: string): Promise<AlgaMatcherAsset[]> {
-  return knex('assets')
-    .where({ tenant, client_id: clientId })
+  return tenantDb(knex, tenant).table('assets')
+    .where({ client_id: clientId })
     .select('asset_id', 'name as asset_name', 'serial_number');
 }
 
@@ -203,7 +195,7 @@ export const getHuduAssetMappings = withHuduAssetAccess(
         clientId,
         error: toErrorMessage(error),
       });
-      return { state: 'error', error: toErrorMessage(error) };
+      return { state: 'error', error: huduActionErrorMessage(error, 'Unable to load Hudu asset mappings. Please try again.') };
     }
   }
 );
@@ -270,7 +262,7 @@ export const setHuduAssetMapping = withHuduAssetAccess(
       return { success: true, data: { mapping_id: result.mapping.id } };
     } catch (error) {
       logger.error('[HuduAssetMappingActions] setHuduAssetMapping failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to save Hudu asset mapping. Please try again.') };
     }
   }
 );
@@ -300,7 +292,7 @@ export const clearHuduAssetMapping = withHuduAssetAccess(
       return { success: true, data: { cleared } };
     } catch (error) {
       logger.error('[HuduAssetMappingActions] clearHuduAssetMapping failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to clear Hudu asset mapping. Please try again.') };
     }
   }
 );

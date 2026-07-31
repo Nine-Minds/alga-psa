@@ -52,12 +52,13 @@ function mapError(error: unknown): NextResponse {
           return 500;
       }
     })();
+    const isServerError = status >= 500;
     return NextResponse.json(
       {
         error: {
           code: error.code,
-          message: error.message,
-          details: error.details ?? null,
+          message: isServerError ? 'Storage operation failed.' : error.message,
+          details: isServerError ? null : error.details ?? null,
         },
       },
       { status },

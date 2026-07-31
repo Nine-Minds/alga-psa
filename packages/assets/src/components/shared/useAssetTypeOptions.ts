@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { AssetTypeRegistryEntry } from '@alga-psa/types';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getAssetTypes } from '../../actions/assetTypeRegistryActions';
+import {
+  getErrorMessage,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const BUILTIN_TYPE_SLUGS = [
   'workstation',
@@ -38,7 +42,13 @@ export function useAssetTypeRegistry(enabled = true): AssetTypeRegistryEntry[] |
     let mounted = true;
     getAssetTypes()
       .then((types) => {
-        if (mounted) setEntries(types);
+        if (!mounted) return;
+        if (isActionPermissionError(types)) {
+          console.warn('Unable to load asset types:', getErrorMessage(types));
+          setEntries([]);
+          return;
+        }
+        setEntries(types);
       })
       .catch((error) => {
         console.error('Error loading asset types:', error);

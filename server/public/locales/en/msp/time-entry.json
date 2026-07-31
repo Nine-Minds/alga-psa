@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Searching...",
       "noWorkItems": "No work items found"
-    }
+    },
+    "paymentWarningTitle": "Payment prerequisite warning",
+    "paymentWarning": "Payment is required for a flagged project billing milestone and has not been confirmed. Confirm payment before continuing work."
   },
   "workItemList": {
     "meta": {
@@ -448,7 +450,8 @@
     "taskUpdated": "Task updated successfully",
     "saveChangesFailed": "Failed to save changes",
     "changesSaved": "Changes saved successfully",
-    "workItemDeleted": "Work item deleted successfully"
+    "workItemDeleted": "Work item deleted successfully",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "This ticket is bundled under {{number}}. Bundle time is usually logged on the master ticket.",

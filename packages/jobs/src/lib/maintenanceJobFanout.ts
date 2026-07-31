@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 // Sibling handlers live in this same package; imported relatively so the
@@ -7,7 +8,6 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 // outside the package use '@alga-psa/jobs/handlers/<name>'.
 import { expiredCreditsHandler } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler } from './handlers/expiringCreditsNotificationHandler';
-import { creditReconciliationHandler } from './handlers/creditReconciliationHandler';
 import { handleReconcileBucketUsage } from './handlers/reconcileBucketUsageHandler';
 import { processRenewalQueueHandler } from './handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler } from './handlers/autoCloseTicketsHandler';
@@ -15,6 +15,7 @@ import { SEARCH_RECONCILE_JOB_NAME, searchReconcileHandler } from './handlers/se
 import { verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMaintenanceHandler';
 import { renewGoogleGmailWatchSubscriptions } from './handlers/googleGmailWatchRenewalHandler';
 import { renewTeamsMeetingArtifactSubscriptions } from './handlers/teamsMeetingArtifactWebhookHandler';
+import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';
 import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeScanHandler';
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
@@ -33,7 +34,6 @@ type MaintenanceJobDef =
 const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'expired-credits': { scope: 'tenant', run: (tenantId) => expiredCreditsHandler({ tenantId }) },
   'expiring-credits-notification': { scope: 'tenant', run: (tenantId) => expiringCreditsNotificationHandler({ tenantId }) },
-  'credit-reconciliation': { scope: 'tenant', run: (tenantId) => creditReconciliationHandler({ tenantId }) },
   'reconcile-bucket-usage': { scope: 'tenant', run: (tenantId) => handleReconcileBucketUsage({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
   'process-renewal-queue': { scope: 'tenant', run: (tenantId) => processRenewalQueueHandler({ tenantId, horizonDays: RENEWAL_HORIZON_DAYS }) },
   'auto-close-tickets': { scope: 'tenant', run: (tenantId) => autoCloseTicketsHandler({ tenantId }) },
@@ -41,6 +41,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'verify-google-calendar-pubsub': { scope: 'tenant', run: (tenantId) => verifyGoogleCalendarProvisioning({ tenantId }) },
   'renew-google-gmail-watch': { scope: 'tenant', run: (tenantId) => renewGoogleGmailWatchSubscriptions({ tenantId }) },
   'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }) },
+  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }) },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
@@ -91,7 +92,10 @@ export async function runMaintenanceJob(
   }
 
   const knex = await getAdminConnection();
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await tenantDb(knex, '__maintenance_job_fanout_tenant_enumeration__')
+    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
+    .whereNull('suspended_at')
+    .select('tenant');
   let succeeded = 0;
   let failed = 0;
 

@@ -5,16 +5,15 @@
  * (F231, FR14/FR16). One Hudu page (25 items) per invocation — never a page
  * fan-out (NFR2) — with the user's search term passed through to Hudu and
  * each article's company resolved to its Alga client via the companies cache
- * + client mapping rows. Gating mirrors the sibling action wrappers (EE tier
- * + `hudu-integration` flag) but on `client` read RBAC:
- * browsing articles is a Technician flow, not settings administration.
+ * + client mapping rows. Gating mirrors the sibling action wrappers (EE tier)
+ * but on `client` read RBAC: browsing articles is a Technician flow, not
+ * settings administration.
  */
 
 import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import { createHuduClient, HuduRequestError } from '../../integrations/hudu/huduClient';
@@ -22,6 +21,7 @@ import type { HuduErrorKind } from '../../integrations/hudu/huduClient';
 import { getHuduIntegration } from '../../integrations/hudu/huduIntegrationRepository';
 import { getHuduCompanyMappingRows, parseCompaniesCache } from '../../integrations/hudu/companyMapping';
 import { buildHuduRecordUrl } from '../../integrations/hudu/referenceData';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 /** Hudu pages are a fixed 25 items; a full page implies more may follow. */
 const HUDU_ARTICLES_PAGE_SIZE = 25;
@@ -67,14 +67,6 @@ function withHuduClientReadAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
 
     return handler(user, context as { tenant: string }, ...args);
   });
@@ -157,7 +149,7 @@ export const listHuduArticlesAcrossCompanies = withHuduClientReadAccess(
       });
       return {
         state: 'error',
-        error: toErrorMessage(error),
+        error: huduActionErrorMessage(error, 'Unable to load Hudu articles. Please try again.'),
         ...(error instanceof HuduRequestError ? { errorKind: error.hudu.kind } : {}),
       };
     }

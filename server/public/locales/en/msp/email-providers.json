@@ -11,7 +11,8 @@
       "resyncing": "Resyncing {{providerName}}...",
       "resyncError": "Failed to resync IMAP provider",
       "resyncStarted": "Resync started for {{providerName}}.",
-      "enterpriseOnly": "Microsoft 365 inbound email is only available in Enterprise Edition."
+      "enterpriseOnly": "Microsoft 365 inbound email is only available in Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "Edit Email Provider",
@@ -143,6 +144,7 @@
     },
     "badges": {
       "disabled": "Disabled",
+      "paused": "Paused",
       "connected": "Connected",
       "disconnected": "Disconnected",
       "error": "Error",
@@ -166,15 +168,29 @@
       "reconnectOauth": "Reconnect OAuth",
       "resyncing": "Resyncing…",
       "resyncMailbox": "Resync Mailbox",
+      "pause": "Pause inbound email",
+      "resume": "Resume inbound email",
       "delete": "Delete Provider"
     },
+    "feedback": {
+      "paused": "Inbound email paused.",
+      "resumed": "Inbound email resumed.",
+      "pauseError": "Failed to change inbound email pause state."
+    },
+    "pausedHelp": "Messages received while this inbox is paused are not imported retroactively.",
     "fields": {
       "status": "Status",
       "lastSync": "Last Sync",
+      "lastIngested": "Last ingested",
+      "delivery": "Delivery",
       "created": "Created",
       "subscription": "Subscription",
       "defaults": "Ticket Defaults",
       "error": "Error:"
+    },
+    "delivery": {
+      "polling": "Polling every 3 minutes",
+      "webhook": "Real-time delivery: active"
     },
     "values": {
       "active": "Active",
@@ -293,7 +309,8 @@
         "popupBlocked": "Failed to open OAuth popup. Please allow popups for this site.",
         "closedEarly": "Authorization window was closed before completing.",
         "authorizationFailed": "Authorization failed",
-        "popupFailed": "OAuth popup failed"
+        "popupFailed": "OAuth popup failed",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Provider saved but setup incomplete: {{error}}",
@@ -707,7 +724,8 @@
       "refreshStatusFailed": "Failed to refresh domain status",
       "domainRemovalScheduled": "Domain removal scheduled",
       "domainRemovalScheduledWithClear": "Domain removal scheduled and ticketing From address cleared",
-      "removeDomainFailed": "Failed to remove domain"
+      "removeDomainFailed": "Failed to remove domain",
+      "testOutboundFailed": "Failed to test outbound email"
     },
     "tabs": {
       "inboundEmail": "Inbound Email",
@@ -741,11 +759,27 @@
         "usernamePlaceholder": "your-email@example.com",
         "passwordLabel": "Password",
         "passwordPlaceholder": "Enter password",
+        "authHint": "Leave username and password blank if your relay accepts mail without authentication.",
         "fromLabel": "From Address",
         "fromPlaceholder": "noreply@example.com",
         "fromHelp": "The default sender address for outbound emails.",
+        "security": {
+          "title": "Connection Security",
+          "secure": "Use implicit TLS (SSL on connect, typically port 465)",
+          "requireTls": "Require STARTTLS upgrade (ports 587 / 25)",
+          "verifyCert": "Verify server certificate",
+          "verifyCertHint": "Turn this off only for a trusted relay on your own network that uses a self-signed certificate."
+        },
         "savingButton": "Saving...",
-        "saveButton": "Save SMTP Settings"
+        "saveButton": "Save SMTP Settings",
+        "test": {
+          "title": "Test Outbound Email",
+          "description": "Saves the current settings, then verifies the provider connection. Enter an address to also send a test message.",
+          "recipientLabel": "Send test to (optional)",
+          "recipientPlaceholder": "you@example.com",
+          "testingButton": "Testing...",
+          "runButton": "Test Connection"
+        }
       },
       "ticketingFrom": {
         "title": "Ticketing From Address",
@@ -764,6 +798,9 @@
         "customPlaceholder": "support@{{domain}}",
         "customSmtpHelp": "Use a domain your SMTP server is authorized to send from. Using a mismatched domain may cause delivery failures or spam filtering.",
         "customManagedHelp": "Must match {{domain}}. If this isn't one of your inbound inboxes, inbound ticket processing may not work.",
+        "nameLabel": "Sender display name",
+        "namePlaceholder": "Support",
+        "nameHelp": "Shown as the sender name on ticket notifications. Leave blank to use the mailbox's configured name or the board name.",
         "warningTitle": "Heads up",
         "errorTitle": "Fix the from address",
         "clearButton": "Clear From Address",

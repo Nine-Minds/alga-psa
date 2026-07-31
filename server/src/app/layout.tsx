@@ -3,7 +3,10 @@ import "./globals.css";
 import "./print.css";
 // Global vendor CSS for react-big-calendar is added via a <link> tag below
 import { ThemedToaster } from '@alga-psa/ui/components/ThemedToaster';
-import { getCurrentTenant, getTenantBrandingByDomain } from '@alga-psa/tenancy/actions';
+// Granular action imports: the /actions barrel would pull every tenancy 'use server'
+// file into every route's server-reference manifest (dev OOM — see package-build-system.md).
+import { getCurrentTenant } from '@alga-psa/tenancy/actions/coreTenantActions';
+import { getTenantBrandingByDomain } from '@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain';
 import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider';
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
@@ -13,6 +16,9 @@ import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateP
 import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
 import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
+import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
+import { resolveRequestHost, resolveRequestOrigin } from '@/lib/deployment/requestHost';
+import { checkFeatureFlag } from '@/lib/feature-flags/serverFeatureFlags';
 import '@mantine/core/styles.css';
 import 'reactflow/dist/style.css';
 // Loaded last so the Inter font-token overrides win over Mantine/Radix defaults.
@@ -41,11 +47,13 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
-  const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:3010';
-  const proto =
-    headersList.get('x-forwarded-proto') ||
-    (host.includes('localhost') ? 'http' : 'https');
-  const metadataBase = new URL(`${proto}://${host}`);
+  const request = { headers: headersList };
+  const caps = resolveDeploymentCapabilities();
+  const host = resolveRequestHost(request, caps).hostHeader || 'localhost:3010';
+  const metadataBase = resolveRequestOrigin(request, caps, {
+    fallbackHost: 'localhost:3010',
+    fallbackProto: host.includes('localhost') ? 'http' : 'https',
+  });
 
   return {
     metadataBase,
@@ -118,6 +126,8 @@ export default async function RootLayout({
     brandingStyles = branding?.computedStyles || generateBrandingStyles(branding);
   }
 
+  const projectBillingUiEnabled = await checkFeatureFlag('project-billing-ui');
+
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`} suppressHydrationWarning>
       <head>
@@ -132,7 +142,7 @@ export default async function RootLayout({
         )}
       </head>
       <body className={`${inter.className} ${inter.variable}`} suppressHydrationWarning>
-        <PostHogProvider>
+        <PostHogProvider initialFeatureFlags={{ 'project-billing-ui': projectBillingUiEnabled }}>
            <MainContent>{children}</MainContent>
         </PostHogProvider>
       </body>

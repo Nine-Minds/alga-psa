@@ -29,6 +29,7 @@ export class SerialCommandQueue {
       onStart: options.onStart,
       onDone: options.onDone,
       signal: options.signal,
+      stdin: options.stdin,
       queuedAt: Date.now()
     };
 
@@ -97,9 +98,10 @@ export class SerialCommandQueue {
 
     const child = spawn('sh', ['-c', entry.command], {
       env: process.env,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: [entry.stdin === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
       detached: true
     });
+    if (entry.stdin !== undefined) child.stdin.end(String(entry.stdin));
 
     const killProcessGroup = (signal) => {
       try {

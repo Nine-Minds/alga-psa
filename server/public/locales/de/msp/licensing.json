@@ -172,5 +172,58 @@
   },
   "runStudio": {
     "unavailable": "Workflow Run Studio ist in dieser Edition nicht verfügbar. (runId: {{runId}})"
+  },
+  "aiConsent": {
+    "title": "KI-Datenweitergabe",
+    "subtitle": "Erforderlich für KI-Funktionen auf dieser Appliance. Prüfen Sie, was Ihr Netzwerk verlässt, bevor Sie KI aktivieren.",
+    "status": {
+      "granted": "Zustimmung erteilt",
+      "revoked": "Zustimmung widerrufen",
+      "missing": "Nicht erteilt"
+    },
+    "unreachable": "Der KI-Dienst konnte nicht erreicht werden, um den aktuellen Zustimmungsstatus zu laden. Versuchen Sie es in Kürze erneut.",
+    "explainer": "Wenn KI aktiviert ist, werden die Inhalte, mit denen die KI arbeitet — einschließlich Tickettexten, E-Mail-Inhalten und Chatnachrichten — von dieser Appliance an den Nine-Minds-Cloud-KI-Dienst und von dort an Drittanbieter von Modellen gesendet, um Antworten zu generieren. Es wird nichts gesendet, bis Sie unten Ihre Zustimmung erteilen.",
+    "termsVersion": "Bedingungsversion",
+    "grantedAt": "Erteilt",
+    "revoke": "Zustimmung widerrufen",
+    "accept": "Akzeptieren und KI aktivieren",
+    "acceptDialog": {
+      "title": "KI-Datenweitergabe aktivieren?",
+      "confirming": "Wird aktiviert…",
+      "confirm": "Ich stimme zu, KI aktivieren",
+      "body": "Indem Sie fortfahren, stimmen Sie zu, dass KI-Funktionen Ticket-, E-Mail- und Chatinhalte von dieser Appliance an den Nine-Minds-Cloud-KI-Dienst und weiter an Drittanbieter von Modellen zur Verarbeitung übertragen dürfen.",
+      "termsVersion": "Version der Datenweitergabebedingungen: {{version}}"
+    },
+    "revokeDialog": {
+      "title": "KI-Datenweitergabe widerrufen?",
+      "confirming": "Wird widerrufen…",
+      "confirm": "Zustimmung widerrufen",
+      "body": "KI-Funktionen stellen auf dieser Appliance sofort die Arbeit ein. Es werden keine weiteren Inhalte an den Cloud-KI-Dienst gesendet, bis die Zustimmung erneut erteilt wird."
+    }
+  },
+  "aiBalance": {
+    "title": "KI-Credits",
+    "subtitle": "Vorausbezahlte Credits finanzieren KI-Funktionen auf dieser Appliance. Käufe erfolgen im Nine-Minds-Store.",
+    "refresh": "Aktualisieren",
+    "unreachable": "Der KI-Dienst konnte nicht erreicht werden, um Ihren Guthabenstand zu laden. Versuchen Sie es in Kürze erneut.",
+    "blockedPendingConsent": "KI ist blockiert, bis oben die Zustimmung zur Datenweitergabe erteilt wird. Solange KI aus ist, werden keine Credits verbraucht.",
+    "upsell": {
+      "heading": "KI-Add-on abonnieren",
+      "body": "Für diese Appliance besteht kein aktives KI-Abonnement. Abonnieren Sie im Nine-Minds-Store, um ein monatliches Guthabenkontingent zu erhalten; der Store verwaltet Zahlung und Aufladungen.",
+      "subscribe": "Im Store abonnieren"
+    },
+    "grace": "Das Guthaben ist aufgebraucht. Die KI funktioniert noch innerhalb eines kleinen Kulanzpuffers von {{grace}} Credits, bevor sie vollständig stoppt — laden Sie auf, um eine Unterbrechung zu vermeiden.",
+    "low": "Der Guthabenstand wird knapp. Laden Sie im Store auf, um Unterbrechungen zu vermeiden.",
+    "total": "Gesamtguthaben",
+    "creditsUnit": "Credits",
+    "included": "Inklusive (monatlich)",
+    "resetsMonthly": "wird jeden Zyklus zurückgesetzt",
+    "topup": "Aufladung (bleibt bestehen)",
+    "carriesOver": "wird übertragen",
+    "manage": {
+      "heading": "Credits kaufen oder Abonnement verwalten",
+      "body": "Aufladungen, automatisches Aufladen und Abonnementänderungen werden im Nine-Minds-Store verwaltet.",
+      "openStore": "Store öffnen"
+    }
   }
 }

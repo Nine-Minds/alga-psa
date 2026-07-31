@@ -1,5 +1,8 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+
+const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
 export interface EmailTemplateContent {
   subject: string;
@@ -12,6 +15,14 @@ export interface TemplateProcessorOptions {
   templateData?: Record<string, any>;
   locale?: string;
 }
+
+type EmailTemplateRecord = {
+  name: string;
+  language_code: string;
+  subject: string;
+  html_content: string;
+  text_content: string | null;
+};
 
 /**
  * Base interface for all template processors
@@ -88,6 +99,15 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     super();
   }
 
+  private tenantTemplatesQuery(tenantId: string) {
+    return tenantDb(this.knex, tenantId).table<EmailTemplateRecord>('tenant_email_templates');
+  }
+
+  private systemTemplatesQuery(tenantId?: string) {
+    return tenantDb(this.knex, tenantId ?? SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT)
+      .table<EmailTemplateRecord>('system_email_templates');
+  }
+
   async process(options: TemplateProcessorOptions): Promise<EmailTemplateContent> {
     const { tenantId, templateData, locale } = options;
     const requestedLocale = (locale || 'en').toLowerCase();
@@ -120,13 +140,13 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
   private async fetchTemplate(params: {
     tenantId?: string;
     locales: string[];
-  }): Promise<{ subject: string; html_content: string; text_content: string | null } | null> {
+  }): Promise<EmailTemplateRecord | null> {
     const { tenantId, locales } = params;
 
     if (tenantId) {
       for (const language of locales) {
-        const tenantTemplate = await this.knex('tenant_email_templates')
-          .where({ tenant: tenantId, name: this.templateName, language_code: language })
+        const tenantTemplate = await this.tenantTemplatesQuery(tenantId)
+          .where({ name: this.templateName, language_code: language })
           .first();
 
         if (tenantTemplate) {
@@ -136,7 +156,7 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     }
 
     for (const language of locales) {
-      const systemTemplate = await this.knex('system_email_templates')
+      const systemTemplate = await this.systemTemplatesQuery(tenantId)
         .where({ name: this.templateName, language_code: language })
         .first();
 

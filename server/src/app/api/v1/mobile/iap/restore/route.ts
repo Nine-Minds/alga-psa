@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { handleApiError, NotFoundError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import { getAppleIapConfig, getTransactionInfo } from '@/lib/iap/appStoreServer';
@@ -22,6 +23,8 @@ const restoreSchema = z.object({
   state: z.string().min(1),
 });
 
+const MOBILE_TENANT_DISCOVERY = 'tenant-discovery';
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json().catch(() => ({}));
@@ -41,7 +44,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const canonicalId = tx.originalTransactionId;
 
     const knex = await getConnection(null);
-    const sub = await knex('apple_iap_subscriptions')
+    const sub = await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+      .unscoped('apple_iap_subscriptions', 'tenant discovery from Apple original transaction id during restore')
       .where({ original_transaction_id: canonicalId })
       .first<{ tenant: string; status: string }>();
 
@@ -58,8 +62,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // Find the admin user to bind the OTT to.
-    const admin = await knex('users')
-      .where({ tenant: sub.tenant, user_type: 'internal' })
+    const admin = await tenantDb(knex, sub.tenant).table('users')
+      .where({ user_type: 'internal' })
       .orderBy('created_at', 'asc')
       .first<{ user_id: string }>('user_id');
 

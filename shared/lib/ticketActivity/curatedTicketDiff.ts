@@ -17,6 +17,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 import {
   CURATED_TICKET_FIELDS,
@@ -186,8 +187,8 @@ export async function buildCuratedTicketDiffWithLabels(
   ): Promise<Map<string, string>> => {
     if (ids.length === 0) return new Map();
     try {
-      const rows = await (knex as Knex)(table)
-        .where({ tenant })
+      const rows = await tenantDb(knex as Knex | Knex.Transaction, tenant)
+        .table<T>(table)
         .whereIn(idColumn, ids)
         .select(idColumn, labelColumn);
       const map = new Map<string, string>();

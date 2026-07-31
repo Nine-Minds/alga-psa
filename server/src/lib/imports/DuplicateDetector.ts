@@ -1,4 +1,5 @@
 import { getConnection } from '@/lib/db/db';
+import { tenantDb } from '@alga-psa/db';
 import type {
   DuplicateCheckResult,
   DuplicateDetectionStrategy,
@@ -15,47 +16,51 @@ type ExactMatchResolver = (
   value: string
 ) => Promise<string | null>;
 
+type AssetIdRow = {
+  asset_id: string;
+};
+
+type AssetFuzzyCandidateRow = {
+  asset_id: string;
+  name: string | null;
+};
+
 const exactResolvers: Record<string, ExactMatchResolver> = {
   serial_number: async (knex, tenantId, value) => {
-    const match = await knex<{ asset_id: string }>('assets')
+    const match = await tenantDb(knex, tenantId).table<AssetIdRow>('assets')
       .select('asset_id')
-      .where('tenant', tenantId)
       .whereRaw('serial_number IS NOT NULL')
       .andWhere('serial_number', value)
       .first();
     return match?.asset_id ?? null;
   },
   asset_tag: async (knex, tenantId, value) => {
-    const match = await knex<{ asset_id: string }>('assets')
+    const match = await tenantDb(knex, tenantId).table<AssetIdRow>('assets')
       .select('asset_id')
-      .where('tenant', tenantId)
       .whereRaw('asset_tag IS NOT NULL')
       .andWhere('asset_tag', value)
       .first();
     return match?.asset_id ?? null;
   },
   hostname: async (knex, tenantId, value) => {
-    const match = await knex<{ asset_id: string }>('assets')
+    const match = await tenantDb(knex, tenantId).table<AssetIdRow>('assets')
       .select('asset_id')
-      .where('tenant', tenantId)
       .whereRaw('name IS NOT NULL')
       .andWhereRaw('LOWER(name) = LOWER(?)', [value])
       .first();
     return match?.asset_id ?? null;
   },
   name: async (knex, tenantId, value) => {
-    const match = await knex<{ asset_id: string }>('assets')
+    const match = await tenantDb(knex, tenantId).table<AssetIdRow>('assets')
       .select('asset_id')
-      .where('tenant', tenantId)
       .whereRaw('name IS NOT NULL')
       .andWhereRaw('LOWER(name) = LOWER(?)', [value])
       .first();
     return match?.asset_id ?? null;
   },
   mac_address: async (knex, tenantId, value) => {
-    const match = await knex<{ asset_id: string }>('assets')
+    const match = await tenantDb(knex, tenantId).table<AssetIdRow>('assets')
       .select('asset_id')
-      .where('tenant', tenantId)
       .andWhere((builder) => {
         builder.whereRaw(
           `
@@ -261,7 +266,7 @@ export class DuplicateDetector {
     knex: Knex,
     field: string,
     value: string
-  ): Promise<Array<{ asset_id: string; name: string | null }>> {
+  ): Promise<AssetFuzzyCandidateRow[]> {
     const normalized = value.toLowerCase();
     const column = field === 'hostname' ? 'name' : field;
 
@@ -272,9 +277,8 @@ export class DuplicateDetector {
     const prefixLength = Math.min(3, Math.max(normalized.length >= 3 ? 3 : normalized.length, 1));
     const prefix = normalized.slice(0, prefixLength);
 
-    const query = knex<{ asset_id: string; name: string | null }>('assets')
+    const query = tenantDb(knex, this.tenantId).table<AssetFuzzyCandidateRow>('assets')
       .select('asset_id', 'name')
-      .where('tenant', this.tenantId)
       .whereNotNull(column)
       .limit(MAX_FUZZY_CANDIDATES);
 

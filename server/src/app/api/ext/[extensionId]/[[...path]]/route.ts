@@ -7,6 +7,7 @@ import { filterRequestHeaders, filterResponseHeaders } from 'server/src/lib/exte
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { assertSessionProductAccess } from '@/lib/api/standaloneProductGuards';
+import { tenantDb } from '@alga-psa/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -127,9 +128,9 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
     let clientId: string | undefined;
     try {
       const { knex } = await createTenantKnex();
-      const tenant = await knex('tenants')
+      const db = tenantDb(knex, tenantId);
+      const tenant = await db.table('tenants')
         .select('client_name')
-        .where('tenant', tenantId)
         .first();
       companyName = tenant?.client_name || '';
 
@@ -140,10 +141,9 @@ async function getUserInfo(tenantId: string): Promise<UserInfo | null> {
       if (sessionClientId) {
         clientId = sessionClientId;
       } else if (currentUser.user_type === 'client' && currentUser.contact_id) {
-        const contact = await knex('contacts')
+        const contact = await db.table('contacts')
           .select('client_id')
           .where({
-            tenant: tenantId,
             contact_name_id: currentUser.contact_id,
           })
           .first();
@@ -392,7 +392,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       clearTimeout(timeout);
       console.error('[api/ext] runner execution failed', { error: err, requestId, tenantId, extensionId });
       return applyCorsHeaders(
-        NextResponse.json({ error: 'bad_gateway', detail: String(err) }, { status: 502 }),
+        NextResponse.json({ error: 'bad_gateway', requestId }, { status: 502 }),
         corsOrigin
       );
     }
@@ -411,7 +411,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       stack: err instanceof Error ? err.stack : undefined,
     });
     return applyCorsHeaders(
-      NextResponse.json({ error: 'internal_error', detail: String(err) }, { status: 500 }),
+      NextResponse.json({ error: 'internal_error' }, { status: 500 }),
       corsOrigin
     );
   }

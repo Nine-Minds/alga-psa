@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { BillingDashboard } from '@alga-psa/billing/components';
+import BillingDashboard from '@alga-psa/billing/components/billing-dashboard/BillingDashboard';
 import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import type { IClient } from '@alga-psa/types';
 import { MspClientCrossFeatureProvider } from '../clients/MspClientCrossFeatureProvider';

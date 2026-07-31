@@ -23,6 +23,24 @@ vi.mock("../network/useNetworkStatus", () => ({
   useNetworkStatus: () => ({}),
 }));
 
+
+vi.mock("../features/timer/TimerContext", () => ({
+  useTimer: () => ({
+    status: "idle",
+    session: null,
+    offsetMs: 0,
+    starting: false,
+    defaultService: null,
+    lastStopped: null,
+    client: null,
+    apiKey: null,
+    refresh: async () => undefined,
+    start: async () => false,
+    openStopModal: () => undefined,
+  }),
+  useTimerElapsedMs: () => null,
+}));
+
 vi.mock("../network/isOffline", () => ({
   isOffline: () => false,
 }));
@@ -237,6 +255,9 @@ vi.mock("../features/ticketDetail/components/DocumentsSection", () => ({
 
 vi.mock("../features/ticketDetail/components/MaterialsSection", () => ({
   MaterialsSection: (props: Record<string, unknown>) => React.createElement("MockMaterialsSection", props),
+}));
+vi.mock("../features/ticketDetail/components/AssetsSection", () => ({
+  AssetsSection: (props: Record<string, unknown>) => React.createElement("MockAssetsSection", props),
 }));
 
 vi.mock("../features/ticketDetail/components/TimeEntriesSection", () => ({

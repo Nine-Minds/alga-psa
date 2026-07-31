@@ -50,7 +50,7 @@ export const ADD_ON_DESCRIPTIONS: Record<ADD_ONS, string> = {
   [ADD_ONS.AI_ASSISTANT]:
     'Unlock AI chat, document assistance, sidebar help, and workflow AI tools for your team.',
   [ADD_ONS.TEAMS]:
-    'Activate the Microsoft Teams integration, including the Teams tab, bot, message extension, quick actions, and activity notifications.',
+    'Activate the Microsoft Teams integration, including the Teams tab, bot, message extension, quick actions, activity notifications, Teams meetings with calendar invites, and automatic recording and transcript capture.',
   [ADD_ONS.ENTERPRISE]:
     'Activate Microsoft Entra Sync for tenant discovery, client mapping, contact synchronization, field sync, and reconciliation workflows.',
 } as const;

@@ -21,6 +21,14 @@ vi.mock('@alga-psa/db', () => ({
   getConnection: (...args: any[]) => getConnectionMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
   createTenantKnex: vi.fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+    tenantJoin: (query: any, _table?: string, _left?: string, _right?: string, options: any = {}) => {
+      const join = options?.type === 'left' ? query.leftJoin : query.join;
+      return typeof join === 'function' ? join.call(query) : query;
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/validation', () => ({
@@ -211,7 +219,9 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { updateTicketStatus } = await import('./client-tickets');
 
-    await expect(updateTicketStatus('ticket-1', 'board-2-closed')).rejects.toThrow('Failed to update ticket status');
+    await expect(updateTicketStatus('ticket-1', 'board-2-closed')).resolves.toEqual({
+      actionError: 'Selected status is not valid for the ticket board',
+    });
     expect(ticketUpdates).toHaveLength(0);
     expect(publishEventMock).not.toHaveBeenCalled();
   });

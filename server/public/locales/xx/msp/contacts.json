@@ -266,6 +266,47 @@
       "message": "11111 {{count}} 11111"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "11111",
+    "description": "11111",
+    "actions": {
+      "addEmail": "11111"
+    },
+    "emailTypes": {
+      "work": "11111",
+      "personal": "11111",
+      "billing": "11111",
+      "other": "11111",
+      "custom": "11111"
+    },
+    "primary": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "row": {
+      "title": "11111 {{number}} 11111",
+      "secondaryDescription": "11111",
+      "defaultLabel": "11111",
+      "noEmailYet": "11111",
+      "editLabel": "11111",
+      "edit": "11111 {{number}} 11111",
+      "doneLabel": "11111",
+      "done": "11111 {{number}} 11111",
+      "moveUp": "11111 {{number}} 11111",
+      "moveDown": "11111 {{number}} 11111",
+      "remove": "11111 {{number}} 11111"
+    },
+    "fields": {
+      "emailAddress": "11111",
+      "emailPlaceholder": "11111",
+      "emailLabel": "11111",
+      "customEmailLabel": "11111",
+      "customTypePlaceholder": "11111",
+      "customTypeSearchPlaceholder": "11111",
+      "customTypeEmpty": "11111",
+      "customTypeUseValue": "11111 {{value}} 11111"
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "11111",
     "description": "11111",
@@ -323,6 +364,9 @@
     "activeAccess": "11111",
     "noAccess": {
       "title": "11111",
+      "description": "11111"
+    },
+    "noClient": {
       "description": "11111"
     },
     "portalAdmin": {
@@ -406,7 +450,8 @@
         "noLocationEmail": "11111",
         "noBaseUrl": "11111",
         "invitationNotFound": "11111"
-      }
+      },
+      "userNotFound": "11111"
     }
   },
   "quickAddContact": {
@@ -571,13 +616,15 @@
       "name": "11111",
       "email": "11111",
       "phoneNumber": "11111",
-      "actions": "11111"
+      "actions": "11111",
+      "role": "11111"
     },
     "filter": {
       "show": "11111",
       "active": "11111",
       "inactive": "11111",
-      "all": "11111"
+      "all": "11111",
+      "searchPlaceholder": "11111"
     },
     "actions": {
       "openMenu": "11111",
@@ -649,6 +696,13 @@
         "openTicketFailed": "11111",
         "userNotAuthenticated": "11111"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "11111",
+      "saveFailed": "11111",
+      "saveFailedDescription": "11111"
     }
   }
 }

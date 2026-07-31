@@ -63,7 +63,7 @@ const healthConnected = {
   settings: {
     autoSyncEnabled: true,
     autoSyncStartDate: null,
-    depositAccountRef: null,
+    autoProvisionCustomers: false, depositAccountRef: null,
     defaultClassRef: null,
     defaultDepartmentRef: null,
     defaultRealm: null
@@ -112,7 +112,7 @@ describe('QboSyncHealthPanel contracts', () => {
     updateAccountingSyncSettingsActionMock.mockResolvedValue({
       autoSyncEnabled: false,
       autoSyncStartDate: null,
-      depositAccountRef: null,
+      autoProvisionCustomers: false, depositAccountRef: null,
       defaultClassRef: null,
       defaultDepartmentRef: null,
       defaultRealm: null
@@ -348,5 +348,58 @@ describe('QboSyncHealthPanel contracts', () => {
     });
 
     expect(document.getElementById('qbo-realm-list')).not.toBeInTheDocument();
+  });
+
+  // Customer contract: we tell customers Alga warns them when QBO's
+  // "Automatically apply credits" automation is on (it races Alga-driven
+  // credit application). Removing or hiding this warning changes advice
+  // customers have been given — see customerContracts.qboCredits.test.ts.
+  it('contract: auto-apply-credits warning renders when the QBO preference is on', async () => {
+    getAccountingSyncHealthMock.mockImplementation(async () => ({
+      ...healthConnected,
+      autoApplyCreditsEnabled: true
+    }));
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-auto-apply-credits-warning')).toBeInTheDocument();
+    });
+    expect(document.getElementById('qbo-auto-apply-credits-warning')?.textContent)
+      .toMatch(/automatically apply credits/i);
+  });
+
+  it('contract: auto-apply-credits warning is hidden when the preference is off', async () => {
+    getAccountingSyncHealthMock.mockImplementation(async () => ({
+      ...healthConnected,
+      autoApplyCreditsEnabled: false
+    }));
+
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-integration-sync-health-card')).toBeInTheDocument();
+    });
+
+    expect(document.getElementById('qbo-auto-apply-credits-warning')).not.toBeInTheDocument();
+  });
+
+  // Customer contract: customer auto-provisioning is opt-in. The toggle must
+  // exist so tenants CAN opt in, and it must persist through the settings
+  // action — see customerContracts.qboExportSafety.test.ts for the default.
+  it('contract: customer auto-provisioning toggle renders and persists the opt-in', async () => {
+    const { default: QboSyncHealthPanel } = await import('./QboSyncHealthPanel');
+    render(<QboSyncHealthPanel />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-sync-auto-provision-toggle')).toBeInTheDocument();
+    });
+
+    fireEvent.click(document.getElementById('qbo-sync-auto-provision-toggle')!);
+    await waitFor(() => {
+      expect(updateAccountingSyncSettingsActionMock).toHaveBeenCalledWith({ autoProvisionCustomers: true });
+    });
   });
 });

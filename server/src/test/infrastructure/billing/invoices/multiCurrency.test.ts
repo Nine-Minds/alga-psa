@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { tenantDb } from '@alga-psa/db';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -8,20 +10,20 @@ import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   createTestService,
   createFixedPlanAssignment,
+  materializeRecurringServicePeriods,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { updateContract } from '@alga-psa/billing/actions';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -34,10 +36,14 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
@@ -48,24 +54,26 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
     setSecret: async () => {},
     getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
+    close: async () => {}
+  })
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
     setSecret: async () => {},
     getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
+    close: async () => {}
+  })
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
@@ -81,6 +89,13 @@ const {
   afterEach: rollbackContext,
   afterAll: cleanupContext
 } = TestContext.createHelpers();
+
+function tenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string
+) {
+  return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
+}
 
 describe('Multi-Currency Billing', () => {
   let context: TestContext;
@@ -148,7 +163,7 @@ describe('Multi-Currency Billing', () => {
       initial_value: 1,
       padding_length: 6
     };
-    await context.db('next_number').insert(nextNumberRecord);
+    await tenantTable(context, 'next_number').insert(nextNumberRecord);
 
     await configureDefaultTax();
   }, 30000);
@@ -163,7 +178,7 @@ describe('Multi-Currency Billing', () => {
 
   it('should generate an invoice in EUR when contract is EUR', async () => {
     // 1. Update client default currency to EUR
-    await context.db('clients')
+    await tenantTable(context, 'clients')
       .where({ client_id: context.clientId })
       .update({ default_currency_code: 'EUR' });
 
@@ -177,7 +192,7 @@ describe('Multi-Currency Billing', () => {
 
     // 3. Create a contract with EUR currency
     const contractId = uuidv4();
-    await context.db('contracts').insert({
+    await tenantTable(context, 'contracts').insert({
       contract_id: contractId,
       contract_name: 'EUR Contract',
       billing_frequency: 'monthly',
@@ -191,7 +206,7 @@ describe('Multi-Currency Billing', () => {
 
     // 4. Create a contract line linked to this contract
     const contractLineId = uuidv4();
-    await context.db('contract_lines').insert({
+    await tenantTable(context, 'contract_lines').insert({
       contract_line_id: contractLineId,
       contract_id: contractId,
       contract_line_name: 'EUR Line',
@@ -203,20 +218,23 @@ describe('Multi-Currency Billing', () => {
       updated_at: new Date().toISOString()
     });
 
-    // 5. Assign the contract line to the client
-    const clientContractLineId = uuidv4();
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: clientContractLineId,
+    // 5. Assign the contract to the client. The line already carries
+    // contract_id, so client_contracts is the whole assignment post-drop.
+    await tenantTable(context, 'client_contracts').insert({
+      tenant: context.tenantId,
+      client_contract_id: uuidv4(),
       client_id: context.clientId,
-      contract_line_id: contractLineId,
+      contract_id: contractId,
       start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       is_active: true,
-      tenant: context.tenantId
+      status: 'pending'
     });
+
+    await materializeRecurringServicePeriods(context, contractLineId);
 
     // 6. Add service configuration to the contract line (Fixed)
     const configId = uuidv4();
-    await context.db('contract_line_service_configuration').insert({
+    await tenantTable(context, 'contract_line_service_configuration').insert({
       config_id: configId,
       contract_line_id: contractLineId,
       service_id: serviceId,
@@ -244,7 +262,7 @@ describe('Multi-Currency Billing', () => {
     expect(result?.total_amount).toBeGreaterThan(0); // Should be 10000 + tax
     
     // Check database persistence
-    const savedInvoice = await context.db('invoices')
+    const savedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: result?.invoice_id })
       .first();
     expect(savedInvoice.currency_code).toBe('EUR');
@@ -253,7 +271,7 @@ describe('Multi-Currency Billing', () => {
   it('should throw error when mixed currencies are detected', async () => {
     // 1. Create Contract A (USD)
     const contractAId = uuidv4();
-    await context.db('contracts').insert({
+    await tenantTable(context, 'contracts').insert({
       contract_id: contractAId,
       contract_name: 'USD Contract',
       billing_frequency: 'monthly',
@@ -267,7 +285,7 @@ describe('Multi-Currency Billing', () => {
 
     // 2. Create Contract B (EUR)
     const contractBId = uuidv4();
-    await context.db('contracts').insert({
+    await tenantTable(context, 'contracts').insert({
       contract_id: contractBId,
       contract_name: 'EUR Contract',
       billing_frequency: 'monthly',
@@ -281,7 +299,7 @@ describe('Multi-Currency Billing', () => {
 
     // 3. Create lines for both
     const lineAId = uuidv4();
-    await context.db('contract_lines').insert({
+    await tenantTable(context, 'contract_lines').insert({
       contract_line_id: lineAId,
       contract_id: contractAId,
       contract_line_name: 'USD Line',
@@ -292,7 +310,7 @@ describe('Multi-Currency Billing', () => {
     });
 
     const lineBId = uuidv4();
-    await context.db('contract_lines').insert({
+    await tenantTable(context, 'contract_lines').insert({
       contract_line_id: lineBId,
       contract_id: contractBId,
       contract_line_name: 'EUR Line',
@@ -302,29 +320,35 @@ describe('Multi-Currency Billing', () => {
       tenant: context.tenantId
     });
 
-    // 4. Assign both to client
-    await context.db('client_contract_lines').insert([
+    // 4. Assign both contracts to the client. The lines already carry
+    // contract_id, so client_contracts is the whole assignment post-drop.
+    await tenantTable(context, 'client_contracts').insert([
       {
-        client_contract_line_id: uuidv4(),
+        tenant: context.tenantId,
+        client_contract_id: uuidv4(),
         client_id: context.clientId,
-        contract_line_id: lineAId,
+        contract_id: contractAId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
-        tenant: context.tenantId
+        status: 'pending'
       },
       {
-        client_contract_line_id: uuidv4(),
+        tenant: context.tenantId,
+        client_contract_id: uuidv4(),
         client_id: context.clientId,
-        contract_line_id: lineBId,
+        contract_id: contractBId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
-        tenant: context.tenantId
+        status: 'pending'
       }
     ]);
 
+    await materializeRecurringServicePeriods(context, lineAId);
+    await materializeRecurringServicePeriods(context, lineBId);
+
     // 5. Add dummy service configs so they are billed
     const serviceId = await createTestService(context, { service_name: 'Generic Service' });
-    await context.db('contract_line_service_configuration').insert([
+    await tenantTable(context, 'contract_line_service_configuration').insert([
       {
         config_id: uuidv4(),
         contract_line_id: lineAId,
@@ -358,19 +382,22 @@ describe('Multi-Currency Billing', () => {
       .toThrow(/Mixed currency billing is not supported/);
   });
 
-  it('should default to client currency if contract currency is missing (simulating legacy)', async () => {
+  // contracts.currency_code is NOT NULL DEFAULT 'USD', so the legacy
+  // "contract with no currency falls back to the client default" path this test
+  // used to cover is unreachable — an unspecified contract currency is USD, and
+  // the invoice follows the contract, not the client's GBP default.
+  it('defaults an unspecified contract currency to USD rather than the client default', async () => {
     // 1. Update client default currency to GBP
-    await context.db('clients')
+    await tenantTable(context, 'clients')
       .where({ client_id: context.clientId })
       .update({ default_currency_code: 'GBP' });
 
-    // 2. Create a contract with NO currency (simulating legacy or null)
+    // 2. Create a contract without specifying a currency
     const contractId = uuidv4();
-    await context.db('contracts').insert({
+    await tenantTable(context, 'contracts').insert({
       contract_id: contractId,
       contract_name: 'Legacy Contract',
       billing_frequency: 'monthly',
-      currency_code: null, // Explicitly null
       status: 'active',
       tenant: context.tenantId,
       is_active: true,
@@ -380,7 +407,7 @@ describe('Multi-Currency Billing', () => {
 
     // 3. Setup line and assignment
     const lineId = uuidv4();
-    await context.db('contract_lines').insert({
+    await tenantTable(context, 'contract_lines').insert({
       contract_line_id: lineId,
       contract_id: contractId,
       contract_line_name: 'Legacy Line',
@@ -390,17 +417,20 @@ describe('Multi-Currency Billing', () => {
       tenant: context.tenantId
     });
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
+    await tenantTable(context, 'client_contracts').insert({
+      tenant: context.tenantId,
+      client_contract_id: uuidv4(),
       client_id: context.clientId,
-      contract_line_id: lineId,
+      contract_id: contractId,
       start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       is_active: true,
-      tenant: context.tenantId
+      status: 'pending'
     });
 
+    await materializeRecurringServicePeriods(context, lineId);
+
     const serviceId = await createTestService(context, { service_name: 'GBP Service' });
-    await context.db('contract_line_service_configuration').insert({
+    await tenantTable(context, 'contract_line_service_configuration').insert({
       config_id: uuidv4(),
       contract_line_id: lineId,
       service_id: serviceId,
@@ -423,11 +453,16 @@ describe('Multi-Currency Billing', () => {
 
     // Assert
     expect(result).not.toBeNull();
-    expect(result?.currencyCode).toBe('GBP'); // Should fallback to client default
-    
-    const savedInvoice = await context.db('invoices')
+    expect(result?.currencyCode).toBe('USD');
+
+    const savedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: result?.invoice_id })
       .first();
-    expect(savedInvoice.currency_code).toBe('GBP');
+    expect(savedInvoice.currency_code).toBe('USD');
+
+    const savedContract = await tenantTable(context, 'contracts')
+      .where({ contract_id: contractId })
+      .first();
+    expect(savedContract.currency_code).toBe('USD');
   });
 });

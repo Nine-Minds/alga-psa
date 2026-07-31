@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowRunLogRecord = {
   log_id: string;
@@ -24,9 +25,21 @@ export type WorkflowRunLogFilters = {
   cursor?: number;
 };
 
+function workflowRunLogs(
+  knex: Knex,
+  tenant?: string | null,
+): Knex.QueryBuilder<WorkflowRunLogRecord, WorkflowRunLogRecord[]> {
+  return tenant
+    ? tenantDb(knex, tenant).table<WorkflowRunLogRecord>('workflow_run_logs')
+    : tenantDb(knex, '__workflow_run_log_unscoped__').unscoped<WorkflowRunLogRecord>(
+      'workflow_run_logs',
+      'workflow run log model supports legacy run_id lookups before the tenant is resolved'
+    );
+}
+
 const WorkflowRunLogModelV2 = {
   create: async (knex: Knex, data: Partial<WorkflowRunLogRecord>): Promise<WorkflowRunLogRecord> => {
-    const [record] = await knex<WorkflowRunLogRecord>('workflow_run_logs')
+    const [record] = await workflowRunLogs(knex, data.tenant)
       .insert({
         ...data,
         created_at: data.created_at ?? new Date().toISOString()
@@ -44,9 +57,8 @@ const WorkflowRunLogModelV2 = {
     const limit = filters.limit ?? 100;
     const cursor = filters.cursor ?? 0;
 
-    const query = knex<WorkflowRunLogRecord>('workflow_run_logs')
+    const query = workflowRunLogs(knex, tenant)
       .where({ run_id: runId });
-    if (tenant) query.andWhere({ tenant });
 
     if (filters.level?.length) {
       query.whereIn('level', filters.level);

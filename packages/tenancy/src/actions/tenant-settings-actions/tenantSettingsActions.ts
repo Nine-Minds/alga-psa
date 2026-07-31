@@ -1,11 +1,18 @@
 'use server';
 
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
+import type { Knex } from 'knex';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface TenantSettings {
   tenant: string;
@@ -23,11 +30,44 @@ export interface ExperimentalFeatures {
   aiAssistant: boolean;
 }
 
+export type TenantSettingsActionError = ActionMessageError | ActionPermissionError;
+
+function tenantSettingsActionErrorFrom(error: unknown): TenantSettingsActionError | null {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.startsWith('Permission denied') || message === 'user is not logged in') {
+      return permissionError(message);
+    }
+    if (message === 'Only admin users can clear onboarding data') {
+      return permissionError('Permission denied: Only admin users can clear onboarding data.');
+    }
+    if (message === 'tenantId is required') {
+      return actionError('Tenant id is required.');
+    }
+    if (message.startsWith('Invalid timezone:')) {
+      return actionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected tenant setting values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required tenant settings field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+
+  return null;
+}
+
 const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = {
   aiAssistant: false,
 };
 
 const AI_ASSISTANT_ACTIVATION_FLAG = 'ai-assistant-activation';
+
+const tenantSettingsQuery = (knex: Knex, tenant: string) =>
+  tenantDb(knex, tenant).table('tenant_settings');
 
 function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
   if (!value || typeof value !== 'object') {
@@ -42,13 +82,11 @@ function normalizeExperimentalFeatures(value: unknown): ExperimentalFeatures {
 
 const getTenantSettingsForTenant = async (tenant: string): Promise<TenantSettings | null> => {
   const { knex } = await createTenantKnex(tenant);
-  const settings = await knex
+  const settings = await tenantSettingsQuery(knex, tenant)
     .select('*')
-    .from('tenant_settings')
-    .where({ tenant })
     .first();
 
-  return settings || null;
+  return (settings as TenantSettings | undefined) || null;
 };
 
 async function canTenantActivateAiAssistant(
@@ -106,15 +144,15 @@ export const updateExperimentalFeatures = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   features: Partial<ExperimentalFeatures>
-): Promise<void> => {
+): Promise<void | TenantSettingsActionError> => {
   try {
     const permissions = await getCurrentUserPermissions();
     if (!permissions.includes('settings:update')) {
-      throw new Error('Permission denied: Cannot update settings');
+      return permissionError('Permission denied: Cannot update settings');
     }
 
     if (features.aiAssistant === true && !(await canTenantActivateAiAssistant(tenant, user))) {
-      throw new Error('Permission denied: Cannot enable AI Assistant for this tenant');
+      return permissionError('Permission denied: Cannot enable AI Assistant for this tenant');
     }
 
     const current = await getExperimentalFeaturesForTenant(tenant, user);
@@ -128,6 +166,8 @@ export const updateExperimentalFeatures = withAuth(async (
     });
   } catch (error) {
     console.error('Error updating experimental features:', error);
+    const expected = tenantSettingsActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });
@@ -169,18 +209,16 @@ export const updateTenantOnboardingStatus = withAuth(async (
     }
 
     // Check if tenant settings already exist
-    const existingSettings = await knex('tenant_settings')
-      .where({ tenant })
+    const existingSettings = await tenantSettingsQuery(knex, tenant)
       .first();
 
     if (existingSettings) {
       // Update existing settings
-      await knex('tenant_settings')
-        .where({ tenant })
+      await tenantSettingsQuery(knex, tenant)
         .update(updateData);
     } else {
       // Insert new settings
-      await knex('tenant_settings')
+      await tenantSettingsQuery(knex, tenant)
         .insert({
           tenant,
           ...updateData,
@@ -214,21 +252,19 @@ export const saveTenantOnboardingProgress = withAuth(async (
     const now = new Date();
 
     // Check if tenant settings already exist
-    const existingRecord = await knex('tenant_settings')
-      .where({ tenant })
+    const existingRecord = await tenantSettingsQuery(knex, tenant)
       .first();
 
     if (existingRecord) {
       // Update existing settings
-      await knex('tenant_settings')
-        .where({ tenant })
+      await tenantSettingsQuery(knex, tenant)
         .update({
           onboarding_data: JSON.stringify(mergedData),
           updated_at: now,
         });
     } else {
       // Insert new settings
-      await knex('tenant_settings')
+      await tenantSettingsQuery(knex, tenant)
         .insert({
           tenant,
           onboarding_data: JSON.stringify(mergedData),
@@ -245,11 +281,11 @@ export const saveTenantOnboardingProgress = withAuth(async (
 export const clearTenantOnboardingData = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext
-): Promise<void> => {
+): Promise<void | TenantSettingsActionError> => {
   try {
     // Check if user has admin permissions
     if (!user.roles.some((role: any) => role.role_name === 'admin')) {
-      throw new Error('Only admin users can clear onboarding data');
+      return permissionError('Permission denied: Only admin users can clear onboarding data.');
     }
 
     const { knex } = await createTenantKnex();
@@ -257,8 +293,7 @@ export const clearTenantOnboardingData = withAuth(async (
     // Use a literal timestamp for Citus compatibility
     const now = new Date();
 
-    await knex('tenant_settings')
-      .where({ tenant })
+    await tenantSettingsQuery(knex, tenant)
       .update({
         onboarding_data: null,
         updated_at: now,
@@ -266,6 +301,8 @@ export const clearTenantOnboardingData = withAuth(async (
 
   } catch (error) {
     console.error('Error clearing tenant onboarding data:', error);
+    const expected = tenantSettingsActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });
@@ -285,10 +322,8 @@ const normalizeSettingsRecord = (value: unknown): Record<string, any> => {
 
 const getCurrentTenantSettingsJson = async (tenant: string): Promise<Record<string, any>> => {
   const { knex } = await createTenantKnex(tenant);
-  const row = await knex
+  const row = await tenantSettingsQuery(knex, tenant)
     .select('settings')
-    .from('tenant_settings')
-    .where({ tenant })
     .first();
   return normalizeSettingsRecord(row?.settings);
 };
@@ -297,7 +332,7 @@ const upsertTenantSettingsJson = async (tenant: string, updatedSettings: Record<
   const { knex } = await createTenantKnex(tenant);
   const now = new Date();
 
-  await knex('tenant_settings')
+  await tenantSettingsQuery(knex, tenant)
     .insert({
       tenant,
       settings: JSON.stringify(updatedSettings),
@@ -397,12 +432,12 @@ export const getTenantTimezoneAuth = withAuth(async (
  */
 export async function setTenantTimezone(
   timezone: string
-): Promise<void> {
+): Promise<void | TenantSettingsActionError> {
   // Validate the timezone is a valid IANA timezone
   try {
     Intl.DateTimeFormat(undefined, { timeZone: timezone });
   } catch {
-    throw new Error(`Invalid timezone: ${timezone}`);
+    return actionError(`Invalid timezone: ${timezone}`);
   }
   return updateTenantSettings({ timezone });
 }
@@ -415,7 +450,7 @@ export async function initializeTenantSettings(tenantId: string): Promise<void> 
     const now = new Date();
     
     // Initialize tenant settings with both onboarding flags set to false
-    await knex('tenant_settings')
+    await tenantSettingsQuery(knex, tenantId)
       .insert({
         tenant: tenantId,
         onboarding_completed: false,

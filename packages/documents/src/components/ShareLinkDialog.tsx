@@ -143,7 +143,7 @@ export default function ShareLinkDialog({
   const handleRevoke = async (shareId: string) => {
     try {
       const result = await revokeShareLink(shareId);
-      if (typeof result === 'object' && 'code' in result) {
+      if (result && typeof result === 'object' && Object.prototype.hasOwnProperty.call(result, 'code')) {
         toast.error(t('messages.shareLinkRevokeFailed'));
         return;
       }

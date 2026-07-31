@@ -26,8 +26,8 @@ const CLIENT_ID = 'client-xero-spec';
 type MinimalLine = {
   line_id: string;
   batch_id: string;
-  invoice_id: string;
-  invoice_charge_id: string;
+  document_id: string;
+  document_line_id: string;
   client_id: string;
   amount_cents: number;
   currency_code: string;
@@ -68,8 +68,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
   const baseLine: MinimalLine = {
     line_id: 'line-1',
     batch_id: BATCH_ID,
-    invoice_id: INVOICE_ID,
-    invoice_charge_id: CHARGE_ID,
+    document_id: INVOICE_ID,
+    document_line_id: CHARGE_ID,
     client_id: CLIENT_ID,
     amount_cents: 12_345,
     currency_code: 'USD',
@@ -329,7 +329,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
       {
         ...baseLine,
         line_id: 'line-range',
-        invoice_charge_id: 'charge-range',
+        document_line_id: 'charge-range',
         service_period_start: '2025-01-01T00:00:00.000Z',
         service_period_end: '2025-03-01T00:00:00.000Z',
         payload: {
@@ -339,7 +339,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
       {
         ...baseLine,
         line_id: 'line-financial',
-        invoice_charge_id: 'charge-financial',
+        document_line_id: 'charge-financial',
         amount_cents: 4_000,
         payload: {
           service_period_source: 'financial_document_fallback'
@@ -443,7 +443,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
       {
         ...baseLine,
         line_id: 'line-client-cadence',
-        invoice_charge_id: 'charge-client-cadence',
+        document_line_id: 'charge-client-cadence',
         service_period_start: '2025-02-01T00:00:00.000Z',
         service_period_end: '2025-03-01T00:00:00.000Z',
         payload: {
@@ -454,7 +454,7 @@ describe('XeroAdapter – spec validation scaffolding', () => {
       {
         ...baseLine,
         line_id: 'line-contract-cadence',
-        invoice_charge_id: 'charge-contract-cadence',
+        document_line_id: 'charge-contract-cadence',
         amount_cents: 9_500,
         service_period_start: '2025-02-08T00:00:00.000Z',
         service_period_end: '2025-03-08T00:00:00.000Z',

@@ -13,7 +13,7 @@ import {
   IContractTemplate,
   IContractTemplateWithLines,
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
@@ -21,8 +21,8 @@ import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   addContractLine as repoAddContractLine,
   fetchContractLineMappings,
@@ -35,7 +35,66 @@ import {
 } from '../repositories/contractLineRepository';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
+type TenantScopedKnex = Knex | Knex.Transaction;
+type ContractActionError = ActionMessageError | ActionPermissionError;
+
+class ContractActionDomainError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ContractActionDomainError';
+  }
+}
+
+function contractActionErrorFrom(error: unknown): ContractActionError | null {
+  if (error instanceof ContractActionDomainError) {
+    if (error.message.startsWith('Permission denied:')) {
+      return permissionError(error.message);
+    }
+    return actionError(error.message);
+  }
+
+  if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+    return permissionError(error.message);
+  }
+
+  if (error instanceof Error) {
+    if (error.message.startsWith('Base contract line') && error.message.includes('not found')) {
+      return actionError('The selected contract line is no longer available. Please refresh and try again.');
+    }
+    if (error.message.startsWith('Template contract line') && error.message.includes('not found')) {
+      return actionError('The selected template line is no longer available. Please refresh and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected contract values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required contract field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected contract, client, or related record no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This contract change conflicts with an existing record. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the contract values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
+
 const isBypassEnabled = (): boolean => process.env.E2E_AUTH_BYPASS === 'true';
+
+function tenantScopedTable(
+  conn: TenantScopedKnex,
+  tenant: string,
+  table: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 function maybeUserActor(user: any) {
   const userId = user?.user_id;
@@ -53,7 +112,7 @@ const assertBillingPermission = async (
   }
 
   if (!await hasPermission(user as any, 'billing', action)) {
-    throw new Error(`Permission denied: Cannot ${context}`);
+    throw new ContractActionDomainError(`Permission denied: Cannot ${context}`);
   }
 };
 
@@ -69,7 +128,7 @@ const assertNoSystemManagedIdentityMutation = (
   );
 
   if (attemptedFields.length > 0) {
-    throw new Error(
+    throw new ContractActionDomainError(
       `Permission denied: ${operation} cannot mutate system-managed contract identity fields (${attemptedFields.join(', ')})`,
     );
   }
@@ -116,14 +175,14 @@ async function attachContractClientLogos(
   }));
 }
 
-async function isTemplateContract(knex: Knex, tenant: string, contractId: string): Promise<boolean> {
-  const template = await knex('contract_templates')
-    .where({ tenant, template_id: contractId })
+async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
+  const template = await tenantScopedTable(knex, tenant, 'contract_templates')
+    .where({ template_id: contractId })
     .first();
   return Boolean(template);
 }
 
-export const getContracts = withAuth(async (user, { tenant }): Promise<IContract[]> => {
+export const getContracts = withAuth(async (user, { tenant }): Promise<IContract[] | ContractActionError> => {
   try {
     await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
@@ -131,14 +190,15 @@ export const getContracts = withAuth(async (user, { tenant }): Promise<IContract
     return await Contract.getAll(knex, tenant);
   } catch (error) {
     console.error('Error fetching contracts:', error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch contracts: ${error}`);
+    throw error;
   }
 });
 
-export const getContractTemplates = withAuth(async (user, { tenant }): Promise<IContract[]> => {
+export const getContractTemplates = withAuth(async (user, { tenant }): Promise<IContract[] | ContractActionError> => {
   try {
     await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
@@ -147,14 +207,15 @@ export const getContractTemplates = withAuth(async (user, { tenant }): Promise<I
     return templates.map(mapTemplateToContract);
   } catch (error) {
     console.error('Error fetching contract templates:', error);
-    if (error instanceof Error) {
-      throw error;
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch contract templates: ${error}`);
+    throw error;
   }
 });
 
-export const getContractsWithClients = withAuth(async (user, { tenant }): Promise<IContractWithClient[]> => {
+export const getContractsWithClients = withAuth(async (user, { tenant }): Promise<IContractWithClient[] | ContractActionError> => {
   try {
     await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
@@ -163,29 +224,26 @@ export const getContractsWithClients = withAuth(async (user, { tenant }): Promis
     return await attachContractClientLogos(rows, tenant);
   } catch (error) {
     console.error('Error fetching contracts with clients:', error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch contracts with clients: ${error}`);
+    throw error;
   }
 });
 
-export const getDraftContracts = withAuth(async (user, { tenant }): Promise<IContractWithClient[]> => {
+export const getDraftContracts = withAuth(async (user, { tenant }): Promise<IContractWithClient[] | ContractActionError> => {
   try {
     await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
-    const rows = await knex('contracts as co')
-      .leftJoin('client_contracts as cc', function () {
-        this.on('co.contract_id', '=', 'cc.contract_id').andOn('co.tenant', '=', 'cc.tenant');
-      })
-      .leftJoin('contract_templates as template', function () {
-        this.on('cc.template_contract_id', '=', 'template.template_id').andOn('cc.tenant', '=', 'template.tenant');
-      })
-      .leftJoin('clients as c', function () {
-        this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
-      })
-      .where({ 'co.tenant': tenant })
+    const facade = tenantDb(knex, tenant);
+    const query = facade.table('contracts as co');
+    facade.tenantJoin(query, 'client_contracts as cc', 'co.contract_id', 'cc.contract_id', { type: 'left' });
+    facade.tenantJoin(query, 'contract_templates as template', 'cc.template_contract_id', 'template.template_id', { type: 'left' });
+    facade.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id', { type: 'left' });
+
+    const rows = await query
       .andWhere((builder) => builder.whereNull('co.is_template').orWhere('co.is_template', false))
       .andWhere('co.status', 'draft')
       .select(
@@ -200,17 +258,18 @@ export const getDraftContracts = withAuth(async (user, { tenant }): Promise<ICon
       )
       .orderBy('co.updated_at', 'desc');
 
-    return await attachContractClientLogos(rows, tenant);
+    return await attachContractClientLogos(rows as unknown as IContractWithClient[], tenant);
   } catch (error) {
     console.error('Error fetching draft contracts:', error);
-    if (error instanceof Error) {
-      throw error;
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch draft contracts: ${error}`);
+    throw error;
   }
 });
 
-export const getContractById = withAuth(async (user, { tenant }, contractId: string): Promise<IContract | null> => {
+export const getContractById = withAuth(async (user, { tenant }, contractId: string): Promise<IContract | ContractActionError | null> => {
   try {
     await assertBillingPermission(user, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
@@ -228,23 +287,42 @@ export const getContractById = withAuth(async (user, { tenant }, contractId: str
     return null;
   } catch (error) {
     console.error(`Error fetching contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch contract: ${error}`);
+    throw error;
   }
 });
 
-export const getContractLineMappings = withAuth(async (user, { tenant }, contractId: string): Promise<IContractLineMapping[]> => {
-  await assertBillingPermission(user, 'read', 'view contract line mappings');
-  const { knex } = await createTenantKnex();
-  return fetchContractLineMappings(knex, tenant, contractId);
+export const getContractLineMappings = withAuth(async (user, { tenant }, contractId: string): Promise<IContractLineMapping[] | ContractActionError> => {
+  try {
+    await assertBillingPermission(user, 'read', 'view contract line mappings');
+    const { knex } = await createTenantKnex();
+    return fetchContractLineMappings(knex, tenant, contractId);
+  } catch (error) {
+    console.error(`Error fetching contract line mappings for contract ${contractId}:`, error);
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
-export const getDetailedContractLines = withAuth(async (user, { tenant }, contractId: string): Promise<DetailedContractLine[]> => {
-  await assertBillingPermission(user, 'read', 'view detailed contract lines');
-  const { knex } = await createTenantKnex();
-  return fetchDetailedContractLines(knex, tenant, contractId);
+export const getDetailedContractLines = withAuth(async (user, { tenant }, contractId: string): Promise<DetailedContractLine[] | ContractActionError> => {
+  try {
+    await assertBillingPermission(user, 'read', 'view detailed contract lines');
+    const { knex } = await createTenantKnex();
+    return fetchDetailedContractLines(knex, tenant, contractId);
+  } catch (error) {
+    console.error(`Error fetching detailed contract lines for contract ${contractId}:`, error);
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 export const addContractLine = withAuth(async (
@@ -253,35 +331,53 @@ export const addContractLine = withAuth(async (
   contractId: string,
   contractLineId: string,
   customRate?: number
-): Promise<IContractLineMapping | ActionPermissionError> => {
-  const { knex } = await createTenantKnex();
+): Promise<IContractLineMapping | ContractActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  const canUpdate = await hasPermission(user, 'billing', 'create');
-  if (!canUpdate) {
-    return permissionError('Permission denied: Cannot modify contract lines');
+    const canUpdate = await hasPermission(user, 'billing', 'create');
+    if (!canUpdate) {
+      return permissionError('Permission denied: Cannot modify contract lines');
+    }
+
+    return knex.transaction((trx: Knex.Transaction) =>
+      repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
+        await syncRecurringServicePeriodsForContractLine(trx, {
+          tenant,
+          contractLineId: mapping.contract_line_id,
+          sourceRunPrefix: 'contract_add_line',
+        });
+        return mapping;
+      })
+    );
+  } catch (error) {
+    console.error(`Error adding contract line ${contractLineId} to contract ${contractId}:`, error);
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  return knex.transaction((trx: Knex.Transaction) =>
-    repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
-      await syncRecurringServicePeriodsForContractLine(trx, {
-        tenant,
-        contractLineId: mapping.contract_line_id,
-        sourceRunPrefix: 'contract_add_line',
-      });
-      return mapping;
-    })
-  );
 });
 
-export const removeContractLine = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<void | ActionPermissionError> => {
-  const { knex } = await createTenantKnex();
+export const removeContractLine = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<void | ContractActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  const canUpdate = await hasPermission(user, 'billing', 'update');
-  if (!canUpdate) {
-    return permissionError('Permission denied: Cannot modify contract lines');
+    const canUpdate = await hasPermission(user, 'billing', 'update');
+    if (!canUpdate) {
+      return permissionError('Permission denied: Cannot modify contract lines');
+    }
+
+    await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
+  } catch (error) {
+    console.error(`Error removing contract line ${contractLineId} from contract ${contractId}:`, error);
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
 });
 
 export const updateContractLineAssociation = withAuth(async (
@@ -290,23 +386,32 @@ export const updateContractLineAssociation = withAuth(async (
   contractId: string,
   contractLineId: string,
   updateData: Partial<IContractLineMapping>
-): Promise<IContractLineMapping | ActionPermissionError> => {
-  const { knex } = await createTenantKnex();
+): Promise<IContractLineMapping | ContractActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  const canUpdate = await hasPermission(user, 'billing', 'update');
-  if (!canUpdate) {
-    return permissionError('Permission denied: Cannot modify contract lines');
-  }
+    const canUpdate = await hasPermission(user, 'billing', 'update');
+    if (!canUpdate) {
+      return permissionError('Permission denied: Cannot modify contract lines');
+    }
 
-  const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
-  await knex.transaction(async (trx) => {
-    await syncRecurringServicePeriodsForContractLine(trx, {
-      tenant,
-      contractLineId,
-      sourceRunPrefix: 'contract_line_association_update',
+    const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
+    await knex.transaction(async (trx) => {
+      await syncRecurringServicePeriodsForContractLine(trx, {
+        tenant,
+        contractLineId,
+        sourceRunPrefix: 'contract_line_association_update',
+      });
     });
-  });
-  return updated;
+    return updated;
+  } catch (error) {
+    console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 export const updateContractLineRate = withAuth(async (
@@ -316,35 +421,54 @@ export const updateContractLineRate = withAuth(async (
   contractLineId: string,
   rate: number,
   billingTiming?: 'arrears' | 'advance'
-): Promise<void | ActionPermissionError> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ContractActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  const canUpdate = await hasPermission(user, 'billing', 'update');
-  if (!canUpdate) {
-    return permissionError('Permission denied: Cannot modify contract lines');
-  }
+    const canUpdate = await hasPermission(user, 'billing', 'update');
+    if (!canUpdate) {
+      return permissionError('Permission denied: Cannot modify contract lines');
+    }
 
-  await knex.transaction(async (trx) => {
-    await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
-    await syncRecurringServicePeriodsForContractLine(trx, {
-      tenant,
-      contractLineId,
-      sourceRunPrefix: 'contract_line_rate_update',
+    await knex.transaction(async (trx) => {
+      await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
+      await syncRecurringServicePeriodsForContractLine(trx, {
+        tenant,
+        contractLineId,
+        sourceRunPrefix: 'contract_line_rate_update',
+      });
     });
-  });
+  } catch (error) {
+    console.error(`Error updating contract line ${contractLineId} rate for contract ${contractId}:`, error);
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
-export const isContractLineAttached = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<boolean> => {
-  const { knex } = await createTenantKnex();
+export const isContractLineAttached = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<boolean | ContractActionError> => {
+  try {
+    await assertBillingPermission(user, 'read', 'check contract line associations');
+    const { knex } = await createTenantKnex();
 
-  return repoIsContractLineAttached(knex, tenant, contractId, contractLineId);
+    return repoIsContractLineAttached(knex, tenant, contractId, contractLineId);
+  } catch (error) {
+    console.error(`Error checking contract line ${contractLineId} association for contract ${contractId}:`, error);
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 export const createContract = withAuth(async (
   user,
   { tenant },
   contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'>
-): Promise<IContract> => {
+): Promise<IContract | ContractActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -375,10 +499,11 @@ export const createContract = withAuth(async (
     return created;
   } catch (error) {
     console.error('Error creating contract:', error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to create contract in tenant ${tenant}: ${error}`);
+    throw error;
   }
 });
 
@@ -387,7 +512,7 @@ export const updateContract = withAuth(async (
   { tenant },
   contractId: string,
   updateData: Partial<IContract>
-): Promise<IContract> => {
+): Promise<IContract | ContractActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -399,7 +524,7 @@ export const updateContract = withAuth(async (
     if (!currentContract) {
       const template = await ContractTemplateModel.getById(contractId, tenant);
       if (!template) {
-        throw new Error(`Contract ${contractId} not found`);
+        throw new ContractActionDomainError(`Contract ${contractId} not found`);
       }
 
       const templateUpdates: Partial<IContractTemplate> = {};
@@ -431,7 +556,7 @@ export const updateContract = withAuth(async (
     }
 
     if (currentContract.is_system_managed_default === true) {
-      throw new Error(
+      throw new ContractActionDomainError(
         'System-managed default contracts are attribution-only; contract authoring and lifecycle edits are disabled.',
       );
     }
@@ -440,7 +565,7 @@ export const updateContract = withAuth(async (
     if (currentContract.status === 'expired') {
       // If trying to manually change status of an expired contract (not through end date logic)
       if (updateData.status && updateData.status !== 'expired') {
-        throw new Error('Cannot manually change the status of an expired contract. To reactivate, extend the contract end date.');
+        throw new ContractActionDomainError('Cannot manually change the status of an expired contract. To reactivate, extend the contract end date.');
       }
 
       // Check if end dates are being updated on client contracts
@@ -452,7 +577,7 @@ export const updateContract = withAuth(async (
     } else {
       // Prevent manual setting of expired status on non-expired contracts
       if (updateData.status === 'expired') {
-        throw new Error('Cannot manually set contract to expired. Contracts are automatically expired when their end date passes.');
+        throw new ContractActionDomainError('Cannot manually set contract to expired. Contracts are automatically expired when their end date passes.');
       }
     }
 
@@ -460,7 +585,7 @@ export const updateContract = withAuth(async (
     if (updateData.status === 'draft') {
       const hasInvoices = await Contract.hasInvoices(knex, tenant, contractId);
       if (hasInvoices) {
-        throw new Error('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
+        throw new ContractActionDomainError('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
       }
     }
 
@@ -500,10 +625,11 @@ export const updateContract = withAuth(async (
     return updated;
   } catch (error) {
     console.error('Error updating contract:', error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to update contract in tenant ${tenant}: ${error}`);
+    throw error;
   }
 });
 
@@ -513,7 +639,7 @@ export const checkContractHasInvoices = withAuth(async (user, { tenant }, contra
   return await Contract.hasInvoices(knex, tenant, contractId);
 });
 
-export const deleteContract = withAuth(async (user, { tenant }, contractId: string): Promise<void | ActionPermissionError> => {
+export const deleteContract = withAuth(async (user, { tenant }, contractId: string): Promise<void | ContractActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -533,11 +659,11 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
 
     const currentContract = await Contract.getById(knex, tenant, contractId);
     if (currentContract?.is_system_managed_default === true) {
-      throw new Error('System-managed default contracts cannot be deleted manually');
+      throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
     }
 
-    const clientContracts = await knex('client_contracts')
-      .where({ tenant, contract_id: contractId })
+    const clientContracts = await tenantScopedTable(knex, tenant, 'client_contracts')
+      .where({ contract_id: contractId })
       .select('client_contract_id', 'client_id');
 
     await Contract.delete(knex, tenant, contractId);
@@ -578,14 +704,15 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
     });
   } catch (error) {
     console.error('Error deleting contract:', error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages from the model
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to delete contract in tenant ${tenant}: ${error}`);
+    throw error;
   }
 });
 
-export const getContractLinesForContract = withAuth(async (user, { tenant }, contractId: string): Promise<any[]> => {
+export const getContractLinesForContract = withAuth(async (user, { tenant }, contractId: string): Promise<any[] | ContractActionError> => {
   try {
     await assertBillingPermission(user, 'read', 'view contract lines');
     const { knex } = await createTenantKnex();
@@ -593,10 +720,11 @@ export const getContractLinesForContract = withAuth(async (user, { tenant }, con
     return await Contract.getContractLines(knex, tenant, contractId);
   } catch (error) {
     console.error(`Error fetching contract lines for contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch contract lines: ${error}`);
+    throw error;
   }
 });
 
@@ -610,46 +738,53 @@ export interface IContractSummary {
   latestEndDate: string | null;
 }
 
-export const getContractSummary = withAuth(async (user, { tenant }, contractId: string): Promise<IContractSummary> => {
+export const getContractSummary = withAuth(async (user, { tenant }, contractId: string): Promise<IContractSummary | ContractActionError> => {
   try {
     await assertBillingPermission(user, 'read', 'view contract summary');
     const { knex } = await createTenantKnex();
 
-    const templateRecord = await knex('contract_templates')
-      .where({ tenant, template_id: contractId })
+    const templateRecord = await tenantScopedTable(knex, tenant, 'contract_templates')
+      .where({ template_id: contractId })
       .first();
 
     let lineCountRaw: string | undefined;
     if (templateRecord) {
-      const templateLineCount = await knex('contract_template_lines')
-        .where({ template_id: contractId, tenant })
+      const templateLineCount = await tenantScopedTable(knex, tenant, 'contract_template_lines')
+        .where({ template_id: contractId })
         .count('* as count')
         .first() as { count: string } | undefined;
       lineCountRaw = templateLineCount?.count;
     } else {
-      const result = await knex('contract_lines')
-        .where({ contract_id: contractId, tenant })
+      const result = await tenantScopedTable(knex, tenant, 'contract_lines')
+        .where({ contract_id: contractId })
         .count('* as count')
         .first() as { count: string } | undefined;
       lineCountRaw = result?.count;
     }
 
     const assignmentColumns = [
-      'client_contract_id',
-      'client_id',
-      'is_active',
-      'start_date',
-      'end_date',
-      'po_required',
-      'po_number'
+      'cc.client_contract_id',
+      'cc.client_id',
+      'cc.is_active',
+      'cc.start_date',
+      'cc.end_date',
+      'cc.po_required',
+      'cc.po_number',
+      'co.status as contract_status',
     ];
 
-    const assignmentsRaw = await knex('client_contracts')
-      .where({ contract_id: contractId })
-      .andWhere({ tenant })
+    const assignmentsQuery = tenantDb(knex, tenant).table('client_contracts as cc');
+    tenantDb(knex, tenant).tenantJoin(
+      assignmentsQuery,
+      'contracts as co',
+      'cc.contract_id',
+      'co.contract_id',
+    );
+    const assignmentsRaw = await assignmentsQuery
+      .where({ 'cc.contract_id': contractId })
       .select(assignmentColumns);
 
-    const assignments = assignmentsRaw.map((assignment: any) => ({
+    const assignments = (assignmentsRaw as any[]).map((assignment: any) => ({
       ...assignment,
       po_required: Boolean(assignment.po_required),
     }));
@@ -660,6 +795,7 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
         isActive: Boolean(assignment.is_active),
         startDate: assignment.start_date,
         endDate: assignment.end_date,
+        contractStatus: assignment.contract_status,
       }) === 'active'
     ).length;
     const poRequiredAssignments = assignments.filter((assignment) => assignment.po_required).length;
@@ -693,14 +829,15 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     };
   } catch (error) {
     console.error(`Error computing summary for contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error;
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to compute contract summary: ${error}`);
+    throw error;
   }
 });
 
-export const getContractAssignments = withAuth(async (user, { tenant }, contractId: string): Promise<IContractAssignmentSummary[]> => {
+export const getContractAssignments = withAuth(async (user, { tenant }, contractId: string): Promise<IContractAssignmentSummary[] | ContractActionError> => {
   try {
     await assertBillingPermission(user, 'read', 'view contract assignments');
     const { knex } = await createTenantKnex();
@@ -724,18 +861,18 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.po_number',
       'cc.po_amount',
       'cc.renewal_ticket_board_id',
-      'cc.renewal_ticket_status_id'
+      'cc.renewal_ticket_status_id',
+      'co.status as contract_status',
     ];
 
-    const rows = await knex('client_contracts as cc')
-      .leftJoin('clients as c', function joinClients() {
-        this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
-      })
-      .leftJoin('default_billing_settings as dbs', function joinDefaults() {
-        this.on('cc.tenant', '=', 'dbs.tenant');
-      })
+    const facade = tenantDb(knex, tenant);
+    const query = facade.table('client_contracts as cc');
+    facade.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id', { type: 'left' });
+    facade.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
+    facade.tenantJoin(query, 'contracts as co', 'cc.contract_id', 'co.contract_id');
+
+    const rows = await query
       .where({ 'cc.contract_id': contractId })
-      .andWhere({ 'cc.tenant': tenant })
       .select(selection)
       .orderBy('cc.start_date', 'asc');
 
@@ -783,6 +920,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
           isActive: Boolean(row.is_active),
           startDate: row.start_date,
           endDate: row.end_date,
+          contractStatus: row.contract_status,
         }),
         start_date: row.start_date ?? null,
         end_date: row.end_date ?? null,
@@ -808,10 +946,11 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
     });
   } catch (error) {
     console.error(`Error fetching assignments for contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error;
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch contract assignments: ${error}`);
+    throw error;
   }
 });
 
@@ -851,14 +990,14 @@ export interface IContractOverview {
 /**
  * Get comprehensive contract overview including contract lines, services, and estimated value
  */
-export const getContractOverview = withAuth(async (user, { tenant }, contractId: string): Promise<IContractOverview> => {
+export const getContractOverview = withAuth(async (user, { tenant }, contractId: string): Promise<IContractOverview | ContractActionError> => {
   try {
     await assertBillingPermission(user, 'read', 'view contract overview');
     const { knex } = await createTenantKnex();
 
     // Check if this is a template contract
-    const templateRecord = await knex('contract_templates')
-      .where({ tenant, template_id: contractId })
+    const templateRecord = await tenantScopedTable(knex, tenant, 'contract_templates')
+      .where({ template_id: contractId })
       .first();
 
     const isTemplate = Boolean(templateRecord);
@@ -866,8 +1005,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     // Get currency code - templates default to USD, contracts have their own currency
     let currencyCode = 'USD';
     if (!isTemplate) {
-      const contractRecord = await knex('contracts')
-        .where({ tenant, contract_id: contractId })
+      const contractRecord = await tenantScopedTable(knex, tenant, 'contracts')
+        .where({ contract_id: contractId })
         .select('currency_code')
         .first();
       if (contractRecord?.currency_code) {
@@ -879,12 +1018,12 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
     if (isTemplate) {
       // Get template lines with their services
-      const lines = await knex('contract_template_lines as ctl')
-        .leftJoin('contract_template_line_fixed_config as tfc', function() {
-          this.on('ctl.template_line_id', '=', 'tfc.template_line_id')
-            .andOn('ctl.tenant', '=', 'tfc.tenant');
-        })
-        .where({ 'ctl.template_id': contractId, 'ctl.tenant': tenant })
+      const facade = tenantDb(knex, tenant);
+      const lineQuery = facade.table('contract_template_lines as ctl');
+      facade.tenantJoin(lineQuery, 'contract_template_line_fixed_config as tfc', 'ctl.template_line_id', 'tfc.template_line_id', { type: 'left' });
+
+      const lines = await lineQuery
+        .where({ 'ctl.template_id': contractId })
         .select([
           'ctl.template_line_id as contract_line_id',
           'ctl.template_line_name as contract_line_name',
@@ -897,12 +1036,11 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
       // Get services for each line
       for (const line of lines) {
-        const services = await knex('contract_template_line_services as ctls')
-          .leftJoin('service_catalog as s', function() {
-            this.on('ctls.service_id', '=', 's.service_id')
-              .andOn('s.tenant', '=', knex.raw('?', [tenant]));
-          })
-          .where({ 'ctls.template_line_id': line.contract_line_id, 'ctls.tenant': tenant })
+        const serviceQuery = facade.table('contract_template_line_services as ctls');
+        facade.tenantJoin(serviceQuery, 'service_catalog as s', 'ctls.service_id', 's.service_id', { type: 'left' });
+
+        const services = await serviceQuery
+          .where({ 'ctls.template_line_id': line.contract_line_id })
           .select([
             'ctls.service_id',
             's.service_name',
@@ -912,11 +1050,11 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           ]);
 
         // Get service configurations for rates
-        const configs = await knex('contract_template_line_service_configuration as config')
-          .where({ 'config.template_line_id': line.contract_line_id, 'config.tenant': tenant })
+        const configs = await tenantScopedTable(knex, tenant, 'contract_template_line_service_configuration as config')
+          .where({ 'config.template_line_id': line.contract_line_id })
           .select(['config.service_id', 'config.custom_rate', 'config.quantity']);
 
-        const configMap = new Map(configs.map(c => [c.service_id, c]));
+        const configMap = new Map<string, any>((configs as any[]).map((c: any) => [c.service_id, c]));
 
         contractLines.push({
           contract_line_id: line.contract_line_id,
@@ -925,7 +1063,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           billing_frequency: line.billing_frequency || 'monthly',
           base_rate: line.base_rate ? Number(line.base_rate) : null,
           display_order: line.display_order ?? 0,
-          services: services.map(svc => {
+          services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             return {
               service_id: svc.service_id,
@@ -941,8 +1079,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     } else {
       // Get regular contract lines with their services
       // Note: For regular contracts, custom_rate is stored directly on contract_lines table
-      const lines = await knex('contract_lines as cl')
-        .where({ 'cl.contract_id': contractId, 'cl.tenant': tenant })
+      const facade = tenantDb(knex, tenant);
+      const lines = await facade.table('contract_lines as cl')
+        .where({ 'cl.contract_id': contractId })
         .select([
           'cl.contract_line_id',
           'cl.contract_line_name',
@@ -955,12 +1094,11 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
       // Get services for each line
       for (const line of lines) {
-        const services = await knex('contract_line_services as cls')
-          .leftJoin('service_catalog as s', function() {
-            this.on('cls.service_id', '=', 's.service_id')
-              .andOn('s.tenant', '=', knex.raw('?', [tenant]));
-          })
-          .where({ 'cls.contract_line_id': line.contract_line_id, 'cls.tenant': tenant })
+        const serviceQuery = facade.table('contract_line_services as cls');
+        facade.tenantJoin(serviceQuery, 'service_catalog as s', 'cls.service_id', 's.service_id', { type: 'left' });
+
+        const services = await serviceQuery
+          .where({ 'cls.contract_line_id': line.contract_line_id })
           .select([
             'cls.service_id',
             's.service_name',
@@ -969,11 +1107,11 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           ]);
 
         // Get service configurations for rates
-        const configs = await knex('contract_line_service_configuration as config')
-          .where({ 'config.contract_line_id': line.contract_line_id, 'config.tenant': tenant })
+        const configs = await tenantScopedTable(knex, tenant, 'contract_line_service_configuration as config')
+          .where({ 'config.contract_line_id': line.contract_line_id })
           .select(['config.service_id', 'config.custom_rate', 'config.quantity']);
 
-        const configMap = new Map(configs.map(c => [c.service_id, c]));
+        const configMap = new Map<string, any>((configs as any[]).map((c: any) => [c.service_id, c]));
 
         contractLines.push({
           contract_line_id: line.contract_line_id,
@@ -982,7 +1120,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           billing_frequency: line.billing_frequency || 'monthly',
           base_rate: line.base_rate ? Number(line.base_rate) : null,
           display_order: line.display_order ?? 0,
-          services: services.map(svc => {
+          services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             return {
               service_id: svc.service_id,
@@ -1055,9 +1193,10 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     };
   } catch (error) {
     console.error(`Error fetching contract overview for ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error;
+    const expected = contractActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch contract overview: ${error}`);
+    throw error;
   }
 });

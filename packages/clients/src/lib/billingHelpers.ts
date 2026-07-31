@@ -1,7 +1,8 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
+import { resolveProductCode } from '@alga-psa/types';
 import type {
   BillingCycleType,
   IContract,
@@ -68,10 +69,16 @@ export const createDefaultTaxSettingsAsync = withAuth(async (
   _user,
   { tenant },
   clientId: string
-): Promise<IClientTaxSettings> => {
+): Promise<IClientTaxSettings | null> => {
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Tax settings are a billing concept; AlgaDesk tenants have no tax rates to
+    // assign, and requiring one would block client creation outright.
+    const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
+    if (resolveProductCode(tenantRow?.product_code).productCode === 'algadesk') {
+      return null;
+    }
     return createDefaultTaxSettings(trx, tenant, clientId);
   });
 });

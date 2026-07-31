@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, AlertTriangle, Info, MoreVertical, Package } from 'lucide-react';
@@ -30,15 +31,25 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { getRemainingBucketUnits, type RemainingBucketUnitsResult } from '@alga-psa/reporting/actions';
+import { getRemainingBucketUnits } from '@alga-psa/reporting/actions/report-actions/getRemainingBucketUnits';
+import type { RemainingBucketUnitsResult } from '@alga-psa/reporting/actions/report-actions/getRemainingBucketUnits';
 import BucketUsageChart from '@alga-psa/ui/components/charts/BucketUsageChart';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface UsageTrackingProps {
   initialServices: IService[];
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
@@ -173,6 +184,15 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   const loadClients = async () => {
     try {
       const fetchedClients = await getAllClientsForBilling();
+      if (isReturnedActionError(fetchedClients)) {
+        setClients([]);
+        toast({
+          title: t('common.error', { defaultValue: 'Error' }),
+          description: getErrorMessage(fetchedClients),
+          variant: "destructive",
+        });
+        return;
+      }
       setClients(fetchedClients);
     } catch (error) {
       toast({
@@ -188,6 +208,15 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       setLoadingBuckets(true);
       const currentDate = new Date().toISOString().split('T')[0];
       const buckets = await getRemainingBucketUnits({ clientId, currentDate });
+      if (isReturnedActionError(buckets)) {
+        toast({
+          title: t('common.error', { defaultValue: 'Error' }),
+          description: getErrorMessage(buckets),
+          variant: "destructive",
+        });
+        setBucketData([]);
+        return;
+      }
       // Map to chart's expected shape
       const mapped: BucketUsageData[] = buckets.map(b => ({
         ...b,
@@ -210,11 +239,20 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       if (selectedService && selectedService !== 'all_services') filter.service_id = selectedService;
 
       const records = await getUsageRecords(filter);
+      if (isReturnedActionError(records)) {
+        setUsageRecords([]);
+        toast({
+          title: t('common.error', { defaultValue: 'Error' }),
+          description: getErrorMessage(records),
+          variant: "destructive",
+        });
+        return;
+      }
       setUsageRecords(records);
     } catch (error) {
       toast({
         title: t('common.error', { defaultValue: 'Error' }),
-        description: t('usage.toast.loadUsageError', { defaultValue: 'Failed to load usage records' }),
+        description: getErrorMessage(error) || t('usage.toast.loadUsageError', { defaultValue: 'Failed to load usage records' }),
         variant: "destructive",
       });
     } finally {
@@ -225,7 +263,15 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   const handleAddUsage = async () => {
     try {
       setIsSaving(true);
-      await createUsageRecord(newUsage);
+      const result = await createUsageRecord(newUsage);
+      if (isReturnedActionError(result)) {
+        toast({
+          title: t('common.error', { defaultValue: 'Error' }),
+          description: getErrorMessage(result),
+          variant: "destructive",
+        });
+        return;
+      }
       setIsAddModalOpen(false);
       loadUsageRecords();
       toast({
@@ -235,7 +281,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     } catch (error) {
       toast({
         title: t('common.error', { defaultValue: 'Error' }),
-        description: t('usage.toast.createError', { defaultValue: 'Failed to create usage record' }),
+        description: getErrorMessage(error) || t('usage.toast.createError', { defaultValue: 'Failed to create usage record' }),
         variant: "destructive",
       });
     } finally {
@@ -248,10 +294,18 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
     try {
       setIsSaving(true);
-      await updateUsageRecord({
+      const result = await updateUsageRecord({
         usage_id: editingUsage.usage_id,
         ...newUsage,
       });
+      if (isReturnedActionError(result)) {
+        toast({
+          title: t('common.error', { defaultValue: 'Error' }),
+          description: getErrorMessage(result),
+          variant: "destructive",
+        });
+        return;
+      }
       setEditingUsage(null);
       loadUsageRecords();
       toast({
@@ -261,7 +315,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     } catch (error) {
       toast({
         title: t('common.error', { defaultValue: 'Error' }),
-        description: t('usage.toast.updateError', { defaultValue: 'Failed to update usage record' }),
+        description: getErrorMessage(error) || t('usage.toast.updateError', { defaultValue: 'Failed to update usage record' }),
         variant: "destructive",
       });
     } finally {
@@ -279,7 +333,15 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
     try {
       setIsSaving(true);
-      await deleteUsageRecord(usageToDelete);
+      const result = await deleteUsageRecord(usageToDelete);
+      if (isReturnedActionError(result)) {
+        toast({
+          title: t('common.error', { defaultValue: 'Error' }),
+          description: getErrorMessage(result),
+          variant: "destructive",
+        });
+        return;
+      }
       loadUsageRecords();
       toast({
         title: t('common.success', { defaultValue: 'Success' }),
@@ -288,7 +350,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     } catch (error) {
       toast({
         title: t('common.error', { defaultValue: 'Error' }),
-        description: t('usage.toast.deleteError', { defaultValue: 'Failed to delete usage record' }),
+        description: getErrorMessage(error) || t('usage.toast.deleteError', { defaultValue: 'Failed to delete usage record' }),
         variant: "destructive",
       });
     } finally {
@@ -591,13 +653,19 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
             </div>
             <div>
               <Label htmlFor="usage-date-input">{t('usage.dialog.fields.usageDate', { defaultValue: 'Usage Date' })}</Label>
-              <Input
+              <DatePicker
                 id="usage-date-input"
-                type="date"
-                value={newUsage.usage_date
+                label={t('usage.dialog.fields.usageDate', { defaultValue: 'Usage Date' })}
+                placeholder={t('usage.dialog.fields.usageDate', { defaultValue: 'Usage Date' })}
+                clearable
+                className="w-full"
+                value={dateFromString(newUsage.usage_date
                   ? new Date(newUsage.usage_date).toISOString().split('T')[0]
-                  : ''}
-                onChange={(e) => setNewUsage({ ...newUsage, usage_date: new Date(e.target.value).toISOString() })}
+                  : '')}
+                onChange={(date) => setNewUsage({
+                  ...newUsage,
+                  usage_date: date ? new Date(dateToString(date)).toISOString() : '',
+                })}
               />
             </div>
             <div>

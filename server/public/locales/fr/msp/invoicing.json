@@ -213,6 +213,7 @@
       "fixAll": "Tout réparer",
       "fixAllBusy": "Reconstruction…",
       "fixAllResult": "{{schedules}} planning(s) reconstruit(s) pour {{clients}} client(s).",
+      "fixAllNoop": "Tous les plannings de facturation sont déjà à jour. Tout élément encore listé ci-dessous doit être examiné individuellement.",
       "fixAllError": "Impossible de reconstruire les périodes de service. Veuillez réessayer.",
       "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service."
     },
@@ -288,11 +289,15 @@
     "fields": {
       "client": "Client",
       "invoiceNumber": "Numéro de facture",
-      "invoiceNumberOptional": "Numéro de facture (facultatif)"
+      "invoiceNumberOptional": "Numéro de facture (facultatif)",
+      "sourceSalesOrder": "Source sales order (optional)"
     },
     "placeholders": {
       "selectClient": "Sélectionnez un client",
-      "invoiceNumberOptional": "Laisser vide pour générer automatiquement"
+      "invoiceNumberOptional": "Laisser vide pour générer automatiquement",
+      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
+      "searchSalesOrders": "Search sales orders...",
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
     },
     "automatedItems": {
       "title": "Éléments de campagne automatisés",
@@ -309,7 +314,9 @@
       "addDiscount": "Ajouter une remise",
       "generate": "Générer une facture",
       "saveChanges": "Enregistrer les modifications",
-      "processing": "Traitement..."
+      "processing": "Traitement...",
+      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
       "total": "Total"
@@ -331,11 +338,29 @@
       "loadItems": "Erreur lors du chargement des éléments de facture",
       "refresh": "Une erreur s'est produite lors de l'actualisation des données de facture.",
       "updateFailed": "Erreur lors de la mise à jour de la facture",
-      "generateFailed": "Erreur lors de la génération de la facture"
+      "generateFailed": "Erreur lors de la génération de la facture",
+      "NO_BILLING_EMAIL": "{{clientName}} n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à l'emplacement de facturation du client, puis réessayez.",
+      "CLIENT_NOT_FOUND": "Le client sélectionné est introuvable. Actualisez la page et réessayez.",
+      "SERVICE_NOT_FOUND": "Le service {{serviceId}} est introuvable. Actualisez la page et réessayez.",
+      "INVALID_QUANTITY": "La quantité doit être supérieure à zéro.",
+      "NO_TAX_RATE": "Aucun taux de taxe actif n'a été trouvé pour {{region}} à la date du {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Le service {{serviceId}} associé à cette remise est introuvable.",
+      "INVOICE_NUMBER_CONFLICT": "Ce numéro de facture est déjà utilisé.",
+      "PERMISSION_DENIED": "Vous n'êtes pas autorisé à créer ou à mettre à jour cette facture.",
+      "UNEXPECTED": "Une erreur s'est produite lors de la génération de la facture. Indiquez la référence {{ref}} lorsque vous contactez le support.",
+      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
+      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à son emplacement de facturation avant de générer la facture."
     },
     "errorFallback": {
       "title": "Quelque chose s'est mal passé",
       "retry": "Réessayer"
+    },
+    "salesOrderContext": {
+      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
     }
   },
   "draftsTab": {
@@ -431,7 +456,8 @@
       "pdfFailed": "Échec de la génération du PDF. Veuillez réessayer.",
       "bulkPdfFailed": "Échec de la génération des fichiers PDF. Veuillez réessayer.",
       "unfinalizeFailed": "Échec de la finalisation de la facture. Veuillez réessayer.",
-      "bulkUnfinalizeFailed": "Échec de la finalisation des factures. Veuillez réessayer."
+      "bulkUnfinalizeFailed": "Échec de la finalisation des factures. Veuillez réessayer.",
+      "bulkUnfinalizeInvoiceFailed": "Impossible de rouvrir {{invoiceNumber}} : {{reason}}"
     }
   },
   "recurringServicePeriods": {
@@ -658,6 +684,8 @@
     "error": "Impossible d'afficher l'aperçu",
     "errorDescription": "Impossible d'afficher l'aperçu. Des données peuvent être manquantes.",
     "errors": {
+      "notFound": "Facture introuvable.",
+      "noTemplates": "Aucun modèle de facture disponible.",
       "loadFailed": "Échec du chargement de l'aperçu : {{message}}",
       "actionFailed": "Échec de {{action}}. Veuillez réessayer.",
       "actionLabels": {
@@ -981,7 +1009,9 @@
       "description": "Description",
       "quantity": "Quantité",
       "rate": "Taux",
-      "amount": "Montant"
+      "amount": "Montant",
+      "salesOrder": "Commande client",
+      "cogsMargin": "Coût des ventes / Marge"
     },
     "labels": {
       "contractSubtotal": "Sous-total du contrat :",
@@ -995,7 +1025,8 @@
     "tabs": {
       "generate": "Générer",
       "drafts": "Brouillons",
-      "finalized": "Finalisée"
+      "finalized": "Finalisée",
+      "projectBilling": "Project Billing"
     }
   },
   "invoiceSyncBadge": {
@@ -1630,6 +1661,66 @@
     },
     "dragOverlay": {
       "component": "Composant"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
+    "bulkActions": "Actions ({{count}})",
+    "loading": "Loading project billing queue...",
+    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "columns": {
+      "project": "Project",
+      "client": "Client",
+      "description": "Description",
+      "amount": "Amount",
+      "trigger": "Trigger",
+      "daysWaiting": "Days waiting",
+      "actions": "Actions"
+    },
+    "trigger": {
+      "phase": "Phase {{phase}} completed {{date}}",
+      "date": "Date reached",
+      "manual": "Manual"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approveInvoiceNow": "Approve & invoice now",
+      "hold": "Hold",
+      "cancel": "Cancel",
+      "approveSelected": "Approve selected",
+      "holdSelected": "Hold selected"
+    },
+    "toasts": {
+      "approved": "Entry approved.",
+      "approvedWithWarning": "Entry approved. {{warning}}",
+      "invoiced": "Entry approved and invoiced.",
+      "bulkApproved": "{{count}} entries approved.",
+      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
+      "held": "Entry placed on hold.",
+      "bulkHeld": "{{count}} entries placed on hold.",
+      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
+      "canceled": "Entry canceled."
+    },
+    "errors": {
+      "loadFailed": "Failed to load the project billing review queue. Please try again.",
+      "approveFailed": "Failed to approve the entry.",
+      "invoiceFailed": "Failed to approve and invoice the entry.",
+      "holdFailed": "Failed to place the entry on hold.",
+      "cancelFailed": "Failed to cancel the entry."
+    },
+    "holdDialog": {
+      "title": "Hold entry",
+      "titlePlural": "Hold {{count}} entries",
+      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
+      "reasonPlaceholder": "Reason for holding...",
+      "cancel": "Cancel",
+      "confirm": "Hold"
+    },
+    "cancelDialog": {
+      "title": "Cancel entry",
+      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
+      "confirm": "Cancel entry",
+      "dismiss": "Keep entry"
     }
   }
 }

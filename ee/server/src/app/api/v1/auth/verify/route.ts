@@ -6,7 +6,7 @@ import {
 } from '@/lib/security/rateLimiting';
 import { observability, observabilityLogger, observabilityMetrics } from '@/lib/observability';
 import { verifyPassword } from '@/utils/encryption/encryption';
-import { withAdminTransaction } from '@alga-psa/db';
+import { tenantDb, withAdminTransaction } from '@alga-psa/db';
 import { withNmStoreApiKey } from '@ee/lib/middleware/withNmStoreApiKey';
 
 // Interface definitions
@@ -42,8 +42,10 @@ async function verifyTenantCredentials(email: string, password: string) {
       try {
         // Use admin connection since we don't have tenant context yet
         return await withAdminTransaction(async (trx) => {
+          const discoveryDb = tenantDb(trx, '__nm_store_auth_verification_discovery__');
           // Query for user by email across all tenants
-          const user = await trx('users')
+          const user = await discoveryDb
+            .unscoped('users', 'NM Store auth verification discovers tenant by user email before tenant context exists')
             .where('email', email)
             .where('is_active', true)
             .first();
@@ -62,7 +64,8 @@ async function verifyTenantCredentials(email: string, password: string) {
           }
           
           // Get tenant information using the same transaction
-          const tenant = await trx('tenants')
+          const tenant = await discoveryDb
+            .unscoped('tenants', 'NM Store auth verification validates discovered tenant before tenant context exists')
             .where('id', user.tenant_id)
             .where('status', 'active')
             .first();
@@ -116,7 +119,7 @@ async function verifyTenantCredentials(email: string, password: string) {
 
 export const POST = withNmStoreApiKey(async (req: NextRequest) => {
   const startTime = Date.now();
-  const clientIp = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+  const clientIp = req.headers.get('x-forwarded-for') || (req as { ip?: string }).ip || 'unknown';
   
   // Use observability.timeOperation for automatic tracing, metrics, and logging
   return await observability.timeOperation(

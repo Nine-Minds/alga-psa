@@ -193,7 +193,7 @@ const PORTAL_INVITATION_CSS = `
 /* ------------------------------------------------------------------ */
 const COPY = {
   en: {
-    subject: 'Portal Invitation - {{clientName}}',
+    subject: 'Portal Invitation - {{tenantName}}',
     title: 'Portal Access Invitation',
     headerTitle: 'Welcome to Your Customer Portal',
     headerSubtitle: "You're invited to access your account",
@@ -212,11 +212,11 @@ const COPY = {
     phoneLabel: 'Phone',
     contactHelp: 'Our support team is ready to help you get started.',
     footerSent: 'This email was sent to {{contactName}} as part of your portal access setup.',
-    footerUnexpected: "If you didn't expect this invitation, please contact us at {{clientLocationEmail}}.",
-    footerCopyright: '\u00a9 {{currentYear}} {{clientName}}. All rights reserved.',
+    footerUnexpected: "If you didn't expect this invitation, please contact us at {{supportEmail}}.",
+    footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. All rights reserved.',
   },
   fr: {
-    subject: 'Invitation au portail client - {{clientName}}',
+    subject: 'Invitation au portail client - {{tenantName}}',
     title: 'Invitation au portail',
     headerTitle: 'Bienvenue sur votre portail client',
     headerSubtitle: 'Vous \u00eates invit\u00e9 \u00e0 acc\u00e9der \u00e0 votre compte',
@@ -235,11 +235,11 @@ const COPY = {
     phoneLabel: 'T\u00e9l\u00e9phone',
     contactHelp: "Notre \u00e9quipe support est pr\u00eate \u00e0 vous aider \u00e0 d\u00e9marrer.",
     footerSent: 'Cet e-mail a \u00e9t\u00e9 envoy\u00e9 \u00e0 {{contactName}} dans le cadre de la configuration de votre acc\u00e8s au portail.',
-    footerUnexpected: "Si vous n\u2019attendiez pas cette invitation, veuillez nous contacter \u00e0 {{clientLocationEmail}}.",
-    footerCopyright: '\u00a9 {{currentYear}} {{clientName}}. Tous droits r\u00e9serv\u00e9s.',
+    footerUnexpected: "Si vous n\u2019attendiez pas cette invitation, veuillez nous contacter \u00e0 {{supportEmail}}.",
+    footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Tous droits r\u00e9serv\u00e9s.',
   },
   es: {
-    subject: 'Invitaci\u00f3n al portal del cliente - {{clientName}}',
+    subject: 'Invitaci\u00f3n al portal del cliente - {{tenantName}}',
     title: 'Invitaci\u00f3n al portal',
     headerTitle: 'Bienvenido a tu portal de cliente',
     headerSubtitle: 'Has sido invitado a acceder a tu cuenta',
@@ -258,11 +258,11 @@ const COPY = {
     phoneLabel: 'Tel\u00e9fono',
     contactHelp: 'Nuestro equipo de soporte est\u00e1 listo para ayudarte a comenzar.',
     footerSent: 'Este correo fue enviado a {{contactName}} como parte de la configuraci\u00f3n de tu acceso al portal.',
-    footerUnexpected: 'Si no esperabas esta invitaci\u00f3n, cont\u00e1ctanos en {{clientLocationEmail}}.',
-    footerCopyright: '\u00a9 {{currentYear}} {{clientName}}. Todos los derechos reservados.',
+    footerUnexpected: 'Si no esperabas esta invitaci\u00f3n, cont\u00e1ctanos en {{supportEmail}}.',
+    footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Todos los derechos reservados.',
   },
   de: {
-    subject: 'Kundenportal-Einladung - {{clientName}}',
+    subject: 'Kundenportal-Einladung - {{tenantName}}',
     title: 'Portal-Einladung',
     headerTitle: 'Willkommen in Ihrem Kundenportal',
     headerSubtitle: 'Sie sind eingeladen, auf Ihr Konto zuzugreifen',
@@ -281,11 +281,11 @@ const COPY = {
     phoneLabel: 'Telefon',
     contactHelp: 'Unser Support-Team steht bereit, um Ihnen den Einstieg zu erleichtern.',
     footerSent: 'Diese E-Mail wurde an {{contactName}} im Rahmen der Einrichtung Ihres Portal-Zugangs gesendet.',
-    footerUnexpected: 'Wenn Sie diese Einladung nicht erwartet haben, kontaktieren Sie uns bitte unter {{clientLocationEmail}}.',
-    footerCopyright: '\u00a9 {{currentYear}} {{clientName}}. Alle Rechte vorbehalten.',
+    footerUnexpected: 'Wenn Sie diese Einladung nicht erwartet haben, kontaktieren Sie uns bitte unter {{supportEmail}}.',
+    footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Alle Rechte vorbehalten.',
   },
   nl: {
-    subject: 'Uitnodiging voor klantenportaal - {{clientName}}',
+    subject: 'Uitnodiging voor klantenportaal - {{tenantName}}',
     title: 'Portaaluitnodiging',
     headerTitle: 'Welkom bij uw klantenportaal',
     headerSubtitle: 'U bent uitgenodigd om toegang te krijgen tot uw account',
@@ -304,11 +304,11 @@ const COPY = {
     phoneLabel: 'Telefoon',
     contactHelp: 'Ons supportteam staat klaar om u op weg te helpen.',
     footerSent: 'Deze e-mail is verzonden naar {{contactName}} als onderdeel van uw portaaltoegang.',
-    footerUnexpected: 'Als u deze uitnodiging niet verwachtte, neem dan contact met ons op via {{clientLocationEmail}}.',
-    footerCopyright: '\u00a9 {{currentYear}} {{clientName}}. Alle rechten voorbehouden.',
+    footerUnexpected: 'Als u deze uitnodiging niet verwachtte, neem dan contact met ons op via {{supportEmail}}.',
+    footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.',
   },
   it: {
-    subject: 'Invito al portale clienti - {{clientName}}',
+    subject: 'Invito al portale clienti - {{tenantName}}',
     title: 'Invito al portale',
     headerTitle: 'Benvenuto nel tuo portale clienti',
     headerSubtitle: 'Sei stato invitato ad accedere al tuo account',
@@ -327,11 +327,11 @@ const COPY = {
     phoneLabel: 'Telefono',
     contactHelp: 'Il nostro team di supporto \u00e8 pronto ad aiutarti a iniziare.',
     footerSent: "Questa e-mail \u00e8 stata inviata a {{contactName}} nell'ambito della configurazione dell'accesso al portale.",
-    footerUnexpected: 'Se non ti aspettavi questo invito, contattaci all\'indirizzo {{clientLocationEmail}}.',
-    footerCopyright: '\u00a9 {{currentYear}} {{clientName}}. Tutti i diritti riservati.',
+    footerUnexpected: 'Se non ti aspettavi questo invito, contattaci all\'indirizzo {{supportEmail}}.',
+    footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Tutti i diritti riservati.',
   },
   pl: {
-    subject: 'Zaproszenie do portalu klienta{{#if clientName}} - {{clientName}}{{/if}}',
+    subject: 'Zaproszenie do portalu klienta{{#if tenantName}} - {{tenantName}}{{/if}}',
     title: 'Zaproszenie do portalu',
     headerTitle: 'Witamy w portalu klienta',
     headerSubtitle: 'Tw\u00f3j dost\u0119p do zarz\u0105dzania us\u0142ugami jest gotowy',
@@ -350,19 +350,19 @@ const COPY = {
     phoneLabel: 'Telefon',
     contactHelp: 'Nasz zesp\u00f3\u0142 wsparcia jest gotowy, aby pom\u00f3c Ci rozpocz\u0105\u0107.',
     footerSent: 'Ta wiadomo\u015b\u0107 zosta\u0142a wys\u0142ana do {{contactName}} w ramach konfiguracji dost\u0119pu do portalu.',
-    footerUnexpected: 'Je\u015bli nie spodziewale\u015b(a\u015b) si\u0119 tego zaproszenia, skontaktuj si\u0119 z nami pod adresem {{clientLocationEmail}}.',
-    footerCopyright: '\u00a9 {{currentYear}} {{clientName}}. Wszelkie prawa zastrze\u017cone.',
+    footerUnexpected: 'Je\u015bli nie spodziewale\u015b(a\u015b) si\u0119 tego zaproszenia, skontaktuj si\u0119 z nami pod adresem {{supportEmail}}.',
+    footerCopyright: '\u00a9 {{currentYear}} {{tenantName}}. Wszelkie prawa zastrze\u017cone.',
   },
 };
 COPY.pt = {
-  subject: 'Convite para o portal - {{clientName}}',
+  subject: 'Convite para o portal - {{tenantName}}',
   title: 'Convite de acesso ao portal',
   headerTitle: 'Boas-vindas ao seu portal do cliente',
   headerSubtitle: 'Você foi convidado(a) a acessar sua conta',
   greeting: 'Olá {{contactName}},',
   intro: 'Ótima notícia! Você foi convidado(a) a acessar o portal do cliente de <strong>{{clientName}}</strong>. Este portal seguro oferece acesso imediato a:',
   infoBoxTitle: '🎯 O que você pode acessar',
-  feature1: '✓ Visualizar e acompanhar seus chamados de suporte',
+  feature1: '✓ Visualizar e acompanhar seus tickets de suporte',
   feature2: '✓ Revisar atualizações e documentação de projetos',
   feature3: '✓ Comunicar-se diretamente com sua equipe de suporte',
   tagline: 'Tenha uma gestão de serviços simples e integrada com nosso portal intuitivo. Tudo o que você precisa para se manter informado e conectado em um local seguro.',
@@ -374,8 +374,8 @@ COPY.pt = {
   phoneLabel: 'Telefone',
   contactHelp: 'Nossa equipe de suporte está pronta para ajudar você a começar.',
   footerSent: 'Este email foi enviado para {{contactName}} como parte da configuração do seu acesso ao portal.',
-  footerUnexpected: 'Se você não esperava este convite, entre em contato conosco em {{clientLocationEmail}}.',
-  footerCopyright: '© {{currentYear}} {{clientName}}. Todos os direitos reservados.',
+  footerUnexpected: 'Se você não esperava este convite, entre em contato conosco em {{supportEmail}}.',
+  footerCopyright: '© {{currentYear}} {{tenantName}}. Todos os direitos reservados.',
 };
 
 /* eslint-enable max-len */
@@ -433,8 +433,8 @@ ${c.tagline ? `
 
     <div class="contact-info">
       <h4>${c.contactTitle}</h4>
-      <p><strong>Email:</strong> {{clientLocationEmail}}</p>
-      <p><strong>${c.phoneLabel}:</strong> {{clientLocationPhone}}</p>
+      <p><strong>Email:</strong> {{supportEmail}}</p>
+      <p><strong>${c.phoneLabel}:</strong> {{supportPhone}}</p>
       <p style="margin-top: 12px; font-size: 13px; color: #64748b;">${c.contactHelp}</p>
     </div>
   </div>
@@ -465,8 +465,8 @@ ${c.warningTitle}
 ${c.warningText.replace(/<[^>]+>/g, '')}
 
 ${c.contactTitle}
-Email: {{clientLocationEmail}}
-${c.phoneLabel}: {{clientLocationPhone}}
+Email: {{supportEmail}}
+${c.phoneLabel}: {{supportPhone}}
 ${c.contactHelp}
 
 ---

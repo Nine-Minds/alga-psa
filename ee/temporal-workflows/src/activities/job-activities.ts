@@ -1,4 +1,5 @@
 import { createLogger, format, transports } from 'winston';
+import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import {
@@ -24,6 +25,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
+const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
@@ -118,6 +120,13 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
   registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
+  registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
+  // Teams meeting Graph cleanup (cancel/decline): the handler imports
+  // src-consumed vertical packages (@alga-psa/clients + EE Teams lib), so the
+  // worker forwards it to the server like the polling jobs above. The
+  // recurring sweep-teams-online-meetings maintenance job re-attempts any
+  // cancel_pending rows if a forwarded run is lost.
+  registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
@@ -192,6 +201,32 @@ export async function executeJobHandler(input: {
     return { success: false, error };
   }
 
+  // Suspended tenants (cancelled, pending deletion) get a successful logged
+  // skip — no retry, no failure row. Fail-open: a flag-read error must run
+  // the job rather than halt active tenants' work.
+  if (tenantId && tenantId !== SYSTEM_TENANT_ID) {
+    let suspended = false;
+    try {
+      suspended = await isTenantSuspended(await getAdminConnection(), tenantId);
+    } catch (probeError) {
+      logger.warn('Tenant suspension probe failed; running job anyway', {
+        jobId,
+        jobName,
+        tenantId,
+        error: probeError instanceof Error ? probeError.message : String(probeError),
+      });
+    }
+    if (suspended) {
+      logger.info('Skipping job handler for suspended tenant', {
+        jobId,
+        jobName,
+        tenantId,
+        event: 'job_skipped_tenant_suspended',
+      });
+      return { success: true, result: { skipped: true, reason: 'tenant_suspended' } };
+    }
+  }
+
   try {
     const result = await runWithTenant(tenantId, async () => {
       const maybeResult = await handler(jobId, {
@@ -236,9 +271,10 @@ export async function updateJobStatus(input: {
   logger.debug('Updating job status', { jobId, tenantId, status });
 
   await runWithTenant(tenantId, async (trx) => {
+    const db = tenantDb(trx, tenantId);
     // Get current metadata
-    const currentJob = await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    const currentJob = await db.table('jobs')
+      .where({ job_id: jobId })
       .first('metadata');
 
     const currentMetadata = currentJob?.metadata
@@ -247,18 +283,29 @@ export async function updateJobStatus(input: {
         : currentJob.metadata
       : {};
 
+    // A recurring schedule reuses one jobs row as its per-fire tracker; a
+    // terminal status would make it invisible to schedule reconcilers, which
+    // then re-schedule on every pass. pg-boss returns tracker rows to queued
+    // after each run — keep parity, and record the run outcome in metadata.
+    const isRecurringTracker = Boolean(currentMetadata?.recurring);
+    const isTerminal = status === 'completed' || status === 'failed';
+    const effectiveStatus = isRecurringTracker && isTerminal ? 'queued' : status;
+
     // Merge metadata
     const updatedMetadata = {
       ...currentMetadata,
       ...metadata,
       ...(error ? { error } : {}),
+      ...(isRecurringTracker && isTerminal
+        ? { lastRunStatus: status, lastRunAt: new Date().toISOString() }
+        : {}),
     };
 
     // Update job record
-    await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    await db.table('jobs')
+      .where({ job_id: jobId })
       .update({
-        status,
+        status: effectiveStatus,
         metadata: JSON.stringify(updatedMetadata),
         updated_at: new Date(),
       });
@@ -284,7 +331,7 @@ export async function createJobDetail(input: {
   logger.debug('Creating job detail', { jobId, tenantId, stepName, status });
 
   const detailId = await runWithTenant(tenantId, async (trx) => {
-    const [row] = await trx('job_details')
+    const [row] = await tenantDb(trx, tenantId).table('job_details')
       .insert({
         tenant: tenantId,
         job_id: jobId,
@@ -326,8 +373,8 @@ export async function getJobData(input: {
   const { jobId, tenantId } = input;
 
   return runWithTenant(tenantId, async (trx) => {
-    const job = await trx('jobs')
-      .where({ job_id: jobId, tenant: tenantId })
+    const job = await tenantDb(trx, tenantId).table('jobs')
+      .where({ job_id: jobId })
       .first();
 
     if (!job) {

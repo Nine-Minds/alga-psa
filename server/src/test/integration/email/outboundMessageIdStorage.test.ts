@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { tenantDb } from '@alga-psa/db';
 
 describe('Outbound Message-ID Storage', () => {
   let knex: Knex;
@@ -9,19 +10,29 @@ describe('Outbound Message-ID Storage', () => {
   let testClientId: string;
   const cleanup: (() => Promise<void>)[] = [];
 
+  function scopedDbFor(tenantId: string) {
+    return tenantDb(knex, tenantId);
+  }
+
+  function ticketsTable() {
+    return scopedDbFor(testTenant).table('tickets');
+  }
+
   beforeAll(async () => {
     // Create test database with migrations and seeds
     knex = await createTestDbConnection();
 
     // Get the tenant that was created by seeds
-    const tenant = await knex('tenants').first('tenant');
+    const tenant = await tenantDb(knex, '__test_discovery__')
+      .unscoped('tenants', 'test discovery of seeded tenant for outbound Message-ID storage')
+      .first('tenant');
     if (!tenant) {
       throw new Error('No tenant found in database after seeds');
     }
     testTenant = tenant.tenant;
 
     // Get or create a test client
-    const client = await knex('clients').where({ tenant: testTenant }).first('client_id');
+    const client = await scopedDbFor(testTenant).table('clients').first('client_id');
     if (!client) {
       throw new Error('No client found in database after seeds');
     }
@@ -45,7 +56,7 @@ describe('Outbound Message-ID Storage', () => {
     it('should store outbound Message-ID in ticket email_metadata references array', async () => {
       // Create a test ticket
       const ticketId = uuidv4();
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -56,15 +67,15 @@ describe('Outbound Message-ID Storage', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Simulate storing an outbound Message-ID
       // This is what sendEventEmail() does at line 412-442
       const outboundMessageId = `<outbound-${Date.now()}@alga-psa.example.com>`;
 
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(
@@ -78,8 +89,8 @@ describe('Outbound Message-ID Storage', () => {
         });
 
       // Verify the Message-ID was stored
-      const updatedTicket = await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      const updatedTicket = await ticketsTable()
+        .where({ ticket_id: ticketId })
         .first();
 
       expect(updatedTicket).toBeDefined();
@@ -92,7 +103,7 @@ describe('Outbound Message-ID Storage', () => {
 
     it('should append multiple Message-IDs to references array', async () => {
       const ticketId = uuidv4();
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -103,13 +114,13 @@ describe('Outbound Message-ID Storage', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Store first outbound Message-ID
       const messageId1 = `<msg1-${Date.now()}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(
@@ -123,8 +134,8 @@ describe('Outbound Message-ID Storage', () => {
 
       // Store second outbound Message-ID
       const messageId2 = `<msg2-${Date.now() + 1}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(
@@ -138,8 +149,8 @@ describe('Outbound Message-ID Storage', () => {
 
       // Store third outbound Message-ID
       const messageId3 = `<msg3-${Date.now() + 2}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(
@@ -151,8 +162,8 @@ describe('Outbound Message-ID Storage', () => {
           )
         });
 
-      const updatedTicket = await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      const updatedTicket = await ticketsTable()
+        .where({ ticket_id: ticketId })
         .first();
 
       expect(updatedTicket.email_metadata.references).toHaveLength(3);
@@ -167,7 +178,7 @@ describe('Outbound Message-ID Storage', () => {
 
     it('should initialize empty references array if email_metadata is null', async () => {
       const ticketId = uuidv4();
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -178,12 +189,12 @@ describe('Outbound Message-ID Storage', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       const messageId = `<init-${Date.now()}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(
@@ -195,8 +206,8 @@ describe('Outbound Message-ID Storage', () => {
           )
         });
 
-      const updatedTicket = await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      const updatedTicket = await ticketsTable()
+        .where({ ticket_id: ticketId })
         .first();
 
       expect(updatedTicket.email_metadata).toBeDefined();
@@ -210,7 +221,7 @@ describe('Outbound Message-ID Storage', () => {
       const originalMessageId = `<original-${Date.now()}@customer.com>`;
       const threadId = `thread-${uuidv4()}`;
 
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -227,12 +238,12 @@ describe('Outbound Message-ID Storage', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       const outboundMessageId = `<outbound-${Date.now()}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(
@@ -244,8 +255,8 @@ describe('Outbound Message-ID Storage', () => {
           )
         });
 
-      const updatedTicket = await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      const updatedTicket = await ticketsTable()
+        .where({ ticket_id: ticketId })
         .first();
 
       // All original fields should still exist
@@ -260,7 +271,7 @@ describe('Outbound Message-ID Storage', () => {
 
     it('should handle Message-ID format variations correctly', async () => {
       const ticketId = uuidv4();
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -271,7 +282,7 @@ describe('Outbound Message-ID Storage', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Test various Message-ID formats
@@ -283,8 +294,8 @@ describe('Outbound Message-ID Storage', () => {
       ];
 
       for (const msgId of messageIds) {
-        await knex('tickets')
-          .where({ tenant: testTenant, ticket_id: ticketId })
+        await ticketsTable()
+          .where({ ticket_id: ticketId })
           .update({
             email_metadata: knex.raw(
               `jsonb_set(
@@ -297,8 +308,8 @@ describe('Outbound Message-ID Storage', () => {
           });
       }
 
-      const updatedTicket = await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      const updatedTicket = await ticketsTable()
+        .where({ ticket_id: ticketId })
         .first();
 
       expect(updatedTicket.email_metadata.references).toHaveLength(messageIds.length);
@@ -320,7 +331,7 @@ describe('Outbound Message-ID Storage', () => {
       const inboundMessageId = `<customer-initial-${Date.now()}@customer.com>`;
 
       // Step 1: Ticket created from inbound email
-      await knex('tickets').insert({
+      await ticketsTable().insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -335,13 +346,13 @@ describe('Outbound Message-ID Storage', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        await ticketsTable().where({ ticket_id: ticketId }).del();
       });
 
       // Step 2: Agent sends first reply
       const agentReply1MessageId = `<agent-reply-1-${Date.now()}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(
@@ -358,8 +369,8 @@ describe('Outbound Message-ID Storage', () => {
 
       // Step 4: Agent sends second reply
       const agentReply2MessageId = `<agent-reply-2-${Date.now() + 1}@alga-psa.example.com>`;
-      await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      await ticketsTable()
+        .where({ ticket_id: ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(
@@ -371,8 +382,8 @@ describe('Outbound Message-ID Storage', () => {
           )
         });
 
-      const finalTicket = await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId })
+      const finalTicket = await ticketsTable()
+        .where({ ticket_id: ticketId })
         .first();
 
       // Verify complete conversation thread is captured

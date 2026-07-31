@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam } from '@alga-psa/types';
 import { ListOptions } from '../controllers/types';
 import { 
@@ -143,8 +143,8 @@ export class UserService extends BaseService<IUser> {
     let countQuery = this.buildBaseQuery(knex, context);
 
     // Apply filters
-    dataQuery = this.applyUserFilters(dataQuery, filters);
-    countQuery = this.applyUserFilters(countQuery, filters);
+    dataQuery = this.applyUserFilters(knex, dataQuery, filters, context);
+    countQuery = this.applyUserFilters(knex, countQuery, filters, context);
 
     // Apply sorting and pagination
     dataQuery = this.applySorting(dataQuery, sort, order);
@@ -190,8 +190,8 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const user = await knex('users')
-      .where({ user_id: id, tenant: context.tenant })
+    const user = await this.buildTenantScopedQuery(knex, context)
+      .where({ user_id: id })
       .select(USER_RESPONSE_COLUMNS)
       .first();
 
@@ -227,8 +227,7 @@ export class UserService extends BaseService<IUser> {
     return withTransaction(knex, async (trx) => {
       // Validate email uniqueness per tenant + user_type (allow same email across different types)
       const targetUserType = data.user_type || 'internal';
-      const existingUserByEmail = await trx('users')
-        .where('tenant', context.tenant)
+      const existingUserByEmail = await this.buildTenantScopedQuery(trx, context)
         .andWhere('email', data.email.toLowerCase())
         .andWhere('user_type', targetUserType)
         .select('user_id')
@@ -239,8 +238,7 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Validate username uniqueness within tenant + user_type (allow same username across different types)
-      const existingUserByUsername = await trx('users')
-        .where('tenant', context.tenant)
+      const existingUserByUsername = await this.buildTenantScopedQuery(trx, context)
         .andWhere('username', data.username.toLowerCase())
         .andWhere('user_type', targetUserType)
         .select('user_id')
@@ -252,9 +250,9 @@ export class UserService extends BaseService<IUser> {
 
       // Validate role IDs if provided
       if (data.role_ids && data.role_ids.length > 0) {
-        const roles = await trx('roles')
+        const roles = await tenantDb(trx, context.tenant).table('roles')
           .whereIn('role_id', data.role_ids)
-          .where('tenant', context.tenant);
+          .select('*');
 
         if (roles.length !== data.role_ids.length) {
           throw new Error('One or more invalid role IDs provided');
@@ -282,7 +280,9 @@ export class UserService extends BaseService<IUser> {
       };
 
       // Insert user
-      const [createdUser] = await trx('users').insert(userData).returning(USER_RESPONSE_FIELD_NAMES);
+      const [createdUser] = await tenantDb(trx, context.tenant).table('users')
+        .insert(userData)
+        .returning(USER_RESPONSE_FIELD_NAMES);
 
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
@@ -291,7 +291,7 @@ export class UserService extends BaseService<IUser> {
           role_id: roleId,
           tenant: context.tenant
         }));
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
       }
 
       // Create default user preferences
@@ -326,8 +326,8 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Verify user exists and belongs to tenant
-      const existingUser = await trx('users')
-        .where({ user_id: id, tenant: context.tenant })
+      const existingUser = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: id })
         .select('user_id', 'email', 'user_type')
         .first();
 
@@ -338,7 +338,7 @@ export class UserService extends BaseService<IUser> {
       // Validate email uniqueness per user_type if changing email
       if (data.email && data.email.toLowerCase() !== existingUser.email) {
         const userTypeToCheck = (data.user_type || existingUser.user_type || 'internal');
-        const emailExists = await trx('users')
+        const emailExists = await this.buildTenantScopedQuery(trx, context)
           .where('email', data.email.toLowerCase())
           .andWhere('user_type', userTypeToCheck)
           .whereNot('user_id', id)
@@ -366,8 +366,8 @@ export class UserService extends BaseService<IUser> {
       });
 
       // Update user
-      const [updatedUser] = await trx('users')
-        .where({ user_id: id, tenant: context.tenant })
+      const [updatedUser] = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: id })
         .update(updateData)
         .returning(USER_RESPONSE_FIELD_NAMES);
 
@@ -403,8 +403,8 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Verify user exists and belongs to tenant
-      const existingUser = await trx('users')
-        .where({ user_id: id, tenant: context.tenant })
+      const existingUser = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: id })
         .select('user_id')
         .first();
 
@@ -414,18 +414,18 @@ export class UserService extends BaseService<IUser> {
 
       // Delete related data in correct order to avoid foreign key constraints
       // 1. Delete user preferences
-      await trx('user_preferences')
-        .where({ user_id: id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('user_preferences')
+        .where({ user_id: id })
         .delete();
 
       // 2. Delete user roles
-      await trx('user_roles')
-        .where({ user_id: id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('user_roles')
+        .where({ user_id: id })
         .delete();
 
       // 3. Delete API keys
-      await trx('api_keys')
-        .where({ user_id: id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('api_keys')
+        .where({ user_id: id })
         .delete();
 
       // 4. Set audit columns to NULL for tables with foreign keys to users
@@ -449,8 +449,7 @@ export class UserService extends BaseService<IUser> {
             if (hasCreatedBy) updates.created_by = null;
             if (hasUpdatedBy) updates.updated_by = null;
 
-            await trx(tableName)
-              .where({ tenant: context.tenant })
+            await tenantDb(trx, context.tenant).table(tableName)
               .where(function() {
                 if (hasCreatedBy) this.orWhere('created_by', id);
                 if (hasUpdatedBy) this.orWhere('updated_by', id);
@@ -461,8 +460,8 @@ export class UserService extends BaseService<IUser> {
       }
 
       // 5. Finally delete the user
-      await trx('users')
-        .where({ user_id: id, tenant: context.tenant })
+      await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: id })
         .delete();
     });
   }
@@ -491,8 +490,8 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Get user
-      const user = await trx('users')
-        .where({ user_id: targetUserId, tenant: context.tenant })
+      const user = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: targetUserId })
         .select('user_id', 'hashed_password')
         .first();
 
@@ -522,8 +521,8 @@ export class UserService extends BaseService<IUser> {
       const hashedPassword = await hashPassword(data.new_password);
 
       // Update password
-      await trx('users')
-        .where({ user_id: targetUserId, tenant: context.tenant })
+      await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: targetUserId })
         .update({ 
           hashed_password: hashedPassword,
           updated_at: knex.raw('now()')
@@ -562,8 +561,8 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Update user 2FA settings
-      await trx('users')
-        .where({ user_id: userId, tenant: context.tenant })
+      await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
         .update({
           two_factor_enabled: true,
           two_factor_secret: secret,
@@ -594,8 +593,8 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Update user 2FA settings
-      await trx('users')
-        .where({ user_id: userId, tenant: context.tenant })
+      await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
         .update({
           two_factor_enabled: false,
           two_factor_secret: null,
@@ -643,8 +642,8 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Verify user exists
-      const user = await trx('users')
-        .where({ user_id: userId, tenant: context.tenant })
+      const user = await this.buildTenantScopedQuery(trx, context)
+        .where({ user_id: userId })
         .select('user_id')
         .first();
 
@@ -653,17 +652,17 @@ export class UserService extends BaseService<IUser> {
       }
 
       // Verify all roles exist
-      const roles = await trx('roles')
+      const roles = await tenantDb(trx, context.tenant).table('roles')
         .whereIn('role_id', roleIds)
-        .where('tenant', context.tenant);
+        .select('*');
 
       if (roles.length !== roleIds.length) {
         throw new Error('One or more invalid role IDs provided');
       }
 
       // Remove existing roles
-      await trx('user_roles')
-        .where({ user_id: userId, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('user_roles')
+        .where({ user_id: userId })
         .del();
 
       // Add new roles
@@ -673,7 +672,7 @@ export class UserService extends BaseService<IUser> {
           role_id: roleId,
           tenant: context.tenant
         }));
-        await trx('user_roles').insert(userRoles);
+        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
       }
 
       // Log role change activity
@@ -705,8 +704,8 @@ export class UserService extends BaseService<IUser> {
 
     return withTransaction(knex, async (trx) => {
       // Remove specified roles
-      await trx('user_roles')
-        .where({ user_id: userId, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('user_roles')
+        .where({ user_id: userId })
         .whereIn('role_id', roleIds)
         .del();
 
@@ -738,15 +737,12 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const teams = await knex('teams as t')
-      .join('team_members as tm', function() {
-        this.on('t.team_id', '=', 'tm.team_id')
-            .andOn('t.tenant', '=', 'tm.tenant');
-      })
-      .where({
-        'tm.user_id': userId,
-        't.tenant': context.tenant
-      })
+    const db = tenantDb(knex, context.tenant);
+    const teamsQuery = db.table('teams as t');
+    db.tenantJoin(teamsQuery, 'team_members as tm', 't.team_id', 'tm.team_id');
+
+    const teams = await teamsQuery
+      .where({ 'tm.user_id': userId })
       .select('t.*', knex.raw('tm.user_id = t.manager_id as is_manager'))
       .orderBy('t.team_name');
 
@@ -827,8 +823,8 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    const preferences = await knex('user_preferences')
-      .where({ user_id: userId, tenant: context.tenant })
+    const preferences = await tenantDb(knex, context.tenant).table('user_preferences')
+      .where({ user_id: userId })
       .select('setting_name', 'setting_value');
 
     const result: Record<string, any> = {};
@@ -890,6 +886,7 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     let query = this.buildEnhancedUserQuery(knex, context);
+    const db = tenantDb(knex, context.tenant);
 
     // Apply search across specified fields
     if (searchData.query) {
@@ -912,17 +909,13 @@ export class UserService extends BaseService<IUser> {
     }
 
     if (searchData.role_id) {
-      query = query.join('user_roles as ur_search', function() {
-        this.on('users.user_id', '=', 'ur_search.user_id')
-            .andOn('users.tenant', '=', 'ur_search.tenant');
-      }).where('ur_search.role_id', searchData.role_id);
+      db.tenantJoin(query, 'user_roles as ur_search', 'users.user_id', 'ur_search.user_id');
+      query = query.where('ur_search.role_id', searchData.role_id);
     }
 
     if (searchData.team_id) {
-      query = query.join('team_members as tm_search', function() {
-        this.on('users.user_id', '=', 'tm_search.user_id')
-            .andOn('users.tenant', '=', 'tm_search.tenant');
-      }).where('tm_search.team_id', searchData.team_id);
+      db.tenantJoin(query, 'team_members as tm_search', 'users.user_id', 'tm_search.user_id');
+      query = query.where('tm_search.team_id', searchData.team_id);
     }
 
     if (!searchData.include_inactive) {
@@ -1033,9 +1026,8 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const result = await trx('users')
+      const result = await this.buildTenantScopedQuery(trx, context)
         .whereIn('user_id', userIds)
-        .where('tenant', context.tenant)
         .update({ 
           is_inactive: deactivate,
           updated_at: knex.raw('now()')
@@ -1077,6 +1069,11 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
+    const db = tenantDb(knex, context.tenant);
+    const usersByRoleQuery = db.table('users as u');
+    db.tenantJoin(usersByRoleQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id');
+    db.tenantJoin(usersByRoleQuery, 'roles as r', 'ur.role_id', 'r.role_id');
+
     const [
       totalStats,
       typeStats,
@@ -1085,8 +1082,7 @@ export class UserService extends BaseService<IUser> {
       activityStats
     ] = await Promise.all([
       // Total and active/inactive counts
-      knex('users')
-        .where('tenant', context.tenant)
+      this.buildTenantScopedQuery(knex, context)
         .select(
           knex.raw('COUNT(*) as total_users'),
           knex.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_users'),
@@ -1095,28 +1091,17 @@ export class UserService extends BaseService<IUser> {
         .first(),
 
       // Users by type
-      knex('users')
-        .where('tenant', context.tenant)
+      this.buildTenantScopedQuery(knex, context)
         .groupBy('user_type')
         .select('user_type', knex.raw('COUNT(*) as count')),
 
       // Users by role
-      knex('users as u')
-        .join('user_roles as ur', function() {
-          this.on('u.user_id', '=', 'ur.user_id')
-              .andOn('u.tenant', '=', 'ur.tenant');
-        })
-        .join('roles as r', function() {
-          this.on('ur.role_id', '=', 'r.role_id')
-              .andOn('ur.tenant', '=', 'r.tenant');
-        })
-        .where('u.tenant', context.tenant)
+      usersByRoleQuery
         .groupBy('r.role_name')
         .select('r.role_name', knex.raw('COUNT(DISTINCT u.user_id) as count')),
 
       // Security stats
-      knex('users')
-        .where('tenant', context.tenant)
+      this.buildTenantScopedQuery(knex, context)
         .select(
           knex.raw('COUNT(CASE WHEN two_factor_enabled = true THEN 1 END) as users_with_2fa'),
           knex.raw('COUNT(*) as users_without_avatar') // Stub for now since image column might not exist
@@ -1279,15 +1264,21 @@ export class UserService extends BaseService<IUser> {
    * Enhanced user query with joins for roles and other data
    */
   private buildEnhancedUserQuery(knex: Knex, context: ServiceContext): Knex.QueryBuilder {
-    return knex('users')
-      .where('tenant', context.tenant)
+    return this.buildTenantScopedQuery(knex, context)
       .select(USER_RESPONSE_COLUMNS);
   }
 
   /**
    * Apply user-specific filters
    */
-  private applyUserFilters(query: Knex.QueryBuilder, filters: UserFilterData): Knex.QueryBuilder {
+  private applyUserFilters(
+    knex: Knex,
+    query: Knex.QueryBuilder,
+    filters: UserFilterData,
+    context: ServiceContext
+  ): Knex.QueryBuilder {
+    const db = tenantDb(knex, context.tenant);
+
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
 
@@ -1333,31 +1324,21 @@ export class UserService extends BaseService<IUser> {
           query.where('contact_id', value);
           break;
         case 'client_id':
-          query.join('contacts', function() {
-            this.on('users.contact_id', '=', 'contacts.contact_name_id')
-                .andOn('users.tenant', '=', 'contacts.tenant');
-          }).where('contacts.client_id', value);
+          db.tenantJoin(query, 'contacts', 'users.contact_id', 'contacts.contact_name_id');
+          query.where('contacts.client_id', value);
           break;
         case 'role_id':
-          query.join('user_roles', function() {
-            this.on('users.user_id', '=', 'user_roles.user_id')
-                .andOn('users.tenant', '=', 'user_roles.tenant');
-          }).where('user_roles.role_id', value);
+          db.tenantJoin(query, 'user_roles', 'users.user_id', 'user_roles.user_id');
+          query.where('user_roles.role_id', value);
           break;
         case 'role_name':
-          query.join('user_roles', function() {
-            this.on('users.user_id', '=', 'user_roles.user_id')
-                .andOn('users.tenant', '=', 'user_roles.tenant');
-          }).join('roles', function() {
-            this.on('user_roles.role_id', '=', 'roles.role_id')
-                .andOn('user_roles.tenant', '=', 'roles.tenant');
-          }).where('roles.role_name', value);
+          db.tenantJoin(query, 'user_roles', 'users.user_id', 'user_roles.user_id');
+          db.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+          query.where('roles.role_name', value);
           break;
         case 'team_id':
-          query.join('team_members', function() {
-            this.on('users.user_id', '=', 'team_members.user_id')
-                .andOn('users.tenant', '=', 'team_members.tenant');
-          }).where('team_members.team_id', value);
+          db.tenantJoin(query, 'team_members', 'users.user_id', 'team_members.user_id');
+          query.where('team_members.team_id', value);
           break;
         case 'search':
           query.where(subQuery => {
@@ -1567,7 +1548,7 @@ export class UserService extends BaseService<IUser> {
     };
 
     for (const [settingName, settingValue] of Object.entries(defaultPreferences)) {
-      await trx('user_preferences').insert({
+      await tenantDb(trx, context.tenant).table('user_preferences').insert({
         user_id: userId,
         setting_name: settingName,
         setting_value: JSON.stringify(settingValue),

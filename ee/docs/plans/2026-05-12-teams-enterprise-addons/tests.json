@@ -1,8 +1,53 @@
 [
-  { "id": "T001", "description": "Constants expose Teams and Enterprise add-on keys, labels, and descriptions", "implemented": true, "featureIds": ["F001"] },
-  { "id": "T002", "description": "TierContext hasAddOn returns true for Teams and Enterprise add-ons when present", "implemented": true, "featureIds": ["F002"] },
-  { "id": "T003", "description": "Entra guard returns 403 without Enterprise add-on and passes with it", "implemented": false, "featureIds": ["F003"] },
-  { "id": "T004", "description": "Teams availability rejects without Teams add-on and passes with it", "implemented": true, "featureIds": ["F004"] },
-  { "id": "T005", "description": "Stripe purchaseAddOn creates checkout for Teams and Enterprise add-ons with selected add-on metadata", "implemented": true, "featureIds": ["F005"] },
-  { "id": "T006", "description": "Manual smoke: tier alone no longer unlocks Teams or Entra; active add-on does", "implemented": false, "featureIds": ["F002", "F003", "F004", "F006"] }
+  {
+    "id": "T001",
+    "description": "Constants expose Teams and Enterprise add-on keys, labels, and descriptions",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "TierContext hasAddOn returns true for Teams and Enterprise add-ons when present",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Entra guard returns 403 without Enterprise add-on and passes with it",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Teams availability rejects without Teams add-on and passes with it",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Stripe purchaseAddOn creates checkout for Teams and Enterprise add-ons with selected add-on metadata",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Manual smoke: tier alone no longer unlocks Teams or Entra; active add-on does",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F006"
+    ]
+  }
 ]

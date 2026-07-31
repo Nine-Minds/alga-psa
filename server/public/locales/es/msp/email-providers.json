@@ -11,7 +11,8 @@
       "resyncing": "Resincronizando {{providerName}}...",
       "resyncError": "No se pudo resincronizar el proveedor IMAP",
       "resyncStarted": "Se inició la resincronización para {{providerName}}.",
-      "enterpriseOnly": "El correo electrónico entrante de Microsoft 365 solo está disponible en Enterprise Edition."
+      "enterpriseOnly": "El correo electrónico entrante de Microsoft 365 solo está disponible en Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "Editar proveedor de correo electrónico",
@@ -143,6 +144,7 @@
     },
     "badges": {
       "disabled": "Desactivado",
+      "paused": "En pausa",
       "connected": "Conectado",
       "disconnected": "Desconectado",
       "error": "Error",
@@ -166,15 +168,29 @@
       "reconnectOauth": "Reconectar OAuth",
       "resyncing": "Resincronizando…",
       "resyncMailbox": "Resincronizar buzón",
+      "pause": "Pausar correo entrante",
+      "resume": "Reanudar correo entrante",
       "delete": "Eliminar proveedor"
     },
+    "feedback": {
+      "paused": "Correo entrante en pausa.",
+      "resumed": "Correo entrante reanudado.",
+      "pauseError": "No se pudo cambiar el estado de pausa del correo entrante."
+    },
+    "pausedHelp": "Los mensajes recibidos mientras esta bandeja está en pausa no se importan retroactivamente.",
     "fields": {
       "status": "Estado",
       "lastSync": "Última sincronización",
+      "lastIngested": "Última ingesta",
+      "delivery": "Entrega",
       "created": "Creado",
       "subscription": "Suscripción",
       "defaults": "Valores predeterminados del ticket",
       "error": "Error:"
+    },
+    "delivery": {
+      "polling": "Sondeo cada 3 minutos",
+      "webhook": "Entrega en tiempo real: activa"
     },
     "values": {
       "active": "Activo",
@@ -293,7 +309,8 @@
         "popupBlocked": "No se pudo abrir la ventana emergente de OAuth. Permita ventanas emergentes para este sitio.",
         "closedEarly": "La ventana de autorización se cerró antes de completarse.",
         "authorizationFailed": "Autorización fallida",
-        "popupFailed": "Error en la ventana emergente de OAuth"
+        "popupFailed": "Error en la ventana emergente de OAuth",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Proveedor guardado pero configuración incompleta: {{error}}",
@@ -707,7 +724,8 @@
       "refreshStatusFailed": "Error al actualizar el estado del dominio",
       "domainRemovalScheduled": "Eliminación de dominio programada",
       "domainRemovalScheduledWithClear": "Eliminación de dominio programada y dirección de remitente de tickets eliminada",
-      "removeDomainFailed": "Error al eliminar el dominio"
+      "removeDomainFailed": "Error al eliminar el dominio",
+      "testOutboundFailed": "Error al probar el correo saliente"
     },
     "tabs": {
       "inboundEmail": "Correo entrante",
@@ -741,11 +759,27 @@
         "usernamePlaceholder": "su-correo@ejemplo.com",
         "passwordLabel": "Contraseña",
         "passwordPlaceholder": "Introduzca la contraseña",
+        "authHint": "Deje el nombre de usuario y la contraseña en blanco si su retransmisor acepta correo sin autenticación.",
         "fromLabel": "Dirección de remitente",
         "fromPlaceholder": "noreply@ejemplo.com",
         "fromHelp": "Dirección de remitente predeterminada para los correos salientes.",
+        "security": {
+          "title": "Seguridad de la conexión",
+          "secure": "Usar TLS implícito (SSL al conectar, normalmente el puerto 465)",
+          "requireTls": "Requerir actualización STARTTLS (puertos 587 / 25)",
+          "verifyCert": "Verificar el certificado del servidor",
+          "verifyCertHint": "Desactive esto solo para un retransmisor de confianza en su propia red que use un certificado autofirmado."
+        },
         "savingButton": "Guardando…",
-        "saveButton": "Guardar configuración SMTP"
+        "saveButton": "Guardar configuración SMTP",
+        "test": {
+          "title": "Probar correo saliente",
+          "description": "Guarda la configuración actual y luego verifica la conexión con el proveedor. Introduzca una dirección para enviar también un mensaje de prueba.",
+          "recipientLabel": "Enviar prueba a (opcional)",
+          "recipientPlaceholder": "tu@ejemplo.com",
+          "testingButton": "Probando...",
+          "runButton": "Probar conexión"
+        }
       },
       "ticketingFrom": {
         "title": "Dirección de remitente de tickets",
@@ -764,6 +798,9 @@
         "customPlaceholder": "soporte@{{domain}}",
         "customSmtpHelp": "Use un dominio desde el que su servidor SMTP esté autorizado a enviar. Un dominio no coincidente puede causar fallos de entrega o filtrado de spam.",
         "customManagedHelp": "Debe coincidir con {{domain}}. Si no es una de sus bandejas entrantes, el procesamiento de tickets entrantes puede no funcionar.",
+        "nameLabel": "Nombre visible del remitente",
+        "namePlaceholder": "Soporte",
+        "nameHelp": "Se muestra como el nombre del remitente en las notificaciones de tickets. Déjelo vacío para usar el nombre configurado del buzón o el nombre del panel.",
         "warningTitle": "Aviso",
         "errorTitle": "Corrija la dirección de remitente",
         "clearButton": "Borrar dirección de remitente",

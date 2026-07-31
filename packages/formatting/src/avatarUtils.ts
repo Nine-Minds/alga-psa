@@ -1,7 +1,6 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getImageUrlInternal } from './imageUrl';
-import { withTransaction } from '@alga-psa/db';
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 
 /**
  * Entity types that can have associated images
@@ -26,12 +25,13 @@ export async function getEntityImageUrl(
 
     // Wrap database queries in a transaction for consistency
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       // Query for document association
-      let query = trx('document_associations')
+      let query = tenantScopedTable('document_associations')
         .where({
           entity_id: entityId,
-          entity_type: entityType,
-          tenant
+          entity_type: entityType
         });
 
       query = query.andWhere('is_entity_logo', true);
@@ -44,11 +44,10 @@ export async function getEntityImageUrl(
       }
 
       // Get the file_id and updated_at from the documents table within the same transaction
-      const documentRecord = await trx('documents')
+      const documentRecord = await tenantScopedTable('documents')
         .select('file_id', 'updated_at')
         .where({
-          document_id: association.document_id,
-          tenant
+          document_id: association.document_id
         })
         .first();
 
@@ -156,16 +155,16 @@ export async function getEntityImageUrlsBatch(
 
   try {
     const { knex } = await createTenantKnex(tenant);
+    const tenantScopedTable = (table: string) => tenantDb(knex, tenant).table(table);
 
     // Get all associations in one query
-    const associations = await knex('document_associations')
+    const associations = await tenantScopedTable('document_associations')
       .select('entity_id', 'document_id')
       .whereIn('entity_id', entityIds)
       .andWhere({
         entity_type: entityType,
-        is_entity_logo: true,
-        tenant
-      });
+        is_entity_logo: true
+      }) as Array<{ entity_id: string; document_id: string }>;
 
     if (associations.length === 0) {
       return result;
@@ -173,10 +172,13 @@ export async function getEntityImageUrlsBatch(
 
     // Get all documents in one query, including updated_at for cache busting
     const documentIds = associations.map(a => a.document_id);
-    const documents = await knex('documents')
+    const documents = await tenantScopedTable('documents')
       .select('document_id', 'file_id', 'updated_at')
-      .whereIn('document_id', documentIds)
-      .andWhere({ tenant });
+      .whereIn('document_id', documentIds) as Array<{
+        document_id: string;
+        file_id: string | null;
+        updated_at: Date | string | null;
+      }>;
 
     // Create maps for quick lookup
     const docToFileMap = new Map(documents.map(d => [d.document_id, { file_id: d.file_id, updated_at: d.updated_at }]));

@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { createTenantScopedIndexerQuery } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface UserSearchRow {
@@ -47,9 +48,8 @@ export const userIndexer: EntityIndexer = {
   sourceEvents: ['USER_CREATED', 'USER_UPDATED', 'USER_DELETED', 'USER_ROLES_UPDATED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
-    const row = await knex<UserSearchRow>('users')
+    const row = await createTenantScopedIndexerQuery<UserSearchRow>(knex, 'users', 'users', tenant)
       .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .andWhere('user_id', id)
       .andWhere('user_type', 'internal')
       .first();
@@ -63,9 +63,8 @@ export const userIndexer: EntityIndexer = {
     cursor: string | null | undefined,
     limit: number,
   ): Promise<SearchDoc[]> {
-    const query = knex<UserSearchRow>('users')
+    const query = createTenantScopedIndexerQuery<UserSearchRow>(knex, 'users', 'users', tenant)
       .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'created_at', 'updated_at')
-      .where('tenant', tenant)
       .andWhere('user_type', 'internal')
       .orderBy('user_id', 'asc')
       .limit(limit);

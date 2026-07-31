@@ -12,7 +12,12 @@ import {
   getInboundWebhook,
   upsertInboundWebhook,
 } from '@/lib/actions/inboundWebhookActions';
-import { handleApiError, NotFoundError } from 'server/src/lib/api/middleware/apiMiddleware';
+import {
+  createServerActionErrorResponse,
+  handleApiError,
+  isServerActionErrorResult,
+  NotFoundError,
+} from 'server/src/lib/api/middleware/apiMiddleware';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -22,6 +27,9 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const webhook = await getInboundWebhook(id);
+    if (isServerActionErrorResult(webhook)) {
+      return createServerActionErrorResponse(webhook);
+    }
 
     if (!webhook) {
       throw new NotFoundError('Inbound webhook not found');
@@ -41,6 +49,9 @@ export async function PUT(request: Request, context: RouteContext) {
       ...input,
       inbound_webhook_id: id,
     });
+    if (isServerActionErrorResult(result)) {
+      return createServerActionErrorResponse(result);
+    }
 
     return NextResponse.json({ data: result.webhook, secret: result.secret });
   } catch (error) {
@@ -51,7 +62,10 @@ export async function PUT(request: Request, context: RouteContext) {
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
-    await deleteInboundWebhook(id);
+    const result = await deleteInboundWebhook(id);
+    if (isServerActionErrorResult(result)) {
+      return createServerActionErrorResponse(result);
+    }
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     return handleApiError(error);

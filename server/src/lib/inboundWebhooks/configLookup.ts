@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export interface InboundWebhookConfigLookupRow {
   tenant: string;
@@ -21,9 +22,8 @@ export async function lookupInboundWebhookBySlug(
   tenant: string,
   webhookSlug: string,
 ): Promise<InboundWebhookConfigLookupRow | null> {
-  const row = await knex<InboundWebhookConfigLookupRow>('inbound_webhooks')
+  const row = await tenantDb(knex, tenant).table<InboundWebhookConfigLookupRow>('inbound_webhooks')
     .where({
-      tenant,
       slug: webhookSlug,
     })
     .first([

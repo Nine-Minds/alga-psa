@@ -1,0 +1,38 @@
+[
+  {
+    "id": "T001",
+    "description": "A token created for five licenses verifies and reserves with licenseCount five.",
+    "implemented": true,
+    "featureIds": ["F002", "F003", "F004"]
+  },
+  {
+    "id": "T002",
+    "description": "Token creation rejects invalid license counts before database access.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T003",
+    "description": "Tampering with a token payload, including its license count, invalidates the signature.",
+    "implemented": true,
+    "featureIds": ["F002", "F005"]
+  },
+  {
+    "id": "T004",
+    "description": "Existing reactivation route and token unit behavior tests remain green.",
+    "implemented": true,
+    "featureIds": ["F001", "F004", "F006"]
+  },
+  {
+    "id": "T005",
+    "description": "Runtime route tests authenticate a five-license request and reject old or invalid signatures.",
+    "implemented": true,
+    "featureIds": ["F001", "F004", "F005"]
+  },
+  {
+    "id": "T006",
+    "description": "The DB-backed reactivation ledger integration suite passes with the license-count token contract.",
+    "implemented": false,
+    "featureIds": ["F002", "F003"]
+  }
+]

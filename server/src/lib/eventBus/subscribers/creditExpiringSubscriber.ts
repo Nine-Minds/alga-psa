@@ -10,9 +10,10 @@
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, withTransaction, tenantDb } from '@alga-psa/db';
 import { getEmailNotificationService } from '@alga-psa/notifications';
 import { formatCurrency, formatDate } from '@alga-psa/core/formatters';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import type { Knex } from 'knex';
 
 const CREDIT_EXPIRING_SUBTYPE = 'Credit Expiring';
@@ -58,9 +59,11 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
       const { knex } = await createTenantKnex();
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const scopedDb = tenantDb(trx, tenantId);
+
         // Get client details
-        const client = await trx('clients')
-          .where({ client_id: clientId, tenant: tenantId })
+        const client = await scopedDb.table('clients')
+          .where({ client_id: clientId })
           .first();
 
         if (!client) {
@@ -72,8 +75,8 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
         }
 
         // Get client billing contacts
-        const contacts = await trx('client_contacts')
-          .where({ client_id: clientId, tenant: tenantId })
+        const contacts = await scopedDb.table('client_contacts')
+          .where({ client_id: clientId })
           .where('is_billing_contact', true)
           .select('user_id', 'email');
 
@@ -87,9 +90,8 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
 
         // Re-resolve credit + transaction details for the email template
         const creditIds = credits.map((credit) => credit.creditId);
-        const creditRows = await trx('credit_tracking')
+        const creditRows = await scopedDb.table('credit_tracking')
           .whereIn('credit_id', creditIds)
-          .where('tenant', tenantId)
           .select('credit_id', 'transaction_id');
 
         const transactionIdByCreditId = creditRows.reduce((acc, row) => {
@@ -102,9 +104,8 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
           .filter((id): id is string => Boolean(id));
 
         const transactions = transactionIds.length
-          ? await trx('transactions')
+          ? await scopedDb.table('transactions')
               .whereIn('transaction_id', transactionIds)
-              .where('tenant', tenantId)
           : [];
 
         const transactionMap = transactions.reduce((acc, tx) => {
@@ -115,12 +116,22 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
         // Calculate total expiring amount
         const totalAmount = credits.reduce((sum, credit) => sum + Number(credit.amount), 0);
 
+        const currencyCode =
+          client.default_currency_code ||
+          (
+            await scopedDb.table('default_billing_settings')
+              .select('default_currency_code')
+              .first()
+          )?.default_currency_code ||
+          'USD';
+        const emailLocale = await getTenantDefaultLocale(tenantId, 'client');
+
         // Format credit data for the email template
         const creditItems = credits.map((credit) => {
           const transactionId = transactionIdByCreditId[credit.creditId];
           return {
             creditId: credit.creditId,
-            amount: formatCurrency(Number(credit.amount)),
+            amount: formatCurrency(Number(credit.amount), emailLocale, currencyCode),
             expirationDate: formatDate(credit.expirationDate),
             transactionId,
             description: transactionMap[transactionId]?.description || 'N/A',
@@ -134,7 +145,7 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
             name: client.name,
           },
           credits: {
-            totalAmount: formatCurrency(totalAmount),
+            totalAmount: formatCurrency(totalAmount, emailLocale, currencyCode),
             expirationDate: formatDate(credits[0].expirationDate),
             daysRemaining: daysBeforeExpiration,
             items: creditItems,
@@ -146,7 +157,7 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
         const notificationService = getEmailNotificationService();
 
         // Get notification subtype
-        const subtype = await trx('notification_subtypes')
+        const subtype = await scopedDb.table('notification_subtypes')
           .where({ name: CREDIT_EXPIRING_SUBTYPE })
           .first();
 

@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
 import {
   runFullSync as runFullSyncEngine,
@@ -48,17 +49,18 @@ class DirectNinjaOneSyncStrategy implements NinjaOneSyncStrategy {
     try {
       const { knex } = await createTenantKnex();
       const { tenantId, integrationId } = input;
+      const db = tenantDb(knex, tenantId);
 
-      const integration = await knex('rmm_integrations')
-        .where({ tenant: tenantId, integration_id: integrationId, provider: 'ninjaone' })
+      const integration = await db.table('rmm_integrations')
+        .where({ integration_id: integrationId, provider: 'ninjaone' })
         .first() as RmmIntegration | undefined;
 
       if (!integration) {
         throw new Error('NinjaOne integration not configured');
       }
 
-      await knex('rmm_integrations')
-        .where({ tenant: tenantId, integration_id: integrationId })
+      await db.table('rmm_integrations')
+        .where({ integration_id: integrationId })
         .update({
           sync_status: 'syncing',
           updated_at: knex.fn.now(),
@@ -71,17 +73,16 @@ class DirectNinjaOneSyncStrategy implements NinjaOneSyncStrategy {
 
       for (const org of organizations) {
         try {
-          const existingMapping = await knex('rmm_organization_mappings')
+          const existingMapping = await db.table('rmm_organization_mappings')
             .where({
-              tenant: tenantId,
               integration_id: integration.integration_id,
               external_organization_id: String(org.id),
             })
             .first();
 
           if (existingMapping) {
-            await knex('rmm_organization_mappings')
-              .where({ tenant: tenantId, mapping_id: existingMapping.mapping_id })
+            await db.table('rmm_organization_mappings')
+              .where({ mapping_id: existingMapping.mapping_id })
               .update({
                 external_organization_name: org.name,
                 metadata: JSON.stringify({ description: org.description, tags: org.tags }),
@@ -89,7 +90,7 @@ class DirectNinjaOneSyncStrategy implements NinjaOneSyncStrategy {
               });
             itemsUpdated++;
           } else {
-            await knex('rmm_organization_mappings').insert({
+            await db.table('rmm_organization_mappings').insert({
               tenant: tenantId,
               integration_id: integration.integration_id,
               external_organization_id: String(org.id),
@@ -107,8 +108,8 @@ class DirectNinjaOneSyncStrategy implements NinjaOneSyncStrategy {
         }
       }
 
-      await knex('rmm_integrations')
-        .where({ tenant: tenantId, integration_id: integrationId })
+      await db.table('rmm_integrations')
+        .where({ integration_id: integrationId })
         .update({
           sync_status: 'completed',
           last_sync_at: knex.fn.now(),
@@ -134,8 +135,8 @@ class DirectNinjaOneSyncStrategy implements NinjaOneSyncStrategy {
 
       try {
         const { knex } = await createTenantKnex();
-        await knex('rmm_integrations')
-          .where({ tenant: input.tenantId, integration_id: input.integrationId })
+        await tenantDb(knex, input.tenantId).table('rmm_integrations')
+          .where({ integration_id: input.integrationId })
           .update({
             sync_status: 'error',
             sync_error: errorMessage,

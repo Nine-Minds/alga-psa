@@ -1,9 +1,21 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver } from './accountingMappingResolver';
+import { getAccountingSyncSettings } from './accountingSync/accountingSyncSettings';
 import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
+import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
+
+type ChargeProjection = {
+  tenant: string;
+  item_id: string;
+  invoice_id?: string | null;
+  service_id?: string | null;
+  tax_region?: string | null;
+  net_amount?: number | string | null;
+};
 
 type ChargeDetailProjection = {
+  tenant: string;
   item_id: string;
   service_period_start?: string | Date | null;
   service_period_end?: string | Date | null;
@@ -14,6 +26,27 @@ type NormalizedRecurringPeriod = {
   service_period_start: string | null;
   service_period_end: string | null;
   billing_timing: 'arrears' | 'advance' | null;
+};
+
+type InvoiceProjection = {
+  tenant: string;
+  invoice_id: string;
+  client_id?: string | null;
+  tax_source?: string | null;
+  invoice_type?: string | null;
+};
+
+type ClientProjection = {
+  tenant: string;
+  client_id: string;
+  client_name?: string | null;
+  payment_terms?: string | null;
+};
+
+type ServiceProjection = {
+  tenant: string;
+  service_id: string;
+  service_name: string;
 };
 
 function buildLineServicePeriodMetadata(
@@ -54,14 +87,19 @@ export class AccountingExportValidation {
       throw new Error(`Export batch ${batchId} not found`);
     }
 
+    const tenant = batch.tenant;
+    if (!tenant) {
+      throw new Error(`Export batch ${batchId} is missing tenant context`);
+    }
+
     const lines = await repo.listLines(batchId);
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
     const validationTimestamp = new Date().toISOString();
 
     // Clear prior unresolved validation errors so each validation run reflects current mappings.
-    await knex('accounting_export_errors')
+    await db.table('accounting_export_errors')
       .where({
-        tenant: batch.tenant,
         batch_id: batchId,
         resolution_state: 'open'
       })
@@ -69,6 +107,40 @@ export class AccountingExportValidation {
         resolution_state: 'resolved',
         resolved_at: validationTimestamp
       });
+
+    if (batch.export_type === 'vendor_bill') {
+      if (!batch.tenant) {
+        throw new Error(`Export batch ${batchId} is missing tenant context`);
+      }
+      if (batch.adapter_type === 'quickbooks_online') {
+        const firstLine = lines[0] ?? null;
+        if (!batch.target_realm && firstLine) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: firstLine.line_id,
+            code: 'missing_target_realm',
+            message: 'Connect QuickBooks Online before exporting vendor bills.',
+            metadata: mergeErrorMetadata(firstLine)
+          });
+        }
+
+        const settings = await getAccountingSyncSettings(knex, batch.tenant);
+        if (!settings.defaultExpenseAccountRef && firstLine) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: firstLine.line_id,
+            code: 'missing_default_expense_account',
+            message: 'Set a default QuickBooks expense account before exporting vendor bills.',
+            metadata: mergeErrorMetadata(firstLine)
+          });
+        }
+      }
+
+      const errors = await repo.listErrors(batchId);
+      const openErrors = errors.filter((item) => item.resolution_state === 'open');
+      await repo.updateBatchStatus(batchId, { status: openErrors.length === 0 ? 'ready' : 'needs_attention' });
+      return;
+    }
 
     const resolver = await AccountingMappingResolver.create();
     const adapterType = batch.adapter_type;
@@ -84,35 +156,33 @@ export class AccountingExportValidation {
 
     for (const line of lines) {
       lineById.set(line.line_id, line);
-      if (line.invoice_charge_id) {
-        chargeIds.add(line.invoice_charge_id);
+      if (line.document_line_id) {
+        chargeIds.add(line.document_line_id);
       }
-      if (line.invoice_id) {
-        invoiceIds.add(line.invoice_id);
-        if (!firstLineByInvoice.has(line.invoice_id)) {
-          firstLineByInvoice.set(line.invoice_id, line.line_id);
+      if (line.document_id) {
+        invoiceIds.add(line.document_id);
+        if (!firstLineByInvoice.has(line.document_id)) {
+          firstLineByInvoice.set(line.document_id, line.line_id);
         }
       }
     }
 
     const charges =
       chargeIds.size > 0
-        ? await knex('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region')
+        ? await db.table<ChargeProjection>('invoice_charges')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount')
             .whereIn('item_id', Array.from(chargeIds))
-            .andWhere({ tenant: batch.tenant })
         : [];
-    const chargesById = new Map(charges.map((charge: any) => [charge.item_id, charge]));
+    const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
     const chargeDetailRows =
       chargeIds.size > 0
-        ? await knex('invoice_charge_details')
+        ? await db.table<ChargeDetailProjection>('invoice_charge_details')
             .select('item_id', 'service_period_start', 'service_period_end', 'billing_timing')
             .whereIn('item_id', Array.from(chargeIds))
-            .andWhere({ tenant: batch.tenant })
             .orderBy('service_period_start', 'asc')
         : [];
     const canonicalPeriodsByChargeId = new Map<string, NormalizedRecurringPeriod[]>();
-    for (const detailRow of chargeDetailRows as ChargeDetailProjection[]) {
+    for (const detailRow of chargeDetailRows) {
       const normalized = normalizeRecurringPeriod(detailRow);
       if (!normalized.service_period_start && !normalized.service_period_end) {
         continue;
@@ -124,12 +194,11 @@ export class AccountingExportValidation {
 
     const invoices =
       invoiceIds.size > 0
-        ? await knex('invoices')
+        ? await db.table<InvoiceProjection>('invoices')
             .select('invoice_id', 'client_id', 'tax_source', 'invoice_type')
             .whereIn('invoice_id', Array.from(invoiceIds))
-            .andWhere({ tenant: batch.tenant })
         : [];
-    const invoiceTaxSourceById = new Map(invoices.map((row: any) => [row.invoice_id, row.tax_source]));
+    const invoiceTaxSourceById = new Map(invoices.map((row) => [row.invoice_id, row.tax_source]));
     const clientIds = new Set<string>();
     if (isQuickBooks) {
       for (const invoice of invoices) {
@@ -161,12 +230,62 @@ export class AccountingExportValidation {
 
     const clients =
       clientIds.size > 0
-        ? await knex('clients')
-            .select('client_id', 'payment_terms')
+        ? await db.table<ClientProjection>('clients')
+            .select('client_id', 'client_name', 'payment_terms')
             .whereIn('client_id', Array.from(clientIds))
-            .andWhere({ tenant: batch.tenant })
         : [];
-    const clientsById = new Map(clients.map((row: any) => [row.client_id, row]));
+    const clientsById = new Map(clients.map((row) => [row.client_id, row]));
+
+    // With customer auto-provisioning off (the default), an unmapped customer
+    // is a validation failure, not a license for the delivery path to write
+    // to the QBO customer list from a background job.
+    if (adapterType === 'quickbooks_online' && clientIds.size > 0 && tenant) {
+      const syncSettings = await getAccountingSyncSettings(knex, tenant);
+      if (!syncSettings.autoProvisionCustomers) {
+        const mappedRows = await knex('tenant_external_entity_mappings')
+          .where({
+            tenant,
+            integration_type: 'quickbooks_online',
+            alga_entity_type: 'client'
+          })
+          .whereIn('alga_entity_id', Array.from(clientIds))
+          .modify((builder) => {
+            const targetRealm = batch.target_realm;
+            if (targetRealm) {
+              builder.andWhere((realmClause) =>
+                realmClause.where('external_realm_id', targetRealm).orWhereNull('external_realm_id')
+              );
+            } else {
+              builder.whereNull('external_realm_id');
+            }
+          })
+          .select('alga_entity_id');
+        const mappedClientIds = new Set(mappedRows.map((row: any) => row.alga_entity_id));
+        const flaggedClients = new Set<string>();
+
+        for (const invoice of invoices) {
+          if (!invoice.client_id || mappedClientIds.has(invoice.client_id) || flaggedClients.has(invoice.client_id)) {
+            continue;
+          }
+          const lineId = firstLineByInvoice.get(invoice.invoice_id);
+          const line = lineId ? lineById.get(lineId) : null;
+          if (lineId) {
+            const clientName = clientsById.get(invoice.client_id)?.client_name ?? invoice.client_id;
+            await repo.addError({
+              batch_id: batchId,
+              line_id: lineId,
+              code: 'missing_customer_mapping',
+              message: `Customer "${clientName}" is not mapped to a QuickBooks customer. Link or create it from the QuickBooks customer mapping screen, or enable automatic customer creation in sync settings.`,
+              metadata: mergeErrorMetadata(line, {
+                client_id: invoice.client_id,
+                client_name: clientName
+              })
+            });
+            flaggedClients.add(invoice.client_id);
+          }
+        }
+      }
+    }
 
     const checkedTaxRegions = new Set<string>();
     const missingTaxRegions = new Set<string>();
@@ -185,17 +304,16 @@ export class AccountingExportValidation {
 
     const services =
       serviceIds.size > 0
-        ? await knex('service_catalog')
+        ? await db.table<ServiceProjection>('service_catalog')
             .select('service_id', 'service_name')
             .whereIn('service_id', Array.from(serviceIds))
-            .andWhere({ tenant: batch.tenant })
         : [];
     const serviceNameById = new Map<string, string>(
-      services.map((row: any) => [row.service_id, row.service_name])
+      services.map((row) => [row.service_id, row.service_name])
     );
 
     for (const line of lines) {
-      if (!line.invoice_charge_id) {
+      if (!line.document_line_id) {
         await repo.addError({
           batch_id: batchId,
           line_id: line.line_id,
@@ -206,19 +324,29 @@ export class AccountingExportValidation {
         continue;
       }
 
-      const charge = chargesById.get(line.invoice_charge_id);
+      const charge = chargesById.get(line.document_line_id);
+      if (adapterType === 'xero' && (charge?.net_amount === null || charge?.net_amount === undefined)) {
+        await repo.addError({
+          batch_id: batchId,
+          line_id: line.line_id,
+          code: 'missing_net_amount',
+          message: `Charge ${line.document_line_id} is missing its net amount. Repair the invoice, then cancel and recreate this export batch.`,
+          metadata: mergeErrorMetadata(line, { invoice_charge_id: line.document_line_id })
+        });
+        continue;
+      }
       if (!charge?.service_id) {
         await repo.addError({
           batch_id: batchId,
           line_id: line.line_id,
           code: 'missing_service',
-          message: `Charge ${line.invoice_charge_id} missing associated service`,
+          message: `Charge ${line.document_line_id} missing associated service`,
           metadata: mergeErrorMetadata(line)
         });
         continue;
       }
 
-      const canonicalPeriods = canonicalPeriodsByChargeId.get(line.invoice_charge_id) ?? [];
+      const canonicalPeriods = canonicalPeriodsByChargeId.get(line.document_line_id) ?? [];
       const exportSource = normalizeExportLineServicePeriodSource(line.payload);
       const exportSummaryStart = normalizeIsoString(line.service_period_start);
       const exportSummaryEnd = normalizeIsoString(line.service_period_end);
@@ -245,7 +373,7 @@ export class AccountingExportValidation {
             code: 'service_period_projection_mismatch',
             message: 'Export line service periods do not match canonical invoice charge details',
             metadata: {
-              invoice_charge_id: line.invoice_charge_id,
+              invoice_charge_id: line.document_line_id,
               expected_summary: {
                 service_period_start: expectedSummaryStart,
                 service_period_end: expectedSummaryEnd
@@ -274,7 +402,7 @@ export class AccountingExportValidation {
             code: 'service_period_projection_mismatch',
             message: 'Historical or financial export lines must not claim canonical recurring detail periods',
             metadata: {
-              invoice_charge_id: line.invoice_charge_id,
+              invoice_charge_id: line.document_line_id,
               expected_source: expectedSource,
               actual_source: exportSource ?? null,
               expected_detail_periods: [],
@@ -292,6 +420,7 @@ export class AccountingExportValidation {
       const serviceMappingKey = `${charge.service_id}:${batch.target_realm ?? 'default'}`;
       if (!checkedServiceMappings.has(serviceMappingKey)) {
         const mapping = await resolver.resolveServiceMapping({
+          tenantId: tenant,
           adapterType,
           targetRealm: batch.target_realm,
           serviceId: charge.service_id
@@ -316,7 +445,7 @@ export class AccountingExportValidation {
         checkedServiceMappings.add(serviceMappingKey);
       }
 
-      const invoiceTaxSource = line.invoice_id ? invoiceTaxSourceById.get(line.invoice_id) : null;
+      const invoiceTaxSource = line.document_id ? invoiceTaxSourceById.get(line.document_id) : null;
       const invoiceDelegatesTax =
         invoiceTaxSource === 'external' || invoiceTaxSource === 'pending_external';
 
@@ -324,6 +453,7 @@ export class AccountingExportValidation {
         const cacheKey = `${charge.tax_region}:${batch.target_realm ?? 'default'}`;
         if (!checkedTaxRegions.has(cacheKey)) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
+            tenantId: tenant,
             adapterType,
             taxRegionId: charge.tax_region,
             targetRealm: batch.target_realm
@@ -382,6 +512,7 @@ export class AccountingExportValidation {
           const paymentKey = `${client.payment_terms}:${batch.target_realm ?? 'default'}`;
           if (!checkedPaymentTerms.has(paymentKey)) {
             const termMapping = await resolver.resolvePaymentTermMapping({
+              tenantId: tenant,
               adapterType,
               paymentTermId: client.payment_terms,
               targetRealm: batch.target_realm
@@ -417,16 +548,7 @@ export class AccountingExportValidation {
 }
 
 function normalizeIsoString(value: unknown): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  const date = value instanceof Date ? value : new Date(String(value));
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toISOString();
+  return normalizeAccountingExportCalendarDate(value) ?? null;
 }
 
 function normalizeRecurringPeriod(input: {

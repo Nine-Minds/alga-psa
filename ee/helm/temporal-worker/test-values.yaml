@@ -22,6 +22,7 @@ email:
 
 # Application URL
 applicationUrl: "https://test.algapsa.com"
+publicBaseUrl: "https://public.test.algapsa.com"
 
 # Test with local secrets (not Vault)
 vault:

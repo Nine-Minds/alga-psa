@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 export const runtime = 'nodejs';
@@ -57,7 +58,9 @@ export async function GET(req: NextRequest) {
     }
 
     const knex = await getAdminConnection();
-    const tenant = await knex('tenants')
+    const discoveryDb = tenantDb(knex, '__billing_check_tenant_email_discovery__');
+    const tenant = await discoveryDb
+      .unscoped('tenants', 'billing check discovers tenant by email before tenant context exists')
       .where('email', email)
       .first('tenant', 'client_name', 'email');
 
@@ -71,7 +74,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const adminUser = await knex('users')
+    const adminUser = await discoveryDb
+      .unscoped('users', 'billing check discovers internal admin by email before tenant context exists')
       .where({
         email,
         user_type: 'internal',
@@ -79,8 +83,8 @@ export async function GET(req: NextRequest) {
       .first('tenant');
 
     if (adminUser) {
-      const userTenant = await knex('tenants')
-        .where('tenant', adminUser.tenant)
+      const userTenant = await tenantDb(knex, adminUser.tenant)
+        .table('tenants')
         .first('tenant', 'client_name', 'email');
 
       if (userTenant) {

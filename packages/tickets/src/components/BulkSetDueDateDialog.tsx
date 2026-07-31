@@ -6,6 +6,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Calendar } from '@alga-psa/ui/components/Calendar';
 import { useTranslation } from 'react-i18next';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './ticket/TicketNotificationSuppressionControl';
 
 interface BulkSetDueDateDialogProps {
   isOpen: boolean;
@@ -13,7 +16,7 @@ interface BulkSetDueDateDialogProps {
   ticketCount: number;
   failed: Array<{ ticketId: string; message: string; label?: string }>;
   isSubmitting: boolean;
-  onConfirm: (dueDateIso: string | null) => Promise<void>;
+  onConfirm: (dueDateIso: string | null, options?: TicketNotificationSuppressionValue) => Promise<void>;
   idPrefix?: string;
 }
 
@@ -29,23 +32,33 @@ export default function BulkSetDueDateDialog({
   const { t } = useTranslation(['features/tickets', 'common']);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [mode, setMode] = useState<'set' | 'clear'>('set');
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+  });
 
   useEffect(() => {
     if (isOpen) {
       setDate(undefined);
       setMode('set');
+      setNotificationSuppression({
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      });
     }
   }, [isOpen]);
 
   const canConfirm = mode === 'clear' || (mode === 'set' && !!date);
 
   const handleConfirm = async () => {
+    const options = notificationSuppression.suppressContactNotifications ? notificationSuppression : undefined;
     if (mode === 'clear') {
-      await onConfirm(null);
+      await (options ? onConfirm(null, options) : onConfirm(null));
       return;
     }
     if (!date) return;
-    await onConfirm(date.toISOString());
+    const dueDateIso = date.toISOString();
+    await (options ? onConfirm(dueDateIso, options) : onConfirm(dueDateIso));
   };
 
   return (
@@ -108,6 +121,14 @@ export default function BulkSetDueDateDialog({
             />
           </div>
         )}
+        <div className="mb-4">
+          <TicketNotificationSuppressionControl
+            idPrefix={`${idPrefix}-notification-suppression`}
+            value={notificationSuppression}
+            onChange={setNotificationSuppression}
+            disabled={isSubmitting}
+          />
+        </div>
         <div className="flex justify-end space-x-2">
           <Button id={`${idPrefix}-cancel`} variant="ghost" onClick={onClose} disabled={isSubmitting}>
             {t('actions.cancel', 'Cancel')}

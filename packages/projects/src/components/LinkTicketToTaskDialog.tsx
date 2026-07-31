@@ -9,7 +9,12 @@ import type { IProject, IProjectPhase, IProjectTask } from '@alga-psa/types';
 import { getProjects, getProjectDetails } from '../actions/projectActions';
 import { addTicketLinkAction } from '../actions/projectTaskActions';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface LinkTicketToTaskDialogProps {
@@ -19,6 +24,10 @@ interface LinkTicketToTaskDialogProps {
     title: string;
     client_id?: string | null;
   };
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function LinkTicketToTaskDialog({
@@ -68,8 +77,8 @@ export default function LinkTicketToTaskDialog({
         setPhases([]);
         setTasks([]);
         const projectDetails = await getProjectDetails(selectedProjectId);
-        if (isActionPermissionError(projectDetails)) {
-          handleError(projectDetails.permissionError);
+        if (isReturnedActionError(projectDetails)) {
+          handleError(getErrorMessage(projectDetails));
           return;
         }
         setPhases(projectDetails.phases || []);
@@ -126,7 +135,11 @@ export default function LinkTicketToTaskDialog({
     try {
       const task = tasks.find((t) => t.task_id === selectedTaskId);
       const phaseId = task?.phase_id || selectedPhaseId;
-      await addTicketLinkAction(selectedProjectId, selectedTaskId, ticket.ticket_id, phaseId);
+      const result = await addTicketLinkAction(selectedProjectId, selectedTaskId, ticket.ticket_id, phaseId);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       toast.success(t('dialogs.linkTicketToTask.linkedSuccess', 'Ticket linked to task successfully'));
       setOpen(false);
       setSelectedProjectId('');

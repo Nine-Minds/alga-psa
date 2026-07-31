@@ -203,6 +203,11 @@ export interface TemplateStyleDeclaration {
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   flex?: string;
+  // Longhand flex has been part of the runtime contract since the AST cutover:
+  // the designer export emits it and the zod styleDeclarationSchema accepts it.
+  flexGrow?: string | number;
+  flexShrink?: string | number;
+  flexBasis?: string;
   aspectRatio?: string;
   objectFit?: string;
   objectPosition?: string;

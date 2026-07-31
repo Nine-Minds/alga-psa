@@ -62,6 +62,10 @@ export interface CompleteSetupResult {
   errorCode?: PortalInvitationErrorCode;
 }
 
+export type ClientUserActionError =
+  | { readonly actionError: string }
+  | { readonly permissionError: string };
+
 export interface InvitationHistoryItem {
   invitation_id: string;
   email: string;

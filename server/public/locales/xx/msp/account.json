@@ -63,7 +63,6 @@
   "features": {
     "integrations": "11111",
     "extensions": "11111",
-    "managedEmail": "11111",
     "sso": "11111",
     "advancedAssets": "11111",
     "clientPortalAdmin": "11111",
@@ -72,6 +71,7 @@
     "entraSync": "11111",
     "cipp": "11111",
     "teamsIntegration": "11111",
+    "scimProvisioning": "11111",
     "advancedAuthorizationBundles": "11111"
   },
   "summary": {
@@ -316,6 +316,45 @@
     "newSubNote": "11111",
     "perMonthSuffix": "11111"
   },
+  "productUpgrade": {
+    "cardTitle": "11111",
+    "cardDescription": "11111",
+    "currentPlanLabel": "11111",
+    "algadeskPlanName": "11111",
+    "currentPerSeatLabel": "11111",
+    "perSeatValue": "11111 {{amount}} 11111",
+    "cardCta": "11111",
+    "openButton": "11111",
+    "dialogTitle": "11111",
+    "intro": "11111",
+    "targetPerSeatLabel": "11111",
+    "seatCountLabel": "11111",
+    "billingIntervalLabel": "11111",
+    "intervalMonth": "11111",
+    "intervalYear": "11111",
+    "dueTodayLabel": "11111",
+    "dueTodayUnknown": "11111",
+    "prorationFallback": "11111",
+    "confirm": "11111",
+    "confirming": "11111",
+    "cancel": "11111",
+    "inProgressTitle": "11111",
+    "inProgressBody": "11111",
+    "currentStepLabel": "11111",
+    "preparingStep": "11111",
+    "completedStepsLabel": "11111",
+    "successTitle": "11111",
+    "successBody": "11111",
+    "successReloginNotice": "11111",
+    "successDone": "11111",
+    "failedTitle": "11111",
+    "failedBody": "11111",
+    "retry": "11111",
+    "retrying": "11111",
+    "close": "11111",
+    "previewFailed": "11111",
+    "startFailed": "11111"
+  },
   "downgradeDialog": {
     "title": "11111",
     "downgrading": "11111",
@@ -386,6 +425,76 @@
       "switchingCompetitor": "11111",
       "noLongerNeed": "11111",
       "other": "11111"
+    }
+  },
+  "aiUsage": {
+    "title": "11111",
+    "subtitle": "11111",
+    "refresh": "11111",
+    "errors": {
+      "loadSummary": "11111",
+      "loadHistory": "11111",
+      "subscribe": "11111",
+      "topup": "11111",
+      "autoTopup": "11111",
+      "unavailable": "11111"
+    },
+    "upsell": {
+      "heading": "11111",
+      "body": "11111",
+      "subscribe": "11111",
+      "subscribing": "11111"
+    },
+    "grace": {
+      "title": "11111",
+      "body": "11111 {{grace}} 11111"
+    },
+    "lowBalance": {
+      "title": "11111",
+      "body": "11111"
+    },
+    "balance": {
+      "total": "11111",
+      "creditsUnit": "11111",
+      "included": "11111",
+      "resetsMonthly": "11111",
+      "topup": "11111",
+      "carriesOver": "11111"
+    },
+    "cycle": {
+      "label": "11111",
+      "resetsIn": "11111 {{days}} 11111"
+    },
+    "topup": {
+      "title": "11111",
+      "description": "11111",
+      "noPacks": "11111",
+      "packWithCredits": "11111 {{label}} 11111 {{credits}} 11111"
+    },
+    "autoTopup": {
+      "title": "11111",
+      "description": "11111",
+      "enable": "11111",
+      "enableHelp": "11111",
+      "threshold": "11111",
+      "pack": "11111",
+      "selectPack": "11111",
+      "save": "11111",
+      "saved": "11111",
+      "saving": "11111"
+    },
+    "history": {
+      "title": "11111",
+      "description": "11111",
+      "allFeatures": "11111",
+      "date": "11111",
+      "feature": "11111",
+      "model": "11111",
+      "tokens": "11111",
+      "credits": "11111",
+      "empty": "11111",
+      "loading": "11111",
+      "loadMore": "11111"
     }
   }
 }

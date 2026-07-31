@@ -3,20 +3,25 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { resolveTxt } from 'node:dns/promises';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  hasTenantProviderCredentials,
   normalizeMspSsoDomain,
   normalizeMspSsoDomainClaimStatus,
   validateMspSsoDomain,
   type MspSsoDomainClaimStatus,
 } from '@alga-psa/auth/lib/sso/mspSsoResolution';
+import logger from '@alga-psa/core/logger';
 import type { Knex } from 'knex';
 
 const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
 const MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE =
   'msp_sso_domain_verification_challenges';
+const MSP_SSO_DOMAIN_CONFLICT_DISCOVERY_CONTEXT = 'msp-sso-domain-conflict-discovery';
+const MSP_SSO_DOMAIN_PERMISSION_DENIED =
+  'Permission denied: You do not have permission to manage MSP SSO login domains.';
 
 export interface MspSsoLoginDomain {
   id: string;
@@ -99,12 +104,22 @@ export interface RevokeMspSsoDomainClaimResult {
   error?: string;
 }
 
+export interface MspSsoTenantCredentialStatusResult {
+  success: boolean;
+  google: boolean;
+  microsoft: boolean;
+}
+
 function normalizeDomain(value: string): string {
   return normalizeMspSsoDomain(value);
 }
 
 function validateDomain(domain: string): string | null {
   return validateMspSsoDomain(domain);
+}
+
+function logMspSsoDomainActionFailure(operation: string, error: unknown): void {
+  console.error(`[MspSsoDomainActions] ${operation} failed`, error);
 }
 
 function uniqueSorted(values: string[]): string[] {
@@ -159,7 +174,7 @@ async function listActiveTenantDomains(knex: Knex, tenant: string): Promise<stri
 async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise<MspSsoDomainClaim[]> {
   const hasChallengeTable = await knex.schema.hasTable(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE);
 
-  const rows = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
+  const rows = await tenantDb(knex, tenant).table(MSP_SSO_LOGIN_DOMAIN_TABLE)
     .select(
       'id',
       'domain',
@@ -171,7 +186,7 @@ async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise
       'rejected_at',
       'revoked_at'
     )
-    .where({ tenant, is_active: true })
+    .where({ is_active: true })
     .orderByRaw('lower(domain) asc');
 
   const claims = rows
@@ -233,9 +248,9 @@ async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise
   }
 
   const claimIds = dedupedClaims.map((claim) => claim.id);
-  const challengeRows = await knex(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+  const challengeRows = await tenantDb(knex, tenant).table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
     .select('claim_id', 'challenge_label', 'challenge_value', 'created_at')
-    .where({ tenant, is_active: true })
+    .where({ is_active: true })
     .whereIn('claim_id', claimIds)
     .orderBy('created_at', 'desc');
 
@@ -264,7 +279,7 @@ async function toDomainClaim(
   tenant: string,
   claimId: string
 ): Promise<MspSsoDomainClaim | null> {
-  const row = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
+  const row = await tenantDb(knex, tenant).table(MSP_SSO_LOGIN_DOMAIN_TABLE)
     .select(
       'id',
       'domain',
@@ -276,7 +291,7 @@ async function toDomainClaim(
       'rejected_at',
       'revoked_at'
     )
-    .where({ tenant, id: claimId })
+    .where({ id: claimId })
     .first();
 
   if (!row) return null;
@@ -303,7 +318,7 @@ async function toVerificationChallenge(
   tenant: string,
   claimId: string
 ): Promise<MspSsoDomainVerificationChallenge | null> {
-  const row = await knex(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+  const row = await tenantDb(knex, tenant).table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
     .select(
       'id',
       'claim_id',
@@ -318,7 +333,7 @@ async function toVerificationChallenge(
       'created_at',
       'updated_at'
     )
-    .where({ tenant, claim_id: claimId, is_active: true })
+    .where({ claim_id: claimId, is_active: true })
     .orderBy('created_at', 'desc')
     .first();
 
@@ -346,16 +361,17 @@ export const listMspSsoLoginDomains = withAuth(async (
 ): Promise<ListMspSsoLoginDomainsResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const { knex } = await createTenantKnex();
     const domains = await listActiveTenantDomains(knex as Knex, tenant);
     return { success: true, domains };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('list login domains', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to load MSP SSO login domains',
+      error: 'Unable to load MSP SSO login domains.',
     };
   }
 });
@@ -366,16 +382,17 @@ export const listMspSsoDomainClaims = withAuth(async (
 ): Promise<ListMspSsoDomainClaimsResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const { knex } = await createTenantKnex();
     const claims = await listActiveTenantDomainClaims(knex as Knex, tenant);
     return { success: true, claims };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('list domain claims', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to load MSP SSO domain claims',
+      error: 'Unable to load MSP SSO domain claims.',
     };
   }
 });
@@ -387,7 +404,7 @@ export const requestMspSsoDomainClaim = withAuth(async (
 ): Promise<RequestMspSsoDomainClaimResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const normalizedDomain = normalizeDomain(input?.domain ?? '');
@@ -399,12 +416,12 @@ export const requestMspSsoDomainClaim = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       const now = trx.fn.now();
       const actorId = (user as { user_id?: string })?.user_id ?? null;
 
-      let claimRow = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+      let claimRow = await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
         .select('id', 'domain', 'is_active', 'claim_status')
-        .where({ tenant })
         .whereRaw('lower(domain) = ?', [normalizedDomain])
         .first();
 
@@ -415,7 +432,7 @@ export const requestMspSsoDomainClaim = withAuth(async (
 
       if (!claimId) {
         claimId = uuidv4();
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE).insert({
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE).insert({
           tenant,
           id: claimId,
           domain: normalizedDomain,
@@ -430,8 +447,8 @@ export const requestMspSsoDomainClaim = withAuth(async (
           updated_at: now,
         });
       } else if (existingClaimStatus !== 'pending') {
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-          .where({ tenant, id: claimId })
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+          .where({ id: claimId })
           .update({
             domain: normalizedDomain,
             is_active: true,
@@ -456,8 +473,8 @@ export const requestMspSsoDomainClaim = withAuth(async (
         };
       }
 
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
-        .where({ tenant, claim_id: claimId, is_active: true })
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ claim_id: claimId, is_active: true })
         .update({
           is_active: false,
           invalidated_at: now,
@@ -467,7 +484,7 @@ export const requestMspSsoDomainClaim = withAuth(async (
 
       const challenge = buildDnsTxtChallenge(normalizedDomain);
       const challengeId = uuidv4();
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
         tenant,
         id: challengeId,
         claim_id: claimId,
@@ -505,9 +522,10 @@ export const requestMspSsoDomainClaim = withAuth(async (
       idempotent: result.idempotent ?? false,
     };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('request domain claim', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to request MSP SSO domain claim',
+      error: 'Unable to request MSP SSO domain claim.',
     };
   }
 });
@@ -519,7 +537,7 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
 ): Promise<RefreshMspSsoDomainClaimChallengeResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const claimId = String(input?.claimId ?? '').trim();
@@ -530,12 +548,13 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       const now = trx.fn.now();
       const actorId = (user as { user_id?: string })?.user_id ?? null;
 
-      const claimRow = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+      const claimRow = await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
         .select('id', 'domain')
-        .where({ tenant, id: claimId, is_active: true })
+        .where({ id: claimId, is_active: true })
         .first();
 
       if (!claimRow) {
@@ -547,8 +566,8 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
         return { claim: null, challenge: null };
       }
 
-      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-        .where({ tenant, id: claimId })
+      await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ id: claimId })
         .update({
           claim_status: 'pending',
           claim_status_updated_at: now,
@@ -560,8 +579,8 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
           updated_at: now,
         });
 
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
-        .where({ tenant, claim_id: claimId, is_active: true })
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ claim_id: claimId, is_active: true })
         .update({
           is_active: false,
           invalidated_at: now,
@@ -570,7 +589,7 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
         });
 
       const challenge = buildDnsTxtChallenge(domain);
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
         tenant,
         id: uuidv4(),
         claim_id: claimId,
@@ -602,9 +621,10 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
       challenge: result.challenge,
     };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('refresh domain claim challenge', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to refresh MSP SSO claim challenge',
+      error: 'Unable to refresh MSP SSO domain challenge.',
     };
   }
 });
@@ -616,7 +636,7 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
 ): Promise<VerifyMspSsoDomainClaimResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const claimId = String(input?.claimId ?? '').trim();
@@ -628,6 +648,7 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
     const actorId = (user as { user_id?: string })?.user_id ?? null;
 
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       const claim = await toDomainClaim(trx, tenant, claimId);
       if (!claim || !claim.is_active) {
         return { claim: null, verified: false, reason: 'missing_claim' as const };
@@ -650,7 +671,12 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
         `msp_sso_verified_domain_owner:${claim.domain}`,
       ]);
 
-      const conflictingOwner = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+      const conflictDiscoveryDb = tenantDb(trx, MSP_SSO_DOMAIN_CONFLICT_DISCOVERY_CONTEXT);
+      const conflictingOwner = await conflictDiscoveryDb
+        .unscoped(
+          MSP_SSO_LOGIN_DOMAIN_TABLE,
+          'cross-tenant MSP SSO verified-domain conflict check'
+        )
         .select('tenant')
         .whereNot({ tenant })
         .where({ is_active: true })
@@ -662,8 +688,8 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
       }
 
       const now = trx.fn.now();
-      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-        .where({ tenant, id: claimId })
+      await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ id: claimId })
         .update({
           claim_status: 'verified',
           claim_status_updated_at: now,
@@ -675,8 +701,8 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
           updated_at: now,
         });
 
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
-        .where({ tenant, id: challenge.id })
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ id: challenge.id })
         .update({
           verified_at: now,
           is_active: false,
@@ -711,9 +737,10 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
       claim: result.claim ?? undefined,
     };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('verify domain claim', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to verify MSP SSO domain claim',
+      error: 'Unable to verify MSP SSO domain claim.',
     };
   }
 });
@@ -725,7 +752,7 @@ export const revokeMspSsoDomainClaim = withAuth(async (
 ): Promise<RevokeMspSsoDomainClaimResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const claimId = String(input?.claimId ?? '').trim();
@@ -737,14 +764,15 @@ export const revokeMspSsoDomainClaim = withAuth(async (
     const actorId = (user as { user_id?: string })?.user_id ?? null;
 
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       const existingClaim = await toDomainClaim(trx, tenant, claimId);
       if (!existingClaim || !existingClaim.is_active) {
         return null;
       }
 
       const now = trx.fn.now();
-      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-        .where({ tenant, id: claimId })
+      await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ id: claimId })
         .update({
           claim_status: 'revoked',
           claim_status_updated_at: now,
@@ -754,8 +782,8 @@ export const revokeMspSsoDomainClaim = withAuth(async (
           updated_at: now,
         });
 
-      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
-        .where({ tenant, claim_id: claimId, is_active: true })
+      await db.table(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ claim_id: claimId, is_active: true })
         .update({
           is_active: false,
           invalidated_at: now,
@@ -775,9 +803,10 @@ export const revokeMspSsoDomainClaim = withAuth(async (
       claim: result,
     };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('revoke domain claim', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to revoke MSP SSO domain claim',
+      error: 'Unable to revoke MSP SSO domain claim.',
     };
   }
 });
@@ -789,7 +818,7 @@ export const saveMspSsoLoginDomains = withAuth(async (
 ): Promise<SaveMspSsoLoginDomainsResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const rawDomains = Array.isArray(input?.domains) ? input.domains : [];
@@ -810,7 +839,12 @@ export const saveMspSsoLoginDomains = withAuth(async (
     const { knex } = await createTenantKnex();
 
     if (desiredDomains.length > 0) {
-      const conflicts = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
+      const conflictDiscoveryDb = tenantDb(knex, MSP_SSO_DOMAIN_CONFLICT_DISCOVERY_CONTEXT);
+      const conflicts = await conflictDiscoveryDb
+        .unscoped(
+          MSP_SSO_LOGIN_DOMAIN_TABLE,
+          'cross-tenant MSP SSO login-domain conflict check'
+        )
         .select('domain')
         .where({ is_active: true })
         .whereNot({ tenant })
@@ -832,9 +866,10 @@ export const saveMspSsoLoginDomains = withAuth(async (
     }
 
     await knex.transaction(async (trx: Knex.Transaction) => {
-      const existingRows = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-        .select('id', 'domain', 'is_active')
-        .where({ tenant });
+      const db = tenantDb(trx, tenant);
+
+      const existingRows = await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .select('id', 'domain', 'is_active');
 
       const existingByDomain = new Map<string, MspSsoLoginDomain>();
       for (const row of existingRows as MspSsoLoginDomain[]) {
@@ -842,8 +877,8 @@ export const saveMspSsoLoginDomains = withAuth(async (
       }
 
       if (desiredDomains.length > 0) {
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-          .where({ tenant, is_active: true })
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+          .where({ is_active: true })
           .whereNotIn(trx.raw('lower(domain)') as unknown as string, desiredDomains)
           .update({
             is_active: false,
@@ -851,8 +886,8 @@ export const saveMspSsoLoginDomains = withAuth(async (
             updated_at: trx.fn.now(),
           });
       } else {
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-          .where({ tenant, is_active: true })
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+          .where({ is_active: true })
           .update({
             is_active: false,
             updated_by: (user as { user_id?: string })?.user_id ?? null,
@@ -863,8 +898,8 @@ export const saveMspSsoLoginDomains = withAuth(async (
       for (const domain of desiredDomains) {
         const existing = existingByDomain.get(domain);
         if (existing) {
-          await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
-            .where({ tenant, id: existing.id })
+          await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE)
+            .where({ id: existing.id })
             .update({
               domain,
               is_active: true,
@@ -879,7 +914,7 @@ export const saveMspSsoLoginDomains = withAuth(async (
           continue;
         }
 
-        await trx(MSP_SSO_LOGIN_DOMAIN_TABLE).insert({
+        await db.table(MSP_SSO_LOGIN_DOMAIN_TABLE).insert({
           tenant,
           id: uuidv4(),
           domain,
@@ -899,9 +934,40 @@ export const saveMspSsoLoginDomains = withAuth(async (
     const domains = await listActiveTenantDomains(knex as Knex, tenant);
     return { success: true, domains };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('save login domains', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to save MSP SSO login domains',
+      error: 'Unable to save MSP SSO login domains.',
     };
+  }
+});
+
+/**
+ * Read-only status of tenant-scoped IdP credentials, used by the Security → Single Sign-On
+ * "Advanced" section to explain when login-domain claims are inert (no tenant credentials
+ * configured, so login SSO uses the hosted app-level providers). On any failure it reports
+ * `success: false` and both providers `false` — the UI treats that as "unknown" and shows no
+ * inert-state notice rather than a wrong one.
+ */
+export const getMspSsoTenantCredentialStatus = withAuth(async (
+  user,
+  { tenant }
+): Promise<MspSsoTenantCredentialStatusResult> => {
+  try {
+    if (!(await canManageDomains(user))) {
+      return { success: false, google: false, microsoft: false };
+    }
+
+    const [google, microsoft] = await Promise.all([
+      hasTenantProviderCredentials(tenant, 'google'),
+      hasTenantProviderCredentials(tenant, 'azure-ad'),
+    ]);
+
+    return { success: true, google, microsoft };
+  } catch (error: unknown) {
+    logger.warn('Failed to resolve MSP SSO tenant credential status', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, google: false, microsoft: false };
   }
 });

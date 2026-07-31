@@ -9,8 +9,9 @@ describe('inbound webhook config lookup', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    whereMock.mockReturnValue({ first: firstMock });
-    knex = vi.fn().mockReturnValue({ where: whereMock });
+    const builder = { where: whereMock, first: firstMock };
+    whereMock.mockReturnValue(builder);
+    knex = vi.fn().mockReturnValue(builder);
   });
 
   it('should look up the webhook scoped by tenant and slug', async () => {
@@ -36,7 +37,8 @@ describe('inbound webhook config lookup', () => {
     expect(result).toBe(row);
     expect(knex).toHaveBeenCalledWith('inbound_webhooks');
     // Tenant scoping is mandatory: the slug alone must never identify a webhook.
-    expect(whereMock).toHaveBeenCalledWith({ tenant: 'tenant-1', slug: 'rmm-alerts' });
+    expect(whereMock).toHaveBeenCalledWith('inbound_webhooks.tenant', 'tenant-1');
+    expect(whereMock).toHaveBeenCalledWith({ slug: 'rmm-alerts' });
     // The lookup selects the full config surface needed by the request processor.
     expect(firstMock).toHaveBeenCalledWith(expect.arrayContaining([
       'tenant',

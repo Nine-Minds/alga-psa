@@ -3,9 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SurveyTriggerReferenceData } from '@alga-psa/surveys/actions/surveyActions';
 import { getSurveyTriggerReferenceData } from '@alga-psa/surveys/actions/surveyActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 let cachedReferenceData: SurveyTriggerReferenceData | null = null;
 let inFlightRequest: Promise<SurveyTriggerReferenceData> | null = null;
+const isSurveyActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function loadTriggerReferenceData(): Promise<SurveyTriggerReferenceData> {
   if (cachedReferenceData) {
@@ -15,6 +24,9 @@ export function loadTriggerReferenceData(): Promise<SurveyTriggerReferenceData> 
   if (!inFlightRequest) {
     inFlightRequest = getSurveyTriggerReferenceData()
       .then((data) => {
+        if (isSurveyActionError(data)) {
+          throw new Error(getErrorMessage(data));
+        }
         cachedReferenceData = data;
         return data;
       })

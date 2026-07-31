@@ -4,6 +4,7 @@ import {
   billingNavigationSections,
   bottomMenuItems,
   extensionsNavigationSections,
+  inventoryNavigationSections,
   navigationSections,
   settingsNavigationSections,
 } from '../../../config/menuConfig';
@@ -46,9 +47,12 @@ describe('menuConfig i18n metadata', () => {
       'nav.surveys',
       'nav.projects',
       'nav.clients',
+      'nav.opportunities',
+      'nav.marketing.label',
       'nav.contacts',
       'nav.documents',
       'nav.assets',
+      'nav.inventory.label',
       'nav.billing.reports',
       'nav.timeManagement',
       'nav.billing.label',
@@ -71,6 +75,13 @@ describe('menuConfig i18n metadata', () => {
     expect(keyedSubItems.map((item) => item.translationKey)).toEqual([
       'nav.projectsAll',
       'nav.projectsTemplates',
+      'nav.marketing.calendar',
+      'nav.marketing.posts',
+      'nav.marketing.content',
+      'nav.marketing.campaigns',
+      'nav.marketing.sequences',
+      'nav.marketing.forms',
+      'nav.marketing.channels',
       'nav.documentsAll',
       'nav.knowledgeBase',
       'nav.timeEntry',
@@ -110,10 +121,12 @@ describe('menuConfig i18n metadata', () => {
       'settings.tabs.teams',
       'settings.tabs.language',
       'settings.tabs.clientPortal',
+      'settings.tabs.license',
       'settings.tabs.ticketing',
       'settings.tabs.sla',
       'settings.tabs.projects',
       'settings.tabs.interactions',
+      'settings.tabs.opportunities',
       'settings.tabs.timeEntry',
       'settings.tabs.billing',
       'settings.tabs.notifications',
@@ -145,6 +158,7 @@ describe('menuConfig i18n metadata', () => {
       'nav.billing.invoiceLayouts',
       'nav.billing.billingCycles',
       'nav.billing.servicePeriods',
+      'nav.billing.credits',
       'nav.billing.quotes',
       'nav.billing.quoteBusinessTemplates',
       'nav.billing.quoteLayouts',
@@ -161,6 +175,38 @@ describe('menuConfig i18n metadata', () => {
   it('F006 wiring: extensions navigation item exposes sidebar settings translation key', () => {
     expect(extensionsNavigationSections[0].items.map((item) => item.translationKey)).toEqual([
       'sidebar.settings',
+    ]);
+  });
+
+  it('T010: inventory navigation section titles use nav.inventory.sections.* translation keys', () => {
+    expect(inventoryNavigationSections.map((section) => section.translationKey)).toEqual([
+      'nav.inventory.sections.overview',
+      'nav.inventory.sections.stock',
+      'nav.inventory.sections.purchasing',
+      'nav.inventory.sections.salesFulfillment',
+      'nav.inventory.sections.analytics',
+    ]);
+  });
+
+  it('T011: inventory navigation items use nav.inventory* translation keys', () => {
+    expect(collectSectionItems(inventoryNavigationSections).map((item) => item.translationKey)).toEqual([
+      'nav.inventoryDashboard',
+      'nav.inventoryStock',
+      'nav.inventoryLocations',
+      'nav.inventoryUnits',
+      'nav.inventoryTransfers',
+      'nav.inventoryCounts',
+      'nav.inventoryWriteOffs',
+      'nav.inventoryVendors',
+      'nav.inventoryPurchaseOrders',
+      'nav.inventoryVendorBills',
+      'nav.inventorySalesOrders',
+      'nav.inventoryDocumentLayouts',
+      'nav.inventoryRma',
+      'nav.inventoryLoaners',
+      'nav.inventoryKits',
+      'nav.inventoryMargin',
+      'nav.inventoryGhostUsage',
     ]);
   });
 });

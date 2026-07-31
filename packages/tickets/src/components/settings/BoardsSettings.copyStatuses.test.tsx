@@ -39,6 +39,35 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   deleteBoardAutoCloseRule: vi.fn(),
 }));
 
+vi.mock('@alga-psa/tickets/actions/board-actions/boardActions', () => ({
+  getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
+  getBoardListStats: () => Promise.resolve({}),
+  createBoard: (...args: unknown[]) => createBoardMock(...args),
+  updateBoard: (...args: unknown[]) => updateBoardMock(...args),
+  deleteBoard: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tickets/actions/board-actions/boardTicketStatusActions', () => ({
+  getBoardTicketStatuses: (...args: unknown[]) => getBoardTicketStatusesMock(...args),
+}));
+
+vi.mock('../../actions/close-rules/closeRuleActions', () => ({
+  getBoardCloseRules: () =>
+    Promise.resolve({
+      require_resolution_comment: false,
+      require_time_entry: false,
+      require_checklist_complete: false,
+      require_no_open_children: false,
+      required_fields: [],
+      is_enabled: true,
+    }),
+  upsertBoardCloseRules: vi.fn(),
+  getBoardAutoCloseRules: () => Promise.resolve([]),
+  createBoardAutoCloseRule: vi.fn(),
+  updateBoardAutoCloseRule: vi.fn(),
+  deleteBoardAutoCloseRule: vi.fn(),
+}));
+
 vi.mock('@alga-psa/reference-data/actions', () => ({
   getAvailableReferenceData: vi.fn().mockResolvedValue([]),
   importReferenceData: vi.fn(),
@@ -46,8 +75,26 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getAllPriorities: (...args: unknown[]) => getAllPrioritiesMock(...args),
 }));
 
+vi.mock('@alga-psa/reference-data/actions/referenceDataActions', () => ({
+  getAvailableReferenceData: vi.fn().mockResolvedValue([]),
+  importReferenceData: vi.fn(),
+  checkImportConflicts: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/reference-data/actions/priorityActions', () => ({
+  getAllPriorities: (...args: unknown[]) => getAllPrioritiesMock(...args),
+}));
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getAllUsers: (...args: unknown[]) => getAllUsersMock(...args),
+  getUserAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
+  getAllUsers: (...args: unknown[]) => getAllUsersMock(...args),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
   getUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
@@ -58,6 +105,18 @@ vi.mock('@alga-psa/sla/actions', () => ({
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: (...args: unknown[]) => getTeamsMock(...args),
   getTeamAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/teamActions', () => ({
+  getTeams: (...args: unknown[]) => getTeamsMock(...args),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/avatarActions', () => ({
+  getTeamAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/teamActionErrors', () => ({
+  isTeamActionError: () => false,
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
@@ -72,7 +131,14 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
+  getErrorMessage: (error: unknown) => {
+    if (error && typeof error === 'object' && 'actionError' in error) return String((error as any).actionError);
+    if (error && typeof error === 'object' && 'permissionError' in error) return String((error as any).permissionError);
+    return error instanceof Error ? error.message : String(error);
+  },
   handleError: vi.fn(),
+  isActionMessageError: (value: unknown) => Boolean(value && typeof value === 'object' && 'actionError' in value),
+  isActionPermissionError: (value: unknown) => Boolean(value && typeof value === 'object' && 'permissionError' in value),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -219,6 +285,15 @@ const expandSection = (id: string) => {
 
 describe('BoardsSettings ticket status copy flow', () => {
   beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+    });
     vi.clearAllMocks();
     useFeatureFlagMock.mockReturnValue({ enabled: false });
     getAllBoardsMock.mockResolvedValue([
@@ -273,6 +348,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
 
@@ -284,6 +366,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     });
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+      expect(document.getElementById('inline-ticket-status-name-0')).toBeTruthy();
     });
 
     fireEvent.change(document.getElementById('inline-ticket-status-name-0') as HTMLInputElement, {
@@ -340,6 +423,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
     fireEvent.change(screen.getByTestId('copy-ticket-statuses-select'), {
@@ -370,6 +460,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
@@ -416,6 +513,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
     expandSection('display');
@@ -429,6 +533,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     });
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+      expect(screen.getByDisplayValue('Support Open')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('save-board-button'));
@@ -469,6 +574,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
@@ -525,6 +637,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(screen.getAllByText('ticketing.boards.actions.edit')[0]);
 
@@ -543,6 +662,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
@@ -572,6 +698,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
 
@@ -599,6 +732,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
 
@@ -609,11 +749,17 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Support Renamed' },
     });
+    // Re-query on every poll. Holding one node across waitFor is what made this
+    // flaky: the dirty-state re-render can swap the button, leaving the captured
+    // reference detached and permanently disabled="" — which no timeout can fix.
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
+    }, { timeout: 5_000 });
     fireEvent.click(screen.getByTestId('save-board-button'));
 
     await waitFor(() => {
       expect(updateBoardMock).toHaveBeenCalled();
-    });
+    }, { timeout: 5_000 });
 
     // The editor stays open (no return to the list) and the header reflects the saved name.
     await waitFor(() => {
@@ -639,6 +785,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
@@ -675,6 +828,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     // Page 1 shows the first 10 boards only.
     await waitFor(() => {
@@ -684,7 +844,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     expect(document.getElementById('board-row-board-11')).not.toBeInTheDocument();
 
     // Advance to page 2 via the standard pagination next control.
-    fireEvent.click(document.getElementById('boards-list-pagination-next-btn') as HTMLElement);
+    fireEvent.click(document.getElementById('boards-settings-table-pagination-next-btn') as HTMLElement);
 
     expect(document.getElementById('board-row-board-11')).toBeInTheDocument();
     expect(document.getElementById('board-row-board-1')).not.toBeInTheDocument();
@@ -703,6 +863,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     // Default 10 per page: the 11th board is on page 2.

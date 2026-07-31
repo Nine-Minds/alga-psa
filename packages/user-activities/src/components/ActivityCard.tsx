@@ -42,7 +42,7 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
     [ActivityType.PROJECT_TASK]: '', // uses inline style
     [ActivityType.TICKET]: 'border-primary-500',
     [ActivityType.TIME_ENTRY]: 'border-orange-500',
-    [ActivityType.WORKFLOW_TASK]: 'border-destructive',
+    [ActivityType.WORKFLOW_TASK]: '', // uses inline style (pink var), matches the list accent
     [ActivityType.NOTIFICATION]: 'border-warning',
     [ActivityType.DOCUMENT]: 'border-teal-500',
   };
@@ -50,6 +50,8 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
   // Secondary color needs inline style since Tailwind doesn't resolve the CSS variable
   const borderStyle = activity.type === ActivityType.PROJECT_TASK
     ? { borderLeftColor: 'rgb(var(--color-secondary-500))' }
+    : activity.type === ActivityType.WORKFLOW_TASK
+    ? { borderLeftColor: 'rgb(var(--color-accent-500))' }
     : undefined;
 
   // Priority indicator - only show when a real priority is set (has color from DB)

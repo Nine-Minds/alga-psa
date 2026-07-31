@@ -79,9 +79,17 @@ exports.up = async function (knex) {
       await knex.raw("SELECT create_distributed_table('asset_type_registry', 'tenant', colocate_with => 'assets')");
     }
 
-    // Required follow-up whenever the table could already hold rows at
-    // distribution time (idempotent re-runs): clear stranded coordinator-heap
-    // rows. No-op when the parent heap is already empty.
+    // Clear stranded coordinator-heap rows left by create_distributed_table on
+    // idempotent re-runs. No-op when the parent heap is already empty.
+    //
+    // ⚠️ UNSAFE PATTERN — do not copy into new migrations.
+    // truncate_local_data_after_distributing_table() issues a TRUNCATE that
+    // CASCADEs across the whole FK graph. Distributed tables in the cascade
+    // only lose stranded coordinator-local rows, but any NON-distributed table
+    // in the recursive FK closure loses ALL of its data (a local table's
+    // coordinator heap is its only copy). Before ever calling this again, walk
+    // the FK closure (pg_constraint) and abort unless every member is
+    // distributed (pg_dist_partition). Retained as history, not as an example.
     const localSize = await knex.raw("SELECT pg_relation_size('asset_type_registry'::regclass) AS size");
     if (Number(localSize.rows?.[0]?.size ?? 0) > 0) {
       await knex.raw("SELECT truncate_local_data_after_distributing_table('asset_type_registry'::regclass)");

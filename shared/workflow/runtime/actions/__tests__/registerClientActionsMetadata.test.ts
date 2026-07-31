@@ -38,6 +38,7 @@ describe('client workflow action registration metadata', () => {
     const byId = new Map(actions.map((action) => [action.id, action]));
 
     expect(byId.get('clients.find')?.ui?.label).toBe('Find Client');
+    expect(byId.get('clients.find')?.ui?.description).toBe('Find a client by id, name, external ref, or location phone');
     expect(byId.get('clients.search')?.ui?.label).toBe('Search Clients');
     expect(byId.get('clients.create')?.ui?.label).toBe('Create Client');
     expect(byId.get('clients.update')?.ui?.label).toBe('Edit Client');
@@ -70,6 +71,28 @@ describe('client workflow action registration metadata', () => {
     expect(byId.get('clients.assign_to_ticket')?.idempotency.mode).toBe('engineProvided');
     expect(byId.get('clients.add_note')?.idempotency.mode).toBe('actionProvided');
     expect(byId.get('clients.add_interaction')?.idempotency.mode).toBe('actionProvided');
+  });
+
+  it('T002: clients.find exposes phone lookup inputs and matched location output metadata', () => {
+    const registry = getActionRegistryV2();
+    const find = registry.get('clients.find', 1);
+
+    expect(find).toBeDefined();
+    if (!find) {
+      throw new Error('Missing clients.find workflow action');
+    }
+
+    const inputSchema = zodToWorkflowJsonSchema(find.inputSchema);
+    const outputSchema = zodToWorkflowJsonSchema(find.outputSchema);
+    const inputProps = inputSchema.properties as Record<string, Record<string, unknown>>;
+    const outputProps = outputSchema.properties as Record<string, Record<string, unknown>>;
+
+    expect(inputProps.phone?.description).toBe('Phone number (normalized digits match against client locations)');
+    expect(inputProps.phone_match?.description).toBe(
+      'Phone matching mode. last7/last10 can match multiple client locations; branch on matched_count.'
+    );
+    expect(outputProps.matched_location).toBeDefined();
+    expect(outputProps.matched_count).toBeDefined();
   });
 
   it('T003: client mutation schemas expose picker metadata for client/ticket/contact/location fields', () => {

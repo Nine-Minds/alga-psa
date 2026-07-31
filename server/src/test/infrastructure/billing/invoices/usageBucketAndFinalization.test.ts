@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,23 +10,23 @@ import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
+  assignContractLineToClient,
   createTestService,
   createFixedPlanAssignment,
   createBucketOverlayForPlan,
   createBucketUsageRecord,
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
-// Force connection directly to PostgreSQL on port 5432 (not pgbouncer on 6432)
+// Force connection directly to PostgreSQL (not pgbouncer on 6432)
 // This is required for tests that need direct database access
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -38,7 +39,8 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));
@@ -52,24 +54,26 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
     setSecret: async () => {},
     getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
+    close: async () => {}
+  })
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
     setSecret: async () => {},
     getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
+    close: async () => {}
+  })
 }));
 
 vi.mock('@alga-psa/workflows/persistence', () => ({
@@ -78,7 +82,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),
@@ -235,13 +240,8 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: contractLineId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
+      await assignContractLineToClient(context, contractLineId, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
 
       // Create usage records
@@ -415,18 +415,10 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_contract_lines')
-        .where({
-          tenant: context.tenantId,
-          client_contract_line_id: clientContractLineId
-        })
-        .update({
-          client_id: context.clientId,
-          contract_line_id: contractLineId,
-          start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-          end_date: null,
-          is_active: true
-        });
+      await assignContractLineToClient(context, contractLineId, {
+        clientContractLineId,
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
 
       // Generate draft invoice
       let invoice = await generateInvoice(billingCycleId);

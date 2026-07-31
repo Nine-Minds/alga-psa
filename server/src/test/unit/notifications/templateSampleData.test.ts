@@ -28,11 +28,14 @@ const TEMPLATE_SAMPLE_DATA: Record<string, Record<string, string>> = {
     expirationTime: '48 hours',
   },
   'portal-invitation': {
-    invitedEmail: 'jane.smith@client.com',
-    inviterName: 'John Doe',
+    contactName: 'Jane Smith',
     clientName: 'Acme Corporation',
-    invitationLink: 'https://app.example.com/auth/accept-invite?token=sample-token',
+    tenantName: 'Northwind Managed Services',
+    portalLink: 'https://app.example.com/auth/accept-invite?token=sample-token',
     expirationTime: '7 days',
+    supportEmail: 'support@northwind.example',
+    supportPhone: '+1 (555) 010-1234',
+    currentYear: String(new Date().getFullYear()),
   },
   'credit-expiration': {
     'client.name': 'Acme Corporation',
@@ -120,9 +123,12 @@ describe('templateSampleData', () => {
 
     it('should return sample data for known template "portal-invitation"', () => {
       const data = getTemplateSampleData('portal-invitation');
-      expect(data.invitedEmail).toBeDefined();
-      expect(data.inviterName).toBeDefined();
+      expect(data.contactName).toBeDefined();
       expect(data.clientName).toBeDefined();
+      // The MSP identity and support contact are distinct from the recipient's client
+      expect(data.tenantName).toBeDefined();
+      expect(data.supportEmail).toBeDefined();
+      expect(data.supportPhone).toBeDefined();
     });
 
     it('should return sample data for known template "sla-breach"', () => {

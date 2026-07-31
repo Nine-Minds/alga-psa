@@ -7,14 +7,19 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices, getDefaultBillingSettings } from '@alga-psa/billing/actions';
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '../../../actions/serviceActions';
+import { getDefaultBillingSettings } from '../../../actions/billingSettingsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { getServiceCategories } from '@alga-psa/billing/actions';
+import { getServiceCategories } from '../../../actions/categoryActions';
 // Import action to get tax rates
-import { getTaxRates } from '@alga-psa/billing/actions';
+import { getTaxRates } from '../../../actions/taxRateActions';
 import { IService, IServiceCategory, IServiceType, IServicePrice, DeletionValidationResult } from '@alga-psa/types'; // Added IServiceType, IServicePrice
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 // Import ITaxRate interface
 import { ITaxRate } from '@alga-psa/types'; // Corrected import path if needed
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
@@ -31,6 +36,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 // Removed old SERVICE_TYPE_OPTIONS
 
@@ -42,6 +48,7 @@ const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 
 const ServiceCatalogManager: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
+  const { money } = useCurrencyFormat();
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [services, setServices] = useState<IService[]>([]);
   // Note: Categories are currently hidden in favor of using Service Types for organization
@@ -154,6 +161,11 @@ const ServiceCatalogManager: React.FC = () => {
   const fetchAllServiceTypes = async () => {
     try {
       const types = await getServiceTypesForSelection();
+      if (isActionMessageError(types) || isActionPermissionError(types)) {
+        setError(getErrorMessage(types));
+        setAllServiceTypes([]);
+        return;
+      }
       setAllServiceTypes(types);
     } catch (fetchError) {
       console.error('Error fetching service types:', fetchError);
@@ -173,6 +185,11 @@ const ServiceCatalogManager: React.FC = () => {
        setIsLoadingTaxRates(true);
        // Use getTaxRates which returns ITaxRate[]
        const rates = await getTaxRates(); // Fetches active rates by default
+       if (isActionMessageError(rates) || isActionPermissionError(rates)) {
+         setErrorTaxRates(getErrorMessage(rates));
+         setTaxRates([]);
+         return;
+       }
        setTaxRates(rates);
        setErrorTaxRates(null);
    } catch (error) {
@@ -203,6 +220,12 @@ const ServiceCatalogManager: React.FC = () => {
         // When filtering, fetch all services (with a large page size)
         console.log("Using client-side filtering - fetching all services");
         response = await getServices(1, 1000, { item_kind: 'service' });
+        if (isActionMessageError(response) || isActionPermissionError(response)) {
+          setError(getErrorMessage(response));
+          setServices([]);
+          setTotalCount(0);
+          return;
+        }
         
         // Update total count based on filtered results
         const filteredCount = response.services.filter(service => {
@@ -216,6 +239,12 @@ const ServiceCatalogManager: React.FC = () => {
         // No filtering, use server-side pagination
         console.log("Using server-side pagination");
         response = await getServices(pageToFetch, pageSize, { item_kind: 'service' });
+        if (isActionMessageError(response) || isActionPermissionError(response)) {
+          setError(getErrorMessage(response));
+          setServices([]);
+          setTotalCount(0);
+          return;
+        }
         setTotalCount(response.totalCount);
       }
       
@@ -240,6 +269,10 @@ const ServiceCatalogManager: React.FC = () => {
   const fetchCategories = async () => {
     try {
       const fetchedCategories = await getServiceCategories();
+      if (isActionMessageError(fetchedCategories) || isActionPermissionError(fetchedCategories)) {
+        setError(getErrorMessage(fetchedCategories));
+        return;
+      }
       setCategories(fetchedCategories);
       setError(null);
     } catch (error) {
@@ -473,7 +506,7 @@ const ServiceCatalogManager: React.FC = () => {
         render: (prices: IServicePrice[] | undefined, record) => {
           if (!prices || prices.length === 0) {
             // Fall back to default_rate if no prices exist
-            return `$${(record.default_rate / 100).toFixed(2)}`;
+            return money(Number(record.default_rate));
           }
           // Show primary price (first one, typically USD)
           const primaryPrice = prices[0];
@@ -762,15 +795,24 @@ const ServiceCatalogManager: React.FC = () => {
                 }}
                 serviceTypes={allServiceTypes}
                 onCreateType={async (name) => {
-                  await createServiceTypeInline(name);
+                  const result = await createServiceTypeInline(name);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   fetchAllServiceTypes(); // Refresh the service types list
                 }}
                 onUpdateType={async (id, name) => {
-                  await updateServiceTypeInline(id, name);
+                  const result = await updateServiceTypeInline(id, name);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   fetchAllServiceTypes(); // Refresh the service types list
                 }}
                 onDeleteType={async (id) => {
-                  await deleteServiceTypeInline(id);
+                  const result = await deleteServiceTypeInline(id);
+                  if (isActionMessageError(result) || isActionPermissionError(result)) {
+                    throw new Error(getErrorMessage(result));
+                  }
                   fetchAllServiceTypes(); // Refresh the service types list
                 }}
                 placeholder={t('serviceCatalog.fields.serviceType.placeholder', {

@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Suche...",
       "noWorkItems": "Keine Arbeitselemente gefunden"
-    }
+    },
+    "paymentWarningTitle": "Warnung zur Zahlungsvoraussetzung",
+    "paymentWarning": "Für einen gekennzeichneten Projektabrechnungsmeilenstein ist eine Zahlung erforderlich, die noch nicht bestätigt wurde. Bestätigen Sie die Zahlung, bevor Sie weiterarbeiten."
   },
   "workItemList": {
     "meta": {
@@ -448,7 +450,8 @@
     "taskUpdated": "Aufgabe erfolgreich aktualisiert",
     "saveChangesFailed": "Änderungen konnten nicht gespeichert werden",
     "changesSaved": "Änderungen erfolgreich gespeichert",
-    "workItemDeleted": "Arbeitsposten erfolgreich gelöscht"
+    "workItemDeleted": "Arbeitsposten erfolgreich gelöscht",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Dieses Ticket ist unter {{number}} gebündelt. Die Zeit für Bündel wird üblicherweise auf dem Master-Ticket erfasst.",

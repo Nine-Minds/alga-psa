@@ -25,6 +25,7 @@ import type {
   TenantExportWorkflowState,
   TenantExportClientResult,
 } from '@ee/interfaces/tenant.interfaces';
+import type { ProductUpgradeStatus } from '../actions/product-upgrade-actions';
 
 // Re-export for consumers
 export type {
@@ -50,6 +51,62 @@ export type {
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
 const DEFAULT_TEMPORAL_TASK_QUEUE = 'tenant-workflows';
+
+export interface TenantProductUpgradeInput {
+  tenantId: string;
+  requestedByUserId: string;
+}
+
+export type TenantProductUpgradeStartClientResult =
+  | {
+      available: true;
+      workflowId: string;
+      runId?: string;
+      alreadyRunning: boolean;
+    }
+  | { available: false; error: string };
+
+export type TenantProductUpgradeStatusClientResult =
+  | { available: true; data: ProductUpgradeStatus }
+  | { available: false; error: string };
+
+interface ProductUpgradeQueryPayload {
+  currentStep: string | null;
+  completedSteps: string[];
+}
+
+function isErrorNamed(error: unknown, name: string): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: unknown }).name === name
+  );
+}
+
+function isProductUpgradeQueryPayload(value: unknown): value is ProductUpgradeQueryPayload {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    (candidate.currentStep === null || typeof candidate.currentStep === 'string') &&
+    Array.isArray(candidate.completedSteps) &&
+    candidate.completedSteps.every((step): step is string => typeof step === 'string')
+  );
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null && 'cause' in error) {
+    const cause = (error as { cause?: unknown }).cause;
+    if (cause instanceof Error && cause.message) {
+      return cause.message;
+    }
+  }
+
+  return error instanceof Error && error.message ? error.message : fallback;
+}
 
 /**
  * Start a tenant creation workflow via Temporal.
@@ -443,5 +500,152 @@ export async function getTenantExportState(
       available: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
+  }
+}
+
+export async function startTenantProductUpgradeWorkflow(
+  input: TenantProductUpgradeInput
+): Promise<TenantProductUpgradeStartClientResult> {
+  let connection: { close: () => Promise<void> } | null = null;
+
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { available: false, error: 'Temporal client not available' };
+    }
+
+    const address = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
+    const namespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
+    const taskQueue = process.env.TEMPORAL_TASK_QUEUE || DEFAULT_TEMPORAL_TASK_QUEUE;
+    connection = await mod.Connection.connect({ address });
+    const client = new mod.Client({ connection, namespace });
+    const workflowId = `tenant-product-upgrade-${input.tenantId}`;
+
+    try {
+      const handle = await client.workflow.start('tenantProductUpgradeWorkflow', {
+        args: [input],
+        taskQueue,
+        workflowId,
+      });
+
+      return {
+        available: true,
+        workflowId: handle.workflowId,
+        runId: handle.firstExecutionRunId,
+        alreadyRunning: false,
+      };
+    } catch (error) {
+      if (!isErrorNamed(error, 'WorkflowExecutionAlreadyStartedError')) {
+        throw error;
+      }
+
+      const handle = client.workflow.getHandle(workflowId);
+      const description = await handle.describe();
+      const runId =
+        typeof description?.runId === 'string'
+          ? description.runId
+          : typeof description?.execution?.runId === 'string'
+            ? description.execution.runId
+            : undefined;
+
+      return {
+        available: true,
+        workflowId,
+        runId,
+        alreadyRunning: true,
+      };
+    }
+  } catch (error) {
+    return {
+      available: false,
+      error: errorMessage(error, 'Failed to start product upgrade workflow'),
+    };
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
+  }
+}
+
+export async function getTenantProductUpgradeStatus(
+  tenantId: string
+): Promise<TenantProductUpgradeStatusClientResult> {
+  let connection: { close: () => Promise<void> } | null = null;
+  const workflowId = `tenant-product-upgrade-${tenantId}`;
+
+  try {
+    const mod: any = await import('@temporalio/client').catch(() => null);
+    if (!mod) {
+      return { available: false, error: 'Temporal client not available' };
+    }
+
+    const address = process.env.TEMPORAL_ADDRESS || DEFAULT_TEMPORAL_ADDRESS;
+    const namespace = process.env.TEMPORAL_NAMESPACE || DEFAULT_TEMPORAL_NAMESPACE;
+    connection = await mod.Connection.connect({ address });
+    const client = new mod.Client({ connection, namespace });
+    const handle = client.workflow.getHandle(workflowId);
+
+    let description: any;
+    try {
+      description = await handle.describe();
+    } catch (error) {
+      if (isErrorNamed(error, 'WorkflowNotFoundError')) {
+        return { available: true, data: { state: 'idle' } };
+      }
+      throw error;
+    }
+
+    const status = description?.status?.name;
+    if (status === 'COMPLETED') {
+      return { available: true, data: { state: 'completed', workflowId } };
+    }
+
+    if (status !== 'RUNNING') {
+      let failure = `Workflow ended with status ${
+        typeof status === 'string' ? status.toLowerCase() : 'unknown'
+      }`;
+      try {
+        await handle.result();
+      } catch (error) {
+        failure = errorMessage(error, failure);
+      }
+
+      return {
+        available: true,
+        data: { state: 'failed', workflowId, error: failure },
+      };
+    }
+
+    const queryResult: unknown = await handle.query('productUpgradeStatus');
+    if (!isProductUpgradeQueryPayload(queryResult)) {
+      throw new Error('Invalid product upgrade workflow status payload');
+    }
+
+    return {
+      available: true,
+      data: {
+        state: 'running',
+        workflowId,
+        currentStep: queryResult.currentStep,
+        completedSteps: queryResult.completedSteps,
+      },
+    };
+  } catch (error) {
+    return {
+      available: false,
+      error: errorMessage(error, 'Failed to get product upgrade workflow status'),
+    };
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
   }
 }
