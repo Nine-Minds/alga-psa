@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { Button } from '@alga-psa/ui/components/Button'
 import { Input } from '@alga-psa/ui/components/Input'
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'
-import { createService, getServiceTypesForSelection, getDefaultBillingSettings } from '@alga-psa/billing/actions'
+import { createService, getServiceTypesForSelection } from '@alga-psa/billing/actions/serviceActions';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { getActiveTaxRegions, getTaxRates } from '@alga-psa/billing/actions/taxSettingsActions'; // Added getTaxRates
 import { ITaxRate, ITaxRegion } from '@alga-psa/types';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
@@ -33,6 +34,11 @@ export const ServiceForm: React.FC = () => {
     const fetchServiceTypes = async () => {
       try {
         const types = await getServiceTypesForSelection()
+        if (isActionMessageError(types) || isActionPermissionError(types)) {
+          setServiceTypes([])
+          setError(getErrorMessage(types))
+          return
+        }
         setServiceTypes(types)
       } catch (error) {
         console.error('Error fetching service types:', error)
@@ -51,6 +57,22 @@ export const ServiceForm: React.FC = () => {
           getTaxRates(), // Use the imported function
           getActiveTaxRegions() // Use the imported function
         ]);
+        if (isActionMessageError(rates) || isActionPermissionError(rates)) {
+          const message = getErrorMessage(rates);
+          setErrorTaxData(message);
+          handleError(rates, message);
+          setTaxRates([]);
+          setTaxRegions([]);
+          return;
+        }
+        if (isActionMessageError(regions) || isActionPermissionError(regions)) {
+          const message = getErrorMessage(regions);
+          setErrorTaxData(message);
+          handleError(regions, message);
+          setTaxRates([]);
+          setTaxRegions([]);
+          return;
+        }
         setTaxRates(rates);
         setTaxRegions(regions);
       } catch (err) {

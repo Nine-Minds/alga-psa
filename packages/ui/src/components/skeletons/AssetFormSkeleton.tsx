@@ -12,7 +12,7 @@ const AssetFormSkeleton = ({
   isEdit = false
 }: AssetFormSkeletonProps) => {
   return (
-    <div className="animate-pulse space-y-6">
+    <div className="animate-pulse space-y-4">
       {/* Header */}
       <Card>
         <CardHeader>
@@ -20,10 +20,10 @@ const AssetFormSkeleton = ({
             <Package className="h-8 w-8 text-gray-300" />
             <div>
               <CardTitle className="flex items-center">
-                <div className="h-7 bg-gray-200 rounded w-40"></div>
+                <span className="block h-7 bg-gray-200 rounded w-40" />
               </CardTitle>
               <CardDescription>
-                <div className="h-4 bg-gray-200 rounded w-64 mt-1"></div>
+                <span className="block h-4 bg-gray-200 rounded w-64 mt-1" />
               </CardDescription>
             </div>
           </div>
@@ -36,10 +36,10 @@ const AssetFormSkeleton = ({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>
-                <div className="h-6 bg-gray-200 rounded w-32"></div>
+                <span className="block h-6 bg-gray-200 rounded w-32" />
               </CardTitle>
               <CardDescription>
-                <div className="h-4 bg-gray-200 rounded w-48 mt-1"></div>
+                <span className="block h-4 bg-gray-200 rounded w-48 mt-1" />
               </CardDescription>
             </div>
             <div className="flex space-x-2">
@@ -50,10 +50,10 @@ const AssetFormSkeleton = ({
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-3">
           {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+            <div className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Tag className="h-4 w-4 text-gray-300" />
@@ -78,7 +78,7 @@ const AssetFormSkeleton = ({
               </div>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Building className="h-4 w-4 text-gray-300" />
@@ -111,7 +111,7 @@ const AssetFormSkeleton = ({
           </div>
           
           {/* Description Section */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <FileText className="h-5 w-5 text-gray-300" />
               <div className="h-5 bg-gray-200 rounded w-28"></div>
@@ -120,8 +120,8 @@ const AssetFormSkeleton = ({
           </div>
           
           {/* Asset Categories and Tags */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+            <div className="space-y-3">
               <div className="h-5 bg-gray-200 rounded w-20"></div>
               <div className="space-y-2">
                 {Array.from({ length: 3 }, (_, i) => (
@@ -134,7 +134,7 @@ const AssetFormSkeleton = ({
               </div>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="h-5 bg-gray-200 rounded w-24"></div>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: 4 }, (_, i) => (

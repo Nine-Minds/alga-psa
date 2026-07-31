@@ -32,7 +32,16 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: (...args: unknown[]) => createTenantKnexMock(...args)
+  createTenantKnex: (...args: unknown[]) => createTenantKnexMock(...args),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => {
+      const alias = / as /i.test(t) ? t.split(/\s+as\s+/i).pop()!.trim() : t;
+      return conn(t).where(`${alias}.tenant`, tenant);
+    },
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      (o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q))
+  })
 }));
 
 vi.mock('@alga-psa/workflows/runtime', () => ({

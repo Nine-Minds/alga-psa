@@ -78,7 +78,7 @@ export function InternalNotificationPreferences() {
         setLoading(false);
       } catch (err) {
         console.error('[InternalNotificationPreferences] Error:', err);
-        setError(err instanceof Error ? err.message : t('notifications.preferences.loadError', 'Failed to load preferences'));
+        setError(t('notifications.preferences.loadError', 'Failed to load preferences'));
         setLoading(false);
       }
     }

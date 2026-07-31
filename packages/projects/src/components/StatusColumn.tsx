@@ -372,7 +372,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
                 indeterminate={someTasksSelected && !allTasksSelected}
                 onChange={() => setTasksSelected(statusTaskIds, !allTasksSelected)}
                 size="sm"
-                containerClassName="mb-0 flex-shrink-0"
+                containerClassName="flex-shrink-0"
                 skipRegistration
               />
             )}

@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Paramètres généraux",
-    "description": "Gérez le nom de votre organisation et le client par défaut. Le client par défaut est utilisé à des fins de configuration et représente votre MSP.",
+    "description": "Gérez le nom de votre organisation et choisissez quelle fiche client représente votre propre entreprise. Les informations de ce client apparaissent sur les factures, les devis et les communications adressées aux clients.",
     "fields": {
       "organizationName": {
         "label": "Nom de l'organisation"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Enregistrer le fuseau horaire par défaut"
     },
     "clients": {
-      "title": "Clients",
+      "title": "Votre entreprise",
+      "help": "Le client marqué comme votre entreprise correspond à votre propre organisation. Son nom, son adresse et son logo apparaissent sur les factures, les devis et les communications adressées aux clients.",
+      "currentDefault": "Votre entreprise est actuellement {{name}}.",
+      "yourCompanyBadge": "Votre entreprise",
       "table": {
         "name": "Nom",
-        "default": "Par défaut",
+        "default": "Votre entreprise (par défaut)",
         "actions": "Actions"
       },
       "placeholder": "Sélectionnez un client à ajouter",
-      "addClient": "Ajouter un client"
+      "addClient": "Ajouter un client",
+      "confirmDialog": {
+        "title": "Changer votre entreprise ?",
+        "message": "Cela remplacera votre entreprise {{current}} par {{next}}. {{next}} représentera votre propre organisation sur les factures, les devis ainsi que dans les e-mails et invitations envoyés aux clients.",
+        "messageInitial": "Cela définira {{next}} comme votre entreprise. {{next}} représentera votre propre organisation sur les factures, les devis ainsi que dans les e-mails et invitations envoyés aux clients.",
+        "confirm": "Changer d'entreprise",
+        "cancel": "Annuler"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Échec de la mise à jour du fuseau horaire",
         "selectClient": "Veuillez sélectionner un client",
         "clientNotFound": "Client introuvable",
+        "clientAlreadyAdded": "Ce client figure déjà dans la liste",
         "addClient": "Échec de l'ajout du client",
         "removeClient": "Échec de la suppression du client",
         "setDefaultClient": "Échec de la définition du client par défaut",
@@ -150,6 +161,7 @@
       "copying": "Copie en cours...",
       "createUser": "Créer un utilisateur",
       "sendInvitation": "Envoyer l'invitation au portail",
+      "sendTeamInvitation": "Envoyer l'invitation",
       "cancel": "Annuler"
     },
     "form": {
@@ -183,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "La définition d'un mot de passe créera l'utilisateur immédiatement. Il pourra se connecter tout de suite.",
-        "withoutPassword": "Aucun mot de passe requis — nous enverrons une invitation au portail pour que l'utilisateur le définisse."
+        "withoutPassword": "Aucun mot de passe requis — nous enverrons une invitation au portail pour que l'utilisateur le définisse.",
+        "withoutPasswordMsp": "Aucun mot de passe requis — nous lui enverrons une invitation par e-mail pour qu'il ou elle le définisse lui-même."
       },
       "requirePasswordChange": "Exiger le changement de mot de passe à la première connexion"
     },
@@ -208,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Invitation au portail envoyée avec succès !",
+        "teamInvitationSent": "Invitation envoyée avec succès !",
         "clientPortalUserCreated": "Utilisateur du portail client créé avec succès !",
         "copiedVanityLink": "Lien de connexion personnalisé au portail copié dans le presse-papiers",
-        "copiedCanonicalLink": "Lien de connexion canonique au portail copié dans le presse-papiers"
+        "copiedCanonicalLink": "Lien de connexion canonique au portail copié dans le presse-papiers",
+        "invitationRevoked": "Invitation révoquée"
       },
       "error": {
         "fetchUsers": "Échec de la récupération des utilisateurs",
@@ -237,6 +252,7 @@
         "contactNotFound": "Contact introuvable.",
         "contactMissingEmailGeneric": "Le contact n'a pas d'adresse e-mail. Ajoutez une adresse e-mail au contact avant d'envoyer une invitation.",
         "contactInvalidEmail": "Le contact a une adresse e-mail invalide. Mettez à jour le contact avec une adresse e-mail valide avant d'envoyer une invitation.",
+        "invalidEmail": "Veuillez saisir une adresse e-mail valide",
         "noDefaultClient": "Aucun client par défaut n'est configuré pour ce tenant. Veuillez définir un client par défaut dans les paramètres généraux.",
         "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",
@@ -245,8 +261,17 @@
         "roleRequired": "Le rôle est requis",
         "invalidRole": "Le rôle sélectionné est invalide",
         "licenseLimitReached": "Vous avez atteint la limite de licences utilisateur MSP.",
-        "soloPlanLimit": "Le plan Solo est limité à 1 utilisateur. Passez à Pro pour ajouter d'autres utilisateurs."
+        "soloPlanLimit": "Le plan Solo est limité à 1 utilisateur. Passez à Pro pour ajouter d'autres utilisateurs.",
+        "revokeInvitation": "Échec de la révocation de l'invitation",
+        "invitationNotFound": "Invitation introuvable ou déjà utilisée"
       }
+    },
+    "invitations": {
+      "title": "Invitations en attente",
+      "description": "Membres de l'équipe invités qui n'ont pas encore configuré leur compte.",
+      "expiresPrefix": "Expire :",
+      "revoke": "Révoquer",
+      "revoking": "Révocation..."
     }
   },
   "userDetails": {
@@ -267,6 +292,27 @@
       "reportsTo": {
         "label": "Supérieur hiérarchique",
         "placeholder": "Sélectionner un responsable"
+      },
+      "workSchedule": {
+        "label": "Heures de travail",
+        "help": "Quand cette personne est en service. Utilisé dans les rapports d’utilisation. Il ne s’agit pas de la disponibilité de réservation client.",
+        "setHours": "Définir les heures de travail",
+        "clear": "Effacer",
+        "weeklyTotal": "{{hours}} h par semaine",
+        "days": {
+          "0": "Dimanche",
+          "1": "Lundi",
+          "2": "Mardi",
+          "3": "Mercredi",
+          "4": "Jeudi",
+          "5": "Vendredi",
+          "6": "Samedi"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Capacité hebdomadaire (heures)",
+        "placeholder": "p. ex. 40",
+        "help": "Utilisé uniquement à défaut d’heures de travail définies ci-dessus."
       },
       "lastLogin": "Dernière connexion",
       "roles": "Rôles",
@@ -312,7 +358,9 @@
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
-        "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs."
+        "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs.",
+        "invalidCapacity": "La capacité hebdomadaire doit être un nombre positif.",
+        "invalidWorkSchedule": "Les heures de travail doivent former une plage valide se terminant après son début."
       }
     },
     "loading": "Chargement des détails de l'utilisateur..."
@@ -384,7 +432,6 @@
       "display": "Affichage",
       "ticketNumbering": "Numérotation des tickets",
       "boards": "Tableaux",
-      "statuses": "Statuts",
       "priorities": "Priorités",
       "categories": "Catégories",
       "checklistTemplates": "Modèles de checklist"
@@ -489,7 +536,9 @@
         "boardManager": "Responsable du tableau",
         "order": "Ordre",
         "itilBoard": "Tableau ITIL",
-        "actions": "Actions"
+        "actions": "Actions",
+        "ticketLoad": "Charge de tickets",
+        "statuses": "Statuts"
       },
       "statusLabels": {
         "active": "Actif",
@@ -508,7 +557,8 @@
         "up": "Monter",
         "down": "Descendre",
         "remove": "Supprimer",
-        "addStatus": "Ajouter un statut"
+        "addStatus": "Ajouter un statut",
+        "back": "Retour aux Tableaux"
       },
       "fields": {
         "boardName": {
@@ -588,6 +638,10 @@
         "liveTimer": {
           "label": "Activer le minuteur de ticket en direct",
           "help": "Affiche le minuteur en direct et les intervalles suivis sur les tickets de ce tableau. La saisie manuelle du temps reste disponible."
+        },
+        "defaultBoard": {
+          "label": "Tableau par défaut pour les tickets du portail client",
+          "help": "Les nouveaux tickets soumis depuis le portail client sont ajoutés à ce tableau. Un seul tableau peut être défini par défaut."
         }
       },
       "dialog": {
@@ -711,9 +765,40 @@
           "fetchFailed": "Échec du chargement des règles de clôture pour ce tableau",
           "autoCloseStatusRequired": "Chaque règle de clôture automatique nécessite un statut déclencheur et un statut cible fermé",
           "autoCloseDaysInvalid": "Le nombre de jours d'inactivité pour la clôture automatique doit être un entier positif",
-          "autoCloseWarningInvalid": "Le délai d'avertissement doit être inférieur au nombre de jours d'inactivité"
-        }
-      }
+          "autoCloseWarningInvalid": "Le délai d'avertissement doit être inférieur au nombre de jours d'inactivité",
+          "autoCloseSuppressionInvalid": "Les notifications aux agents et observateurs ne peuvent être ignorées que si les notifications au client le sont."
+        },
+        "suppressContactNotificationsLabel": "Ne pas notifier le client",
+        "suppressContactNotificationsHelp": "Ignore l'e-mail d'avertissement, l'e-mail de clôture, l'invitation à l'enquête et la notification du portail client.",
+        "suppressInternalNotificationsLabel": "Ne pas notifier non plus les agents et observateurs"
+      },
+      "editor": {
+        "sections": {
+          "general": "Général",
+          "generalHelp": "Nom, description, visibilité et valeur par défaut",
+          "assignment": "Attribution et SLA",
+          "assignmentHelp": "Routage par défaut, SLA et responsable du tableau",
+          "inbound": "E-mail et réponses entrantes",
+          "inboundHelp": "Rouvrir les tickets lorsque les clients répondent par e-mail",
+          "close": "Règles de clôture",
+          "closeHelp": "Conditions requises avant de pouvoir clôturer un ticket",
+          "automation": "Automatisation",
+          "automationHelp": "Clôturer automatiquement les tickets inactifs après une période d'inactivité",
+          "statuses": "Priorités et statuts",
+          "statusesHelp": "Priorité par défaut et statuts de ticket pour ce tableau",
+          "display": "Affichage et comportement",
+          "displayHelp": "Minuteur en direct et type de tableau"
+        },
+        "saveChanges": "Enregistrer les modifications",
+        "unsaved": "Non enregistré",
+        "unsavedShort": "Modifications non enregistrées",
+        "unsavedBanner": "Vous avez des modifications non enregistrées. Cliquez sur « Enregistrer les modifications » pour les appliquer.",
+        "allSaved": "Toutes les modifications sont enregistrées",
+        "reopenBadge": "rouvrir",
+        "required": "Obligatoire"
+      },
+      "empty": "Aucun tableau trouvé.",
+      "searchPlaceholder": "Rechercher des tableaux…"
     },
     "priorities": {
       "title": {
@@ -1005,6 +1090,15 @@
     "openMenu": "Ouvrir le menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Fonctionnalités du portail",
+      "description": "Choisissez les fonctionnalités en libre-service auxquelles les clients peuvent accéder.",
+      "appointmentsLabel": "Rendez-vous",
+      "appointmentsHelp": "Permettez aux clients de consulter et de demander des rendez-vous depuis le portail client.",
+      "appointmentsEnabled": "Les rendez-vous sont désormais disponibles dans le portail client",
+      "appointmentsDisabled": "Les rendez-vous sont désormais masqués dans le portail client",
+      "updateFailed": "Impossible de mettre à jour les fonctionnalités du portail client"
+    },
     "branding": {
       "title": "Image de marque et apparence",
       "description": "Personnalisez l'apparence de votre portail client avec l'image de marque de votre entreprise.",
@@ -1015,7 +1109,8 @@
         "primaryColor": "Couleur principale",
         "secondaryColor": "Couleur secondaire",
         "supportEmail": "E-mail du support",
-        "supportPhone": "Téléphone du support"
+        "supportPhone": "Téléphone du support",
+        "heroGradient": "Dégradé de l’en-tête du tableau de bord"
       },
       "help": {
         "companyName": "Ce nom sera affiché dans l'en-tête du portail client",
@@ -1023,7 +1118,12 @@
         "primaryColor": "Utilisée pour les boutons, les liens et les éléments mis en avant",
         "secondaryColor": "Utilisée pour les accents et les actions secondaires",
         "supportEmail": "Affiché aux clients dans les confirmations de rendez-vous et autres e-mails sortants comme adresse de contact pour obtenir de l'aide.",
-        "supportPhone": "Facultatif. Affiché à côté de l'e-mail du support dans les e-mails destinés aux clients."
+        "supportPhone": "Facultatif. Affiché à côté de l'e-mail du support dans les e-mails destinés aux clients.",
+        "heroGradient": "Contrôle le dégradé de la bannière d’accueil du tableau de bord client."
+      },
+      "heroGradient": {
+        "primaryShades": "Couleur principale vers une nuance principale",
+        "primarySecondary": "Couleur principale vers couleur secondaire"
       },
       "preview": "Aperçu",
       "previewDarkMode": "Aperçu en mode sombre",
@@ -1138,6 +1238,17 @@
         "step3": "Utilisez le bouton Actualiser pour suivre la progression du provisionnement. Nous enverrons un email à vos administrateurs si le provisionnement échoue.",
         "canonicalHostFallback": "hôte canonique"
       },
+      "appliance": {
+        "helpText": "Pointez ce nom d'hôte vers votre appliance et faites en sorte que votre proxy inverse transmette l'en-tête Host d'origine avant d'enregistrer.",
+        "checklistTitle": "Configuration du proxy inverse",
+        "step1Prefix": "Pointez ",
+        "step1Suffix": " vers cette appliance (un enregistrement A vers son adresse, ou un CNAME vers votre hôte d'appliance).",
+        "step2": "Sur votre proxy inverse, terminez TLS pour le domaine et transmettez à cette appliance sur le port 3000, en préservant l'en-tête Host d'origine (par ex. proxy_set_header Host $host) et en envoyant X-Forwarded-Proto: https.",
+        "step3": "Obtenez et maintenez le certificat TLS pour le domaine sur votre proxy.",
+        "step4": "Enregistrez le domaine ici — il s'active immédiatement. Configurez d'abord le DNS et votre proxy, car les liens du portail basculent immédiatement vers ce domaine.",
+        "docLinkText": "Guide de configuration et de dépannage du proxy inverse",
+        "neverSeenWarning": "Aucune requête n'a encore atteint {{domain}}. Vérifiez que votre proxy inverse transmet l'en-tête Host d'origine."
+      },
       "badges": {
         "pending_dns": "DNS en attente",
         "verifying_dns": "Vérification du DNS",
@@ -1232,6 +1343,176 @@
       "telemetry": {
         "title": "Télémétrie et analytique",
         "description": "Gérez vos préférences de télémétrie et d'analytique"
+      }
+    },
+    "settingsForm": {
+      "enable": {
+        "label": "Activer les notifications",
+        "description": "Activer ou désactiver toutes les notifications pour ce locataire"
+      },
+      "loading": "Chargement des paramètres de notification...",
+      "loadError": "Échec du chargement des paramètres",
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement..."
+    },
+    "emailTemplatesUi": {
+      "preview": {
+        "subjectLabel": "Aperçu de l'objet",
+        "iframeTitle": "Aperçu du modèle d'e-mail",
+        "sampleDataNote": "L'aperçu utilise des données d'exemple. Les e-mails réels contiendront des valeurs réelles."
+      },
+      "errors": {
+        "loadFailed": "Échec du chargement des modèles"
+      },
+      "list": {
+        "loading": "Chargement des modèles d'e-mail...",
+        "templateCount": "({{templateCount}} modèles)",
+        "usingCustom": "Utilisation d'un modèle personnalisé",
+        "usingStandard": "Utilisation du modèle standard"
+      },
+      "columns": {
+        "name": "Nom",
+        "actions": "Actions"
+      },
+      "fields": {
+        "language": "Langue",
+        "subject": "Objet",
+        "htmlContent": "Contenu HTML",
+        "textContent": "Contenu texte"
+      },
+      "actions": {
+        "collapse": "Réduire",
+        "expand": "Développer",
+        "edit": "Modifier",
+        "useStandard": "Utiliser le standard",
+        "view": "Afficher",
+        "customize": "Personnaliser",
+        "sending": "Envoi...",
+        "sendTest": "Envoyer un e-mail de test",
+        "close": "Fermer",
+        "cancel": "Annuler",
+        "saving": "Enregistrement...",
+        "save": "Enregistrer"
+      },
+      "description": "Chaque type d'événement dispose d'un modèle standard personnalisable. Vous pouvez utiliser le modèle standard ou créer une version personnalisée.",
+      "filter": {
+        "languages": "Langues",
+        "reset": "Réinitialiser"
+      },
+      "test": {
+        "sentTo": "E-mail de test envoyé à {{recipient}}",
+        "failed": "Échec de l'envoi de l'e-mail de test."
+      },
+      "view": {
+        "title": "Modèle standard : {{name}}"
+      },
+      "tabs": {
+        "source": "Source",
+        "preview": "Aperçu"
+      },
+      "common": {
+        "notAvailable": "N/D"
+      },
+      "edit": {
+        "title": "Modifier le modèle personnalisé : {{name}}"
+      },
+      "languages": {
+        "en": "Anglais",
+        "fr": "Français",
+        "es": "Espagnol",
+        "de": "Allemand",
+        "nl": "Néerlandais",
+        "it": "Italien",
+        "pl": "Polonais",
+        "pt": "Portugais"
+      }
+    },
+    "categoriesUi": {
+      "errors": {
+        "loadCategories": "Échec du chargement des catégories",
+        "loadSubtypes": "Échec du chargement des sous-types de notification",
+        "save": "Échec de l'enregistrement des paramètres de notification"
+      },
+      "loading": "Chargement des catégories de notification...",
+      "toasts": {
+        "saved": "Paramètres de notification enregistrés avec succès",
+        "discarded": "Modifications annulées"
+      },
+      "columns": {
+        "name": "Nom",
+        "description": "Description",
+        "enabled": "Activé",
+        "defaultForUsers": "Par défaut pour les utilisateurs",
+        "actions": "Actions"
+      },
+      "tooltips": {
+        "cannotDisable": "Cette catégorie ne peut pas être désactivée",
+        "cannotModify": "Cette catégorie ne peut pas être modifiée"
+      },
+      "actions": {
+        "enableAllSubtypes": "Activer tous les sous-types",
+        "disableAllSubtypes": "Désactiver tous les sous-types",
+        "disable": "Désactiver",
+        "enable": "Activer",
+        "disableDefault": "Désactiver par défaut",
+        "enableDefault": "Activer par défaut",
+        "discardChanges": "Annuler les modifications",
+        "saving": "Enregistrement...",
+        "saveChanges": "Enregistrer les modifications",
+        "cancel": "Annuler"
+      },
+      "help": {
+        "intro": "Contrôlez quels types de notification par e-mail sont disponibles et définissez les valeurs par défaut pour les nouveaux utilisateurs.",
+        "enabledLabel": "Activé :",
+        "enabledDescription": "Détermine si ce type de notification est actif",
+        "defaultLabel": "Par défaut pour les utilisateurs :",
+        "defaultDescription": "Détermine si les nouveaux utilisateurs ont cette notification activée par défaut"
+      },
+      "unsavedChangesAlert": "Vous avez des modifications non enregistrées. Cliquez sur « Enregistrer les modifications » pour les appliquer.",
+      "discardDialog": {
+        "title": "Annuler les modifications ?",
+        "message": "Êtes-vous sûr de vouloir annuler toutes les modifications non enregistrées ? Cette action est irréversible."
+      }
+    },
+    "internalCategoriesUi": {
+      "errors": {
+        "loadCategories": "Échec du chargement des catégories",
+        "loadSubtypes": "Échec du chargement des sous-types de notification",
+        "saveSettings": "Échec de l'enregistrement des paramètres de notification"
+      },
+      "loading": "Chargement des catégories de notifications internes...",
+      "toasts": {
+        "saveSuccess": "Paramètres de notification enregistrés avec succès",
+        "changesDiscarded": "Modifications annulées"
+      },
+      "columns": {
+        "name": "Nom",
+        "description": "Description",
+        "enabled": "Activé",
+        "defaultForUsers": "Par défaut pour les utilisateurs",
+        "actions": "Actions"
+      },
+      "actions": {
+        "enableAllSubtypes": "Activer tous les sous-types",
+        "disableAllSubtypes": "Désactiver tous les sous-types",
+        "disable": "Désactiver",
+        "enable": "Activer",
+        "disableDefault": "Désactiver par défaut",
+        "enableDefault": "Activer par défaut",
+        "discardChanges": "Annuler les modifications",
+        "saving": "Enregistrement...",
+        "saveChanges": "Enregistrer les modifications",
+        "cancel": "Annuler"
+      },
+      "intro": "Contrôlez quels types de notifications internes sont disponibles et définissez les valeurs par défaut pour les nouveaux utilisateurs.",
+      "enabledLabel": "Activé :",
+      "enabledDescription": "Détermine si ce type de notification est actif dans le système",
+      "defaultForUsersLabel": "Par défaut pour les utilisateurs :",
+      "defaultForUsersDescription": "Détermine si les nouveaux utilisateurs ont cette notification activée par défaut",
+      "unsavedChangesAlert": "Vous avez des modifications non enregistrées. Cliquez sur « Enregistrer les modifications » pour les appliquer.",
+      "discardDialog": {
+        "title": "Annuler les modifications ?",
+        "message": "Êtes-vous sûr de vouloir annuler toutes les modifications non enregistrées ? Cette action est irréversible."
       }
     }
   },
@@ -1577,6 +1858,12 @@
     "loading": {
       "title": "SSO",
       "description": "Chargement des outils d'attribution SSO en masse..."
+    },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
     },
     "autoLink": {
       "title": "Configurer automatiquement le SSO pour les nouveaux utilisateurs internes",

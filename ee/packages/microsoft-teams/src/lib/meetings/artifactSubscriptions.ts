@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
 import { resolveTeamsMeetingGraphConfig } from './meetingConfig';
 
@@ -87,7 +87,7 @@ function subscriptionColumn(kind: ArtifactSubscriptionKind): {
       };
 }
 
-function resolveWebhookUrl(): string {
+export function resolveTeamsRecordingsWebhookUrl(): string {
   const configured = [
     process.env.TEAMS_RECORDINGS_WEBHOOK_URL,
     process.env.TEAMS_WEBHOOK_BASE_URL,
@@ -223,8 +223,8 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
   }
 
   const { knex } = await createTenantKnex(tenantId);
-  const row = await knex<TeamsIntegrationSubscriptionRow>('teams_integrations')
-    .where({ tenant: tenantId })
+  const db = tenantDb(knex, tenantId);
+  const row = await db.table<TeamsIntegrationSubscriptionRow>('teams_integrations')
     .first();
 
   if (!row || row.install_status !== 'active') {
@@ -236,8 +236,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
   let clientStateSecret = normalizeString(row.meeting_artifact_webhook_secret);
   if (!clientStateSecret) {
     clientStateSecret = generateArtifactWebhookSecret();
-    await knex('teams_integrations')
-      .where({ tenant: tenantId })
+    await db.table('teams_integrations')
       .update({ meeting_artifact_webhook_secret: clientStateSecret, updated_at: knex.fn.now() });
   }
 
@@ -246,7 +245,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
     clientId: config.clientId,
     clientSecret: config.clientSecret,
   });
-  const notificationUrl = input.notificationUrl ?? resolveWebhookUrl();
+  const notificationUrl = input.notificationUrl ?? resolveTeamsRecordingsWebhookUrl();
   const results: TeamsMeetingArtifactSubscriptionResult[] = [];
 
   for (const kind of [TEAMS_RECORDING_KIND, TEAMS_TRANSCRIPT_KIND]) {
@@ -270,8 +269,7 @@ export async function renewTeamsMeetingArtifactSubscriptions(input: {
       }
     }
 
-    await knex('teams_integrations')
-      .where({ tenant: tenantId })
+    await db.table('teams_integrations')
       .update({
         [columns.idColumn]: result.subscriptionId,
         [columns.expiryColumn]: result.expiresAt,

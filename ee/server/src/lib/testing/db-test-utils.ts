@@ -5,6 +5,7 @@
 
 import { Knex, knex } from 'knex';
 import path from 'node:path';
+import { tenantDb } from '@alga-psa/db';
 import { rollbackTenant } from './tenant-creation';
 
 export interface DbTestConfig {
@@ -91,7 +92,9 @@ export async function cleanupTestData(
 
   // Clean up specific tables
   for (const table of cleanupTables) {
-    await db(table).del();
+    await tenantDb(db, '__ee_test_table_cleanup__')
+      .unscoped(table, 'EE test cleanup deletes caller-specified tables without tenant context')
+      .del();
   }
 
   // If not preserving seeds, clean up all test data
@@ -121,7 +124,9 @@ export async function resetDatabase(
 
     // Clean up specific tables
     for (const table of cleanupTables) {
-      await db(table).del();
+      await tenantDb(db, '__ee_test_database_reset__')
+        .unscoped(table, 'EE test database reset deletes caller-specified tables without tenant context')
+        .del();
     }
 
     // Reset sequences and clean up test data
@@ -159,21 +164,23 @@ export async function verifyTenantIsolation(
   tenantId: string
 ): Promise<boolean> {
   try {
+    const tenantScopedDb = tenantDb(db, tenantId);
     // Check that tenant data exists only for this tenant
-    const tenantData = await db('tenants').where('tenant', tenantId).first();
+    const tenantData = await tenantScopedDb.table('tenants').first();
     if (!tenantData) {
       return false;
     }
 
     // Check that users are properly isolated
-    const users = await db('users').where('tenant', tenantId);
-    const otherTenantUsers = await db('users').whereNot('tenant', tenantId);
+    const users = await tenantScopedDb.table('users');
+    const otherTenantUsers = await tenantScopedDb
+      .unscoped('users', 'tenant isolation test asserts users outside the target tenant')
+      .whereNot('tenant', tenantId);
     
     // Verify no data leakage between tenants
     for (const user of users) {
-      const userRoles = await db('user_roles')
-        .where('user_id', user.user_id)
-        .where('tenant', tenantId);
+      const userRoles = await tenantScopedDb.table('user_roles')
+        .where('user_id', user.user_id);
       
       if (userRoles.length === 0) {
         return false; // User without proper tenant role assignment
@@ -217,10 +224,20 @@ export async function getDatabaseStats(db: Knex): Promise<{
   clientCount: number;
   connectionCount: number;
 }> {
+  const statsDb = tenantDb(db, '__ee_test_database_stats__');
   const [tenantCount, userCount, clientCount] = await Promise.all([
-    db('tenants').count('* as count').first(),
-    db('users').count('* as count').first(),
-    db('clients').count('* as count').first(),
+    statsDb
+      .unscoped('tenants', 'EE test database stats count rows across all tenants')
+      .count('* as count')
+      .first(),
+    statsDb
+      .unscoped('users', 'EE test database stats count rows across all tenants')
+      .count('* as count')
+      .first(),
+    statsDb
+      .unscoped('clients', 'EE test database stats count rows across all tenants')
+      .count('* as count')
+      .first(),
   ]);
 
   // Get connection count

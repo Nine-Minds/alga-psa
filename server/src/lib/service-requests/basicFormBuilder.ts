@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { saveServiceRequestDefinitionDraft, type ServiceRequestDefinitionManagementRow } from './definitionManagement';
 
 export type BasicFormFieldType =
@@ -229,11 +230,8 @@ async function getDefinitionFormSchema(
   tenant: string,
   definitionId: string
 ): Promise<BasicFormSchema> {
-  const row = (await knex('service_request_definitions')
-    .where({
-      tenant,
-      definition_id: definitionId,
-    })
+  const row = (await tenantDb(knex, tenant).table('service_request_definitions')
+    .where({ definition_id: definitionId })
     .first('form_schema')) as DraftFormSchemaRow | undefined;
 
   if (!row) {

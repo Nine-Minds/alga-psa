@@ -60,10 +60,14 @@ export {
   upsertHuduIntegration,
   setHuduIntegrationActive,
   touchHuduIntegrationLastSynced,
+  mergeHuduSettings,
+  setHuduSyncRunState,
 } from './huduIntegrationRepository';
 export type {
   HuduIntegrationRecord,
   UpsertHuduIntegrationInput,
+  HuduSyncStatus,
+  HuduSyncRunState,
 } from './huduIntegrationRepository';
 
 export {
@@ -156,3 +160,6 @@ export type {
 
 export { writeHuduPasswordRevealAudit } from './revealAudit';
 export type { HuduPasswordRevealAuditParams } from './revealAudit';
+
+export { runHuduTenantSync, resolveTenantAuditUserId } from './tenantSync';
+export type { HuduTenantSyncSummary, RunHuduTenantSyncOptions } from './tenantSync';

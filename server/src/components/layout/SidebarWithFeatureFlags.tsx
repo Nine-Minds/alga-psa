@@ -11,10 +11,24 @@ import {
   type MenuItem,
   type NavigationSection,
 } from '@/config/menuConfig';
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useTier } from '@/context/TierContext';
 import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
+import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+export function filterNavigationSectionsBySelfHost(
+  sections: readonly NavigationSection[],
+  selfHostMode: boolean,
+): NavigationSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.requiresSelfHost || selfHostMode),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 
 export function filterMenuItemsByFeatureAccess(
   items: readonly MenuItem[],
@@ -56,10 +70,29 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  const opportunitiesFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
+  const opportunitiesEnabled =
+    typeof opportunitiesFlag === 'boolean' ? opportunitiesFlag : opportunitiesFlag?.enabled ?? false;
+  const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
+  const marketingEnabled =
+    typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
   const { productCode } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
+
+  useEffect(() => {
+    let isMounted = true;
+    getLicenseStatus()
+      .then((result) => {
+        if (isMounted && !isActionPermissionError(result)) {
+          setSelfHostMode(result.selfHostMode);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     if (!useNavigationSections) return;
@@ -101,7 +134,10 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     const filteredSections = baseSections.map((section) => ({
       ...section,
-      items: section.items.map((item) => {
+      items: section.items
+        .filter((item) => item.name !== 'Opportunities' || opportunitiesEnabled)
+        .filter((item) => item.name !== 'Marketing' || marketingEnabled)
+        .map((item) => {
         if (item.name === 'Workflows') {
           const filteredSubItems = item.subItems?.filter((subItem) => {
             if (subItem.name !== 'Dead Letter') return true;
@@ -111,18 +147,27 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         }
 
         return item;
-      }).filter((item): item is MenuItem => item !== null)
+      })
     }));
 
     return filterMenuSectionsByProduct(
       productCode,
       filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, opportunitiesEnabled, marketingEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
-    return filterMenuSectionsByProduct(productCode, settingsNavigationSections);
-  }, [productCode]);
+    const productSections = filterMenuSectionsByProduct(productCode, settingsNavigationSections);
+    const opportunitiesFilteredSections = productSections.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => item.name !== 'Opportunities' || opportunitiesEnabled),
+    }));
+
+    return filterNavigationSectionsBySelfHost(
+      opportunitiesFilteredSections,
+      selfHostMode,
+    );
+  }, [opportunitiesEnabled, productCode, selfHostMode]);
 
   return (
     <Sidebar

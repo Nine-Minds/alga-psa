@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type {
   NormalizedRmmDeviceType,
   NormalizedRmmExternalDeviceSnapshot,
@@ -52,9 +52,9 @@ async function resolveClientIdForScope(
 ): Promise<string | null> {
   if (args.resolvedClientId) return args.resolvedClientId;
 
-  const mapping = await trx('rmm_organization_mappings')
+  const db = tenantDb(trx, args.tenant);
+  const mapping = await db.table('rmm_organization_mappings')
     .where({
-      tenant: args.tenant,
       integration_id: args.integrationId,
       external_organization_id: args.externalScopeId,
     })
@@ -110,7 +110,8 @@ async function upsertAssetExtension(
     patch.installed_software = JSON.stringify(ext.installedSoftware ?? []);
   }
 
-  await trx(table)
+  const db = tenantDb(trx, args.tenant);
+  await db.table(table)
     .insert({
       tenant: args.tenant,
       asset_id: trx.raw('?::uuid', [args.assetId]),
@@ -133,9 +134,10 @@ async function markMappedAssetDeleted(
   }
 ): Promise<NormalizedRmmIngestionResult> {
   const now = new Date().toISOString();
+  const db = tenantDb(trx, args.tenant);
 
-  await trx('assets')
-    .where({ tenant: args.tenant, asset_id: args.assetId })
+  await db.table('assets')
+    .where({ asset_id: args.assetId })
     .update({
       status: 'inactive',
       agent_status: 'offline',
@@ -143,8 +145,8 @@ async function markMappedAssetDeleted(
       updated_at: now,
     });
 
-  await trx('tenant_external_entity_mappings')
-    .where({ tenant: args.tenant, id: args.mappingId })
+  await db.table('tenant_external_entity_mappings')
+    .where({ id: args.mappingId })
     .update({
       sync_status: 'error',
       last_synced_at: trx.fn.now(),
@@ -171,9 +173,10 @@ export async function ingestNormalizedRmmDeviceSnapshot(
   const assetType = normalizeAssetType(snapshot.assetType);
 
   return knex.transaction(async (trx) => {
-    const exactMapping = await trx('tenant_external_entity_mappings')
+    const db = tenantDb(trx, tenant);
+
+    const exactMapping = await db.table('tenant_external_entity_mappings')
       .where({
-        tenant,
         integration_type: snapshot.provider,
         alga_entity_type: 'asset',
         external_entity_id: snapshot.externalDeviceId,
@@ -183,9 +186,8 @@ export async function ingestNormalizedRmmDeviceSnapshot(
 
     const anyRealmMapping = exactMapping
       ? null
-      : await trx('tenant_external_entity_mappings')
+      : await db.table('tenant_external_entity_mappings')
           .where({
-            tenant,
             integration_type: snapshot.provider,
             alga_entity_type: 'asset',
             external_entity_id: snapshot.externalDeviceId,
@@ -218,16 +220,15 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     let mappingId: string | null = null;
 
     if (existingMapping?.alga_entity_id) {
-      existingAsset = await trx('assets')
-        .where({ tenant, asset_id: existingMapping.alga_entity_id })
+      existingAsset = await db.table('assets')
+        .where({ asset_id: existingMapping.alga_entity_id })
         .first<ExistingAssetRow>('asset_id', 'asset_type', 'client_id');
       mappingId = existingMapping.id;
     }
 
     if (!existingAsset) {
-      existingAsset = await trx('assets')
+      existingAsset = await db.table('assets')
         .where({
-          tenant,
           rmm_provider: snapshot.provider,
           rmm_device_id: snapshot.externalDeviceId,
         })
@@ -235,9 +236,8 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     }
 
     if (!mappingId && existingAsset?.asset_id) {
-      const assetScopedMapping = await trx('tenant_external_entity_mappings')
+      const assetScopedMapping = await db.table('tenant_external_entity_mappings')
         .where({
-          tenant,
           integration_type: snapshot.provider,
           alga_entity_type: 'asset',
           alga_entity_id: existingAsset.asset_id,
@@ -279,8 +279,8 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         assetPatch.client_id = resolvedClientId;
       }
 
-      await trx('assets')
-        .where({ tenant, asset_id: assetId })
+      await db.table('assets')
+        .where({ asset_id: assetId })
         .update(assetPatch);
 
       await upsertAssetExtension(trx, {
@@ -291,8 +291,8 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       });
 
       if (mappingId) {
-        await trx('tenant_external_entity_mappings')
-          .where({ tenant, id: mappingId })
+        await db.table('tenant_external_entity_mappings')
+          .where({ id: mappingId })
           .update({
             external_realm_id: snapshot.externalScopeId,
             sync_status: 'synced',
@@ -300,7 +300,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
             metadata: snapshot.metadata ?? {},
           });
       } else {
-        await trx('tenant_external_entity_mappings').insert({
+        await db.table('tenant_external_entity_mappings').insert({
           tenant,
           integration_type: snapshot.provider,
           alga_entity_type: 'asset',
@@ -329,7 +329,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     }
 
     const now = new Date().toISOString();
-    const [createdAsset] = await trx('assets')
+    const [createdAsset] = await db.table('assets')
       .insert({
         tenant,
         asset_type: assetType,
@@ -359,7 +359,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       snapshot,
     });
 
-    await trx('tenant_external_entity_mappings').insert({
+    await db.table('tenant_external_entity_mappings').insert({
       tenant,
       integration_type: snapshot.provider,
       alga_entity_type: 'asset',

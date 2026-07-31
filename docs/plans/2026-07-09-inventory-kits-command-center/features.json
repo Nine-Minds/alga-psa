@@ -1,0 +1,176 @@
+[
+  {
+    "id": "F001",
+    "description": "Create server-side kit summary read model with derived status, pricing mode, component count, buildable quantity, and usage metadata.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Acceptance Criteria"]
+  },
+  {
+    "id": "F002",
+    "description": "Create server-side kit detail read model with product identity, inventory settings, BOM rows, stock/cost context, pricing/margin, readiness, and sales-order behavior data.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "UX / UI Notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Add create-kit action that creates a product-backed kit and enables inventory with is_kit=true.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Add update-kit action for identity and kit pricing fields exposed by the Kits screen.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Replace the Kits page header with Inventory kits summary counts and a primary Create kit action.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F006",
+    "description": "Add searchable/filterable kit list with status, SKU, pricing mode, can-build quantity, component count, and row action.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F007",
+    "description": "Add selected-kit detail view with product identity, BOM, pricing/margin, stock readiness, sales-order behavior, and usage links.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F008",
+    "description": "Make component loading clear stale BOM rows immediately and show inline retry on load failure.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F009",
+    "description": "Render empty BOM as an explicit warning state.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F010",
+    "description": "Make duplicate component add read as an update-quantity operation.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Validate positive integer component quantities in the UI.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Expose and validate fixed-price kit amount when kit pricing mode is fixed.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Acceptance Criteria"]
+  },
+  {
+    "id": "F013",
+    "description": "Map known kit server errors to human operator-facing explanations.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Preserve existing sales-order kit explosion behavior: priced parent and zero-dollar child component lines.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Acceptance Criteria"]
+  },
+  {
+    "id": "F015",
+    "description": "Add inventory locale keys for all new Kits screen copy.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "Use one transaction-safe kit price resolver for summary, detail preview, and sales-order mutations without a sum-mode catalog-rate fallback.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations", "Acceptance Criteria"]
+  },
+  {
+    "id": "F017",
+    "description": "Render sum-mode kit price as a read-only calculated amount based on BOM component selling prices.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F018",
+    "description": "Render exactly one editable kit price when fixed pricing is selected.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F019",
+    "description": "Make Create kit request a price only for fixed mode and allow sum-mode kits to be created before their BOM is defined.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F020",
+    "description": "Seed a sales-order kit line from the canonical resolved price unless the user explicitly changes that order line's price.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations", "Acceptance Criteria"]
+  },
+  {
+    "id": "F021",
+    "description": "Identify a changed sales-order kit price as an order-specific override and let the user reset it to the resolved kit price before save.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F022",
+    "description": "Show the component selling-price basis for a calculated sum-mode kit price separately from component cost and margin.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F023",
+    "description": "Label component cost, gross profit, and gross margin as separate financial facts.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F024",
+    "description": "Order Create kit fields by dependency and remove the separate kit cost input that does not drive kit margin.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F025",
+    "description": "Enable Save pricing only when pricing mode or fixed price has unsaved changes.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F026",
+    "description": "Require an explicit order-specific kit price when the sales-order currency differs from the configured kit currency.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Acceptance Criteria"]
+  },
+  {
+    "id": "F027",
+    "description": "Suppress cost, gross profit, and gross margin when component costs are missing or use another currency.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F028",
+    "description": "Let the operator enter a positive whole-number kit quantity in the sales-order preview and multiply both parent totals and child quantities.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria"]
+  },
+  {
+    "id": "F029",
+    "description": "Open sales-order creation with the selected kit preselected and link kit usage to a server-filtered list of sales orders containing that kit.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes", "Acceptance Criteria"]
+  }
+]

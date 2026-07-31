@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
@@ -51,11 +52,9 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
   context: ServiceRequestPortalCatalogContext,
   definitionId: string
 ): Promise<ServiceRequestPortalDefinitionDetail | null> {
-  const definition = (await knex('service_request_definitions')
-    .where({
-      tenant: context.tenant,
-      definition_id: definitionId,
-    })
+  const db = tenantDb(knex, context.tenant);
+  const definition = (await db.table('service_request_definitions')
+    .where({ definition_id: definitionId })
     .whereNot('lifecycle_state', 'archived')
     .first('tenant', 'definition_id', 'lifecycle_state')) as PublishedDefinitionRow | undefined;
 
@@ -63,11 +62,8 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     return null;
   }
 
-  const latestVersion = (await knex('service_request_definition_versions')
-    .where({
-      tenant: context.tenant,
-      definition_id: definitionId,
-    })
+  const latestVersion = (await db.table('service_request_definition_versions')
+    .where({ definition_id: definitionId })
     .orderBy('version_number', 'desc')
     .first(
       'version_id',

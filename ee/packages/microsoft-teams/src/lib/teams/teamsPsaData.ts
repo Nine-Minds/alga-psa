@@ -4,11 +4,14 @@ import {
   computeWorkDateFields,
   createTenantKnex,
   resolveUserTimeZone,
+  tenantDb,
+  truncateToMinute,
   withTransaction,
   type ServiceContext,
 } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 export interface TeamsTicketRecord {
   ticket_id: string;
@@ -72,24 +75,15 @@ function fullNameExpression(knex: any, tableAlias: string, outputAlias: string):
 }
 
 function buildTeamsTicketBaseQuery(knex: any, tenant: string) {
-  return knex('tickets as t')
-    .leftJoin('clients as comp', function joinClients(this: any) {
-      this.on('t.client_id', '=', 'comp.client_id').andOn('t.tenant', '=', 'comp.tenant');
-    })
-    .leftJoin('contacts as cont', function joinContacts(this: any) {
-      this.on('t.contact_name_id', '=', 'cont.contact_name_id').andOn('t.tenant', '=', 'cont.tenant');
-    })
-    .leftJoin('statuses as stat', function joinStatuses(this: any) {
-      this.on('t.status_id', '=', 'stat.status_id').andOn('t.tenant', '=', 'stat.tenant');
-    })
-    .leftJoin('priorities as pri', function joinPriorities(this: any) {
-      this.on('t.priority_id', '=', 'pri.priority_id').andOn('t.tenant', '=', 'pri.tenant');
-    })
-    .leftJoin('users as assigned_user', function joinAssignedUser(this: any) {
-      this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
-    })
-    .where('t.tenant', tenant)
-    .select(
+  const db = tenantDb(knex, tenant);
+  const query = db.table('tickets as t');
+  db.tenantJoin(query, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
+  db.tenantJoin(query, 'contacts as cont', 't.contact_name_id', 'cont.contact_name_id', { type: 'left' });
+  db.tenantJoin(query, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
+  db.tenantJoin(query, 'priorities as pri', 't.priority_id', 'pri.priority_id', { type: 'left' });
+  db.tenantJoin(query, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
+
+  return query.select(
       't.ticket_id',
       't.ticket_number',
       't.title',
@@ -121,7 +115,8 @@ export async function resolveTeamsTicketByReference(
   reference: string,
   context: ServiceContext
 ): Promise<TeamsTicketRecord | null> {
-  const trimmed = reference.trim();
+  // Accept human forms with a leading '#' ("ticket #1234").
+  const trimmed = reference.trim().replace(/^#/, '');
   if (!trimmed) return null;
 
   const { knex } = await createTenantKnex(context.tenant);
@@ -132,6 +127,16 @@ export async function resolveTeamsTicketByReference(
     .whereRaw('LOWER("t"."ticket_number") = ?', [trimmed.toLowerCase()])
     .first();
   if (byNumber) return byNumber as TeamsTicketRecord;
+
+  // Purely numeric references also match prefixed/zero-padded ticket numbers
+  // (e.g. "1833" resolves alga0001833). Tenant scoping comes from the base
+  // query, so identical numbers in other tenants never leak.
+  if (/^\d+$/.test(trimmed)) {
+    const byNumericSuffix = await buildTeamsTicketBaseQuery(knex, context.tenant)
+      .whereRaw('"t"."ticket_number" ~* ?', [`^[^0-9]*0*${trimmed}$`])
+      .first();
+    if (byNumericSuffix) return byNumericSuffix as TeamsTicketRecord;
+  }
 
   // Fall back to ticket_id lookup only when the reference looks like a UUID.
   if (UUID_PATTERN.test(trimmed)) {
@@ -144,45 +149,100 @@ export async function resolveTeamsTicketByReference(
   return null;
 }
 
+export interface TeamsClientRecord {
+  client_id: string;
+  client_name: string | null;
+}
+
+export async function searchTeamsClientsByName(params: {
+  tenantId: string;
+  name: string;
+  limit: number;
+}): Promise<TeamsClientRecord[]> {
+  const trimmed = params.name.trim();
+  if (!trimmed) return [];
+
+  const { knex } = await createTenantKnex(params.tenantId);
+  const rows = await tenantDb(knex, params.tenantId).table('clients')
+    .where('is_inactive', false)
+    .whereILike('client_name', `%${trimmed}%`)
+    .select('client_id', 'client_name')
+    .orderBy('client_name', 'asc')
+    .limit(params.limit);
+
+  return rows as TeamsClientRecord[];
+}
+
+export async function listTeamsActiveClients(params: {
+  tenantId: string;
+  limit: number;
+}): Promise<TeamsClientRecord[]> {
+  const { knex } = await createTenantKnex(params.tenantId);
+  const rows = await tenantDb(knex, params.tenantId).table('clients')
+    .where('is_inactive', false)
+    .select('client_id', 'client_name')
+    .orderBy('client_name', 'asc')
+    .limit(params.limit);
+
+  return rows as TeamsClientRecord[];
+}
+
+export interface TeamsTicketCreationDefaults {
+  boardId: string | null;
+  statusId: string | null;
+}
+
+/**
+ * Default board + open status used when a ticket is created from a bot chat
+ * command (no picker UI). Prefers the tenant default board, then that
+ * board's default open status.
+ */
+export async function getTeamsTicketCreationDefaults(params: {
+  tenantId: string;
+}): Promise<TeamsTicketCreationDefaults> {
+  const { knex } = await createTenantKnex(params.tenantId);
+  const db = tenantDb(knex, params.tenantId);
+
+  const board = (await db.table('boards')
+    .where('is_inactive', false)
+    .select('board_id')
+    .orderBy([
+      { column: 'is_default', order: 'desc' },
+      { column: 'board_name', order: 'asc' },
+    ])
+    .first()) as { board_id?: string | null } | undefined;
+
+  const boardId = board?.board_id ?? null;
+  if (!boardId) {
+    return { boardId: null, statusId: null };
+  }
+
+  const status = (await db.table('statuses')
+    .where({ status_type: 'ticket', is_closed: false })
+    .where((builder: any) => {
+      builder.where('board_id', boardId).orWhereNull('board_id');
+    })
+    .select('status_id')
+    .orderBy([
+      { column: 'is_default', order: 'desc' },
+      { column: 'order_number', order: 'asc' },
+    ])
+    .first()) as { status_id?: string | null } | undefined;
+
+  return { boardId, statusId: status?.status_id ?? null };
+}
+
 export async function listAssignedOpenTeamsTickets(params: {
   tenantId: string;
   assignedToUserId: string;
   limit: number;
 }): Promise<TeamsTicketRecord[]> {
   const { knex } = await createTenantKnex(params.tenantId);
-  const rows = await knex('tickets as t')
-    .leftJoin('clients as comp', function joinClients(this: any) {
-      this.on('t.client_id', '=', 'comp.client_id').andOn('t.tenant', '=', 'comp.tenant');
-    })
-    .leftJoin('contacts as cont', function joinContacts(this: any) {
-      this.on('t.contact_name_id', '=', 'cont.contact_name_id').andOn('t.tenant', '=', 'cont.tenant');
-    })
-    .leftJoin('statuses as stat', function joinStatuses(this: any) {
-      this.on('t.status_id', '=', 'stat.status_id').andOn('t.tenant', '=', 'stat.tenant');
-    })
-    .leftJoin('priorities as pri', function joinPriorities(this: any) {
-      this.on('t.priority_id', '=', 'pri.priority_id').andOn('t.tenant', '=', 'pri.tenant');
-    })
-    .leftJoin('users as assigned_user', function joinAssignedUser(this: any) {
-      this.on('t.assigned_to', '=', 'assigned_user.user_id').andOn('t.tenant', '=', 'assigned_user.tenant');
-    })
-    .where('t.tenant', params.tenantId)
+  const rows = await buildTeamsTicketBaseQuery(knex, params.tenantId)
     .andWhere('t.assigned_to', params.assignedToUserId)
     .andWhere((builder: any) => {
       builder.where('stat.is_closed', false).orWhereNull('stat.is_closed');
     })
-    .select(
-      't.ticket_id',
-      't.ticket_number',
-      't.title',
-      't.assigned_to',
-      'comp.client_name',
-      'cont.full_name as contact_name',
-      'stat.name as status_name',
-      'stat.is_closed as status_is_closed',
-      'pri.priority_name',
-      fullNameExpression(knex, 'assigned_user', 'assigned_to_name')
-    )
     .orderBy('t.entered_at', 'desc')
     .limit(params.limit);
 
@@ -196,17 +256,7 @@ export async function searchTeamsTickets(params: {
   includeClosed?: boolean;
 }): Promise<TeamsTicketRecord[]> {
   const { knex } = await createTenantKnex(params.tenantId);
-  const rows = await knex('tickets as t')
-    .leftJoin('clients as comp', function joinClients(this: any) {
-      this.on('t.client_id', '=', 'comp.client_id').andOn('t.tenant', '=', 'comp.tenant');
-    })
-    .leftJoin('contacts as cont', function joinContacts(this: any) {
-      this.on('t.contact_name_id', '=', 'cont.contact_name_id').andOn('t.tenant', '=', 'cont.tenant');
-    })
-    .leftJoin('statuses as stat', function joinStatuses(this: any) {
-      this.on('t.status_id', '=', 'stat.status_id').andOn('t.tenant', '=', 'stat.tenant');
-    })
-    .where('t.tenant', params.tenantId)
+  const rows = await buildTeamsTicketBaseQuery(knex, params.tenantId)
     .modify((builder: any) => {
       if (!params.includeClosed) {
         builder.where((sub: any) => {
@@ -221,13 +271,6 @@ export async function searchTeamsTickets(params: {
         .orWhereILike('comp.client_name', `%${params.query}%`)
         .orWhereILike('cont.full_name', `%${params.query}%`);
     })
-    .select(
-      't.ticket_id',
-      't.ticket_number',
-      't.title',
-      'comp.client_name',
-      'cont.full_name as contact_name'
-    )
     .orderBy('t.entered_at', 'desc')
     .limit(params.limit);
 
@@ -241,8 +284,8 @@ export async function updateTeamsTicketAssignee(params: {
   actorUserId: string;
 }): Promise<void> {
   const { knex } = await createTenantKnex(params.tenantId);
-  await knex('tickets')
-    .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+  await tenantDb(knex, params.tenantId).table('tickets')
+    .where({ ticket_id: params.ticketId })
     .update({
       assigned_to: params.assigneeId,
       updated_by: params.actorUserId,
@@ -260,8 +303,9 @@ export async function addTeamsTicketComment(params: {
 }): Promise<void> {
   const { knex } = await createTenantKnex(params.tenantId);
   await withTransaction(knex, async (trx) => {
-    const ticket = await trx('tickets')
-      .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+    const db = tenantDb(trx, params.tenantId);
+    const ticket = await db.table('tickets')
+      .where({ ticket_id: params.ticketId })
       .first('ticket_id');
 
     if (!ticket) {
@@ -273,7 +317,7 @@ export async function addTeamsTicketComment(params: {
     const teamsThreadId = randomUUID();
     const teamsNowIso = new Date().toISOString();
 
-    await trx('comment_threads').insert({
+    await db.table('comment_threads').insert({
       tenant: params.tenantId,
       thread_id: teamsThreadId,
       ticket_id: params.ticketId,
@@ -286,7 +330,7 @@ export async function addTeamsTicketComment(params: {
       created_by: params.actorUserId || null,
     });
 
-    await trx('comments').insert({
+    await db.table('comments').insert({
       comment_id: teamsCommentId,
       thread_id: teamsThreadId,
       ticket_id: params.ticketId,
@@ -300,8 +344,8 @@ export async function addTeamsTicketComment(params: {
       metadata: params.metadata,
     });
 
-    await trx('tickets')
-      .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+    await db.table('tickets')
+      .where({ ticket_id: params.ticketId })
       .update({
         updated_by: params.actorUserId,
         updated_at: trx.raw('now()'),
@@ -314,8 +358,8 @@ export async function getTeamsProjectTaskById(
   context: ServiceContext
 ): Promise<TeamsProjectTaskRecord | null> {
   const { knex } = await createTenantKnex(context.tenant);
-  const task = await knex('project_tasks')
-    .where({ tenant: context.tenant, task_id: taskId })
+  const task = await tenantDb(knex, context.tenant).table('project_tasks')
+    .where({ task_id: taskId })
     .select('task_id', 'project_id', 'task_name', 'description')
     .first();
 
@@ -327,8 +371,8 @@ export async function listTeamsProjectTasks(
   context: ServiceContext
 ): Promise<TeamsProjectTaskRecord[]> {
   const { knex } = await createTenantKnex(context.tenant);
-  const rows = await knex('project_tasks')
-    .where({ tenant: context.tenant, project_id: projectId })
+  const rows = await tenantDb(knex, context.tenant).table('project_tasks')
+    .where({ project_id: projectId })
     .select('task_id', 'project_id', 'task_name', 'description')
     .orderBy([{ column: 'order_key', order: 'asc' }, { column: 'wbs_code', order: 'asc' }]);
 
@@ -340,15 +384,16 @@ export async function getTeamsContactById(
   context: ServiceContext
 ): Promise<TeamsContactRecord | null> {
   const { knex } = await createTenantKnex(context.tenant);
-  const contact = await knex('contacts as c')
-    .leftJoin('clients as comp', function joinClients(this: any) {
-      this.on('c.client_id', '=', 'comp.client_id').andOn('c.tenant', '=', 'comp.tenant');
-    })
-    .where({ 'c.tenant': context.tenant, 'c.contact_name_id': contactId })
+  const db = tenantDb(knex, context.tenant);
+  const contactQuery = db.table('contacts as c');
+  db.tenantJoin(contactQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+
+  const contact = await contactQuery
+    .where({ 'c.contact_name_id': contactId })
     .select('c.contact_name_id', 'c.client_id', 'c.full_name', 'c.email', 'c.role', 'comp.client_name')
     .first();
 
-  return (contact as TeamsContactRecord | undefined) ?? null;
+  return (contact as unknown as TeamsContactRecord | undefined) ?? null;
 }
 
 export async function searchTeamsContacts(params: {
@@ -357,12 +402,12 @@ export async function searchTeamsContacts(params: {
   limit: number;
 }): Promise<TeamsContactRecord[]> {
   const { knex } = await createTenantKnex(params.tenantId);
+  const db = tenantDb(knex, params.tenantId);
   const normalizedDigits = params.query.replace(/\D/g, '');
-  const rows = await knex('contacts as c')
-    .leftJoin('clients as comp', function joinClients(this: any) {
-      this.on('c.client_id', '=', 'comp.client_id').andOn('c.tenant', '=', 'comp.tenant');
-    })
-    .where('c.tenant', params.tenantId)
+  const contactQuery = db.table('contacts as c');
+  db.tenantJoin(contactQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+
+  const rows = await contactQuery
     .andWhere('c.is_inactive', false)
     .where((builder: any) => {
       builder
@@ -370,24 +415,23 @@ export async function searchTeamsContacts(params: {
         .orWhereILike('c.email', `%${params.query}%`)
         .orWhereILike('c.role', `%${params.query}%`)
         .orWhereILike('comp.client_name', `%${params.query}%`)
-        .orWhereExists(function existsPhone(this: any) {
-          this.select(knex.raw('1'))
-            .from('contact_phone_numbers as cpn')
-            .whereRaw('cpn.tenant = c.tenant')
+        .orWhereExists(
+          db.subquery('contact_phone_numbers as cpn')
+            .select(knex.raw('1'))
             .andWhereRaw('cpn.contact_name_id = c.contact_name_id')
             .andWhere(function matchPhone(this: any) {
               this.whereILike('cpn.phone_number', `%${params.query}%`);
               if (normalizedDigits) {
                 this.orWhere('cpn.normalized_phone_number', 'like', `%${normalizedDigits}%`);
               }
-            });
-        });
+            })
+        );
     })
     .select('c.contact_name_id', 'c.client_id', 'c.full_name', 'c.email', 'c.role', 'comp.client_name')
     .orderBy('c.full_name', 'asc')
     .limit(params.limit);
 
-  return rows as TeamsContactRecord[];
+  return rows as unknown as TeamsContactRecord[];
 }
 
 export async function getTeamsTimeEntryById(
@@ -395,8 +439,8 @@ export async function getTeamsTimeEntryById(
   context: ServiceContext
 ): Promise<TeamsTimeEntryRecord | null> {
   const { knex } = await createTenantKnex(context.tenant);
-  const entry = await knex('time_entries')
-    .where({ tenant: context.tenant, entry_id: entryId })
+  const entry = await tenantDb(knex, context.tenant).table('time_entries')
+    .where({ entry_id: entryId })
     .select('entry_id', 'work_item_id', 'work_item_type')
     .first();
 
@@ -416,38 +460,47 @@ export async function createTeamsTimeEntry(params: {
   const { knex } = await createTenantKnex(params.tenantId);
   const userTimeZone = await resolveUserTimeZone(knex, params.tenantId, params.actorUserId);
   const { work_date, work_timezone } = computeWorkDateFields(params.startTime, userTimeZone);
+  // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape used
+  // by TimeEntryService and the workflow runtime. Teams supplies real meeting instants, so the
+  // seconds must be dropped here too or stored entries reproduce the off-by-one duration bug.
+  const startTime = truncateToMinute(params.startTime);
+  const endTime = truncateToMinute(params.endTime);
   const billableDuration = Math.max(
     0,
-    Math.round((new Date(params.endTime).getTime() - new Date(params.startTime).getTime()) / 60000)
+    Math.round((endTime.getTime() - startTime.getTime()) / 60000)
   );
   const entryId = randomUUID();
 
   let projectId: string | null = null;
   if (params.workItemType === 'project_task') {
-    const task = await knex('project_tasks')
-      .where({ tenant: params.tenantId, task_id: params.workItemId })
+    const task = await tenantDb(knex, params.tenantId).table('project_tasks')
+      .where({ task_id: params.workItemId })
       .select('project_id')
       .first();
     projectId = (task as { project_id?: string | null } | undefined)?.project_id ?? null;
   }
 
-  await knex('time_entries').insert({
-    tenant: params.tenantId,
-    entry_id: entryId,
-    user_id: params.actorUserId,
-    start_time: params.startTime,
-    end_time: params.endTime,
-    work_date,
-    work_timezone,
-    notes: params.notes || null,
-    work_item_id: params.workItemId,
-    work_item_type: params.workItemType,
-    billable_duration: params.billable ? billableDuration : 0,
-    approval_status: 'DRAFT',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    created_by: params.actorUserId,
-    updated_by: params.actorUserId,
+  await withTransaction(knex, async (trx) => {
+    const entry = {
+      tenant: params.tenantId,
+      entry_id: entryId,
+      user_id: params.actorUserId,
+      start_time: startTime,
+      end_time: endTime,
+      work_date,
+      work_timezone,
+      notes: params.notes || null,
+      work_item_id: params.workItemId,
+      work_item_type: params.workItemType,
+      billable_duration: params.billable ? billableDuration : 0,
+      approval_status: 'DRAFT',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: params.actorUserId,
+      updated_by: params.actorUserId,
+    };
+    await tenantDb(trx, params.tenantId).table('time_entries').insert(entry);
+    await recalculateProjectTaskActualHoursForEntryChange(trx, params.tenantId, null, entry);
   });
 
   return {
@@ -463,8 +516,8 @@ export async function getTeamsApprovalById(
   context: ServiceContext
 ): Promise<TeamsApprovalRecord | null> {
   const { knex } = await createTenantKnex(context.tenant);
-  const approval = await knex('time_sheets')
-    .where({ tenant: context.tenant, id: approvalId })
+  const approval = await tenantDb(knex, context.tenant).table('time_sheets')
+    .where({ id: approvalId })
     .select('id', 'approval_status')
     .first();
 
@@ -479,8 +532,10 @@ export async function approveTeamsTimeSheet(params: {
 }): Promise<void> {
   const { knex } = await createTenantKnex(params.tenantId);
   await withTransaction(knex, async (trx) => {
-    await trx('time_sheets')
-      .where({ tenant: params.tenantId, id: params.approvalId })
+    const db = tenantDb(trx, params.tenantId);
+
+    await db.table('time_sheets')
+      .where({ id: params.approvalId })
       .update({
         approval_status: 'APPROVED',
         approved_at: new Date(),
@@ -489,8 +544,8 @@ export async function approveTeamsTimeSheet(params: {
         updated_at: new Date(),
       });
 
-    await trx('time_entries')
-      .where({ tenant: params.tenantId, time_sheet_id: params.approvalId })
+    await db.table('time_entries')
+      .where({ time_sheet_id: params.approvalId })
       .update({
         approval_status: 'APPROVED',
         approved_at: new Date(),
@@ -499,7 +554,7 @@ export async function approveTeamsTimeSheet(params: {
       });
 
     if (params.approvalNotes) {
-      await trx('time_sheet_comments').insert({
+      await db.table('time_sheet_comments').insert({
         time_sheet_id: params.approvalId,
         user_id: params.actorUserId,
         comment_text: params.approvalNotes,
@@ -520,8 +575,10 @@ export async function requestChangesForTeamsTimeSheet(params: {
 }): Promise<void> {
   const { knex } = await createTenantKnex(params.tenantId);
   await withTransaction(knex, async (trx) => {
-    await trx('time_sheets')
-      .where({ tenant: params.tenantId, id: params.approvalId })
+    const db = tenantDb(trx, params.tenantId);
+
+    await db.table('time_sheets')
+      .where({ id: params.approvalId })
       .update({
         approval_status: 'CHANGES_REQUESTED',
         change_reason: params.changeReason,
@@ -529,7 +586,7 @@ export async function requestChangesForTeamsTimeSheet(params: {
         updated_at: new Date(),
       });
 
-    await trx('time_sheet_comments').insert({
+    await db.table('time_sheet_comments').insert({
       time_sheet_id: params.approvalId,
       user_id: params.actorUserId,
       comment_text: `Changes requested: ${params.changeReason}${params.detailedFeedback ? `\n\nDetails: ${params.detailedFeedback}` : ''}`,
@@ -547,18 +604,15 @@ export async function listPendingApprovalsForTeams(params: {
   query?: string;
 }): Promise<TeamsPendingApprovalRecord[]> {
   const { knex } = await createTenantKnex(params.tenantId);
+  const db = tenantDb(knex, params.tenantId);
   const canReadAll = await hasPermission(params.user, 'timesheet', 'read_all', knex);
   const normalizedQuery = params.query?.trim();
 
-  let query = knex('time_sheets')
-    .join('users', function joinUsers(this: any) {
-      this.on('time_sheets.user_id', '=', 'users.user_id').andOn('time_sheets.tenant', '=', 'users.tenant');
-    })
-    .join('time_periods', function joinPeriods(this: any) {
-      this.on('time_sheets.period_id', '=', 'time_periods.period_id').andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-    })
-    .where('time_sheets.tenant', params.tenantId)
-    .whereIn('time_sheets.approval_status', ['SUBMITTED', 'CHANGES_REQUESTED'])
+  let query = db.table('time_sheets');
+  db.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id');
+  db.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
+
+  query = query.whereIn('time_sheets.approval_status', ['SUBMITTED', 'CHANGES_REQUESTED'])
     .select(
       'time_sheets.id',
       'time_sheets.approval_status',
@@ -585,16 +639,15 @@ export async function listPendingApprovalsForTeams(params: {
 
     query = query
       .where((builder: any) => {
-        builder.whereExists(function managerScope(this: any) {
-          this.select(1)
-            .from('team_members')
-            .join('teams', function joinTeams(this: any) {
-              this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
-            })
+        const managerScope = db.subquery('team_members')
+          .select(knex.raw('1'));
+        db.tenantJoin(managerScope, 'teams', 'team_members.team_id', 'teams.team_id');
+
+        builder.whereExists(
+          managerScope
             .where('team_members.user_id', knex.ref('users.user_id'))
             .andWhere('teams.manager_id', params.user.user_id)
-            .andWhere('teams.tenant', params.tenantId);
-        });
+        );
 
         if (reportsToUserIds.length > 0) {
           builder.orWhereIn('users.user_id', reportsToUserIds);

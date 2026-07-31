@@ -23,6 +23,13 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { MoreVertical, PlusIcon, RefreshCw } from 'lucide-react';
 import { useTriggerReferenceData } from '../hooks/useTriggerReferenceData';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface TriggerListProps {
   templates: SurveyTemplate[];
@@ -31,6 +38,9 @@ interface TriggerListProps {
   onTriggersChange: React.Dispatch<React.SetStateAction<SurveyTrigger[]>>;
   onRefresh: () => Promise<void>;
 }
+
+const isSurveyActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function TriggerList({ templates, triggers, isLoading, onTriggersChange, onRefresh }: TriggerListProps) {
   const { t } = useTranslation('msp/surveys');
@@ -114,6 +124,9 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
     setIsToggling(trigger.triggerId);
     try {
       const updated = await updateSurveyTrigger(trigger.triggerId, { enabled });
+      if (isSurveyActionError(updated)) {
+        throw new Error(getErrorMessage(updated));
+      }
       onTriggersChange((prev) =>
         prev.map((item) => (item.triggerId === updated.triggerId ? updated : item))
       );
@@ -139,7 +152,10 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
 
   const handleDelete = async (trigger: SurveyTrigger) => {
     try {
-      await deleteSurveyTrigger(trigger.triggerId);
+      const result = await deleteSurveyTrigger(trigger.triggerId);
+      if (isSurveyActionError(result)) {
+        throw new Error(getErrorMessage(result));
+      }
       onTriggersChange((prev) => prev.filter((item) => item.triggerId !== trigger.triggerId));
       toast({
         title: t('settings.triggerList.toasts.deleted', {

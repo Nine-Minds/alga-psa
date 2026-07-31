@@ -9,6 +9,7 @@ import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle, ChevronDown, C
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { CSVImportPreview } from './CSVImportPreview';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getCsvResponseErrorMessage } from './csvResponseErrors';
 
 interface CSVTaxImportPanelProps {
   onImportComplete?: (result: { importId: string; invoiceCount: number }) => void;
@@ -106,14 +107,21 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
         })
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => null);
+      const fallbackMessage = t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' });
 
       if (!response.ok) {
-        throw new Error(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
+        setError(getCsvResponseErrorMessage(result, fallbackMessage));
+        return;
+      }
+      if (!result) {
+        setError(fallbackMessage);
+        return;
       }
 
       setValidationResult(result.validation);
     } catch (err) {
+      console.error('Failed to validate CSV tax import:', err);
       setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
@@ -145,10 +153,16 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
         })
       });
 
-      const result: ImportResult = await response.json();
+      const result = await response.json().catch(() => null) as ImportResult | null;
+      const fallbackMessage = t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' });
 
       if (!response.ok) {
-        throw new Error(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
+        setError(getCsvResponseErrorMessage(result, fallbackMessage));
+        return;
+      }
+      if (!result) {
+        setError(fallbackMessage);
+        return;
       }
 
       setImportResult(result);
@@ -160,6 +174,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
         });
       }
     } catch (err) {
+      console.error('Failed to import CSV tax data:', err);
       setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);

@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -22,7 +23,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   deleteContract,
   getDraftContracts,
@@ -42,6 +43,22 @@ import {
   getDraftTabBadgeCount,
   normalizeContractSubtab,
 } from './contractsTabs';
+import { toPlainDate } from '@alga-psa/core';
+
+// start_date/end_date are calendar dates. Parsing them with `new Date()` reads a
+// date-only/UTC-midnight value as UTC, so `.toLocaleDateString()` renders the
+// previous day in negative-offset timezones. Pin to noon UTC to stay on the
+// intended calendar day regardless of the viewer's timezone.
+const formatCalendarDate = (value: unknown): string | null => {
+  if (value === null || value === undefined || value === '') return null;
+  try {
+    const plainDate = toPlainDate(value as string | Date);
+    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
+    return displayDate.toLocaleDateString();
+  } catch {
+    return null;
+  }
+};
 
 const Contracts: React.FC = () => {
   const { t } = useTranslation('msp/contracts');
@@ -127,6 +144,13 @@ const Contracts: React.FC = () => {
         getContractsWithClients(),
         getDraftContracts(),
       ]);
+      const expectedLoadError = [fetchedTemplates, fetchedAssignments, fetchedDrafts].find(
+        (result) => isActionMessageError(result) || isActionPermissionError(result)
+      );
+      if (expectedLoadError) {
+        setError(getErrorMessage(expectedLoadError));
+        return;
+      }
       setTemplateContracts(fetchedTemplates);
       setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
       setDraftContracts(fetchedDrafts);
@@ -155,8 +179,8 @@ const Contracts: React.FC = () => {
     setIsDeletingContract(true);
     try {
       const result = await deleteContract(contractToDelete.contractId);
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(getErrorMessage(result));
         setContractToDelete(null);
         return;
       }
@@ -180,6 +204,10 @@ const Contracts: React.FC = () => {
         handleError(draftData.permissionError);
         return;
       }
+      if (isActionMessageError(draftData)) {
+        toast.error(getErrorMessage(draftData));
+        return;
+      }
       setDraftToResume(draftData);
       setShowClientWizard(true);
     } catch (err) {
@@ -197,8 +225,8 @@ const Contracts: React.FC = () => {
     setIsDiscardingDraft(true);
     try {
       const result = await deleteContract(draftToDiscard.contractId);
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(getErrorMessage(result));
         return;
       }
       await fetchContracts();
@@ -216,7 +244,11 @@ const Contracts: React.FC = () => {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: false });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: false });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error
@@ -231,7 +263,11 @@ const Contracts: React.FC = () => {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error
@@ -246,7 +282,11 @@ const Contracts: React.FC = () => {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error
@@ -362,10 +402,7 @@ const Contracts: React.FC = () => {
     {
       title: t('contractsList.columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
-      render: (value: string | null) =>
-        typeof value === 'string' && value.trim().length > 0
-          ? value
-          : t('contractsList.empty.dash', { defaultValue: '—' }),
+      render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
     },
     {
       title: t('contractsList.columns.sourceTemplate', { defaultValue: 'Source Template' }),
@@ -384,28 +421,14 @@ const Contracts: React.FC = () => {
     {
       title: t('contractsList.columns.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
-      render: (value: any) => {
-        if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
-        try {
-          const date = new Date(value);
-          return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
-        } catch {
-          return t('contractsList.empty.dash', { defaultValue: '—' });
-        }
-      },
+      render: (value: any) =>
+        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
-      render: (value: any) => {
-        if (!value) return t('contractsList.empty.dash', { defaultValue: '—' });
-        try {
-          const date = new Date(value);
-          return isNaN(date.getTime()) ? t('contractsList.empty.dash', { defaultValue: '—' }) : date.toLocaleDateString();
-        } catch {
-          return t('contractsList.empty.dash', { defaultValue: '—' });
-        }
-      },
+      render: (value: any) =>
+        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.status', { defaultValue: 'Status' }),
@@ -709,10 +732,7 @@ const Contracts: React.FC = () => {
             {
               title: t('contractsList.columns.client', { defaultValue: 'Client' }),
               dataIndex: 'client_name',
-              render: (value: string | null) =>
-                typeof value === 'string' && value.trim().length > 0
-                  ? value
-                  : t('contractsList.empty.dash', { defaultValue: '—' }),
+              render: (value, record) => <ClientNameCell clientName={value as string | null | undefined} clientId={record.client_id} logoUrl={record.logoUrl ?? null} />,
             },
             {
               title: t('contractsList.columns.created', { defaultValue: 'Created' }),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTenantIdBySlug } from '@alga-psa/db';
+import { getTenantIdBySlug, tenantDb } from '@alga-psa/db';
 import { getAvailableTimeSlots } from '@alga-psa/client-portal/services/availabilityService';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import logger from '@alga-psa/core/logger';
@@ -178,11 +178,11 @@ export async function GET(req: NextRequest) {
     // Execute database operations within tenant context
     return await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
+      const db = tenantDb(knex, tenantId);
 
       // Get service-specific default duration
-      const serviceSettings = await knex('availability_settings')
+      const serviceSettings = await db.table('availability_settings')
         .where({
-          tenant: tenantId,
           setting_type: 'service_rules',
           service_id: validatedParams.service_id
         })
@@ -210,9 +210,8 @@ export async function GET(req: NextRequest) {
 
       if (userIds.size > 0) {
         // Get user settings for users with slots
-        const allUserSettings = await knex('availability_settings')
+        const allUserSettings = await db.table('availability_settings')
           .where({
-            tenant: tenantId,
             setting_type: 'user_hours'
           })
           .whereIn('user_id', Array.from(userIds))
@@ -232,8 +231,7 @@ export async function GET(req: NextRequest) {
           .map((setting: any) => setting.user_id);
 
         if (allowedUserIds.length > 0) {
-          const users = await knex('users')
-            .where({ tenant: tenantId })
+          const users = await db.table('users')
             .whereIn('user_id', allowedUserIds)
             .select(
               'user_id',

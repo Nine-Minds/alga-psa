@@ -1,5 +1,8 @@
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
+
+const EXTENSION_ENDPOINT_GLOBAL_TENANT = '__extension_endpoint_global__';
 
 export interface ExtensionApiEndpointRow {
   id: string;
@@ -21,7 +24,8 @@ function normalizePath(path: string): string {
 }
 
 async function readVersionEndpoints(db: Knex, versionId: string): Promise<Array<{ method: string; path: string; handler: string }>> {
-  const row = await db('extension_version')
+  const extensionDb = tenantDb(db, EXTENSION_ENDPOINT_GLOBAL_TENANT);
+  const row = await extensionDb.table('extension_version')
     .where({ id: versionId })
     .first(['api_endpoints']);
   if (!row) return [];
@@ -43,6 +47,7 @@ async function readVersionEndpoints(db: Knex, versionId: string): Promise<Array<
 }
 
 async function materializeEndpoints(db: Knex, versionId: string): Promise<void> {
+  const extensionDb = tenantDb(db, EXTENSION_ENDPOINT_GLOBAL_TENANT);
   // Citus requires IMMUTABLE expressions in ON CONFLICT DO UPDATE;
   // use a precomputed literal timestamp instead of db.fn.now().
   const now = new Date();
@@ -57,7 +62,7 @@ async function materializeEndpoints(db: Knex, versionId: string): Promise<void> 
     deduped.set(`${endpoint.method} ${endpoint.path}`, endpoint);
   }
 
-  await db('extension_api_endpoint')
+  await extensionDb.table('extension_api_endpoint')
     .insert(
       Array.from(deduped.values()).map((e) => ({
         version_id: versionId,
@@ -73,7 +78,7 @@ async function materializeEndpoints(db: Knex, versionId: string): Promise<void> 
 
 export async function listEndpointsForVersion(versionId: string): Promise<ExtensionApiEndpointRow[]> {
   const db = await getAdminConnection();
-  return db('extension_api_endpoint')
+  return tenantDb(db, EXTENSION_ENDPOINT_GLOBAL_TENANT).table('extension_api_endpoint')
     .where({ version_id: versionId })
     .orderBy([{ column: 'method', order: 'asc' }, { column: 'path', order: 'asc' }])
     .select(['id', 'version_id', 'method', 'path', 'handler']);
@@ -107,7 +112,7 @@ export async function findEndpointIdByMethodPath(params: {
   const db = await getAdminConnection();
   const method = normalizeMethod(params.method);
   const path = normalizePath(params.path);
-  const row = await db('extension_api_endpoint')
+  const row = await tenantDb(db, EXTENSION_ENDPOINT_GLOBAL_TENANT).table('extension_api_endpoint')
     .where({ version_id: params.versionId, method, path })
     .first(['id']);
   return row?.id ?? null;

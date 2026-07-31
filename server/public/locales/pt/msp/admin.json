@@ -1,259 +1,276 @@
 {
   "common": {
     "actions": {
-      "save": "Save Settings",
-      "saving": "Saving...",
-      "reset": "Reset",
-      "refresh": "Refresh",
-      "close": "Close",
-      "edit": "Edit",
-      "delete": "Delete",
-      "deleting": "Deleting…",
-      "verify": "Verify"
+      "save": "Salvar configurações",
+      "saving": "Salvando...",
+      "reset": "Reiniciar",
+      "refresh": "Atualizar",
+      "close": "Fechar",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "deleting": "Excluindo…",
+      "verify": "Verificar"
     },
     "states": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "loading": "Loading..."
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "loading": "Carregando..."
     }
   },
   "telemetry": {
     "loading": {
-      "title": "Organization Telemetry Settings",
-      "description": "Loading..."
+      "title": "Configurações de telemetria da organização",
+      "description": "Carregando..."
     },
     "empty": {
-      "title": "Organization Telemetry Settings",
-      "description": "Error loading settings",
-      "body": "Failed to load telemetry settings"
+      "title": "Configurações de telemetria da organização",
+      "description": "Erro ao carregar configurações",
+      "body": "Falha ao carregar as configurações de telemetria"
     },
     "page": {
-      "title": "Organization Telemetry & Analytics",
-      "description": "Configure telemetry settings for your entire organization. Telemetry is enabled by default to improve the platform, but users can opt-out individually unless you disable this option."
+      "title": "Telemetria e análise da organização",
+      "description": "Defina as configurações de telemetria para toda a sua organização. A telemetria está habilitada por padrão para melhorar a plataforma, mas os usuários podem cancelar individualmente, a menos que você desabilite esta opção."
     },
     "toggles": {
       "enableTelemetry": {
-        "title": "Enable Telemetry",
-        "description": "Allow collection of anonymous usage data to improve the platform (enabled by default)"
+        "title": "Habilitar Telemetria",
+        "description": "Permitir a coleta de dados de uso anônimos para melhorar a plataforma (habilitado por padrão)"
       },
       "allowUserOptOut": {
-        "title": "Allow User Opt-Out",
-        "description": "Allow individual users to opt-out of telemetry collection"
+        "title": "Permitir cancelamento do usuário",
+        "description": "Permitir que usuários individuais desativem a coleta de telemetria"
       }
     },
     "alerts": {
-      "enabled": "✓ Telemetry enabled. All categories are enabled by default for new users, but they can opt-out individually if desired.",
-      "centralizedControl": "Centralized control: Users cannot opt-out individually. Ensure compliance with local privacy regulations."
+      "enabled": "✓ Telemetria habilitada. Todas as categorias são habilitadas por padrão para novos usuários, mas eles podem cancelar individualmente, se desejarem.",
+      "centralizedControl": "Controle centralizado: os usuários não podem cancelar individualmente. Garanta a conformidade com os regulamentos de privacidade locais."
     },
     "anonymization": {
-      "title": "Data Anonymization Level",
-      "description": "Choose how much data to anonymize before collection",
+      "title": "Nível de anonimato de dados",
+      "description": "Escolha quantos dados serão anonimizados antes da coleta",
       "options": {
         "none": {
-          "title": "No Anonymization",
-          "description": "Collect data as-is (not recommended)"
+          "title": "Sem anonimato",
+          "description": "Colete dados como estão (não recomendado)"
         },
         "partial": {
-          "title": "Partial Anonymization",
-          "description": "Remove PII, keep correlation IDs"
+          "title": "Anonimização Parcial",
+          "description": "Remova PII, mantenha os IDs de correlação"
         },
         "full": {
-          "title": "Full Anonymization",
-          "description": "Maximum privacy, minimal correlation"
+          "title": "Anonimato total",
+          "description": "Privacidade máxima, correlação mínima"
         }
       }
     },
     "compliance": {
-      "title": "Compliance Notes"
+      "title": "Notas de Conformidade"
     },
     "privacy": {
-      "collectTitle": "What We Collect",
+      "collectTitle": "O que coletamos",
       "collectItems": {
-        "errors": "• Error information (no sensitive data)",
-        "performance": "• Performance metrics (page load times, API response times)",
-        "usage": "• Feature usage patterns (which features are used)",
-        "system": "• System metrics (for infrastructure optimization)"
+        "errors": "• Informações de erro (sem dados confidenciais)",
+        "performance": "• Métricas de desempenho (tempos de carregamento de página, tempos de resposta da API)",
+        "usage": "• Padrões de uso de recursos (quais recursos são usados)",
+        "system": "• Métricas do sistema (para otimização de infraestrutura)"
       },
-      "excludeTitle": "What We DON'T Collect",
+      "excludeTitle": "O que NÃO coletamos",
       "excludeItems": {
-        "personalInfo": "• Personal information (names, emails, addresses)",
-        "clientData": "• Client data or business information",
-        "passwords": "• Passwords or authentication tokens",
-        "files": "• File contents or documents"
+        "personalInfo": "• Informações pessoais (nomes, e-mails, endereços)",
+        "clientData": "• Dados do cliente ou informações comerciais",
+        "passwords": "• Senhas ou tokens de autenticação",
+        "files": "• Conteúdo ou documentos de arquivos"
       }
     },
     "footer": {
-      "lastUpdated": "Last updated: {{value}}",
-      "updatedBy": " by {{user}}"
+      "lastUpdated": "Última atualização: {{value}}",
+      "updatedBy": "por {{user}}"
     },
     "errors": {
-      "loadTenantTelemetrySettings": "Failed to load tenant telemetry settings",
-      "loadSettings": "Failed to load settings",
-      "saveTelemetrySettings": "Failed to save telemetry settings",
-      "saveSettings": "Failed to save settings"
+      "loadTenantTelemetrySettings": "Falha ao carregar as configurações de telemetria do locatário",
+      "loadSettings": "Falha ao carregar as configurações",
+      "saveTelemetrySettings": "Falha ao salvar as configurações de telemetria",
+      "saveSettings": "Falha ao salvar as configurações"
     }
   },
   "email": {
-    "loading": "Loading email settings...",
-    "error": "Error: {{error}}",
+    "loading": "Carregando configurações de e-mail...",
+    "error": "Erro: {{error}}",
     "tabs": {
-      "inbound": "Inbound Email",
-      "outbound": "Outbound Email"
+      "inbound": "E-mail de entrada",
+      "outbound": "E-mail de saída"
     },
     "descriptions": {
-      "outbound": "Configure SMTP or API settings for sending emails from your application",
-      "inbound": "Configure email providers to receive and process emails as tickets"
+      "outbound": "Defina as configurações de SMTP ou API para enviar e-mails do seu aplicativo",
+      "inbound": "Configure provedores de e-mail para receber e processar e-mails como tickets"
     },
     "providerConfig": {
-      "title": "Email Provider Configuration",
-      "providerLabel": "Email Provider",
+      "title": "Configuração do provedor de e-mail",
+      "providerLabel": "Provedor de e-mail",
       "options": {
-        "smtp": "SMTP (Traditional Email Server)",
-        "resend": "Resend (Modern API Service)"
+        "smtp": "SMTP (servidor de e-mail tradicional)",
+        "resend": "Reenviar (serviço de API moderno)"
       },
-      "placeholder": "Select email provider",
+      "placeholder": "Selecione o provedor de e-mail",
       "descriptions": {
-        "smtp": "Configure traditional SMTP email server settings",
-        "resend": "Configure Resend API for modern email delivery"
+        "smtp": "Defina as configurações do servidor de e-mail SMTP tradicional",
+        "resend": "Configure a API Resend para entrega de e-mail moderna"
       },
       "status": {
-        "provider": "{{provider}} Provider"
+        "provider": "Provedor {{provider}}"
       }
     },
     "smtp": {
       "host": {
-        "label": "SMTP Host",
-        "placeholder": "smtp.example.com"
+        "label": "Anfitrião SMTP",
+        "placeholder": "smtp.exemplo.com"
       },
       "port": {
-        "label": "Port",
+        "label": "Porta",
         "placeholder": "587"
       },
       "username": {
-        "label": "Username",
-        "placeholder": "your-email@example.com"
+        "label": "Nome de usuário",
+        "placeholder": "seu-e-mail@exemplo.com"
       },
       "password": {
-        "label": "Password",
-        "placeholder": "Enter password"
+        "label": "Senha",
+        "placeholder": "Digite a senha"
       },
       "fromAddress": {
-        "label": "From Address",
+        "label": "Do endereço",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Deixe o nome de usuário e a senha em branco se o seu relay aceitar e-mails sem autenticação.",
+      "security": {
+        "title": "Segurança da conexão",
+        "secure": "Usar TLS implícito (SSL ao conectar, normalmente a porta 465)",
+        "requireTls": "Exigir atualização STARTTLS (portas 587 / 25)",
+        "verifyCert": "Verificar o certificado do servidor",
+        "verifyCertHint": "Desative isto apenas para um relay confiável na sua própria rede que use um certificado autoassinado."
       }
     },
     "resend": {
       "apiKey": {
-        "label": "Resend API Key",
+        "label": "Reenviar chave de API",
         "placeholder": "re_xxxxxxxxxxxxxxxxxx",
-        "helpPrefix": "Get your API key from"
+        "helpPrefix": "Obtenha sua chave de API em"
       },
       "fromAddress": {
-        "label": "From Address",
-        "placeholder": "noreply@yourdomain.com",
-        "help": "Must be from a verified domain. Use the Domains tab to add custom domains."
+        "label": "Do endereço",
+        "placeholder": "noreply@seudominio.com",
+        "help": "Deve ser de um domínio verificado. Use a guia Domínios para adicionar domínios personalizados."
       }
     },
     "domains": {
-      "verified": "Verified",
-      "failed": "Failed",
-      "pending": "Pending",
-      "requiredDnsRecords": "Required DNS Records:"
+      "verified": "Verificado",
+      "failed": "Fracassado",
+      "pending": "Pendente",
+      "requiredDnsRecords": "Registros DNS necessários:"
     },
     "general": {
-      "title": "General Settings",
-      "trackingEnabled": "Enable Email Tracking",
-      "dailyLimit": "Daily Email Limit"
+      "title": "Configurações Gerais",
+      "trackingEnabled": "Habilitar rastreamento de e-mail",
+      "dailyLimit": "Limite diário de e-mail"
     },
     "errors": {
-      "loadEmailSettings": "Failed to load email settings",
-      "saveSettings": "Failed to save settings",
-      "addDomain": "Failed to add domain",
-      "verifyDomain": "Failed to verify domain"
+      "loadEmailSettings": "Falha ao carregar as configurações de e-mail",
+      "saveSettings": "Falha ao salvar as configurações",
+      "addDomain": "Falha ao adicionar domínio",
+      "verifyDomain": "Falha ao verificar o domínio",
+      "testOutbound": "Falha ao testar o e-mail de saída"
+    },
+    "test": {
+      "title": "Testar e-mail de saída",
+      "description": "Salva as configurações atuais e depois verifica a conexão com o provedor. Insira um endereço para também enviar uma mensagem de teste.",
+      "recipientLabel": "Enviar teste para (opcional)",
+      "recipientPlaceholder": "voce@exemplo.com",
+      "run": "Testar conexão",
+      "testing": "Testando..."
     }
   },
   "microsoft365": {
     "title": {
-      "microsoft": "Microsoft 365 Diagnostics",
-      "default": "Diagnostics"
+      "microsoft": "Diagnóstico do Microsoft 365",
+      "default": "Diagnóstico"
     },
-    "description": "Runs a live Graph check (including create+delete subscription) to diagnose mailbox, folder, and permission issues.",
+    "description": "Executa uma verificação de gráfico ao vivo (incluindo criação+exclusão de assinatura) para diagnosticar problemas de caixa de correio, pasta e permissão.",
     "note": {
-      "label": "Note:",
-      "body": "Diagnostics will create a temporary Microsoft Graph subscription and then delete it. If deletion fails, you may need to manually remove the subscription in Microsoft 365."
+      "label": "Observação:",
+      "body": "O Diagnóstico criará uma assinatura temporária do Microsoft Graph e a excluirá. Se a exclusão falhar, talvez seja necessário remover manualmente a assinatura no Microsoft 365."
     },
     "labels": {
-      "provider": "Provider:",
-      "mailbox": "Mailbox:",
-      "overall": "Overall:",
-      "resource": "Resource: {{resource}}",
-      "recommendations": "Recommendations",
-      "error": "Error"
+      "provider": "Provedor:",
+      "mailbox": "Caixa de correio:",
+      "overall": "Geral:",
+      "resource": "Recurso: {{resource}}",
+      "recommendations": "Recomendações",
+      "error": "Erro"
     },
     "actions": {
-      "copySupportBundle": "Copy Support Bundle",
-      "copied": "Copied"
+      "copySupportBundle": "Copiar pacote de suporte",
+      "copied": "Copiado"
     },
     "states": {
-      "running": "Running diagnostics...",
-      "diagnosticsFailed": "Diagnostics failed"
+      "running": "Executando diagnóstico...",
+      "diagnosticsFailed": "Falha no diagnóstico"
     },
     "statuses": {
-      "pass": "Pass",
-      "warn": "Warn",
-      "fail": "Fail",
-      "skip": "Skip"
+      "pass": "Passar",
+      "warn": "Avisar",
+      "fail": "Falhar",
+      "skip": "Pular"
     }
   },
   "inboundDefaults": {
-    "loading": "Loading ticket defaults...",
+    "loading": "Carregando padrões de ticket...",
     "header": {
-      "title": "Inbound Ticket Defaults",
-      "description": "Configure default values for tickets created from email processing"
+      "title": "Padrões de tickets de entrada",
+      "description": "Configurar valores padrão para tickets criados a partir do processamento de email"
     },
     "actions": {
-      "addDefaults": "Add Defaults"
+      "addDefaults": "Adicionar padrões"
     },
     "form": {
-      "editTitle": "Edit Ticket Defaults",
-      "createTitle": "Create Ticket Defaults",
-      "description": "Configure the default values that will be applied to tickets created from email processing"
+      "editTitle": "Editar padrões de ticket",
+      "createTitle": "Criar padrões de ticket",
+      "description": "Configure os valores padrão que serão aplicados aos tickets criados no processamento de email"
     },
     "empty": {
-      "title": "No ticket defaults configured",
-      "description": "Create your first configuration to define default values for email-generated tickets"
+      "title": "Nenhum padrão de ticket configurado",
+      "description": "Crie sua primeira configuração para definir valores padrão para tickets gerados por email"
     },
     "badges": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Ativo",
+      "inactive": "Inativo"
     },
     "fields": {
-      "board": "Board:",
+      "board": "Quadro:",
       "status": "Status:",
-      "priority": "Priority:",
-      "enteredBy": "Entered By:"
+      "priority": "Prioridade:",
+      "enteredBy": "Inscrito por:"
     },
     "fallbacks": {
-      "notSet": "Not set",
-      "system": "System"
+      "notSet": "Não definido",
+      "system": "Sistema"
     },
     "menu": {
-      "edit": "Edit",
-      "delete": "Delete",
-      "deleting": "Deleting…"
+      "edit": "Editar",
+      "delete": "Excluir",
+      "deleting": "Excluindo…"
     },
     "help": {
-      "title": "How It Works",
+      "title": "Como funciona",
       "items": {
-        "providerReference": "• Each email provider can reference one ticket defaults configuration",
-        "requiredValues": "• When an email creates a ticket, these defaults provide required field values",
-        "systemCreator": "• System-generated tickets will show \"System\" as the creator when entered_by is null",
-        "scenarios": "• You can create different defaults for different email scenarios (support, billing, etc.)"
+        "providerReference": "• Cada provedor de e-mail pode fazer referência a uma configuração padrão de ticket",
+        "requiredValues": "• Quando um email cria um ticket, esses padrões fornecem valores de campo obrigatórios",
+        "systemCreator": "• Tickets gerados pelo sistema mostrarão \"System\" como o criador quando enter_by for nulo",
+        "scenarios": "• Você pode criar diferentes padrões para diferentes cenários de e-mail (suporte, cobrança, etc.)"
       }
     },
     "errors": {
-      "load": "Failed to load ticket defaults",
-      "delete": "Failed to delete ticket defaults"
+      "load": "Falha ao carregar padrões de ticket",
+      "delete": "Falha ao excluir padrões de ticket"
     }
   },
   "policyManagement": {
@@ -263,46 +280,46 @@
       "time": "Tempo",
       "projects": "Projetos",
       "assets": "Ativos",
-      "billing": "Faturamento"
+      "billing": "Cobrança"
     },
     "targetTypes": {
-      "role": "Função",
+      "role": "Papel",
       "team": "Equipe",
       "user": "Usuário",
       "apiKey": "Chave de API"
     },
     "templateSummaries": {
-      "own": "registros de propriedade do principal",
-      "assigned": "registros atribuídos ao principal",
-      "managed": "registros de propriedade de usuários gerenciados",
-      "ownOrAssigned": "registros de propriedade ou atribuídos ao principal",
-      "ownOrManaged": "registros de propriedade do principal ou de usuários gerenciados",
-      "sameClient": "registros no mesmo escopo de cliente",
-      "clientPortfolio": "registros do portfólio de clientes do principal",
-      "selectedClients": "registros em escopos de clientes selecionados",
-      "sameTeam": "registros de propriedade da mesma equipe",
-      "selectedBoards": "registros nos boards selecionados"
+      "own": "registros de propriedade do diretor",
+      "assigned": "registros atribuídos ao diretor",
+      "managed": "registros pertencentes a usuários gerenciados",
+      "ownOrAssigned": "registros pertencentes ou atribuídos ao principal",
+      "ownOrManaged": "registros de propriedade do usuário principal ou gerenciado",
+      "sameClient": "registros no mesmo escopo do cliente",
+      "clientPortfolio": "registros da carteira de clientes principais",
+      "selectedClients": "registros em escopos de cliente selecionados",
+      "sameTeam": "registros pertencentes à mesma equipe",
+      "selectedBoards": "registros em painéis selecionados"
     },
     "constraintSummaries": {
-      "notSelfApprover": "bloqueia autoaprovação",
+      "notSelfApprover": "bloqueia a autoaprovação",
       "clientVisibleOnly": "requer registros visíveis ao cliente",
-      "hideSensitiveFields": "oculta campos sensíveis"
+      "hideSensitiveFields": "edita campos confidenciais"
     },
     "dates": {
       "unknown": "Desconhecido"
     },
     "ruleSummary": {
-      "base": "Restringir {{action}} de {{resourceType}} a {{scope}}.",
-      "withConstraint": "Restringir {{action}} de {{resourceType}} a {{scope}}; {{constraint}}."
+      "base": "Limite {{resourceType}} {{action}} a {{scope}}.",
+      "withConstraint": "Limite {{resourceType}} {{action}} a {{scope}}; {{constraint}}."
     },
     "upsell": {
       "title": "Pacotes de autorização",
-      "description": "O gerenciamento avançado de pacotes de autorização está disponível no nível Premium. Faça upgrade para gerenciar pacotes de restrição reutilizáveis."
+      "description": "O gerenciamento avançado do pacote de autorização está disponível no nível Premium. Atualize para gerenciar pacotes reutilizáveis ​​de restrição."
     },
     "hero": {
-      "badge": "Espaço de trabalho Premium",
+      "badge": "Espaço de trabalho premium",
       "title": "Pacotes de autorização",
-      "subtitle": "Gerencie restrições de acesso Premium com revisões de rascunho, atribuições com escopo e simulação segura a partir de um único centro de controle.",
+      "subtitle": "Gerencie a restrição de acesso premium com revisões de rascunhos, atribuições de escopo e simulação segura a partir de um centro de controle.",
       "newBundle": "Novo pacote",
       "addStarters": "Adicionar pacotes iniciais",
       "addingStarters": "Adicionando pacotes iniciais..."
@@ -310,32 +327,32 @@
     "metrics": {
       "activeBundles": {
         "title": "Pacotes ativos",
-        "subtitle": "Pacotes de restrição reutilizáveis atualmente disponíveis para atribuição"
+        "subtitle": "Pacotes de restrição reutilizáveis ​​atualmente disponíveis para atribuição"
       },
       "activeAssignments": {
-        "title": "Atribuições ativas",
-        "subtitle": "Implantações ao vivo de função, equipe, usuário e chave de API"
+        "title": "Tarefas ativas",
+        "subtitle": "Lançamentos de função ao vivo, equipe, usuário e chave de API"
       },
       "starterBundles": {
         "title": "Pacotes iniciais",
-        "subtitle": "Predefinições prontas baseadas em relacionamento para adaptar"
+        "subtitle": "Predefinições agrupadas de relacionamento em primeiro lugar, prontas para adaptação"
       },
       "archivedBundles": {
         "title": "Pacotes arquivados",
-        "subtitle": "Pacotes aposentados preservados para auditoria e reutilização"
+        "subtitle": "Pacotes descontinuados preservados para auditoria e reutilização"
       }
     },
     "library": {
       "eyebrow": "Biblioteca",
       "title": "Biblioteca de pacotes de autorização",
-      "description": "Navegue pelo status dos pacotes, gerencie alterações de ciclo de vida e abra um espaço de trabalho focado em um pacote por vez.",
-      "searchPlaceholder": "Pesquisar pacotes por nome ou descrição",
-      "showArchived": "Mostrar arquivados",
+      "description": "Navegue pelo status do pacote, gerencie alterações no ciclo de vida e abra um espaço de trabalho focado para um pacote por vez.",
+      "searchPlaceholder": "Pesquise pacotes por nome ou descrição",
+      "showArchived": "Mostrar arquivado",
       "columns": {
         "bundle": "Pacote",
         "status": "Status",
         "type": "Tipo",
-        "assignments": "Atribuições",
+        "assignments": "Tarefas",
         "updated": "Atualizado",
         "actions": "Ações"
       },
@@ -348,109 +365,109 @@
         "custom": "Personalizado"
       },
       "badges": {
-        "starter": "Inicial"
+        "starter": "Iniciante"
       },
       "descriptions": {
         "systemStarter": "Pacote inicial do sistema.",
         "customBundle": "Pacote de restrição personalizado para atribuições de função, equipe, usuário ou chave de API."
       },
-      "effectiveSummary": "Resumo efetivo: pacote {{status}} com {{count}} atribuição(ões) ativa(s).",
+      "effectiveSummary": "Resumo efetivo: pacote {{status}} com atribuições ativas {{count}}.",
       "empty": "Nenhum pacote de autorização encontrado.",
       "loading": "Carregando pacotes de autorização...",
       "actions": {
-        "openEditor": "Abrir editor",
-        "assignments": "Atribuições",
+        "openEditor": "Editor aberto",
+        "assignments": "Tarefas",
         "simulator": "Simulador",
         "clone": "Clonar",
-        "archive": "Arquivar",
+        "archive": "Arquivo",
         "openMenu": "Abrir menu"
       }
     },
     "workspace": {
-      "backToLibrary": "Voltar à biblioteca",
-      "updatedWithAssignments": "Atualizado em {{date}} · {{count}} atribuição(ões) ativa(s)",
+      "backToLibrary": "De volta à biblioteca",
+      "updatedWithAssignments": "Atribuições ativas {{date}} · {{count}} atualizadas",
       "eyebrow": "Espaço de trabalho do pacote",
       "fallbackBundleName": "Pacote selecionado",
-      "fallbackDescription": "Use o editor de rascunho, o gerenciador de atribuições e o simulador para aplicar alterações de restrição com segurança.",
+      "fallbackDescription": "Use o editor de rascunho, o gerenciador de tarefas e o simulador para enviar alterações de restrição seguras.",
       "tabs": {
         "editor": "Editor de rascunho",
-        "assignments": "Atribuições",
+        "assignments": "Tarefas",
         "simulator": "Simulador"
       }
     },
     "editor": {
-      "header": "Editor de pacote",
-      "editingDraftPrefix": "Editando revisão de rascunho para ",
+      "header": "Editor de pacotes",
+      "editingDraftPrefix": "Editando a revisão do rascunho para",
       "editingDraftSuffix": ". As alterações permanecem em rascunho até serem publicadas.",
-      "viewingPublishedPrefix": "Visualizando a revisão publicada para ",
+      "viewingPublishedPrefix": "Visualizando a revisão publicada para",
       "viewingPublishedSuffix": ". Nenhuma revisão de rascunho ativa existe no momento.",
       "publishDraft": "Publicar rascunho",
       "publishing": "Publicando...",
       "publishedBadge": "Publicado",
       "loading": "Carregando editor de rascunho...",
       "revisionSummary": "Resumo da revisão: {{summary}}",
-      "ruleCount": "{{count}} regra(s) {{revisionType}}",
+      "ruleCount": "Regras {{count}} {{revisionType}}",
       "revisionType": {
         "draft": "rascunho",
-        "published": "publicada"
+        "published": "publicado"
       },
       "emptyRules": "Ainda não há regras {{revisionType}} para {{resource}}.",
       "ruleForm": {
-        "addDraftTitle": "Adicionar regra de rascunho",
-        "editDraftTitle": "Editar regra de rascunho",
-        "createDraftTitle": "Criar regra de rascunho",
+        "addDraftTitle": "Adicionar rascunho de regra",
+        "editDraftTitle": "Editar rascunho de regra",
+        "createDraftTitle": "Criar rascunho de regra",
         "editPublishedTitle": "Editar regra publicada como rascunho",
-        "helperEditPublished": "Salvar criará uma nova revisão de rascunho com suas alterações a esta regra publicada.",
-        "helperCreateDraft": "Salvar criará uma nova revisão de rascunho para este pacote.",
-        "reset": "Redefinir",
+        "helperEditPublished": "Salvar criará um novo rascunho de revisão com suas alterações nesta regra publicada.",
+        "helperCreateDraft": "Salvar criará um novo rascunho de revisão para este pacote.",
+        "reset": "Reiniciar",
         "action": "Ação",
         "template": "Modelo",
         "constraint": "Restrição (opcional)",
-        "constraintNone": "nenhuma",
-        "saveDraftRule": "Salvar regra de rascunho",
-        "addDraftRule": "Adicionar regra de rascunho",
-        "saveAsDraftChange": "Salvar como alteração de rascunho",
-        "createDraftRule": "Criar regra de rascunho"
+        "constraintNone": "nenhum",
+        "saveDraftRule": "Salvar rascunho de regra",
+        "addDraftRule": "Adicionar rascunho de regra",
+        "saveAsDraftChange": "Salvar como rascunho de alteração",
+        "createDraftRule": "Criar rascunho de regra"
       },
       "rule": {
         "edit": "Editar",
         "remove": "Remover",
         "removeAsDraft": "Remover como alteração de rascunho",
-        "removeDraftTooltip": "Remover esta regra de rascunho.",
-        "removePublishedTooltip": "Criar uma nova revisão de rascunho que remove esta regra publicada.",
+        "removeDraftTooltip": "Remova este rascunho de regra.",
+        "removePublishedTooltip": "Crie um novo rascunho de revisão que remova esta regra publicada.",
         "selectedClientScopes": "Escopos de cliente selecionados",
-        "selectedBoardScopes": "Escopos de board selecionados",
-        "redactedFields": "Campos ocultados"
+        "selectedBoardScopes": "Escopos de quadro selecionados",
+        "redactedFields": "Campos redigidos"
       },
       "scopes": {
         "clientTitle": "Escopos de cliente selecionados",
-        "boardTitle": "Escopos de board selecionados",
-        "selectClient": "Selecionar cliente",
-        "selectBoard": "Selecionar board",
-        "addClientScope": "Adicionar escopo de cliente",
-        "addBoardScope": "Adicionar escopo de board",
+        "boardTitle": "Escopos de quadro selecionados",
+        "selectClient": "Selecione o cliente",
+        "selectBoard": "Selecione o quadro",
+        "addClientScope": "Adicionar escopo do cliente",
+        "addBoardScope": "Adicionar escopo do quadro",
         "noClientScopes": "Nenhum escopo de cliente adicionado ainda.",
-        "noBoardScopes": "Nenhum escopo de board adicionado ainda.",
+        "noBoardScopes": "Nenhum escopo de quadro adicionado ainda.",
         "remove": "Remover"
       },
       "redaction": {
-        "label": "Campos ocultados",
-        "placeholder": "internal_cost, margin",
-        "helper": "Nomes de campos separados por vírgulas a serem ocultados quando esta regra permitir acesso."
+        "label": "Campos redigidos",
+        "placeholder": "custo_interno, margem",
+        "helper": "Nomes de campos separados por vírgula a serem editados quando esta regra permitir acesso."
       }
     },
     "assignments": {
-      "header": "Gerenciador de atribuições",
-      "description": "Visualize e gerencie alvos de função, equipe, usuário e chave de API atualmente afetados por este pacote.",
-      "loading": "Carregando atribuições...",
-      "addAssignment": "Adicionar atribuição",
-      "selectTargetPlaceholder": "Selecionar {{target}}",
-      "addButton": "Adicionar atribuição",
+      "header": "Gerente de tarefas",
+      "description": "Visualize e gerencie metas de função, equipe, usuário e chave de API atualmente afetadas por este pacote.",
+      "loading": "Carregando tarefas...",
+      "addAssignment": "Adicionar tarefa",
+      "selectTargetPlaceholder": "Selecione {{target}}",
+      "addButton": "Adicionar tarefa",
       "adding": "Adicionando...",
-      "empty": "Ainda não há atribuições para este pacote.",
-      "groupEmpty": "Nenhuma atribuição de {{target}}.",
+      "empty": "Nenhuma tarefa para este pacote ainda.",
+      "groupEmpty": "Nenhuma designação {{target}}.",
       "statusActions": {
-        "disable": "Desabilitar",
+        "disable": "Desativar",
         "enable": "Habilitar",
         "saving": "Salvando..."
       },
@@ -461,25 +478,25 @@
     },
     "simulator": {
       "header": "Simulador de acesso",
-      "description": "Simule o comportamento do pacote em rascunho vs publicado contra um principal real e registro existente.",
-      "inputTitle": "Entrada da simulação",
+      "description": "Simule o comportamento do pacote rascunho versus publicado em relação a um principal real e a um registro existente.",
+      "inputTitle": "Entrada de simulação",
       "resource": "Recurso",
       "action": "Ação",
       "principal": "Usuário",
       "record": "Registro",
       "useSynthetic": "Usar cenário de registro sintético",
-      "syntheticOwnerPlaceholder": "ID do usuário proprietário (opcional)",
+      "syntheticOwnerPlaceholder": "ID de usuário proprietário (opcional)",
       "syntheticClientPlaceholder": "ID do cliente (opcional)",
-      "syntheticBoardPlaceholder": "ID do board (opcional)",
-      "clientVisible": "Visível ao cliente",
+      "syntheticBoardPlaceholder": "ID do quadro (opcional)",
+      "clientVisible": "Cliente visível",
       "run": "Executar simulação",
-      "running": "Executando simulação...",
+      "running": "Simulação em execução...",
       "resultTitle": "Resultado da simulação",
-      "draftRevision": "Revisão de rascunho",
+      "draftRevision": "Revisão preliminar",
       "publishedRevision": "Revisão publicada",
       "allowed": "Permitido",
       "denied": "Negado",
-      "empty": "Execute uma simulação para comparar o comportamento do rascunho e da revisão publicada."
+      "empty": "Execute uma simulação para comparar o comportamento do rascunho e do publicado."
     },
     "createDialog": {
       "title": "Criar pacote de autorização",
@@ -489,83 +506,83 @@
       "nameLabel": "Nome",
       "namePlaceholder": "Revisor Financeiro Oeste",
       "descriptionLabel": "Descrição",
-      "descriptionPlaceholder": "Pacote de restrição reutilizável para uma equipe específica, grupo de clientes ou fluxo de trabalho."
+      "descriptionPlaceholder": "Pacote de restrição reutilizável para uma equipe, grupo de clientes ou fluxo de trabalho específico."
     },
     "clone": {
-      "copySuffix": "{{name}} Cópia"
+      "copySuffix": "Cópia {{name}}"
     },
     "errors": {
       "loadBundles": "Falha ao carregar pacotes.",
-      "loadEditor": "Falha ao carregar o editor de pacote.",
-      "loadAssignments": "Falha ao carregar as atribuições do pacote.",
-      "cloneBundle": "Falha ao clonar o pacote.",
-      "archiveBundle": "Falha ao arquivar o pacote.",
-      "seedStarters": "Falha ao semear pacotes iniciais.",
+      "loadEditor": "Falha ao carregar o editor de pacotes.",
+      "loadAssignments": "Falha ao carregar atribuições de pacote configurável.",
+      "cloneBundle": "Falha ao clonar pacote.",
+      "archiveBundle": "Falha ao arquivar pacote.",
+      "seedStarters": "Falha ao propagar pacotes iniciais.",
       "bundleNameRequired": "O nome do pacote é obrigatório.",
-      "createBundle": "Falha ao criar o pacote.",
+      "createBundle": "Falha ao criar pacote.",
       "publishDraft": "Falha ao publicar o rascunho do pacote.",
       "selectTemplate": "Selecione um modelo antes de salvar uma regra.",
       "selectClientRequired": "Adicione pelo menos um cliente selecionado antes de salvar esta regra.",
-      "selectBoardRequired": "Adicione pelo menos um board selecionado antes de salvar esta regra.",
-      "redactedFieldRequired": "Insira pelo menos um campo oculto antes de salvar esta regra.",
-      "saveRule": "Falha ao salvar a regra de rascunho.",
-      "removeRule": "Falha ao remover a regra.",
-      "selectTarget": "Selecione um alvo antes de adicionar uma atribuição.",
-      "addAssignment": "Falha ao adicionar a atribuição.",
-      "updateAssignmentStatus": "Falha ao atualizar o status da atribuição.",
+      "selectBoardRequired": "Adicione pelo menos um quadro selecionado antes de salvar esta regra.",
+      "redactedFieldRequired": "Insira pelo menos um campo editado antes de salvar esta regra.",
+      "saveRule": "Falha ao salvar o rascunho da regra.",
+      "removeRule": "Falha ao remover regra.",
+      "selectTarget": "Selecione um alvo antes de adicionar uma tarefa.",
+      "addAssignment": "Falha ao adicionar tarefa.",
+      "updateAssignmentStatus": "Falha ao atualizar o status da tarefa.",
       "selectPrincipal": "Selecione um principal antes de executar a simulação.",
       "selectRecord": "Selecione um registro antes de executar a simulação.",
       "runSimulation": "Falha ao executar a simulação.",
       "simulator": {
-        "unsupportedAction": "Atualmente, o simulador oferece suporte apenas a verificações de Leitura e Aprovação. Escolha uma dessas ações e tente novamente.",
-        "unsupportedResource": "Esse tipo de registro ainda não está disponível no simulador. Escolha um tipo de registro compatível e tente novamente.",
-        "clientTicketNotSupported": "As verificações de chamados para usuários cliente ainda não estão disponíveis no simulador porque a visibilidade do quadro de chamados não está incluída. Tente com um usuário interno ou verifique o acesso de chamados do cliente no aplicativo."
+        "unsupportedAction": "O simulador atualmente suporta apenas verificações de leitura e aprovação. Escolha uma dessas ações e tente novamente.",
+        "unsupportedResource": "Este tipo de registro ainda não está disponível no simulador. Escolha um tipo de registro compatível e tente novamente.",
+        "clientTicketNotSupported": "As verificações de tickets para usuários clientes ainda não estão disponíveis no simulador porque a visibilidade do quadro de tickets não está incluída. Experimente um usuário interno ou verifique o acesso ao ticket do cliente no aplicativo."
       }
     }
   },
   "emailLogs": {
     "page": {
-      "title": "Registos de Email",
-      "description": "Reveja a atividade de envio de emails e resolva problemas de entrega de notificações."
+      "title": "Registros de e-mail",
+      "description": "Revise a atividade de e-mail enviado e solucione problemas de entrega de notificações."
     },
     "metrics": {
       "totalSent": "Total enviado",
-      "failedRate": "Taxa de falhas",
+      "failedRate": "Taxa falhada",
       "today": "Hoje"
     },
     "filters": {
       "startDate": "Data de início",
-      "endDate": "Data de fim",
-      "status": "Estado",
+      "endDate": "Data de término",
+      "status": "Status",
       "recipient": "Destinatário",
-      "recipientPlaceholder": "Pesquisar email…",
+      "recipientPlaceholder": "Pesquisar e-mail…",
       "ticket": "Ticket",
       "ticketPlaceholder": "Ticket #…",
       "statusOptions": {
         "all": "Todos",
         "sent": "Enviado",
-        "failed": "Falhou"
+        "failed": "Fracassado"
       }
     },
     "table": {
-      "time": "Hora",
+      "time": "Tempo",
       "ticket": "Ticket",
       "recipient": "Destinatário",
       "subject": "Assunto",
-      "status": "Estado"
+      "status": "Status"
     },
-    "loading": "A carregar…",
-    "results_one": "{{count}} resultado",
-    "results_other": "{{count}} resultados",
+    "loading": "Carregando…",
+    "results_one": "Resultado {{count}}",
+    "results_other": "Resultados {{count}}",
     "refresh": "Atualizar",
     "close": "Fechar",
     "detail": {
-      "title": "Detalhes do Registo de Email",
+      "title": "Detalhes do registro de e-mail",
       "noSubject": "Sem assunto",
       "sentAt": "Enviado em",
-      "status": "Estado",
-      "provider": "Fornecedor",
-      "messageId": "ID da Mensagem",
+      "status": "Status",
+      "provider": "Provedor",
+      "messageId": "ID da mensagem",
       "to": "Para",
       "from": "De",
       "error": "Erro",

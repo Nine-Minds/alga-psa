@@ -10,7 +10,16 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IStatus, StatusItemType } from '@alga-psa/types';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 /**
  * Status model with tenant-explicit methods.
@@ -29,9 +38,9 @@ const Status = {
     }
 
     try {
-      const statuses = await knexOrTrx<IStatus>('statuses')
+      const statuses = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .select('*')
-        .where({ tenant });
+        ;
 
       return statuses;
     } catch (error) {
@@ -53,9 +62,9 @@ const Status = {
     }
 
     try {
-      const statuses = await knexOrTrx<IStatus>('statuses')
+      const statuses = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .select('*')
-        .where({ tenant, status_type: statusType })
+        .where({ status_type: statusType })
         .orderBy('order_number', 'asc');
 
       return statuses;
@@ -78,11 +87,10 @@ const Status = {
     }
 
     try {
-      const status = await knexOrTrx<IStatus>('statuses')
+      const status = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .select('*')
         .where({
-          status_id: id,
-          tenant
+          status_id: id
         })
         .first();
 
@@ -107,18 +115,16 @@ const Status = {
 
     try {
       // Check if this is the first status of this type - if so, make it default
-      const existingStatuses = await knexOrTrx<IStatus>('statuses')
+      const existingStatuses = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .where({
-          tenant,
           status_type: status.status_type,
           is_default: true
         });
 
       // Get the max order number for this status type
-      const maxOrderResult = await knexOrTrx('statuses')
+      const maxOrderResult = await tenantScopedTable(knexOrTrx, 'statuses', tenant)
         .max('order_number as maxOrder')
         .where({
-          tenant,
           status_type: status.status_type
         })
         .first<{ maxOrder: number | null }>();
@@ -132,7 +138,7 @@ const Status = {
         is_default: existingStatuses.length === 0
       };
 
-      const [insertedStatus] = await knexOrTrx<IStatus>('statuses')
+      const [insertedStatus] = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .insert(statusToInsert)
         .returning('status_id');
 
@@ -159,14 +165,13 @@ const Status = {
     try {
       // If updating is_default to false, check if this is the last default status
       if (status.is_default === false) {
-        const currentStatus = await knexOrTrx<IStatus>('statuses')
-          .where({ tenant, status_id: id })
+        const currentStatus = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
+          .where({ status_id: id })
           .first();
 
         if (currentStatus) {
-          const defaultStatuses = await knexOrTrx<IStatus>('statuses')
+          const defaultStatuses = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
             .where({
-              tenant,
               is_default: true,
               status_type: currentStatus.status_type
             })
@@ -178,17 +183,15 @@ const Status = {
         }
       }
 
-      await knexOrTrx<IStatus>('statuses')
+      await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .where({
-          status_id: id,
-          tenant
+          status_id: id
         })
         .update(status);
 
-      const updatedStatus = await knexOrTrx<IStatus>('statuses')
+      const updatedStatus = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .where({
-          status_id: id,
-          tenant
+          status_id: id
         })
         .first();
 
@@ -217,10 +220,9 @@ const Status = {
 
     try {
       // Check if this is a default status
-      const status = await knexOrTrx<IStatus>('statuses')
+      const status = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .where({
           status_id: id,
-          tenant,
           is_default: true
         })
         .first();
@@ -229,10 +231,9 @@ const Status = {
         throw new Error('Cannot delete the default status');
       }
 
-      const result = await knexOrTrx<IStatus>('statuses')
+      const result = await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .where({
-          status_id: id,
-          tenant
+          status_id: id
         })
         .del();
 
@@ -272,10 +273,9 @@ const Status = {
     }
 
     try {
-      return await knexOrTrx<IStatus>('statuses')
+      return await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .select('*')
         .where({
-          tenant,
           board_id: boardId,
           status_type: 'ticket',
         })
@@ -309,10 +309,9 @@ const Status = {
     }
 
     try {
-      return await knexOrTrx<IStatus>('statuses')
+      return await tenantScopedTable<IStatus>(knexOrTrx, 'statuses', tenant)
         .select('*')
         .where({
-          tenant,
           board_id: boardId,
           status_id: statusId,
           status_type: 'ticket',

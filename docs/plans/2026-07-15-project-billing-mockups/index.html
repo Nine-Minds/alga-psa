@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixed-fee project billing — UI options</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+body{padding:48px 24px}
+.wrap{max-width:880px;margin:0 auto}
+h1{font-size:22px;font-weight:700;letter-spacing:-0.01em;margin:0 0 6px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:26px}
+.opts{display:grid;gap:14px}
+a.opt{display:flex;gap:16px;align-items:center;background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px 20px;text-decoration:none;color:inherit}
+a.opt:hover{border-color:var(--purple)}
+.num{font-weight:700;font-size:18px;color:var(--purple);background:var(--purple-soft);border-radius:6px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex:none}
+.opt h2{margin:0 0 3px;font-size:15px;font-weight:600}
+.opt p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.scenario{margin-top:26px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-size:12.5px;color:#374151;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Fixed-fee project billing — UI options</h1>
+  <div class="sub">Three integration points into the <b>existing project screen</b> (real header, metadata row, phases panel, kanban, ViewSwitcher) · grounded in ProjectInfo.tsx / ProjectDetail.tsx and the product design system</div>
+  <div class="opts">
+    <a class="opt" href="option-1-drawer.html">
+      <div class="num">1</div>
+      <div><h2>Drawer — the Materials pattern</h2><p>A "Billing" outline button joins the header actions and opens a right-side drawer with the schedule, budget bar, cost and config. A "Billed: $12,000 of $24,000" bar joins the metadata row. Zero layout change; billing is one click away but never in the way.</p></div>
+    </a>
+    <a class="opt" href="option-2-band.html">
+      <div class="num">2</div>
+      <div><h2>Band — summary strip above the board</h2><p>A collapsible strip between the project header and the board: fee/invoiced/ready/margin stats, a horizontal milestone track, and an approve CTA when something is ready. Financial state always visible while working the kanban.</p></div>
+    </a>
+    <a class="opt" href="option-3-view.html">
+      <div class="num">3</div>
+      <div><h2>View — Kanban | List | Billing</h2><p>The existing ViewSwitcher gains a third view. Billing takes over the board area as a full workspace (schedule table with allocation footer, budget vs actual, delivery economics) while the phases panel stays for context. Most room to grow (T&amp;M caps, overrides).</p></div>
+    </a>
+  </div>
+  <div class="scenario">
+    <b>Shared scenario:</b> Office 365 Migration for Meridian Health (PRJ-2041) · $24,000 fixed fee, standalone invoices · Deposit 25% (invoiced), Discovery &amp; design 25% (invoiced), Migration cutover 30% (phase completed → <i>ready to bill</i>, waiting 4 days), Final acceptance 20% (manual, pending) · 84.5 h logged at cost, 44% projected margin. All three also add <b>$ milestone badges on phases</b> in the phases panel.
+  </div>
+</div>
+</body></html>

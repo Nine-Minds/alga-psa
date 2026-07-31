@@ -268,6 +268,47 @@
       "message": "{{count}} kontaktów już istnieje. Czy chcesz zaktualizować je nowymi danymi?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Adresy e-mail",
+    "description": "Dodaj co najmniej jeden adres e-mail i wybierz dokładnie jeden domyślny.",
+    "actions": {
+      "addEmail": "Dodaj e-mail"
+    },
+    "emailTypes": {
+      "work": "Służbowy",
+      "personal": "Osobisty",
+      "billing": "Rozliczeniowy",
+      "other": "Inny",
+      "custom": "Niestandardowy"
+    },
+    "primary": {
+      "title": "Główny adres e-mail",
+      "description": "Ten adres pozostaje domyślnym adresem zapisanym w rekordzie kontaktu"
+    },
+    "row": {
+      "title": "Dodatkowy e-mail {{number}}",
+      "secondaryDescription": "Zapisany jako niedomyślny adres e-mail",
+      "defaultLabel": "Domyślny",
+      "noEmailYet": "Nie wprowadzono jeszcze adresu e-mail",
+      "editLabel": "Edytuj",
+      "edit": "Edytuj dodatkowy e-mail {{number}}",
+      "doneLabel": "Gotowe",
+      "done": "Zakończ edycję dodatkowego e-maila {{number}}",
+      "moveUp": "Przenieś dodatkowy e-mail {{number}} w górę",
+      "moveDown": "Przenieś dodatkowy e-mail {{number}} w dół",
+      "remove": "Usuń dodatkowy e-mail {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Adres e-mail",
+      "emailPlaceholder": "nazwa@przyklad.com",
+      "emailLabel": "Typ adresu e-mail",
+      "customEmailLabel": "Niestandardowy typ adresu e-mail",
+      "customTypePlaceholder": "Wybierz lub wpisz niestandardowy typ adresu e-mail",
+      "customTypeSearchPlaceholder": "Wyszukaj lub wpisz niestandardowy typ adresu e-mail...",
+      "customTypeEmpty": "Brak pasujących niestandardowych typów adresu e-mail.",
+      "customTypeUseValue": "Użyj \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Numery telefonu",
     "description": "Edytor numerów telefonu z zarządzaniem typami, walidacją, wartościami domyślnymi i obsługą rozszerzeń",
@@ -328,6 +369,9 @@
     "noAccess": {
       "title": "Brak dostępu do portalu",
       "description": "Ten kontakt nie ma jeszcze dostępu do portalu klienta"
+    },
+    "noClient": {
+      "description": "Przypisz ten kontakt do klienta, aby zarządzać dostępem do portalu."
     },
     "portalAdmin": {
       "label": "Administrator portalu",
@@ -410,7 +454,8 @@
         "noLocationEmail": "Lokalizacja domyślnego klienta musi mieć skonfigurowany kontaktowy adres e-mail.",
         "noBaseUrl": "Podstawowy adres URL nie jest skonfigurowany dla zaproszeń do portalu.",
         "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już wykorzystane."
-      }
+      },
+      "userNotFound": "Client user not found"
     }
   },
   "quickAddContact": {
@@ -575,13 +620,15 @@
       "name": "Nazwa",
       "email": "E-mail",
       "phoneNumber": "Numer telefonu",
-      "actions": "Akcje"
+      "actions": "Akcje",
+      "role": "Rola"
     },
     "filter": {
       "show": "Pokaż:",
       "active": "Aktywne kontakty",
       "inactive": "Nieaktywne kontakty",
-      "all": "Wszystkie kontakty"
+      "all": "Wszystkie kontakty",
+      "searchPlaceholder": "Szukaj kontaktów..."
     },
     "actions": {
       "openMenu": "Otwórz menu",
@@ -607,7 +654,7 @@
     "description": "Możliwość przesyłania zdjęć profilowych kontaktów"
   },
   "contactNotesPanel": {
-    "title": "Notatki i szybkie informacje",
+    "title": "Notatki",
     "description": "Panel notatek rich text z widokiem starszej notatki oraz akcjami zapisz/spróbuj ponownie",
     "legacy": {
       "initialNote": "Notatka początkowa"
@@ -653,6 +700,13 @@
         "openTicketFailed": "Nie udało się otworzyć zgłoszenia",
         "userNotAuthenticated": "Użytkownik nieuwierzytelniony"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Kontakt zaktualizowany",
+      "saveFailed": "Nie mozna zaktualizowac kontaktu",
+      "saveFailedDescription": "The contact could not be updated. Please try again."
     }
   }
 }

@@ -6,7 +6,12 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getTicketingDisplaySettings,
@@ -102,7 +107,7 @@ const DisplaySettings = (): React.JSX.Element => {
   const handleSaveDisplaySettings = async (): Promise<void> => {
     try {
       setIsSavingDisplay(true);
-      await updateTicketingDisplaySettings({
+      const result = await updateTicketingDisplaySettings({
         dateTimeFormat,
         responseStateTrackingEnabled,
         list: {
@@ -110,6 +115,10 @@ const DisplaySettings = (): React.JSX.Element => {
           tagsInlineUnderTitle,
         },
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('settings.display.saveSuccess', 'Ticket display settings saved'));
 
       // Update original settings after successful save
@@ -178,7 +187,7 @@ const DisplaySettings = (): React.JSX.Element => {
         </h4>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
           {columnOptions.map(({ key, label }) => (
-            <div key={key} className="[&>div]:mb-0">
+            <div key={key}>
               <Checkbox
                 id={`column-${key}`}
                 label={label}
@@ -190,7 +199,7 @@ const DisplaySettings = (): React.JSX.Element => {
         </div>
         {/* Tags visibility (tags always render inline under the title) */}
         <div className="mt-4 space-y-2">
-          <div className="[&>div]:mb-0">
+          <div>
             <Checkbox
               id="column-tags"
               label={t('settings.display.showTags', 'Show Tags')}

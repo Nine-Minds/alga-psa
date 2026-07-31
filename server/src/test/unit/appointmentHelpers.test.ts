@@ -13,9 +13,54 @@ import {
 } from '@alga-psa/scheduling/actions/appointmentHelpers';
 import * as sharedDb from '@alga-psa/db';
 import type { Knex } from 'knex';
+import {
+  signAppointmentIcsToken,
+  verifyAppointmentIcsToken,
+} from '@alga-psa/scheduling/lib/appointmentIcsSigning';
+
+// Pin the ICS signing secret so generated links are deterministic; signing
+// and verification themselves use the real implementations.
+const TEST_ICS_SECRET = 'test-ics-secret';
+vi.mock('@alga-psa/scheduling/lib/appointmentIcsSigning', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/scheduling/lib/appointmentIcsSigning')>();
+  return {
+    ...actual,
+    getAppointmentIcsSigningSecret: async () => TEST_ICS_SECRET,
+  };
+});
+
+const signedIcsUrl = async (base: string, entryId: string): Promise<string> =>
+  `${base}/api/calendar/appointment/${entryId}.ics?token=${await signAppointmentIcsToken(TEST_ICS_SECRET, entryId)}`;
 
 // Mock the shared db module (production imports createTenantKnex and withTransaction from @alga-psa/db)
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (tableExpr: string) => {
+      const builder = conn(tableExpr);
+      if (!builder || typeof builder.where !== 'function') {
+        return builder;
+      }
+      const aliasMatch = /\bas\s+([A-Za-z0-9_]+)\s*$/i.exec(tableExpr.trim());
+      const tenantColumn = aliasMatch ? `${aliasMatch[1]}.tenant` : 'tenant';
+      builder.where({ [tenantColumn]: tenant });
+      return {
+        ...builder,
+        where: (criteria: any, ...rest: any[]) =>
+          criteria && typeof criteria === 'object' && !Array.isArray(criteria)
+            ? builder.where({ [tenantColumn]: tenant, ...criteria })
+            : builder.where(criteria, ...rest),
+      };
+    },
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: vi.fn(),
   withTransaction: vi.fn((knex, callback) => callback(knex))
 }));
@@ -279,13 +324,13 @@ describe('Appointment Helper Functions', () => {
 
     it('should generate ICS link with default localhost URL', async () => {
       const result = await generateICSLink(mockScheduleEntry);
-      expect(result).toBe('http://localhost:3000/api/calendar/appointment/entry-123.ics');
+      expect(result).toBe(await signedIcsUrl('http://localhost:3000', 'entry-123'));
     });
 
     it('should generate ICS link with custom base URL from environment', async () => {
       process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
       const result = await generateICSLink(mockScheduleEntry);
-      expect(result).toBe('https://example.com/api/calendar/appointment/entry-123.ics');
+      expect(result).toBe(await signedIcsUrl('https://example.com', 'entry-123'));
     });
 
     it('should handle entry_id with special characters', async () => {
@@ -294,7 +339,7 @@ describe('Appointment Helper Functions', () => {
         entry_id: 'entry-123-abc_def'
       };
       const result = await generateICSLink(entryWithSpecialId);
-      expect(result).toBe('http://localhost:3000/api/calendar/appointment/entry-123-abc_def.ics');
+      expect(result).toBe(await signedIcsUrl('http://localhost:3000', 'entry-123-abc_def'));
     });
 
     it('should handle UUID entry_id', async () => {
@@ -303,20 +348,20 @@ describe('Appointment Helper Functions', () => {
         entry_id: '550e8400-e29b-41d4-a716-446655440000'
       };
       const result = await generateICSLink(entryWithUUID);
-      expect(result).toBe('http://localhost:3000/api/calendar/appointment/550e8400-e29b-41d4-a716-446655440000.ics');
+      expect(result).toBe(await signedIcsUrl('http://localhost:3000', '550e8400-e29b-41d4-a716-446655440000'));
     });
 
     it('should generate link with trailing slash in base URL', async () => {
       process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/';
       const result = await generateICSLink(mockScheduleEntry);
       // Note: This will result in double slashes, which is acceptable for the URL structure
-      expect(result).toBe('https://example.com//api/calendar/appointment/entry-123.ics');
+      expect(result).toBe(await signedIcsUrl('https://example.com/', 'entry-123'));
     });
 
     it('should generate link with production URL', async () => {
       process.env.NEXT_PUBLIC_APP_URL = 'https://app.algapsa.com';
       const result = await generateICSLink(mockScheduleEntry);
-      expect(result).toBe('https://app.algapsa.com/api/calendar/appointment/entry-123.ics');
+      expect(result).toBe(await signedIcsUrl('https://app.algapsa.com', 'entry-123'));
     });
 
     it('should maintain consistent structure regardless of entry times', async () => {
@@ -327,7 +372,22 @@ describe('Appointment Helper Functions', () => {
         scheduled_end: '2026-01-01T17:00:00Z'
       };
       const result = await generateICSLink(differentEntry);
-      expect(result).toBe('http://localhost:3000/api/calendar/appointment/different-123.ics');
+      expect(result).toBe(await signedIcsUrl('http://localhost:3000', 'different-123'));
+    });
+
+    it('should mint a token that verifies for the same entry', async () => {
+      const result = await generateICSLink(mockScheduleEntry);
+      const token = new URL(result).searchParams.get('token');
+      expect(token).toBeTruthy();
+      expect(await verifyAppointmentIcsToken(TEST_ICS_SECRET, 'entry-123', token!)).toBe(true);
+    });
+
+    it('should reject tokens for a different entry or a tampered token', async () => {
+      const result = await generateICSLink(mockScheduleEntry);
+      const token = new URL(result).searchParams.get('token')!;
+      expect(await verifyAppointmentIcsToken(TEST_ICS_SECRET, 'other-entry', token)).toBe(false);
+      expect(await verifyAppointmentIcsToken(TEST_ICS_SECRET, 'entry-123', token.slice(0, -2) + '00')).toBe(false);
+      expect(await verifyAppointmentIcsToken(TEST_ICS_SECRET, 'entry-123', 'not-hex')).toBe(false);
     });
   });
 

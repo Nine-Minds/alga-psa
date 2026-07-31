@@ -27,6 +27,9 @@ vi.mock('../../src/services/accountingMappingResolver', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: 'tenant-1' })),
+  tenantDb: vi.fn((knex: any) => ({
+    table: (table: string) => knex(table),
+  })),
 }));
 
 import { AccountingExportValidation } from '../../src/services/accountingExportValidation';
@@ -50,12 +53,13 @@ type FakeState = {
 function createFakeKnex(state: FakeState) {
   const updates: Array<{ table: string; patch: any }> = [];
   const tableData: Record<string, () => any[]> = {
-    invoice_charges: () => state.charges,
+    invoice_charges: () => state.charges.map((charge) => ({ net_amount: 100, ...charge })),
     invoice_charge_details: () => state.chargeDetails,
     invoices: () => state.invoices,
     clients: () => state.clients,
     service_catalog: () => state.services,
     accounting_export_errors: () => [],
+    tenant_settings: () => [{ settings: { accountingSync: { autoProvisionCustomers: true } } }],
   };
 
   const knex: any = (table: string) => {
@@ -72,6 +76,7 @@ function createFakeKnex(state: FakeState) {
       updates.push({ table, patch });
       return Promise.resolve(1);
     };
+    builder.first = () => Promise.resolve(tableData[table]?.()[0]);
     builder.then = (onFulfilled: any, onRejected: any) =>
       Promise.resolve(tableData[table]?.() ?? []).then(onFulfilled, onRejected);
     return builder;
@@ -106,8 +111,8 @@ function createFakeResolver(overrides: Partial<Record<string, any>> = {}) {
 function makeCanonicalLine(overrides: Partial<any> = {}) {
   return {
     line_id: 'line-1',
-    invoice_id: 'inv-1',
-    invoice_charge_id: 'charge-1',
+    document_id: 'inv-1',
+    document_line_id: 'charge-1',
     service_period_start: P1_START,
     service_period_end: P1_END,
     payload: {
@@ -169,7 +174,7 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
 
   it('flags lines without an invoice charge id', async () => {
     const state = baseState({
-      lines: [makeCanonicalLine({ invoice_charge_id: null })],
+      lines: [makeCanonicalLine({ document_line_id: null })],
     });
     const { repo } = await run(state);
 

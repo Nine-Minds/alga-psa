@@ -8,7 +8,7 @@ import {
   AccountingExportTransformResult,
   AccountingExportDocument
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { AppError, unparseCSV } from '@alga-psa/core';
@@ -141,6 +141,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'file',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: false,
       supportsInvoiceUpdates: false,
       supportsTaxDelegation: true,
@@ -162,7 +163,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     const chargesById = await this.loadCharges(knex, tenantId, context);
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
 
-    const linesByInvoice = groupBy(context.lines, (line) => line.invoice_id);
+    const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
     const documents: AccountingExportDocument[] = [];
     const allCsvRows: XeroCsvRow[] = [];
 
@@ -198,13 +199,13 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       let isFirstLine = true;
 
       for (const line of exportLines) {
-        if (!line.invoice_charge_id) {
+        if (!line.document_line_id) {
           throw new AppError('XERO_CSV_LINE_MISSING_CHARGE', `Export line ${line.line_id} missing invoice_charge_id`);
         }
 
-        const charge = chargesById.get(line.invoice_charge_id);
+        const charge = chargesById.get(line.document_line_id);
         if (!charge) {
-          throw new AppError('XERO_CSV_CHARGE_NOT_FOUND', `Charge ${line.invoice_charge_id} missing for invoice ${invoiceId}`);
+          throw new AppError('XERO_CSV_CHARGE_NOT_FOUND', `Charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
 
         // Resolve service mapping for item code and account code
@@ -214,6 +215,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
 
         if (charge.service_id) {
           const serviceMapping = await resolver.resolveServiceMapping({
+            tenantId: context.batch.tenant,
             adapterType: 'xero', // Use xero mappings (shared with OAuth adapter)
             serviceId: charge.service_id,
             targetRealm: context.batch.target_realm
@@ -230,6 +232,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         // Resolve tax mapping if we have a tax region
         if (charge.tax_region && !taxType) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
+            tenantId: context.batch.tenant,
             adapterType: 'xero', // Use xero mappings
             taxRegionId: charge.tax_region,
             targetRealm: context.batch.target_realm
@@ -456,12 +459,12 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbInvoice>> {
-    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.invoice_id)));
+    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.document_id)));
     if (invoiceIds.length === 0) {
       return new Map();
     }
 
-    const rows = await knex<DbInvoice>('invoices')
+    const rows = await tenantDb(knex, tenantId).table<DbInvoice>('invoices')
       .select(
         'invoice_id',
         'invoice_number',
@@ -471,7 +474,6 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'client_id',
         'currency_code'
       )
-      .where('tenant', tenantId)
       .whereIn('invoice_id', invoiceIds);
 
     return new Map(rows.map((row) => [row.invoice_id, row]));
@@ -483,14 +485,14 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbCharge>> {
     const chargeIds = context.lines
-      .map((line) => line.invoice_charge_id)
+      .map((line) => line.document_line_id)
       .filter((id): id is string => Boolean(id));
 
     if (chargeIds.length === 0) {
       return new Map();
     }
 
-    const rows = await knex<DbCharge>('invoice_charges')
+    const rows = await tenantDb(knex, tenantId).table<DbCharge>('invoice_charges')
       .select(
         'item_id',
         'invoice_id',
@@ -502,7 +504,6 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'tax_amount',
         'tax_region'
       )
-      .where('tenant', tenantId)
       .whereIn('item_id', chargeIds);
 
     return new Map(rows.map((row) => [row.item_id, row]));
@@ -532,9 +533,8 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       return { clients: new Map(), mappings: new Map() };
     }
 
-    const clients = await knex<DbClient>('clients')
+    const clients = await tenantDb(knex, tenantId).table<DbClient>('clients')
       .select('client_id', 'client_name', 'billing_email')
-      .where('tenant', tenantId)
       .whereIn('client_id', Array.from(clientIds));
 
     const clientMap = new Map(clients.map((client) => [client.client_id, client]));

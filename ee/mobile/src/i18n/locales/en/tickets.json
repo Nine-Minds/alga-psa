@@ -443,5 +443,9 @@
       "validation": "Time entry was rejected by the server.",
       "generic": "Unable to create time entry. Please try again."
     }
+  },
+  "assets": {
+    "title": "Linked devices",
+    "error": "Couldn't load linked devices."
   }
 }

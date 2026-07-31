@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -29,6 +31,11 @@ import { TaxRateDetailPanel } from './TaxRateDetailPanel';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const TaxRates: React.FC = () => {
   const { t } = useTranslation('msp/service-catalog');
@@ -85,6 +92,11 @@ const TaxRates: React.FC = () => {
     setIsLoading(true);
     try {
       const rates = await getTaxRates();
+      if (isActionMessageError(rates) || isActionPermissionError(rates)) {
+        setTaxRates([]);
+        setError(getErrorMessage(rates));
+        return;
+      }
       setTaxRates(rates);
       setError(null);
     } catch (error) {
@@ -100,6 +112,11 @@ const TaxRates: React.FC = () => {
    try {
        setIsLoadingTaxRegions(true);
        const regions = await getActiveTaxRegions();
+       if (isActionMessageError(regions) || isActionPermissionError(regions)) {
+         setErrorTaxRegions(getErrorMessage(regions));
+         setTaxRegions([]);
+         return;
+       }
        setTaxRegions(regions);
        setErrorTaxRegions(null);
    } catch (error) {
@@ -145,13 +162,21 @@ const TaxRates: React.FC = () => {
     try {
       setValidationErrors([]);
       if (isEditing) {
-        await updateTaxRate(currentTaxRate as ITaxRate);
+        const result = await updateTaxRate(currentTaxRate as ITaxRate);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       } else {
         const newTaxRateWithId: ITaxRate = {
           ...currentTaxRate,
           tax_rate_id: uuidv4(),
         } as ITaxRate;
-        await addTaxRate(newTaxRateWithId);
+        const result = await addTaxRate(newTaxRateWithId);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       }
       setIsDialogOpen(false);
       setCurrentTaxRate({}); // Reverted: Clear state
@@ -539,16 +564,18 @@ const TaxRates: React.FC = () => {
               <Label htmlFor="tax-rate-start-date-field">
                 {t('taxRates.dialog.fields.startDate', { defaultValue: 'Start Date *' })}
               </Label>
-              <Input
+              <DatePicker
                 id="tax-rate-start-date-field"
-                type="date"
-                value={currentTaxRate.start_date || ''}
-                onChange={(e) => {
-                  setCurrentTaxRate({ ...currentTaxRate, start_date: e.target.value });
+                label={t('taxRates.dialog.fields.startDate', { defaultValue: 'Start Date *' })}
+                placeholder={t('taxRates.dialog.fields.startDate', { defaultValue: 'Start Date *' })}
+                clearable
+                value={dateFromString(currentTaxRate.start_date || '')}
+                onChange={(date) => {
+                  setCurrentTaxRate({ ...currentTaxRate, start_date: dateToString(date) });
                   setError(null);
                   clearErrorIfSubmitted();
                 }}
-                className={hasAttemptedSubmit && !currentTaxRate.start_date ? 'border-red-500' : ''}
+                className={`w-full ${hasAttemptedSubmit && !currentTaxRate.start_date ? 'border-red-500' : ''}`}
               />
             </div>
             <div>
@@ -557,12 +584,15 @@ const TaxRates: React.FC = () => {
                   defaultValue: 'End Date (Optional)',
                 })}
               </Label>
-              <Input
+              <DatePicker
                 id="tax-rate-end-date-field"
-                type="date"
-                value={currentTaxRate.end_date || ''}
-                onChange={(e) => {
-                  setCurrentTaxRate({ ...currentTaxRate, end_date: e.target.value || null });
+                label={t('taxRates.dialog.fields.endDate', { defaultValue: 'End Date (Optional)' })}
+                placeholder={t('taxRates.dialog.fields.endDate', { defaultValue: 'End Date (Optional)' })}
+                clearable
+                className="w-full"
+                value={dateFromString(currentTaxRate.end_date || '')}
+                onChange={(date) => {
+                  setCurrentTaxRate({ ...currentTaxRate, end_date: dateToString(date) || null });
                   setError(null);
                 }}
               />

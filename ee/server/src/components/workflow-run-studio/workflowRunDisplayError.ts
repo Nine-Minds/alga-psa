@@ -1,6 +1,7 @@
 export type WorkflowDisplayError = {
   message: string;
   category?: string | null;
+  code?: string | null;
   at?: string | null;
   technicalMessage?: string | null;
   actionId?: string | null;
@@ -22,11 +23,20 @@ type WorkflowActionInvocationLike = {
   step_path: string;
   action_id: string;
   error_message?: string | null;
+  error_json?: Record<string, unknown> | null;
 };
 
 const getErrorJsonMessage = (errorJson?: Record<string, unknown> | null): string | null => {
   const message = errorJson?.message;
   return typeof message === 'string' && message.trim().length > 0 ? message : null;
+};
+
+export const getWorkflowErrorCode = (errorJson?: Record<string, unknown> | null): string | null => {
+  const code = errorJson?.code;
+  if (typeof code === 'string' && code.trim().length > 0) return code.trim();
+  const category = errorJson?.category;
+  if (typeof category === 'string' && category.trim().length > 0) return category.trim();
+  return null;
 };
 
 export const buildStepDisplayError = (
@@ -44,6 +54,7 @@ export const buildStepDisplayError = (
     return {
       message: failedInvocation.error_message,
       category: failedInvocation.action_id,
+      code: getWorkflowErrorCode(failedInvocation.error_json),
       technicalMessage: stepMessage && stepMessage !== failedInvocation.error_message ? stepMessage : null,
       actionId: failedInvocation.action_id,
       stepPath: step.step_path,
@@ -54,6 +65,7 @@ export const buildStepDisplayError = (
     return {
       message: stepMessage,
       category: typeof step.error_json?.category === 'string' ? step.error_json.category : null,
+      code: getWorkflowErrorCode(step.error_json),
       at: typeof step.error_json?.at === 'string' ? step.error_json.at : null,
       stepPath: step.step_path,
     };
@@ -93,6 +105,7 @@ export const buildRunDisplayError = (
     return {
       message: failedInvocation.error_message,
       category: failedInvocation.action_id,
+      code: getWorkflowErrorCode(failedInvocation.error_json),
       technicalMessage: runMessage && runMessage !== failedInvocation.error_message ? runMessage : null,
       actionId: failedInvocation.action_id,
       stepPath: failedInvocation.step_path,
@@ -103,6 +116,7 @@ export const buildRunDisplayError = (
     return {
       message: runMessage,
       category: typeof run?.error_json?.category === 'string' ? run.error_json.category : null,
+      code: getWorkflowErrorCode(run?.error_json),
       at: typeof run?.error_json?.at === 'string' ? run.error_json.at : null,
       stepPath: typeof run?.error_json?.nodePath === 'string' ? run.error_json.nodePath : null,
     };

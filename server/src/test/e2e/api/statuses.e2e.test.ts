@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { tenantDb } from '@alga-psa/db';
 import {
   setupE2ETestEnvironment,
   E2ETestEnvironment
@@ -21,13 +22,15 @@ describe('Status API E2E Tests', () => {
   let secondaryBoardScopedTicketStatusId: string;
   let legacyGlobalTicketStatusId: string;
 
+  function tenantTable(table: string) {
+    return tenantDb(env.db, env.tenant).table(table);
+  }
+
   beforeAll(async () => {
     env = await setupE2ETestEnvironment();
 
     // Create additional test statuses
-    const db = env.db;
-
-    const primaryBoard = await db('boards')
+    const primaryBoard = await tenantTable('boards')
       .where({ tenant: env.tenant })
       .orderBy('is_default', 'desc')
       .first<{ board_id: string }>('board_id');
@@ -37,7 +40,7 @@ describe('Status API E2E Tests', () => {
     primaryBoardId = primaryBoard.board_id;
 
     secondaryBoardId = uuidv4();
-    await db('boards').insert({
+    await tenantTable('boards').insert({
       board_id: secondaryBoardId,
       tenant: env.tenant,
       board_name: 'Secondary Board',
@@ -47,7 +50,7 @@ describe('Status API E2E Tests', () => {
 
     // Create a legacy global ticket status that should no longer be surfaced by generic ticket APIs
     legacyGlobalTicketStatusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTable('statuses').insert({
       status_id: legacyGlobalTicketStatusId,
       name: 'Legacy Global Ticket Status',
       status_type: 'ticket',
@@ -59,7 +62,7 @@ describe('Status API E2E Tests', () => {
     testStatusIds.push(legacyGlobalTicketStatusId);
 
     boardScopedTicketStatusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTable('statuses').insert({
       status_id: boardScopedTicketStatusId,
       name: 'Board Scoped Ticket Status',
       status_type: 'ticket',
@@ -72,7 +75,7 @@ describe('Status API E2E Tests', () => {
     testStatusIds.push(boardScopedTicketStatusId);
 
     secondaryBoardScopedTicketStatusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTable('statuses').insert({
       status_id: secondaryBoardScopedTicketStatusId,
       name: 'Secondary Board Ticket Status',
       status_type: 'ticket',
@@ -86,7 +89,7 @@ describe('Status API E2E Tests', () => {
 
     // Create a project status
     const projectStatusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTable('statuses').insert({
       status_id: projectStatusId,
       name: 'Test Project Status',
       status_type: 'project',
@@ -99,7 +102,7 @@ describe('Status API E2E Tests', () => {
 
     // Create a project_task status
     const taskStatusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTable('statuses').insert({
       status_id: taskStatusId,
       name: 'Test Task Status',
       status_type: 'project_task',
@@ -115,10 +118,10 @@ describe('Status API E2E Tests', () => {
     if (env) {
       // Clean up test statuses
       for (const statusId of testStatusIds) {
-        await env.db('statuses').where('status_id', statusId).delete();
+        await tenantTable('statuses').where('status_id', statusId).delete();
       }
       if (secondaryBoardId) {
-        await env.db('boards').where('board_id', secondaryBoardId).delete();
+        await tenantTable('boards').where('board_id', secondaryBoardId).delete();
       }
       await env.cleanup();
     }

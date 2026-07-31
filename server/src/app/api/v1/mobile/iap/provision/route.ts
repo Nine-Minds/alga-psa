@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { handleApiError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import {
@@ -57,11 +58,14 @@ type ExistingSubscription = {
   status: string;
 };
 
+const MOBILE_TENANT_DISCOVERY = 'tenant-discovery';
+
 async function findExistingSubscription(
   originalTransactionId: string,
 ): Promise<ExistingSubscription | null> {
   const knex = await getConnection(null);
-  const row = await knex('apple_iap_subscriptions')
+  const row = await tenantDb(knex, MOBILE_TENANT_DISCOVERY)
+    .unscoped('apple_iap_subscriptions', 'tenant discovery from Apple original transaction id during provision')
     .where({ original_transaction_id: originalTransactionId })
     .first();
   return (row as ExistingSubscription) ?? null;
@@ -69,8 +73,8 @@ async function findExistingSubscription(
 
 async function findAdminUserForTenant(tenantId: string): Promise<{ userId: string } | null> {
   const knex = await getConnection(null);
-  const row = await knex('users')
-    .where({ tenant: tenantId, user_type: 'internal' })
+  const row = await tenantDb(knex, tenantId).table('users')
+    .where({ user_type: 'internal' })
     .orderBy('created_at', 'asc')
     .first('user_id');
   if (!row) return null;
@@ -105,10 +109,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     try {
       txPayload = await getTransactionInfo(parsed.originalTransactionId, config);
     } catch (e) {
+      console.warn('[mobile-iap-provision] Apple transaction verification failed:', e);
       return handleApiError(
         new ValidationError(
           'Unable to verify Apple transaction',
-          e instanceof Error ? [{ message: e.message, path: [] }] : undefined,
+          [{ message: 'transaction_unverified', path: [] }],
         ),
       );
     }
@@ -217,10 +222,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
 
     if (!workflowResult.available || !workflowResult.result) {
+      console.error('[mobile-iap-provision] Tenant creation workflow unavailable:', workflowResult.error);
       return handleApiError(
-        new ValidationError(
-          `Tenant creation unavailable: ${workflowResult.error ?? 'Temporal client not available'}`,
-        ),
+        new ValidationError('Tenant creation is temporarily unavailable. Please try again later.'),
       );
     }
 
@@ -229,8 +233,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // can switch to a polling endpoint.
     const result = await workflowResult.result;
     if (!result.success || !result.tenantId || !result.adminUserId) {
+      console.error('[mobile-iap-provision] Tenant creation workflow failed:', result.error);
       return handleApiError(
-        new ValidationError(`Tenant creation failed: ${result.error ?? 'unknown error'}`),
+        new ValidationError('Tenant creation failed. Please try again later.'),
       );
     }
 

@@ -21,7 +21,7 @@
       "status": "Status",
       "duration": "Duur",
       "started": "Gestart",
-      "completed": "Voltooid"
+      "completed": "Beëindigd"
     },
     "time": {
       "justNow": "Zojuist",
@@ -45,7 +45,7 @@
         "status": "Status",
         "duration": "Duur",
         "started": "Gestart",
-        "completed": "Voltooid"
+        "completed": "Beëindigd"
       },
       "optionsDialog": {
         "title": "Afdrukopties",
@@ -63,9 +63,12 @@
       "pending": "In behandeling",
       "processing": "Verwerking",
       "pgboss": "PG baas",
-      "temporal": "Tijdelijk"
+      "temporal": "Tijdelijk",
+      "queued": "In wachtrij",
+      "running": "Actief"
     },
-    "successRate": "{{count}}% succespercentage"
+    "successRate": "{{count}}% succespercentage",
+    "successRateNone": "Nog geen voltooide taken"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,36 @@
   "actions": {
     "print": "Afdrukken",
     "printOptions": "Afdrukopties"
+  },
+  "clearHistory": {
+    "button": "Geschiedenis wissen",
+    "dialog": {
+      "title": "Taakgeschiedenis wissen",
+      "warning": "Hiermee wordt de taakgeschiedenis definitief uit deze lijst verwijderd en dit kan niet ongedaan worden gemaakt. Taken die nog worden uitgevoerd, worden niet gestopt of geannuleerd.",
+      "daysLabel": "Leeftijd in dagen",
+      "daysError": "Voer een geheel aantal dagen in (1 of meer).",
+      "cancel": "Annuleren",
+      "clearing": "Wissen…",
+      "confirm": "Geschiedenis wissen"
+    },
+    "scope": {
+      "finished": {
+        "label": "Alleen voltooide",
+        "description": "Voltooide en mislukte taken. Taken die in behandeling, in de wachtrij of actief zijn, blijven behouden."
+      },
+      "all": {
+        "label": "Alle statussen",
+        "description": "Alle taken, inclusief taken die in behandeling, in de wachtrij of nog actief zijn."
+      }
+    },
+    "age": {
+      "toggle": "Verwijder alleen taken ouder dan een ingestelde leeftijd"
+    },
+    "toast": {
+      "none": "Geen overeenkomende taken om te wissen.",
+      "error": "Kan taakgeschiedenis niet wissen. Probeer het opnieuw.",
+      "success_one": "{{count}} taak uit de geschiedenis gewist.",
+      "success_other": "{{count}} taken uit de geschiedenis gewist."
+    }
   }
 }

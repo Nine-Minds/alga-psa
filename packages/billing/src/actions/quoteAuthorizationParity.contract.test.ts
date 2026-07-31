@@ -21,6 +21,7 @@ describe('quote action authorization parity contracts', () => {
     expect(source).toContain('export const sendQuoteReminder = withAuth(async (');
     expect(source).toContain('export const createQuoteRevision = withAuth(async (');
     expect(source).toContain('export const convertQuoteToContract = withAuth(async (');
+    expect(source).toContain('export const convertQuoteToSalesOrder = withAuth(async (');
     expect(source).toContain('export const convertQuoteToInvoice = withAuth(async (');
     expect(source).toContain('export const convertQuoteToBoth = withAuth(async (');
   });

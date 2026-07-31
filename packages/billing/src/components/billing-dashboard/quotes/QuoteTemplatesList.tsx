@@ -15,6 +15,7 @@ import {
 import { MoreVertical, Edit, Copy, Trash2 } from 'lucide-react';
 import type { ColumnDefinition, IQuoteListItem } from '@alga-psa/types';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { listQuotes, deleteQuote } from '../../../actions/quoteActions';
 
 interface QuoteTemplatesListProps {
@@ -22,6 +23,9 @@ interface QuoteTemplatesListProps {
   onCreateFromTemplate: (quoteId: string) => void;
   onNewTemplate?: () => void;
 }
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const QuoteTemplatesList: React.FC<QuoteTemplatesListProps> = ({ onEdit, onCreateFromTemplate, onNewTemplate }) => {
   const { t } = useTranslation('msp/quotes');
@@ -40,8 +44,8 @@ const QuoteTemplatesList: React.FC<QuoteTemplatesListProps> = ({ onEdit, onCreat
     try {
       setIsLoading(true);
       const result = await listQuotes({ is_template: true, pageSize: 200 });
-      if ('permissionError' in result) {
-        setError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
         setTemplates([]);
       } else {
         setTemplates(result.data);
@@ -64,14 +68,15 @@ const QuoteTemplatesList: React.FC<QuoteTemplatesListProps> = ({ onEdit, onCreat
     setError(null);
     try {
       const result = await deleteQuote(quoteId);
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        setError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
       } else {
         void loadTemplates();
       }
       setDeleteDialogState({ isOpen: false, quoteId: null });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('quoteTemplates.errors.delete', {
+      console.error('Failed to delete quote template:', err);
+      setError(t('quoteTemplates.errors.delete', {
         defaultValue: 'Failed to delete template.',
       }));
     } finally {

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { workflowStepQuotaService } from '../../../../shared/workflow/runtime/services/workflowStepQuotaService';
 import logger from '@alga-psa/core/logger';
@@ -23,6 +24,14 @@ async function ensureStripeTables(knex: Knex): Promise<void> {
   }
 }
 
+function tenantTable(knex: Knex, tenant: string, table: string) {
+  return tenantDb(knex, tenant).table(table);
+}
+
+function tenantRows(knex: Knex, tenant: string) {
+  return tenantDb(knex, tenant).unscoped('tenants', 'workflow step quota test fixture creates tenant rows');
+}
+
 async function seedTenant(knex: Knex, tenant: string, plan: 'solo' | 'pro' | 'premium' = 'pro'): Promise<void> {
   const hasCompanyName = await knex.schema.hasColumn('tenants', 'company_name');
   const hasClientName = await knex.schema.hasColumn('tenants', 'client_name');
@@ -34,7 +43,7 @@ async function seedTenant(knex: Knex, tenant: string, plan: 'solo' | 'pro' | 'pr
   if (hasCompanyName) payload.company_name = 'Quota Test Co';
   if (hasClientName) payload.client_name = 'Quota Test Co';
   if (hasEmail) payload.email = `${tenant}@example.com`;
-  await knex('tenants').insert(payload);
+  await tenantRows(knex, tenant).insert(payload);
 }
 
 async function seedStripePeriod(knex: Knex, tenant: string, args: {
@@ -49,7 +58,7 @@ async function seedStripePeriod(knex: Knex, tenant: string, args: {
   const priceId = uuidv4();
   const subscriptionId = uuidv4();
 
-  await knex('stripe_customers').insert({
+  await tenantTable(knex, tenant, 'stripe_customers').insert({
     tenant,
     stripe_customer_id: customerId,
     stripe_customer_external_id: `cus_${uuidv4()}`,
@@ -57,7 +66,7 @@ async function seedStripePeriod(knex: Knex, tenant: string, args: {
     name: 'Billing',
   });
 
-  await knex('stripe_products').insert({
+  await tenantTable(knex, tenant, 'stripe_products').insert({
     tenant,
     stripe_product_id: productId,
     stripe_product_external_id: `prod_${uuidv4()}`,
@@ -66,7 +75,7 @@ async function seedStripePeriod(knex: Knex, tenant: string, args: {
     metadata: args.workflowStepLimitProduct == null ? {} : { workflow_step_limit: args.workflowStepLimitProduct },
   });
 
-  await knex('stripe_prices').insert({
+  await tenantTable(knex, tenant, 'stripe_prices').insert({
     tenant,
     stripe_price_id: priceId,
     stripe_price_external_id: `price_${uuidv4()}`,
@@ -75,7 +84,7 @@ async function seedStripePeriod(knex: Knex, tenant: string, args: {
     metadata: args.workflowStepLimitPrice == null ? {} : { workflow_step_limit: args.workflowStepLimitPrice },
   });
 
-  await knex('stripe_subscriptions').insert({
+  await tenantTable(knex, tenant, 'stripe_subscriptions').insert({
     tenant,
     stripe_subscription_id: subscriptionId,
     stripe_subscription_external_id: `sub_${uuidv4()}`,
@@ -108,7 +117,7 @@ describe('workflowStepQuotaService', () => {
     const periodStart = '2026-04-01T00:00:00.000Z';
     const periodEnd = '2026-05-01T00:00:00.000Z';
 
-    await db('workflow_step_usage_periods').insert({
+    await tenantTable(db, tenant, 'workflow_step_usage_periods').insert({
       tenant,
       period_start: periodStart,
       period_end: periodEnd,
@@ -120,7 +129,7 @@ describe('workflowStepQuotaService', () => {
       tier: 'pro',
     });
 
-    await db('workflow_step_usage_periods')
+    await tenantTable(db, tenant, 'workflow_step_usage_periods')
       .insert({
         tenant,
         period_start: periodStart,
@@ -138,7 +147,7 @@ describe('workflowStepQuotaService', () => {
         updated_at: db.fn.now(),
       });
 
-    const rows = await db('workflow_step_usage_periods')
+    const rows = await tenantTable(db, tenant, 'workflow_step_usage_periods')
       .where({ tenant, period_start: periodStart, period_end: periodEnd })
       .select('*');
 
@@ -186,17 +195,22 @@ describe('workflowStepQuotaService', () => {
       workflowStepLimitPrice: '1200',
     });
 
-    const priceSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant);
+    // Pin `now` inside the seeded Stripe period so the test is not wall-clock
+    // dependent (the default `now = new Date()` left the April period behind
+    // once the real date passed it).
+    const now = new Date('2026-04-15T00:00:00.000Z');
+
+    const priceSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant, now);
     expect(priceSummary.effectiveLimit).toBe(1200);
     expect(priceSummary.limitSource).toBe('stripe_price_metadata');
 
-    await db('stripe_prices').where({ tenant }).update({ metadata: { workflow_step_limit: 'invalid' } });
-    const productSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant);
+    await tenantTable(db, tenant, 'stripe_prices').where({ tenant }).update({ metadata: { workflow_step_limit: 'invalid' } });
+    const productSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant, now);
     expect(productSummary.effectiveLimit).toBe(5000);
     expect(productSummary.limitSource).toBe('stripe_product_metadata');
 
-    await db('stripe_products').where({ tenant }).update({ metadata: { workflow_step_limit: 'unlimited' } });
-    const unlimitedSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant);
+    await tenantTable(db, tenant, 'stripe_products').where({ tenant }).update({ metadata: { workflow_step_limit: 'unlimited' } });
+    const unlimitedSummary = await workflowStepQuotaService.resolveQuotaSummary(db, tenant, now);
     expect(unlimitedSummary.effectiveLimit).toBeNull();
     expect(unlimitedSummary.limitSource).toBe('unlimited_metadata');
   });
@@ -211,15 +225,16 @@ describe('workflowStepQuotaService', () => {
       workflowStepLimitPrice: '2',
     });
 
-    const first = await workflowStepQuotaService.reserveStepStart(db, tenant);
-    const second = await workflowStepQuotaService.reserveStepStart(db, tenant);
-    const third = await workflowStepQuotaService.reserveStepStart(db, tenant);
+    const now = new Date('2026-04-15T00:00:00.000Z');
+    const first = await workflowStepQuotaService.reserveStepStart(db, tenant, now);
+    const second = await workflowStepQuotaService.reserveStepStart(db, tenant, now);
+    const third = await workflowStepQuotaService.reserveStepStart(db, tenant, now);
 
     expect(first.allowed).toBe(true);
     expect(second.allowed).toBe(true);
     expect(third.allowed).toBe(false);
 
-    const row = await db('workflow_step_usage_periods').where({ tenant }).first<{ used_count: number }>();
+    const row = await tenantTable(db, tenant, 'workflow_step_usage_periods').where({ tenant }).first<{ used_count: number }>();
     expect(row?.used_count).toBe(2);
   });
 
@@ -233,15 +248,16 @@ describe('workflowStepQuotaService', () => {
       workflowStepLimitPrice: 'unlimited',
     });
 
+    const now = new Date('2026-04-15T00:00:00.000Z');
     const results = await Promise.all([
-      workflowStepQuotaService.reserveStepStart(db, tenant),
-      workflowStepQuotaService.reserveStepStart(db, tenant),
-      workflowStepQuotaService.reserveStepStart(db, tenant),
-      workflowStepQuotaService.reserveStepStart(db, tenant),
+      workflowStepQuotaService.reserveStepStart(db, tenant, now),
+      workflowStepQuotaService.reserveStepStart(db, tenant, now),
+      workflowStepQuotaService.reserveStepStart(db, tenant, now),
+      workflowStepQuotaService.reserveStepStart(db, tenant, now),
     ]);
 
     expect(results.every((result) => result.allowed)).toBe(true);
-    const row = await db('workflow_step_usage_periods').where({ tenant }).first<{ used_count: number; effective_limit: number | null }>();
+    const row = await tenantTable(db, tenant, 'workflow_step_usage_periods').where({ tenant }).first<{ used_count: number; effective_limit: number | null }>();
     expect(row?.effective_limit).toBeNull();
     expect(row?.used_count).toBe(4);
   });
@@ -256,8 +272,9 @@ describe('workflowStepQuotaService', () => {
       workflowStepLimitPrice: '3',
     });
 
+    const now = new Date('2026-04-15T00:00:00.000Z');
     const reservations = await Promise.all(
-      Array.from({ length: 12 }).map(() => workflowStepQuotaService.reserveStepStart(db, tenant))
+      Array.from({ length: 12 }).map(() => workflowStepQuotaService.reserveStepStart(db, tenant, now))
     );
 
     const allowedCount = reservations.filter((reservation) => reservation.allowed).length;
@@ -265,7 +282,7 @@ describe('workflowStepQuotaService', () => {
     expect(allowedCount).toBe(3);
     expect(deniedCount).toBe(9);
 
-    const row = await db('workflow_step_usage_periods').where({ tenant }).first<{ used_count: number }>();
+    const row = await tenantTable(db, tenant, 'workflow_step_usage_periods').where({ tenant }).first<{ used_count: number }>();
     expect(row?.used_count).toBe(3);
   });
 
@@ -275,7 +292,7 @@ describe('workflowStepQuotaService', () => {
     const periodStart = '2026-04-01T00:00:00.000Z';
     const periodEnd = '2026-05-01T00:00:00.000Z';
 
-    await db('workflow_step_usage_periods').insert({
+    await tenantTable(db, tenant, 'workflow_step_usage_periods').insert({
       tenant,
       period_start: periodStart,
       period_end: periodEnd,
@@ -288,7 +305,7 @@ describe('workflowStepQuotaService', () => {
     });
 
     const workflowId = uuidv4();
-    await db('workflow_definitions').insert({
+    await tenantTable(db, tenant, 'workflow_definitions').insert({
       workflow_id: workflowId,
       tenant,
       name: 'Quota Drift Workflow',
@@ -299,7 +316,7 @@ describe('workflowStepQuotaService', () => {
     });
 
     const runId = uuidv4();
-    await db('workflow_runs').insert({
+    await tenantTable(db, tenant, 'workflow_runs').insert({
       run_id: runId,
       tenant,
       workflow_id: workflowId,
@@ -310,10 +327,12 @@ describe('workflowStepQuotaService', () => {
       input_json: {},
     });
 
-    await db('workflow_run_steps').insert([
-      { step_id: uuidv4(), run_id: runId, step_path: '0', definition_step_id: 'a', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:00.000Z' },
-      { step_id: uuidv4(), run_id: runId, step_path: '1', definition_step_id: 'b', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:01.000Z' },
-      { step_id: uuidv4(), run_id: runId, step_path: '2', definition_step_id: 'c', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:02.000Z' },
+    // The step ledger is tenant-scoped (runtime writes tenant on every step
+    // row); the reconcile query joins on it, so the fixture must set it too.
+    await tenantTable(db, tenant, 'workflow_run_steps').insert([
+      { step_id: uuidv4(), tenant, run_id: runId, step_path: '0', definition_step_id: 'a', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:00.000Z' },
+      { step_id: uuidv4(), tenant, run_id: runId, step_path: '1', definition_step_id: 'b', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:01.000Z' },
+      { step_id: uuidv4(), tenant, run_id: runId, step_path: '2', definition_step_id: 'c', status: 'SUCCEEDED', attempt: 1, started_at: '2026-04-10T00:00:02.000Z' },
     ]);
 
     const reconciliation = await workflowStepQuotaService.reconcileUsagePeriod(db, tenant, periodStart, periodEnd);
@@ -337,9 +356,10 @@ describe('workflowStepQuotaService', () => {
     const warnSpy = vi.spyOn(logger, 'warn');
     const debugSpy = vi.spyOn(logger, 'debug');
 
-    await workflowStepQuotaService.resolveQuotaSummary(db, tenant, new Date('2026-04-20T00:00:00.000Z'));
-    await workflowStepQuotaService.reserveStepStart(db, tenant);
-    await workflowStepQuotaService.reserveStepStart(db, tenant);
+    const now = new Date('2026-04-20T00:00:00.000Z');
+    await workflowStepQuotaService.resolveQuotaSummary(db, tenant, now);
+    await workflowStepQuotaService.reserveStepStart(db, tenant, now);
+    await workflowStepQuotaService.reserveStepStart(db, tenant, now);
 
     const fallbackTenant = uuidv4();
     await seedTenant(db, fallbackTenant, 'pro');

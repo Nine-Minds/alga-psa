@@ -8,6 +8,7 @@ export type OnlineMeetingStatus =
   | 'recording_pending'
   | 'recording_ready'
   | 'no_recording'
+  | 'cancel_pending'
   | 'cancelled'
   | 'failed';
 
@@ -29,15 +30,19 @@ export interface IOnlineMeetingArtifact extends TenantEntity {
 export interface IOnlineMeeting extends TenantEntity {
   meeting_id: string;
   provider: OnlineMeetingProvider;
-  provider_meeting_id: string;
+  /** Null for rows persisted after a failed Graph creation. */
+  provider_meeting_id: string | null;
   provider_event_id: string | null;
   organizer_upn: string | null;
   organizer_user_id: string | null;
   subject: string;
-  join_url: string;
+  /** Null for rows persisted after a failed Graph creation. */
+  join_url: string | null;
   start_time: Date;
   end_time: Date;
   status: OnlineMeetingStatus;
+  /** Graph error code recorded for failed creation / cleanup outcomes. */
+  error_code: string | null;
   recording_fetch_attempts: number;
   last_fetch_at: Date | null;
   appointment_request_id: string | null;

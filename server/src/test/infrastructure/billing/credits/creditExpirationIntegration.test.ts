@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import {
+  assignContractLineToClient,
   createTestService,
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
@@ -15,21 +16,15 @@ import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
-import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
+import { expiredCreditsHandler } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
@@ -48,11 +43,6 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
   };
 });
-
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-}));
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
@@ -240,26 +230,22 @@ describe('Credit Expiration Integration Tests', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await ensureDefaultTax();
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
     await ensureDefaultTax();
   }, 30000);
 
@@ -335,14 +321,7 @@ describe('Credit Expiration Integration Tests', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: clientId,
-      contract_line_id: planId,
-      tenant: context.tenantId,
-      start_date: startDate,
-      is_active: true
-    });
+    await assignContractLineToClient(context, planId, { clientId, startDate });
 
     // Check initial credit balance is zero
     const initialCredit = await ClientContractLine.getClientCredit(clientId);

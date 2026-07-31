@@ -52,6 +52,30 @@ wait_for_redis() {
     log "Redis is up and running!"
 }
 
+# Function to check if the Temporal frontend is accepting connections.
+# The v2 workflow runtime connects to Temporal as its first action and does NOT
+# retry: if the frontend isn't up yet (a common startup-ordering race), the
+# worker process exits. Wait for it here, like postgres/redis, so the race never
+# crashes the worker. Set WAIT_FOR_TEMPORAL=false to skip (non-Temporal setups).
+wait_for_temporal() {
+    if [ "${WAIT_FOR_TEMPORAL:-true}" != "true" ]; then
+        log "Skipping Temporal readiness wait (WAIT_FOR_TEMPORAL=${WAIT_FOR_TEMPORAL})"
+        return 0
+    fi
+    local address="${TEMPORAL_ADDRESS:-temporal-frontend.temporal.svc.cluster.local:7233}"
+    local host="${address%%:*}"
+    local port="${address##*:}"
+    # Fall back to the default port if TEMPORAL_ADDRESS carried no ":port".
+    [ "$port" = "$host" ] && port=7233
+    log "Waiting for Temporal frontend at ${host}:${port} to be ready..."
+    # bash /dev/tcp avoids needing a temporal CLI or nc in the image.
+    until (exec 3<>"/dev/tcp/${host}/${port}") 2>/dev/null; do
+        log "Temporal is unavailable - sleeping"
+        sleep 1
+    done
+    log "Temporal is up and running!"
+}
+
 # Function to start the workflow worker
 start_workflow_worker() {
     # Set up application database connection using app_user
@@ -82,7 +106,8 @@ main() {
     # Wait for dependencies
     wait_for_postgres
     wait_for_redis
-    
+    wait_for_temporal
+
     # Start the workflow worker
     start_workflow_worker
 }
@@ -90,9 +115,16 @@ main() {
 # Execute main function with error handling
 if ! main; then
     log "Error: Workflow worker failed to start properly"
-    # Enter infinite sleep loop instead of exiting
-    log "Entering sleep loop after failure to keep container running for debugging"
-    while true; do
-        sleep 3600  # Sleep for 1 hour
-    done
+    # Exit non-zero so Kubernetes restarts the container (and the liveness probe
+    # catches a worker that wedged after start). Hanging here instead would mask
+    # the failure: with no process to fail a probe, k8s reports the pod healthy
+    # forever. Set DEBUG_HANG_ON_FAILURE=true to keep the container up for
+    # interactive debugging instead.
+    if [ "${DEBUG_HANG_ON_FAILURE:-false}" = "true" ]; then
+        log "DEBUG_HANG_ON_FAILURE=true - sleeping to keep the container running for debugging"
+        while true; do
+            sleep 3600  # Sleep for 1 hour
+        done
+    fi
+    exit 1
 fi

@@ -9,6 +9,18 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexImpl })),
+  // The harness builder's `.where` overwrites its recorded clause, and the
+  // assertions expect tenant to be merged into the production `.where({...})`,
+  // so fold the tenant in when the scoped builder's `.where` is first called.
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => {
+      const builder = conn(table);
+      const originalWhere = builder.where.bind(builder);
+      builder.where = (value: Record<string, unknown>) => originalWhere({ tenant, ...value });
+      return builder;
+    },
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 type DeletePlan = {
@@ -76,7 +88,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     knexImpl = knex;
 
     const { deleteInboundTicketDefaults } = await import('./inboundTicketDefaultsActions');
-    await deleteInboundTicketDefaults('defaults-1');
+    await expect(deleteInboundTicketDefaults('defaults-1')).resolves.toEqual({ success: true });
 
     expect(calls).toEqual(
       expect.arrayContaining([
@@ -104,7 +116,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     );
   });
 
-  it('throws when defaults row is not found after reference clearing', async () => {
+  it('returns an action error when defaults row is not found after reference clearing', async () => {
     const { knex } = createDeleteHarness({
       hasClientsDestinationColumn: true,
       hasContactsDestinationColumn: true,
@@ -113,8 +125,8 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     knexImpl = knex;
 
     const { deleteInboundTicketDefaults } = await import('./inboundTicketDefaultsActions');
-    await expect(
-      deleteInboundTicketDefaults('missing-defaults')
-    ).rejects.toThrow('Defaults configuration not found');
+    await expect(deleteInboundTicketDefaults('missing-defaults')).resolves.toEqual({
+      actionError: 'Defaults configuration not found',
+    });
   });
 });

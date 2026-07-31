@@ -18,7 +18,17 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import Pagination from '@alga-psa/ui/components/Pagination';
 import FolderTreeView from './FolderTreeView';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+    getErrorMessage,
+    handleError,
+    isActionMessageError,
+    isActionPermissionError,
+    type ActionMessageError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+    isActionPermissionError(value) || isActionMessageError(value);
 
 interface DocumentSelectorProps {
     id: string;
@@ -115,8 +125,8 @@ export default function DocumentSelector({
                 }, pageToLoad, pageSize);
             }
 
-            if (isActionPermissionError(response)) {
-                handleError(response.permissionError);
+            if (isDocumentActionError(response)) {
+                handleError(response, getErrorMessage(response));
                 setDocuments([]);
                 setTotalPages(1);
                 setCurrentPage(1);
@@ -207,8 +217,8 @@ export default function DocumentSelector({
                         entityType!,
                         selectedIds
                     );
-                    if (isActionPermissionError(associationResult)) {
-                        handleError(associationResult.permissionError);
+                    if (isDocumentActionError(associationResult)) {
+                        handleError(associationResult, getErrorMessage(associationResult));
                         return;
                     }
                     await onDocumentsSelected(selectedDocs);

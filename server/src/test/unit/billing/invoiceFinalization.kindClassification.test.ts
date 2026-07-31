@@ -7,6 +7,8 @@ type Row = Record<string, any>;
 function createMockDb() {
   const tables: Record<string, Row[]> = {
     invoices: [],
+    transactions: [],
+    credit_tracking: [],
   };
 
   const tx = ((tableName: string) => {
@@ -29,6 +31,13 @@ function createMockDb() {
         }
         return filteredRows.length;
       },
+      orderBy() {
+        return builder;
+      },
+      async insert(payload: Row) {
+        rows.push(payload);
+        return [payload];
+      },
     };
 
     return builder;
@@ -46,8 +55,7 @@ const mocks = vi.hoisted(() => {
       callback(db.tx),
     ),
     createTenantKnex: vi.fn(async () => ({ knex: db.tx, tenant: 'tenant-1' })),
-    updateClientCredit: vi.fn(async () => undefined),
-    getClientCredit: vi.fn(async () => 0),
+    getAvailableCredit: vi.fn(async () => 0),
     applyCreditToInvoice: vi.fn(async () => undefined),
     validateInvoiceFinalization: vi.fn(async () => ({ canFinalize: true })),
     publishWorkflowEvent: vi.fn(async () => undefined),
@@ -56,6 +64,18 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   withTransaction: mocks.withTransaction,
   createTenantKnex: mocks.createTenantKnex,
 }));
@@ -65,15 +85,13 @@ vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => null),
 }));
 
-vi.mock('../../../../../packages/billing/src/models/clientContractLine', () => ({
-  default: {
-    updateClientCredit: mocks.updateClientCredit,
-    getClientCredit: mocks.getClientCredit,
-  },
-}));
-
 vi.mock('../../../../../packages/billing/src/actions/creditActions', () => ({
   applyCreditToInvoice: mocks.applyCreditToInvoice,
+  resolveCreditExpirationDate: vi.fn(async () => undefined),
+}));
+
+vi.mock('../../../../../packages/billing/src/lib/creditBalance', () => ({
+  getAvailableCredit: mocks.getAvailableCredit,
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/taxSourceActions', () => ({
@@ -103,8 +121,10 @@ describe('invoice finalization kind classification', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.db.tables.invoices.length = 0;
+    mocks.db.tables.transactions.length = 0;
+    mocks.db.tables.credit_tracking.length = 0;
     mocks.validateInvoiceFinalization.mockResolvedValue({ canFinalize: true });
-    mocks.getClientCredit.mockResolvedValue(0);
+    mocks.getAvailableCredit.mockResolvedValue(0);
   });
 
   it('T047: true prepayment invoice behavior still works after explicit invoice-kind classification is introduced', async () => {
@@ -123,8 +143,21 @@ describe('invoice finalization kind classification', () => {
 
     await finalizeInvoiceWithKnex('invoice-prepayment', mocks.db.tx, 'tenant-1', 'user-1');
 
-    expect(mocks.updateClientCredit).toHaveBeenCalledWith('client-1', 5000);
-    expect(mocks.getClientCredit).not.toHaveBeenCalled();
+    // Prepayment credit is issued at finalization: ledger + tracking rows
+    expect(mocks.db.tables.transactions).toHaveLength(1);
+    expect(mocks.db.tables.transactions[0]).toMatchObject({
+      type: 'credit_issuance',
+      amount: 5000,
+      client_id: 'client-1',
+      invoice_id: 'invoice-prepayment',
+    });
+    expect(mocks.db.tables.credit_tracking).toHaveLength(1);
+    expect(mocks.db.tables.credit_tracking[0]).toMatchObject({
+      amount: 5000,
+      remaining_amount: 5000,
+      client_id: 'client-1',
+    });
+    expect(mocks.getAvailableCredit).not.toHaveBeenCalled();
     expect(mocks.db.tables.invoices[0]).toMatchObject({
       status: 'sent',
       finalized_at: expect.any(String),
@@ -147,8 +180,8 @@ describe('invoice finalization kind classification', () => {
 
     await finalizeInvoiceWithKnex('invoice-recurring', mocks.db.tx, 'tenant-1', 'user-1');
 
-    expect(mocks.updateClientCredit).not.toHaveBeenCalled();
-    expect(mocks.getClientCredit).toHaveBeenCalledWith('client-1');
+    expect(mocks.db.tables.credit_tracking).toHaveLength(0);
+    expect(mocks.getAvailableCredit).toHaveBeenCalled();
     expect(mocks.applyCreditToInvoice).not.toHaveBeenCalled();
   });
 

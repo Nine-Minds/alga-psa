@@ -1,11 +1,14 @@
 import nodemailer from 'nodemailer';
 import { getSecret } from '../lib/utils/getSecret';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getCurrencySymbol } from 'server/src/constants/currency';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { createTenantKnex } from 'server/src/lib/db';
+import { tenantDb } from '@alga-psa/db';
+
+const SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT = '__system_email_template_lookup__';
 
 interface EmailConfig {
   host: string;
@@ -340,8 +343,9 @@ export class EmailService {
   private async getEmailTemplate(templateName: string): Promise<string | null> {
     // First try to get system template from database for notification emails
     try {
-      const { knex } = await createTenantKnex();
-      const template = await knex('system_email_templates')
+      const { knex, tenant } = await createTenantKnex();
+      const template = await tenantDb(knex, tenant ?? SYSTEM_EMAIL_TEMPLATE_LOOKUP_TENANT)
+        .table('system_email_templates')
         .select('html_content')
         .where({ name: templateName })
         .first();

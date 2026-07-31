@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -218,26 +219,30 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
             </div>
             <div>
                 <Label htmlFor="tax-rate-start-date">{t('taxRateCreateForm.startDateLabel', { defaultValue: 'Start Date *' })}</Label>
-                <Input
+                <DatePicker
                     id="tax-rate-start-date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                        setStartDate(e.target.value);
+                    label={t('taxRateCreateForm.startDateLabel', { defaultValue: 'Start Date *' })}
+                    placeholder={t('taxRateCreateForm.startDateLabel', { defaultValue: 'Start Date *' })}
+                    clearable
+                    value={dateFromString(startDate)}
+                    onChange={(date) => {
+                        setStartDate(dateToString(date));
                         clearErrorIfSubmitted();
                     }}
                     disabled={isSubmitting}
-                    required
-                    className={hasAttemptedSubmit && !startDate ? 'border-red-500' : ''}
+                    className={hasAttemptedSubmit && !startDate ? 'w-full border-red-500' : 'w-full'}
                 />
             </div>
             <div>
                 <Label htmlFor="tax-rate-end-date">{t('taxRateCreateForm.endDateLabel', { defaultValue: 'End Date (Optional)' })}</Label>
-                <Input
+                <DatePicker
                     id="tax-rate-end-date"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    label={t('taxRateCreateForm.endDateLabel', { defaultValue: 'End Date (Optional)' })}
+                    placeholder={t('taxRateCreateForm.endDateLabel', { defaultValue: 'End Date (Optional)' })}
+                    clearable
+                    className="w-full"
+                    value={dateFromString(endDate)}
+                    onChange={(date) => setEndDate(dateToString(date))}
                     disabled={isSubmitting}
                 />
             </div>

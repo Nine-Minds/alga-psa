@@ -53,6 +53,11 @@ vi.mock('react-hot-toast', () => ({
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   handleError,
+  // The component also imports these predicates; leaving them out makes the
+  // reopen handler throw (undefined is not a function) and swallow the flow.
+  isActionMessageError: (v: unknown) => Boolean((v as { messageError?: unknown } | null | undefined)?.messageError),
+  isActionPermissionError: (v: unknown) => Boolean((v as { permissionError?: unknown } | null | undefined)?.permissionError),
+  getErrorMessage: (v: unknown) => String((v as { message?: unknown } | null | undefined)?.message ?? v),
 }));
 
 vi.mock('../src/components/time-management/time-entry/time-sheet/TimeSheet', () => ({

@@ -52,11 +52,13 @@ vi.mock('@temporalio/client', () => ({
   Connection: {
     connect: connectMock,
   },
-  Client: vi.fn(() => ({
-    workflow: {
-      getHandle: getHandleMock,
-    },
-  })),
+  Client: function Client() {
+    return {
+      workflow: {
+        getHandle: getHandleMock,
+      },
+    };
+  },
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -90,6 +92,12 @@ vi.mock('@alga-psa/db', () => ({
     knex.fn = { now: () => new Date() };
 
     return { knex, tenant: state.integration.tenant };
+  }),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      (o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q)),
   }),
 }));
 

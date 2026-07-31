@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readRepoFile } from '../../test-utils/repoPaths';
 
-const editorSource = fs.readFileSync(
-  path.resolve(process.cwd(), 'packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx'),
-  'utf8'
+const editorSource = readRepoFile(
+  'packages/billing/src/components/billing-dashboard/InvoiceTemplateEditor.tsx'
 );
 
 describe('InvoiceTemplateEditor compiler cutover wiring', () => {

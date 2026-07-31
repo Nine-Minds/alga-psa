@@ -4,7 +4,7 @@ import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import { getSession } from '@alga-psa/auth';
 import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import logger from '@alga-psa/core/logger';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
@@ -25,24 +25,24 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         }
 
         const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          const user = await trx<IUser>('users')
+          const scopedDb = tenantDb(trx, sessionUser.tenant);
+          const user = await scopedDb.table<IUser>('users')
             .select('*')
             .where('user_id', sessionUser.id)
-            .where('tenant', sessionUser.tenant)
             .first();
 
           if (!user) {
             return null;
           }
 
-          const roles = await trx<IRole>('roles')
-            .join('user_roles', function () {
-              this.on('roles.role_id', '=', 'user_roles.role_id')
-                .andOn('roles.tenant', '=', 'user_roles.tenant');
-            })
+          const rolesQuery = scopedDb.table<IRole>('roles');
+          const roles = await scopedDb.tenantJoin(
+            rolesQuery,
+            'user_roles',
+            'roles.role_id',
+            'user_roles.role_id'
+          )
             .where('user_roles.user_id', user.user_id)
-            .where('user_roles.tenant', sessionUser.tenant)
-            .where('roles.tenant', sessionUser.tenant)
             .select('roles.*');
 
           return { ...user, roles };
@@ -76,25 +76,25 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
 
     if (sessionUser.user_type && session.user?.email) {
       const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const user = await trx<IUser>('users')
+        const scopedDb = tenantDb(trx, tenant);
+        const user = await scopedDb.table<IUser>('users')
           .select('*')
           .where('email', session.user!.email!.toLowerCase())
           .where('user_type', sessionUser.user_type)
-          .where('tenant', tenant)
           .first();
 
         if (!user) {
           return null;
         }
 
-        const roles = await trx<IRole>('roles')
-          .join('user_roles', function () {
-            this.on('roles.role_id', '=', 'user_roles.role_id')
-              .andOn('roles.tenant', '=', 'user_roles.tenant');
-          })
+        const rolesQuery = scopedDb.table<IRole>('roles');
+        const roles = await scopedDb.tenantJoin(
+          rolesQuery,
+          'user_roles',
+          'roles.role_id',
+          'user_roles.role_id'
+        )
           .where('user_roles.user_id', user.user_id)
-          .where('user_roles.tenant', tenant)
-          .where('roles.tenant', tenant)
           .select('roles.*');
 
         return { ...user, roles };
@@ -117,24 +117,24 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     logger.warn(`DEVELOPMENT ONLY: Email-only lookup for: ${session.user.email} in tenant: ${tenant}`);
 
     const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const user = await trx<IUser>('users')
+      const scopedDb = tenantDb(trx, tenant);
+      const user = await scopedDb.table<IUser>('users')
         .select('*')
         .where('email', session.user!.email!.toLowerCase())
-        .where('tenant', tenant)
         .first();
 
       if (!user) {
         return null;
       }
 
-      const roles = await trx<IRole>('roles')
-        .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id')
-            .andOn('roles.tenant', '=', 'user_roles.tenant');
-        })
+      const rolesQuery = scopedDb.table<IRole>('roles');
+      const roles = await scopedDb.tenantJoin(
+        rolesQuery,
+        'user_roles',
+        'roles.role_id',
+        'user_roles.role_id'
+      )
         .where('user_roles.user_id', user.user_id)
-        .where('user_roles.tenant', tenant)
-        .where('roles.tenant', tenant)
         .select('roles.*');
 
       return { ...user, roles };

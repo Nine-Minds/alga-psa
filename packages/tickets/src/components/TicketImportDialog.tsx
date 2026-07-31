@@ -20,6 +20,13 @@ import { parseCSV } from '@alga-psa/core';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   generateTicketCSVTemplate,
   getTicketImportReferenceData,
   importTickets,
@@ -61,6 +68,10 @@ import {
   MAX_TICKET_IMPORT_ROWS,
   LARGE_TICKET_IMPORT_THRESHOLD,
 } from '@alga-psa/types';
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface TicketImportDialogProps {
   isOpen: boolean;
@@ -559,6 +570,11 @@ const TicketImportDialog: React.FC<TicketImportDialogProps> = ({
         processed, statusResolutions, clientResolutions, contactResolutions,
         priorityResolutions, categoryResolutions, defaultBoardId
       );
+      if (isReturnedActionError(result)) {
+        setErrors([getErrorMessage(result)]);
+        setStep('preview');
+        return;
+      }
       setImportResult({
         ...result,
         ticketsSkipped: result.ticketsSkipped + preImportSkipped,

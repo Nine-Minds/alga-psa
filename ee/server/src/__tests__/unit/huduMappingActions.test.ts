@@ -1,6 +1,6 @@
 /**
  * T040/T046 — Hudu company-mapping server actions, unit-mocked: auth gate,
- * feature flag, tiers, knex, the hudu_integrations repository and the Hudu
+ * tiers, knex, the hudu_integrations repository and the Hudu
  * client are mocked; the matcher + cache shaping stay REAL (partial module
  * mock keeps only the knex-level row functions fake). The row functions
  * themselves run against the real DB in
@@ -16,7 +16,6 @@ const CLIENT_2 = '22222222-2222-2222-2222-222222222222';
 const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
@@ -44,10 +43,6 @@ vi.mock('@alga-psa/auth', () => ({
     (...args: unknown[]) =>
       handler(internalUser, { tenant: TENANT }, ...args),
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -96,7 +91,6 @@ beforeEach(() => {
   clientsRows = [];
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
 
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
@@ -154,13 +148,6 @@ describe('T040: syncHuduCompanies', () => {
 
     await expect(syncHuduCompanies()).rejects.toThrow(/insufficient permissions \(update\)/);
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'system_settings', 'update');
-  });
-
-  it('rejects when the hudu-integration flag is off', async () => {
-    isEnabledMock.mockResolvedValue(false);
-    const { syncHuduCompanies } = await importActions();
-
-    await expect(syncHuduCompanies()).rejects.toThrow(/disabled for this tenant/);
   });
 
   it('returns a failure envelope when the Hudu fetch fails', async () => {

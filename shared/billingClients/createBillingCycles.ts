@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import type { IClientContractLineCycle, IClient, ISO8601String, BillingCycleType } from '@alga-psa/types';
 import { parseISO } from 'date-fns';
@@ -44,7 +45,7 @@ function getStartOfCurrentCycle(
 }
 
 async function createBillingCycle(
-  knex: Knex,
+  knex: Knex | Knex.Transaction,
   cycle: Partial<IClientContractLineCycle> & {
     effective_date: ISO8601String;
     period_start_date: ISO8601String;
@@ -68,10 +69,10 @@ async function createBillingCycle(
     };
   }
 
-  const overlap = await knex('client_billing_cycles')
+  const db = tenantDb(knex, cycle.tenant as string);
+  const overlap = await db.table('client_billing_cycles')
     .where({
       client_id: cycle.client_id,
-      tenant: cycle.tenant,
       is_active: true
     })
     .whereNotNull('period_end_date')
@@ -88,10 +89,9 @@ async function createBillingCycle(
     };
   }
 
-  const existingCycle = await knex('client_billing_cycles')
+  const existingCycle = await db.table('client_billing_cycles')
     .where({
       client_id: cycle.client_id,
-      tenant: cycle.tenant,
       is_active: true,
       effective_date: effectiveDate
     })
@@ -116,7 +116,7 @@ async function createBillingCycle(
   };
 
   try {
-    await knex('client_billing_cycles').insert(fullCycle);
+    await db.table('client_billing_cycles').insert(fullCycle);
     return { success: true };
   } catch (error: unknown) {
     if (
@@ -156,15 +156,23 @@ export async function createClientContractLineCycles(
   client: IClient,
   options: { manual?: boolean; effectiveDate?: string } = {}
 ): Promise<BillingCycleCreationResult> {
+  if (!client.tenant) {
+    return {
+      success: false,
+      error: 'db_error',
+      message: 'Client tenant is required to create billing cycles.'
+    };
+  }
+
   const billingCycle = client.billing_cycle as BillingCycleType;
   const now = ensureUtcMidnightIsoDate(new Date().toISOString().split('T')[0] + 'T00:00:00Z');
 
   const anchorSettings = await loadClientAnchorSettings(knex, client, billingCycle);
 
-  const lastCycle = (await knex('client_billing_cycles')
+  const db = tenantDb(knex, client.tenant);
+  const lastCycle = (await db.table('client_billing_cycles')
     .where({
       client_id: client.client_id,
-      tenant: client.tenant,
       is_active: true
     })
     .orderBy('period_start_date', 'desc')
@@ -268,9 +276,13 @@ async function loadClientAnchorSettings(
   client: IClient,
   billingCycle: BillingCycleType
 ): Promise<NormalizedBillingCycleAnchorSettings> {
+  if (!client.tenant) {
+    throw new Error('Client tenant is required to load billing anchor settings.');
+  }
+
   const defaults = getAnchorDefaultsForCycle(billingCycle);
-  const settings = await knex('client_billing_settings')
-    .where({ tenant: client.tenant, client_id: client.client_id })
+  const settings = await tenantDb(knex, client.tenant).table('client_billing_settings')
+    .where({ client_id: client.client_id })
     .first()
     .select(
       'billing_cycle_anchor_day_of_month',
@@ -290,4 +302,3 @@ async function loadClientAnchorSettings(
 }
 
 export { getNextCycleDate, getStartOfCurrentCycle };
-

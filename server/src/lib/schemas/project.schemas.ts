@@ -7,6 +7,7 @@ export const clientPortalConfigSchema = z.object({
   show_phase_completion: z.boolean().default(false),
   show_tasks: z.boolean().default(false),
   show_budget_hours: z.boolean().default(false),
+  show_billing: z.boolean().default(false),
   visible_task_fields: z.array(z.string()).default(['task_name', 'due_date', 'status'])
 });
 
@@ -145,7 +146,8 @@ export const createTaskSchema = projectTaskSchema.omit({
   created_at: true,
   updated_at: true,
   tenant: true,
-  wbs_code: true  // wbs_code is auto-generated
+  wbs_code: true,  // wbs_code is auto-generated
+  actual_hours: true,
 }).extend({
   assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
@@ -155,7 +157,8 @@ export const updateTaskSchema = projectTaskSchema.partial().omit({
   task_id: true,
   created_at: true,
   updated_at: true,
-  tenant: true
+  tenant: true,
+  actual_hours: true,
 }).extend({
   assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()

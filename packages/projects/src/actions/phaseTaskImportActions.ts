@@ -1,15 +1,15 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
-import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { getServices } from './serviceCatalogActions';
-import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';
+import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
 import ProjectModel from '@alga-psa/projects/models/project';
 import ProjectTaskModel from '../models/projectTask';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -36,19 +36,55 @@ import {
 } from '@alga-psa/types';
 import { IProjectStatusMapping } from '@alga-psa/types';
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+function phaseTaskImportErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return error.message;
+    }
+    if (
+      error.message === 'Project not found' ||
+      error.message === 'No status mappings found for project. Please configure task statuses first.'
+    ) {
+      return error.message;
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return 'One of the selected project, phase, status, task, or tag values is invalid. Please refresh and try again.';
+  }
+  if (dbError?.code === '23502') {
+    return `Missing required imported task field${dbError.column ? `: ${dbError.column}` : ''}.`;
+  }
+  if (dbError?.code === '23503') {
+    return 'One of the selected project import records no longer exists. Please refresh and try again.';
+  }
+  if (dbError?.code === '23505') {
+    return 'The import conflicts with an existing project task or phase. Please refresh and try again.';
+  }
+  if (dbError?.code === '23514') {
+    return 'One of the imported task values is not allowed. Please review the CSV and try again.';
+  }
+
+  return 'Failed to import phases and tasks. Please check the file and try again.';
+}
+
 async function resolveProjectStatusInfo(
   trx: Knex.Transaction,
   tenant: string,
   projectStatusMappingId: string
 ): Promise<{ status: string; isClosed: boolean }> {
-  const row = await trx('project_status_mappings as psm')
-    .leftJoin('statuses as s', function joinStatuses(this: Knex.JoinClause) {
-      this.on('psm.status_id', '=', 's.status_id').andOn('psm.tenant', '=', 's.tenant');
-    })
-    .leftJoin('standard_statuses as ss', function joinStandardStatuses(this: Knex.JoinClause) {
-      this.on('psm.standard_status_id', '=', 'ss.standard_status_id');
-    })
-    .where({ 'psm.project_status_mapping_id': projectStatusMappingId, 'psm.tenant': tenant })
+  const db = tenantDb(trx, tenant);
+  const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
+    .where({ 'psm.project_status_mapping_id': projectStatusMappingId })
     .select(
       trx.raw(
         'COALESCE(psm.custom_name, s.name, ss.name, psm.project_status_mapping_id::text) as status_name'
@@ -56,6 +92,10 @@ async function resolveProjectStatusInfo(
       trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
     )
     .first<{ status_name: string; is_closed: boolean }>();
+  db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+  db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+
+  const row = await query;
 
   if (!row) {
     return { status: projectStatusMappingId, isClosed: false };
@@ -140,25 +180,23 @@ async function getImportStatusReferenceData(
   statusLookup: Record<string, string>;
   statusLookupByPhase: Record<string, Record<string, string>>;
 }> {
+  const db = tenantDb(trx, tenant);
+  const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant)
+    .where({ 'psm.project_id': projectId })
+    .select(
+      'psm.*',
+      trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+      trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
+      trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
+    )
+    .orderBy('psm.display_order');
+  db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+  db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+
   const [phases, statusMappings] = await Promise.all([
     ProjectModel.getPhases(trx, tenant, projectId),
-    trx('project_status_mappings as psm')
-      .where({ 'psm.project_id': projectId, 'psm.tenant': tenant })
-      .leftJoin('statuses as s', function(this: Knex.JoinClause) {
-        this.on('psm.status_id', 's.status_id')
-          .andOn('psm.tenant', 's.tenant');
-      })
-      .leftJoin('standard_statuses as ss', function(this: Knex.JoinClause) {
-        this.on('psm.standard_status_id', 'ss.standard_status_id');
-      })
-      .select(
-        'psm.*',
-        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
-        trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
-        trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
-      )
-      .orderBy('psm.display_order'),
-  ]);
+    statusMappingsQuery,
+  ]) as [IProjectPhase[], ImportStatusMappingRow[]];
 
   const defaultMappings = statusMappings.filter((mapping) => !mapping.phase_id);
   const statusLookup = buildStatusLookupFromMappings(defaultMappings);
@@ -262,7 +300,7 @@ export async function groupRowsIntoPhases(
       assigned_to: primaryAgentId,
       additional_agent_ids: additionalAgentIds,
       estimated_hours: parseImportNumber(row.estimated_hours),
-      actual_hours: parseImportNumber(row.actual_hours),
+      actual_hours: null,
       due_date: parseImportDate(row.due_date),
       priority_id: priorityLookup[priorityName] || null,
       service_id: serviceLookup[serviceName] || null,
@@ -296,7 +334,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Collect and document client requirements',
       assigned_to: 'John Smith',
       estimated_hours: '16',
-      actual_hours: '',
       due_date: '2024-02-15',
       priority: 'High',
       service: 'Consulting',
@@ -310,7 +347,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Design initial wireframes for review',
       assigned_to: 'Sarah Johnson',
       estimated_hours: '8',
-      actual_hours: '',
       due_date: '2024-02-20',
       priority: 'Medium',
       service: 'Design',
@@ -324,7 +360,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Implement REST API endpoints',
       assigned_to: 'Mike Wilson, Sarah Johnson',  // First = primary, rest = additional agents
       estimated_hours: '40',
-      actual_hours: '',
       due_date: '2024-03-15',
       priority: 'High',
       service: 'Development',
@@ -338,7 +373,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Create React UI components',
       assigned_to: 'Tom Brown',
       estimated_hours: '32',
-      actual_hours: '',
       due_date: '2024-03-20',
       priority: 'Medium',
       service: 'Development',
@@ -352,7 +386,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Final documentation review before delivery',
       assigned_to: 'John Smith',
       estimated_hours: '4',
-      actual_hours: '',
       due_date: '2024-03-25',
       priority: 'Low',
       service: '',
@@ -368,7 +401,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
     'task_description',
     'assigned_to',
     'estimated_hours',
-    'actual_hours',
     'due_date',
     'priority',
     'service',
@@ -396,24 +428,21 @@ export const getImportReferenceData = withAuth(async (
     // Fetch all reference data in parallel within the same transaction
     const [users, priorities, services, phases, statusReferenceData] = await Promise.all([
       // Users (only active internal/MSP agents - exclude client portal users)
-      trx('users')
+      tenantScopedTable(trx, 'users', tenant)
         .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'is_inactive', 'tenant')
-        .where('tenant', tenant)
         .where('is_inactive', false)
         .where('user_type', 'internal')
         .orderBy(['first_name', 'last_name']),
 
       // Priorities for project_task
-      trx('priorities')
+      tenantScopedTable(trx, 'priorities', tenant)
         .select('priority_id', 'priority_name')
-        .where('tenant', tenant)
         .where('item_type', 'project_task')
         .orderBy('order_number'),
 
       // Active services
-      trx('service_catalog')
+      tenantScopedTable(trx, 'service_catalog', tenant)
         .select('service_id', 'service_name')
-        .where('tenant', tenant)
         .where('is_active', true)
         .orderBy('service_name'),
 
@@ -586,10 +615,7 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     }
 
     if (row.actual_hours?.trim()) {
-      const parsed = parseImportNumber(row.actual_hours);
-      if (parsed === null || parsed < 0) {
-        warnings.push(`Invalid actual_hours: "${row.actual_hours}" - will be skipped`);
-      }
+      warnings.push('Actual Hours is derived from linked time entries and will be ignored');
     }
 
     return {
@@ -776,10 +802,7 @@ export const validatePhaseTaskImportData = withAuth(async (
     }
 
     if (row.actual_hours?.trim()) {
-      const parsed = parseImportNumber(row.actual_hours);
-      if (parsed === null || parsed < 0) {
-        warnings.push(`Invalid actual_hours: "${row.actual_hours}" - will be skipped`);
-      }
+      warnings.push('Actual Hours is derived from linked time entries and will be ignored');
     }
 
     return {
@@ -820,12 +843,13 @@ export const importPhasesAndTasks = withAuth(async (
   defaultStatusMappingId?: string,
   defaultPhaseName?: string
 ): Promise<IPhaseTaskImportResult> => {
-  const { knex: db } = await createTenantKnex();
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(user, 'project', 'update')) {
-      throw new Error('Permission denied: Cannot update projects');
-    }
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'project', 'update')) {
+        throw new Error('Permission denied: Cannot update projects');
+      }
 
     // Verify project exists
     const project = await ProjectModel.getById(trx, tenant, projectId);
@@ -1084,7 +1108,6 @@ export const importPhasesAndTasks = withAuth(async (
               description_rich_text: null,
               assigned_to: taskData.assigned_to,
               estimated_hours: taskData.estimated_hours,
-              actual_hours: taskData.actual_hours,
               due_date: taskData.due_date,
               priority_id: taskData.priority_id,
               service_id: taskData.service_id,
@@ -1179,7 +1202,16 @@ export const importPhasesAndTasks = withAuth(async (
       tasksCreated,
       errors,
     };
-  });
+    });
+  } catch (error) {
+    console.error('Error importing phases and tasks:', error);
+    return {
+      success: false,
+      phasesCreated: 0,
+      tasksCreated: 0,
+      errors: [phaseTaskImportErrorMessage(error)],
+    };
+  }
 });
 
 /**
@@ -1214,21 +1246,21 @@ async function createNewStatusMapping(
   await trx.raw('SELECT pg_advisory_xact_lock(?)', [lockHash]);
 
   // Check if status already exists in tenant's status library
-  let status = await trx('statuses')
-    .where({ tenant, name: statusName, status_type: 'project_task' })
+  let status = await tenantScopedTable(trx, 'statuses', tenant)
+    .where({ name: statusName, status_type: 'project_task' })
     .first();
 
   if (!status) {
     // Get next order number for the tenant's status library
-    const maxOrder = await trx('statuses')
-      .where({ tenant, status_type: 'project_task' })
+    const maxOrder = await tenantScopedTable(trx, 'statuses', tenant)
+      .where({ status_type: 'project_task' })
       .max('order_number as max')
       .first();
 
     const orderNumber = (maxOrder?.max ?? 0) + 1;
 
     // Create a new status in the tenant's status library
-    [status] = await trx('statuses')
+    [status] = await tenantScopedTable(trx, 'statuses', tenant)
       .insert({
         tenant,
         item_type: 'project_task',
@@ -1245,8 +1277,8 @@ async function createNewStatusMapping(
   // Check if a mapping already exists in the same scope (phase-scoped or project-wide).
   // A project-wide mapping and a phase-scoped mapping for the same status are distinct rows
   // and serve different read paths, so the existence check must include phase_id.
-  const existingMappingQuery = trx('project_status_mappings')
-    .where({ tenant, project_id: projectId, status_id: status.status_id });
+  const existingMappingQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)
+    .where({ project_id: projectId, status_id: status.status_id });
   const existingMapping = phaseId === null
     ? await existingMappingQuery.whereNull('phase_id').first()
     : await existingMappingQuery.where({ phase_id: phaseId }).first();
@@ -1260,7 +1292,7 @@ async function createNewStatusMapping(
   }
 
   // Create the project status mapping pointing to the status
-  const [newMapping] = await trx('project_status_mappings')
+  const [newMapping] = await tenantScopedTable(trx, 'project_status_mappings', tenant)
     .insert({
       tenant,
       project_id: projectId,

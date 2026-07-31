@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory — Alga PSA (hybrid mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --purple:#8A4DEA; --purple-light:#A36FF8; --purple-dark:#7C3AED; --purple-wash:#F3F0FF;
+  --charcoal:#312E38;
+  --ink:#0F172A; --slate-700:#334155; --slate-500:#64748B; --border:#E2E8F0; --page:#F8FAFC;
+  --green:#10B981; --amber:#F59E0B; --red:#EF4444; --cyan:#40CFF9;
+  --red-50:#FEF2F2; --amber-50:#FFFBEB; --green-50:#ECFDF5; --slate-50:#F8FAFC;
+  --grad:linear-gradient(135deg,#A36FF8,#8A4DEA);
+  --card-shadow:0 1px 2px rgba(82,46,140,.06), 0 8px 24px rgba(82,46,140,.07);
+  --card-shadow-hover:0 2px 4px rgba(82,46,140,.08), 0 14px 32px rgba(82,46,140,.12);
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--page); color:var(--ink);
+  -webkit-font-smoothing:antialiased; line-height:1.45;
+  padding:32px 28px 48px;
+}
+.wrap{max-width:1400px;margin:0 auto}
+
+/* ---------- header ---------- */
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}
+.page-head h1{font-family:'Poppins',sans-serif;font-weight:700;font-size:28px;letter-spacing:-0.01em;color:var(--ink)}
+.page-head .sub{color:var(--slate-500);font-size:14px;margin-top:4px;max-width:720px}
+.page-head .sub b{color:var(--slate-700);font-weight:600}
+.head-actions{display:flex;gap:10px;flex-shrink:0;padding-top:4px}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+  padding:9px 15px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--slate-700);
+  cursor:pointer;transition:all .16s ease;white-space:nowrap;
+}
+.btn svg{width:16px;height:16px}
+.btn:hover{border-color:#D5CBEE;background:#FDFCFF;box-shadow:0 1px 2px rgba(82,46,140,.06)}
+.btn-primary{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(138,77,234,.28)}
+.btn-primary:hover{background:linear-gradient(135deg,#9D63F6,var(--purple-dark));box-shadow:0 4px 14px rgba(138,77,234,.36)}
+
+/* ---------- top bento row (money) ---------- */
+.grid-top{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+
+/* ---------- main split ---------- */
+.grid-main{display:grid;grid-template-columns:1.38fr 1fr;gap:16px;align-items:start}
+.col-right{display:flex;flex-direction:column;gap:16px}
+
+.card{
+  background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--card-shadow);
+}
+.card-pad{padding:18px 18px}
+
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:0.10em;text-transform:uppercase;color:var(--slate-500)}
+.eyebrow.purple{color:var(--purple)}
+.link{color:var(--purple);font-weight:600;text-decoration:none;font-size:12.5px;display:inline-flex;align-items:center;gap:3px;transition:color .15s}
+.link svg{width:13px;height:13px}
+.link:hover{color:var(--purple-dark);text-decoration:underline}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ---------- stat tiles ---------- */
+.tile-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tile-head .ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tile-head .ic svg{width:16px;height:16px}
+.ic-red{background:var(--red-50);color:var(--red)}
+.ic-amber{background:var(--amber-50);color:#B45309}
+.ic-purple{background:var(--purple-wash);color:var(--purple)}
+.ic-green{background:var(--green-50);color:#047857}
+.ic-slate{background:var(--slate-50);color:var(--slate-500)}
+.ic-cyan{background:#EAF9FE;color:#0891B2}
+
+.tile-num{font-family:'Poppins',sans-serif;font-weight:700;font-size:30px;letter-spacing:-0.02em;color:var(--ink);line-height:1.05}
+.tile-num.mono{font-family:var(--mono);font-weight:500;font-size:27px}
+.tile-sub{font-size:12.5px;color:var(--slate-500);margin-top:2px}
+.delta{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600}
+.delta svg{width:13px;height:13px}
+.delta.down{color:var(--red)}
+.delta.up{color:var(--green)}
+
+.breakdown{margin-top:14px;border-top:1px solid #F1F5F9;padding-top:11px;display:flex;flex-direction:column;gap:7px}
+.brow{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px}
+.brow .lbl{color:var(--slate-700);display:flex;align-items:center;gap:6px;min-width:0}
+.brow .lbl .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.brow .lbl a{color:var(--purple);text-decoration:none;font-weight:500}
+.brow .lbl a:hover{text-decoration:underline}
+.brow .val{color:var(--ink);font-weight:500;flex-shrink:0;display:inline-flex;align-items:center;gap:7px}
+.tile-foot{margin-top:13px;display:flex;align-items:center;justify-content:space-between}
+.cause{font-size:12px;color:var(--slate-500);margin-top:10px;padding:8px 10px;background:var(--amber-50);border-radius:8px;line-height:1.4}
+.cause b{color:#B45309}
+
+/* aged pills (lifted from A) */
+.age-pill{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:6px;background:#F1F5F9;color:var(--slate-500)}
+.age-pill.hot{background:var(--red-50);color:#B91C1C;font-weight:600}
+.age-pill.warm{background:var(--amber-50);color:#B45309}
+
+/* mini funnel */
+.funnel{margin-top:14px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #F1F5F9;padding-top:12px}
+.fstep{display:flex;align-items:center;gap:9px}
+.fstep .fbar{height:22px;border-radius:6px;display:flex;align-items:center;padding:0 9px;font-size:11.5px;font-weight:600;color:#fff;white-space:nowrap}
+.fstep .fname{font-size:11.5px;color:var(--slate-500);width:66px;flex-shrink:0}
+.fstep .fval{font-size:11.5px;color:var(--slate-700);font-weight:500;margin-left:auto;flex-shrink:0}
+
+/* by-tech chips inside tile */
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;border-top:1px solid #F1F5F9;padding-top:12px}
+.tchip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:3px 9px;border-radius:20px;background:var(--slate-50);border:1px solid var(--border);color:var(--slate-700)}
+.tchip b{color:var(--ink);font-weight:600}
+.tchip a{color:var(--purple);text-decoration:none;font-weight:600}
+.tchip a:hover{text-decoration:underline}
+
+/* ---------- cutover readiness (condensed from B into rail) ---------- */
+.railcut{margin-top:14px;border-top:1px solid #F1F5F9;padding-top:14px;display:flex;flex-direction:column;gap:15px}
+.rcut{position:relative;padding-left:13px}
+.rcut::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;border-radius:3px}
+.rcut.risk::before{background:var(--amber)}
+.rcut.ready::before{background:var(--green)}
+.rcut.prog::before{background:var(--purple)}
+.rcut-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.rcut-name{font-family:'Poppins',sans-serif;font-weight:600;font-size:14px;color:var(--ink)}
+.rcut-name a{color:inherit;text-decoration:none}
+.rcut-name a:hover{color:var(--purple);text-decoration:underline}
+.rcut-date{font-family:var(--mono);font-size:11px;color:var(--slate-500)}
+.rcut-tmin{font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:5px;background:var(--slate-50);color:var(--slate-500)}
+.rcut-tmin.soon{background:var(--amber-50);color:#B45309}
+.rcut-pct{margin-left:auto;font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--ink);line-height:1}
+.rcut-pct.risk{color:#B45309}
+.rcut-pct.ready{color:#047857}
+.badge{font-size:10px;font-weight:600;letter-spacing:.03em;padding:2px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;text-transform:uppercase}
+.badge svg{width:11px;height:11px}
+.badge.risk{background:var(--amber-50);color:#B45309}
+.badge.ready{background:var(--green-50);color:#047857}
+.badge.prog{background:var(--purple-wash);color:var(--purple-dark)}
+.pbar{height:10px;border-radius:999px;background:#EEF2F7;overflow:hidden;display:flex}
+.pbar .seg-staged{background:var(--grad)}
+.pbar .seg-back{background:repeating-linear-gradient(45deg,var(--amber),var(--amber) 4px,#FCE3B0 4px,#FCE3B0 8px)}
+.rcut-scope{font-size:12px;color:var(--slate-700);margin-top:8px;line-height:1.45}
+.rcut-scope .mut{color:var(--slate-500)}
+.feeds{margin-top:8px;font-size:11.5px;color:#B45309;display:flex;align-items:flex-start;gap:6px;
+  background:var(--amber-50);padding:6px 9px;border-radius:8px;border:1px dashed #F3D28A;line-height:1.4}
+.feeds svg{width:13px;height:13px;flex-shrink:0;margin-top:1px}
+.feeds a{color:inherit;font-weight:600;text-decoration:none}
+.feeds b{color:#92400E;font-weight:600}
+
+/* ---------- attention stream ---------- */
+.stream-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 0}
+.stream-title{display:flex;align-items:center;gap:10px}
+.stream-title h2{font-family:'Poppins',sans-serif;font-weight:600;font-size:17px;color:var(--ink)}
+.stream-title .count{font-size:12px;font-weight:600;color:var(--red);background:var(--red-50);padding:2px 9px;border-radius:20px}
+.filters{display:flex;gap:6px;padding:14px 18px 4px;flex-wrap:wrap}
+.fchip{font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--slate-700);cursor:pointer;transition:all .15s}
+.fchip:hover{border-color:#D5CBEE;background:#FDFCFF}
+.fchip.active{background:var(--purple);border-color:var(--purple);color:#fff}
+
+.sev-label{display:flex;align-items:center;gap:8px;padding:16px 18px 4px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--slate-500)}
+.sev-label .line{flex:1;height:1px;background:var(--border)}
+.sev-label .n{color:var(--slate-500);font-weight:600}
+
+.rows{display:flex;flex-direction:column}
+.arow{
+  display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:14px;
+  padding:13px 18px;border-top:1px solid #F1F5F9;transition:background .14s;cursor:default;
+}
+.arow:hover{background:#FCFBFE}
+.arow .sev{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sev-red{background:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.14)}
+.sev-amber{background:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,.14)}
+.sev-info{background:var(--cyan);box-shadow:0 0 0 3px rgba(64,207,249,.14)}
+
+.acat{display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;letter-spacing:0.02em;padding:3px 8px;border-radius:6px;text-transform:lowercase;white-space:nowrap}
+.cat-money{background:var(--red-50);color:#B91C1C}
+.cat-fulfill{background:var(--purple-wash);color:var(--purple-dark)}
+.cat-field{background:#EAF9FE;color:#0891B2}
+.cat-ops{background:var(--slate-50);color:var(--slate-700)}
+.cat-amber{background:var(--amber-50);color:#B45309}
+
+.abody{min-width:0}
+.atitle{font-size:13.5px;color:var(--ink);font-weight:500;line-height:1.35}
+.atitle a{color:var(--purple);text-decoration:none;font-weight:600}
+.atitle a:hover{text-decoration:underline}
+.ameta{font-size:12px;color:var(--slate-500);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ameta .ref{font-family:var(--mono);font-size:11px;color:var(--slate-700)}
+.acatline{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+
+.amoney{font-family:var(--mono);font-size:14px;font-weight:500;text-align:right;white-space:nowrap;color:var(--ink)}
+.amoney.red{color:var(--red)}
+.amoney .age{display:block;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;color:var(--slate-500);margin-top:2px}
+
+.abtn{
+  display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:9px;
+  border:1px solid var(--border);background:#fff;color:var(--purple);cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.abtn svg{width:14px;height:14px}
+.abtn:hover{border-color:var(--purple-light);background:var(--purple-wash)}
+.abtn.solid{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 2px 6px rgba(138,77,234,.25)}
+.abtn.solid:hover{background:linear-gradient(135deg,#9D63F6,var(--purple-dark))}
+
+.stream-foot{padding:14px 18px;border-top:1px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between}
+.stream-foot .muted{font-size:12px;color:var(--slate-500)}
+
+/* ---------- footer vanity strip ---------- */
+.vanity{
+  margin-top:16px;background:#fff;border:1px solid var(--border);border-radius:14px;
+  padding:12px 18px;display:flex;align-items:center;gap:26px;flex-wrap:wrap;
+  box-shadow:0 1px 2px rgba(82,46,140,.04);
+}
+.vanity .veyebrow{font-size:10.5px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--slate-500);margin-right:2px}
+.vstat{display:flex;align-items:baseline;gap:7px;font-size:12.5px;color:var(--slate-500)}
+.vstat .vn{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--slate-700)}
+.vstat .vup{color:var(--green);font-weight:600;font-size:11.5px}
+.vstat .vwarn{color:var(--amber);font-weight:600}
+.vsep{width:1px;height:20px;background:var(--border)}
+.vanity .link{margin-left:auto}
+
+@media (max-width:1120px){
+  .grid-main{grid-template-columns:1fr}
+  .grid-top{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="page-head">
+    <div>
+      <h1>Inventory</h1>
+      <div class="sub">3 branches · 7 vans · 23 techs — <b>10 items need attention</b>, $21,000 in play today. Managed by Denise Park.</div>
+    </div>
+    <div class="head-actions">
+      <button class="btn"><i data-lucide="package-plus"></i> Receive stock</button>
+      <button class="btn btn-primary"><i data-lucide="plus"></i> New purchase order</button>
+    </div>
+  </div>
+
+  <!-- TOP MONEY BENTO -->
+  <div class="grid-top">
+
+    <!-- Unbilled but shipped (red-accented, A's hero treatment) -->
+    <div class="card card-pad" style="background:linear-gradient(180deg,#FFF7F7 0%,#ffffff 46%);border-color:#F6D5D5">
+      <div class="tile-head">
+        <div>
+          <div class="eyebrow" style="color:#B91C1C">Unbilled but shipped</div>
+          <div class="tile-num mono" style="margin-top:6px">$14,200</div>
+        </div>
+        <div class="ic ic-red"><i data-lucide="receipt-text"></i></div>
+      </div>
+      <div class="breakdown" style="border-top-color:#F1E2E2">
+        <div class="brow"><span class="lbl"><span class="dot" style="background:var(--red)"></span><a href="#">Rodriguez Group</a> cutover · <span class="mono" style="font-size:11px;color:var(--slate-500)">SO-00042</span></span><span class="val mono">$8,100</span></div>
+        <div class="brow"><span class="lbl"><span class="dot" style="background:var(--amber)"></span>Drop-ships not invoiced · 3 SOs</span><span class="val mono">$4,900</span></div>
+        <div class="brow"><span class="lbl"><span class="dot" style="background:var(--cyan)"></span>Ghost usage · 6 tickets</span><span class="val mono">$1,200</span></div>
+      </div>
+      <div class="tile-foot"><a class="link" href="#">View revenue ledger <i data-lucide="arrow-right"></i></a></div>
+    </div>
+
+    <!-- Margin -->
+    <div class="card card-pad">
+      <div class="tile-head">
+        <div>
+          <div class="eyebrow">Margin MTD</div>
+          <div style="display:flex;align-items:baseline;gap:9px;margin-top:6px">
+            <div class="tile-num">31.4%</div>
+            <span class="delta down"><i data-lucide="trending-down"></i> 4.7pt vs last mo</span>
+          </div>
+        </div>
+        <div class="ic ic-amber"><i data-lucide="percent"></i></div>
+      </div>
+      <div class="tile-sub mono" style="margin-top:2px">$18,400 margin · $58,600 rev · COGS $40,200</div>
+      <div class="cause">Polycom vendor cost <b>+8% since March</b>. 3 open quotes + <a href="#" style="color:#B45309;font-weight:600;text-decoration:none">SO-00041</a> still at old cost — <b>$1,400 margin at risk</b>.</div>
+    </div>
+
+    <!-- Vendor owed -->
+    <div class="card card-pad">
+      <div class="tile-head">
+        <div>
+          <div class="eyebrow">Vendor-owed (RMA credits)</div>
+          <div style="display:flex;align-items:baseline;gap:9px;margin-top:6px">
+            <div class="tile-num mono">$6,800</div>
+            <span class="delta down" style="color:var(--red)"><i data-lucide="clock"></i> 47d oldest</span>
+          </div>
+        </div>
+        <div class="ic ic-red"><i data-lucide="rotate-ccw"></i></div>
+      </div>
+      <div class="breakdown">
+        <div class="brow"><span class="lbl"><a href="#">Netgear</a> credit · <span class="mono" style="font-size:11px;color:var(--slate-500)">RMA-2026-011</span></span><span class="val"><span class="mono">$2,100</span> <span class="age-pill hot">47d</span></span></div>
+        <div class="brow"><span class="lbl"><a href="#">Polycom</a> · <span class="mono" style="font-size:11px;color:var(--slate-500)">RMA-4471</span></span><span class="val"><span class="mono">$1,900</span> <span class="age-pill warm">31d</span></span></div>
+        <div class="brow"><span class="lbl"><a href="#">Yealink</a> · RMA-4478 + 2 cases</span><span class="val"><span class="mono">$2,800</span> <span class="age-pill">≤18d</span></span></div>
+      </div>
+      <div class="tile-foot"><a class="link" href="#">Chase all RMAs <i data-lucide="arrow-right"></i></a></div>
+    </div>
+  </div>
+
+  <!-- MAIN SPLIT -->
+  <div class="grid-main">
+
+    <!-- LEFT: attention stream -->
+    <div class="card">
+      <div class="stream-head">
+        <div class="stream-title">
+          <i data-lucide="siren" style="width:19px;height:19px;color:var(--red)"></i>
+          <h2>Needs attention</h2>
+          <span class="count">4 urgent</span>
+        </div>
+        <a class="link" href="#">Snooze rules <i data-lucide="settings-2"></i></a>
+      </div>
+      <div class="filters">
+        <button class="fchip active">All</button>
+        <button class="fchip">Money</button>
+        <button class="fchip">Fulfillment</button>
+        <button class="fchip">Field</button>
+        <button class="fchip">Ops</button>
+      </div>
+
+      <!-- RED -->
+      <div class="sev-label"><span class="sev sev-red" style="width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 3px rgba(239,68,68,.14)"></span> Costs money or a customer today <span class="line"></span><span class="n">4</span></div>
+      <div class="rows">
+
+        <div class="arow">
+          <span class="sev sev-red"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-money">unbilled</span></div>
+            <div class="atitle"><a href="#">Rodriguez Group</a> — shipped Fri, still not invoiced</div>
+            <div class="ameta"><span class="ref">SO-00042</span> · 3 lines · site cutover · shipped 3d ago</div>
+          </div>
+          <div class="amoney red">$8,100<span class="age">3d</span></div>
+          <button class="abtn solid"><i data-lucide="file-text"></i> Invoice</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-red"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-fulfill">at-risk cutover</span></div>
+            <div class="atitle"><a href="#">Miller Dental</a> cutover Thu — 6 of 24 handsets backordered</div>
+            <div class="ameta">ETA <span class="ref">PO-0187</span> Wed Jul 8 — <span style="color:var(--red);font-weight:600">1 day before install</span> · readiness 75%</div>
+          </div>
+          <div class="amoney">Jul 9<span class="age">2d out</span></div>
+          <button class="abtn"><i data-lucide="external-link"></i> View SO</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-red"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-field">van shortage</span></div>
+            <div class="atitle"><a href="#">Van 7 · R. Alvarez</a> — 0 PoE injectors, 3 installs today</div>
+            <div class="ameta">Reorder pt 4 · transfer Main→Van 7 dispatched <span class="ref">7:02a</span> · in transit</div>
+          </div>
+          <div class="amoney">3 jobs<span class="age">today</span></div>
+          <button class="abtn"><i data-lucide="truck"></i> Track transfer</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-red"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-money">overdue loaner</span></div>
+            <div class="atitle"><a href="#">Sound Dental</a> — Polycom Trio 8500 loaner 12d overdue</div>
+            <div class="ameta">Due Jun 24 · conference phone · unit value <span class="mono">$480</span></div>
+          </div>
+          <div class="amoney red">$480<span class="age">12d</span></div>
+          <button class="abtn"><i data-lucide="phone-incoming"></i> Recall</button>
+        </div>
+      </div>
+
+      <!-- AMBER -->
+      <div class="sev-label"><span style="width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,.14)"></span> Worth chasing this week <span class="line"></span><span class="n">6</span></div>
+      <div class="rows">
+
+        <div class="arow">
+          <span class="sev sev-amber"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-amber">ghost usage</span></div>
+            <div class="atitle"><a href="#">R. Alvarez</a> closed 3 hardware tickets, no parts billed</div>
+            <div class="ameta"><span class="ref">T-20261847</span> "dead PoE switch — Sound Dental" +2 · est. materials</div>
+          </div>
+          <div class="amoney">$950<span class="age">est</span></div>
+          <button class="abtn"><i data-lucide="search-check"></i> Review</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-amber"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-amber">RMA aging</span></div>
+            <div class="atitle"><a href="#">Netgear</a> owes credit — no response 47 days</div>
+            <div class="ameta"><span class="ref">RMA-2026-011</span> · oldest open receivable</div>
+          </div>
+          <div class="amoney">$2,100<span class="age">47d</span></div>
+          <button class="abtn"><i data-lucide="send"></i> Chase</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-amber"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-fulfill">at-risk cutover</span></div>
+            <div class="atitle"><a href="#">Cascade Legal</a> cutover Jul 15 — 12 of 40 MACs provisioned</div>
+            <div class="ameta">40 allocated from stock · switches on hand · staging in progress · 45%</div>
+          </div>
+          <div class="amoney">45%<span class="age">9d out</span></div>
+          <button class="abtn"><i data-lucide="list-checks"></i> Open staging</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-amber"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-amber">price creep</span></div>
+            <div class="atitle"><a href="#">SO-00041</a> still priced at old Polycom cost (+8%)</div>
+            <div class="ameta">Signed SO not re-quoted · margin exposure if fulfilled as-is</div>
+          </div>
+          <div class="amoney">$1,400<span class="age">at risk</span></div>
+          <button class="abtn"><i data-lucide="calculator"></i> Re-quote</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-amber"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-money">price creep</span></div>
+            <div class="atitle"><a href="#">Jenne</a> bill exceeds PO by $40</div>
+            <div class="ameta"><span class="ref">ESC-INV-7741</span> · flagged vs matching PO · needs sign-off</div>
+          </div>
+          <div class="amoney">+$40<span class="age">bill</span></div>
+          <button class="abtn"><i data-lucide="file-check-2"></i> Review bill</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-amber"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-ops">count approval</span></div>
+            <div class="atitle"><a href="#">Bellevue warehouse</a> count variance needs approver</div>
+            <div class="ameta"><span class="ref">#C-114</span> counted by J. Chen · four-eyes hold</div>
+          </div>
+          <div class="amoney">−$340<span class="age">variance</span></div>
+          <button class="abtn"><i data-lucide="check-check"></i> Approve</button>
+        </div>
+      </div>
+
+      <!-- INFO -->
+      <div class="sev-label"><span style="width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 3px rgba(64,207,249,.14)"></span> Keep an eye on <span class="line"></span><span class="n">2</span></div>
+      <div class="rows">
+
+        <div class="arow">
+          <span class="sev sev-info"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-field">warranty</span></div>
+            <div class="atitle">14 units warranty-expiring ≤30d across 3 clients</div>
+            <div class="ameta"><a href="#" style="color:var(--purple);text-decoration:none;font-weight:600">Sound Dental</a> 8 · <a href="#" style="color:var(--purple);text-decoration:none;font-weight:600">Rodriguez</a> 4 · <a href="#" style="color:var(--purple);text-decoration:none;font-weight:600">Pike St</a> 2</div>
+          </div>
+          <div class="amoney">14 units<span class="age">≤30d</span></div>
+          <button class="abtn"><i data-lucide="shield-alert"></i> View</button>
+        </div>
+
+        <div class="arow">
+          <span class="sev sev-info"></span>
+          <div class="abody">
+            <div class="acatline"><span class="acat cat-ops">dead stock</span></div>
+            <div class="atitle"><a href="#">Tacoma</a> — no movement in 90 days</div>
+            <div class="ameta">Candidate for transfer or liquidation · ties up working capital</div>
+          </div>
+          <div class="amoney">$4,200<span class="age">90d</span></div>
+          <button class="abtn"><i data-lucide="package-x"></i> Review</button>
+        </div>
+      </div>
+
+      <div class="stream-foot">
+        <span class="muted">Ranked by dollar + customer impact · refreshed 2 min ago</span>
+        <a class="link" href="#">Full exception log <i data-lucide="arrow-right"></i></a>
+      </div>
+    </div>
+
+    <!-- RIGHT: bento tiles -->
+    <div class="col-right">
+
+      <!-- This week's deployments (cutover readiness, condensed from B) -->
+      <div class="card card-pad">
+        <div class="tile-head">
+          <div>
+            <div class="eyebrow purple">This week · 3 cutovers</div>
+            <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px;color:var(--ink);margin-top:4px">This week's deployments</div>
+          </div>
+          <div class="ic ic-purple"><i data-lucide="calendar-clock"></i></div>
+        </div>
+
+        <div class="railcut">
+
+          <!-- Miller Dental -->
+          <div class="rcut risk">
+            <div class="rcut-top">
+              <span class="rcut-name"><a href="#">Miller Dental</a></span>
+              <span class="rcut-date">Thu Jul 9</span>
+              <span class="rcut-tmin soon">T-3</span>
+              <span class="badge risk"><i data-lucide="alert-triangle"></i> At risk</span>
+              <span class="rcut-pct risk">75%</span>
+            </div>
+            <div class="pbar">
+              <div class="seg-staged" style="width:75%"></div>
+              <div class="seg-back" style="width:25%"></div>
+            </div>
+            <div class="rcut-scope">24× Yealink T54W — <b style="font-weight:600">18 staged</b> · <span class="mut">6 backordered</span></div>
+            <div class="feeds"><i data-lucide="corner-down-right"></i><span>Fed by <a href="#">PO-0187</a> Jenne, ETA <b>Wed Jul 8</b> — one day before install.</span></div>
+          </div>
+
+          <!-- Harborview -->
+          <div class="rcut ready">
+            <div class="rcut-top">
+              <span class="rcut-name"><a href="#">Harborview Clinic</a></span>
+              <span class="rcut-date">Mon Jul 13</span>
+              <span class="rcut-tmin">T-7</span>
+              <span class="badge ready"><i data-lucide="check-circle-2"></i> Ready</span>
+              <span class="rcut-pct ready">100%</span>
+            </div>
+            <div class="pbar"><div class="seg-staged" style="width:100%"></div></div>
+            <div class="rcut-scope">16× T54W — <b style="font-weight:600">16/16 staged</b> · <span class="mut">switch + injectors verified</span></div>
+          </div>
+
+          <!-- Cascade Legal -->
+          <div class="rcut prog">
+            <div class="rcut-top">
+              <span class="rcut-name"><a href="#">Cascade Legal</a></span>
+              <span class="rcut-date">Wed Jul 15</span>
+              <span class="rcut-tmin">T-9</span>
+              <span class="badge prog"><i data-lucide="loader"></i> Staging</span>
+              <span class="rcut-pct">45%</span>
+            </div>
+            <div class="pbar"><div class="seg-staged" style="width:45%"></div></div>
+            <div class="rcut-scope">40× T54W + 2× PoE switch — <b style="font-weight:600">12/40 MACs</b> · <span class="mut">switches on hand</span></div>
+          </div>
+
+        </div>
+        <div class="tile-foot" style="margin-top:14px"><span></span><a class="link" href="#">All service orders <i data-lucide="arrow-right"></i></a></div>
+      </div>
+
+      <!-- Pipeline funnel -->
+      <div class="card card-pad">
+        <div class="tile-head">
+          <div>
+            <div class="eyebrow purple">Sales-order pipeline</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px">
+              <div class="tile-num mono" style="font-size:24px">$61,300</div>
+              <span class="tile-sub" style="margin-top:0">9 open SOs</span>
+            </div>
+          </div>
+          <div class="ic ic-purple"><i data-lucide="git-merge"></i></div>
+        </div>
+        <div class="funnel">
+          <div class="fstep"><span class="fname">Quote</span><span class="fbar" style="width:78%;background:linear-gradient(90deg,#A36FF8,#8A4DEA)">3 open</span><span class="fval mono">$19,800</span></div>
+          <div class="fstep"><span class="fname">SO booked</span><span class="fbar" style="width:64%;background:#8A4DEA">9 · 1 draft</span><span class="fval mono">$61,300</span></div>
+          <div class="fstep"><span class="fname">Fulfilling</span><span class="fbar" style="width:44%;background:#F59E0B">3 backorder</span><span class="fval mono">$27,400</span></div>
+          <div class="fstep"><span class="fname">Invoiced</span><span class="fbar" style="width:30%;background:#10B981">this wk</span><span class="fval mono">$16,900</span></div>
+        </div>
+        <div class="tile-foot" style="margin-top:13px"><span class="tile-sub" style="margin-top:0"><span style="color:var(--amber);font-weight:600">3 SOs</span> blocked on backorder</span><a class="link" href="#">All SOs <i data-lucide="arrow-right"></i></a></div>
+      </div>
+
+      <!-- Receiving today -->
+      <div class="card card-pad">
+        <div class="tile-head">
+          <div>
+            <div class="eyebrow">Receiving today</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px">
+              <div class="tile-num">4</div>
+              <span class="tile-sub" style="margin-top:0">POs · <span class="mono">$19,950</span> · 6 more this wk</span>
+            </div>
+          </div>
+          <div class="ic ic-green"><i data-lucide="package-check"></i></div>
+        </div>
+        <div class="breakdown">
+          <div class="brow"><span class="lbl"><span class="dot" style="background:var(--red)"></span><a href="#">PO-0187</a> Jenne — <b style="font-weight:600;color:var(--slate-700)">Miller handsets</b></span><span class="val mono">$9,800</span></div>
+          <div class="brow"><span class="lbl"><span class="dot" style="background:var(--slate-500)"></span><a href="#">PO-0185</a> ScanSource · 2× PoE sw</span><span class="val mono">$6,100</span></div>
+          <div class="brow"><span class="lbl"><span class="dot" style="background:var(--slate-500)"></span><a href="#">PO-0191</a> Graybar · cabling</span><span class="val mono">$3,200</span></div>
+        </div>
+        <div class="cause" style="background:var(--red-50);color:#991B1B;margin-top:12px"><b style="color:#B91C1C">Flag:</b> PO-0187 lands today, 1 day before <a href="#" style="color:#B91C1C;font-weight:600;text-decoration:none">Miller</a> cutover — no slack.</div>
+        <div class="tile-foot" style="margin-top:12px"><a class="link" href="#">Receive stock <i data-lucide="arrow-right"></i></a></div>
+      </div>
+
+      <!-- Ghost usage this week -->
+      <div class="card card-pad">
+        <div class="tile-head">
+          <div>
+            <div class="eyebrow">Ghost usage · this week</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px">
+              <div class="tile-num">6</div>
+              <span class="tile-sub" style="margin-top:0">tickets closed, 0 parts · est <span class="mono">$1,900</span></span>
+            </div>
+          </div>
+          <div class="ic ic-amber"><i data-lucide="ghost"></i></div>
+        </div>
+        <div class="tile-sub" style="margin-top:9px">Hardware tickets closed with no material posted — unbilled labor-only closes, by tech:</div>
+        <div class="chip-row">
+          <span class="tchip"><b>Alvarez</b> 3 · <span class="mono">$950</span></span>
+          <span class="tchip"><b>Chen</b> 2 · <span class="mono">$620</span></span>
+          <span class="tchip"><b>Kowalski</b> 1 · <span class="mono">$330</span></span>
+        </div>
+        <div class="tile-foot" style="margin-top:13px"><a class="link" href="#">Review ghost usage <i data-lucide="arrow-right"></i></a></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER VANITY STRIP -->
+  <div class="vanity">
+    <span class="veyebrow">Inventory health</span>
+    <div class="vstat"><span>On-hand value</span><span class="vn">$342,600</span><span class="vup">▲ $12,400 wk</span></div>
+    <div class="vsep"></div>
+    <div class="vstat"><span>Units on hand</span><span class="vn">18,412</span><span>· 1,847 serialized</span></div>
+    <div class="vsep"></div>
+    <div class="vstat"><span>Dead stock</span><span class="vn">$4,200</span><span class="vwarn">Tacoma · 90d</span></div>
+    <div class="vsep"></div>
+    <div class="vstat"><span>This week</span><span class="vn">240</span><span>received ·</span><span class="vn">187</span><span>deployed ·</span><span class="vn">12</span><span>transfers ·</span><span class="vn">4</span><span>RMAs</span></div>
+    <a class="link" href="#">Valuation report <i data-lucide="arrow-right"></i></a>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  lucide.createIcons({attrs:{'stroke-width':1.75}});
+  // filter chips — cosmetic toggle only (mock)
+  document.querySelectorAll('.fchip').forEach(c=>{
+    c.addEventListener('click',()=>{
+      document.querySelectorAll('.fchip').forEach(x=>x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

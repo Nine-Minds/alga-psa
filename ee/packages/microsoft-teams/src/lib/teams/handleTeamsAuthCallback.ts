@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTeamsAvailability } from './teamsAvailability';
 import { resolveTeamsTabAuthState, type TeamsTabAuthState } from './resolveTeamsTabAuthState';
 import { buildTeamsReauthUrl } from './buildTeamsReauthUrl';
+import { isBotConnectorConfigured, sendBotActivity } from './bot/teamsBotConnector';
+import { findTeamsConversationReferenceByConversationId } from './bot/teamsConversationReferences';
+import { buildTeamsAdaptiveCard, buildAdaptiveImBackAction } from './bot/teamsAdaptiveCards';
 
 type TeamsAuthCallbackSurface = 'tab' | 'bot' | 'message_extension';
 
@@ -136,6 +139,85 @@ function getExpectedMicrosoftTenantId(request: NextRequest | Request): string | 
   );
 }
 
+function getBotConversationId(request: NextRequest | Request): string | null {
+  const requestUrl = getRequestUrl(request);
+  const conversationId = requestUrl.searchParams.get('conversationId');
+  return conversationId && conversationId.trim() ? conversationId.trim() : null;
+}
+
+/**
+ * After a bot-initiated sign-in completes, confirm in the originating Teams
+ * conversation with a proactive welcome card (the sign-in card carried the
+ * conversation id through the auth flow). Best-effort: failures never break
+ * the callback page.
+ */
+async function sendTeamsBotWelcomeCard(params: {
+  tenantId: string;
+  conversationId: string;
+  userName: string | null;
+}): Promise<void> {
+  try {
+    if (!isBotConnectorConfigured()) {
+      return;
+    }
+
+    const reference = await findTeamsConversationReferenceByConversationId({
+      tenantId: params.tenantId,
+      conversationId: params.conversationId,
+    });
+    if (!reference || !reference.serviceUrl) {
+      return;
+    }
+
+    const title = 'You are signed in to Alga PSA';
+    const text = `${params.userName ? `${params.userName}, your` : 'Your'} Microsoft account is now linked. Try “my tickets” to see your queue, or “help” for everything the bot can do.`;
+    const welcomeActivity = {
+      type: 'message' as const,
+      text,
+      attachments: [
+        buildTeamsAdaptiveCard({
+          title,
+          text,
+          actions: [
+            buildAdaptiveImBackAction('My tickets', 'my tickets'),
+            buildAdaptiveImBackAction('Help', 'help'),
+          ],
+        }),
+      ],
+    };
+
+    try {
+      await sendBotActivity({
+        serviceUrl: reference.serviceUrl,
+        conversationId: params.conversationId,
+        activity: welcomeActivity,
+      });
+    } catch {
+      // Hero-card fallback for clients that reject adaptive content.
+      await sendBotActivity({
+        serviceUrl: reference.serviceUrl,
+        conversationId: params.conversationId,
+        activity: {
+          type: 'message',
+          text,
+          attachments: [
+            {
+              contentType: 'application/vnd.microsoft.card.hero',
+              content: { title, text },
+            },
+          ],
+        },
+      });
+    }
+  } catch (error) {
+    console.warn('[teams-auth-callback] failed to send bot welcome card', {
+      tenantId: params.tenantId,
+      conversationId: params.conversationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 function buildAvailabilityPayload(
   surface: TeamsAuthCallbackSurface,
   params: {
@@ -215,6 +297,18 @@ export async function handleTeamsAuthCallback(
   }
 
   const payload = buildCallbackPayload(surface, state);
+
+  if (surface === 'bot' && state.status === 'ready') {
+    const conversationId = getBotConversationId(request);
+    if (conversationId) {
+      await sendTeamsBotWelcomeCard({
+        tenantId: state.tenantId,
+        conversationId,
+        userName: state.userName,
+      });
+    }
+  }
+
   return new NextResponse(renderCallbackHtml(payload), {
     status: 200,
     headers: {

@@ -6,7 +6,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import type { IStatus, ItemType } from '@alga-psa/types';
-import { createStatus, updateStatus } from '@alga-psa/reference-data/actions';
+import { createStatus, isStatusActionError, statusActionErrorMessage, updateStatus } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -73,13 +73,17 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
 
     try {
       if (editingStatus) {
-        await updateStatus(editingStatus.status_id, {
+        const updatedStatus = await updateStatus(editingStatus.status_id, {
           ...editingStatus,
           name: statusName,
           order_number: statusOrder,
           is_closed: isClosed,
           is_default: isDefault
         });
+        if (isStatusActionError(updatedStatus)) {
+          toast.error(statusActionErrorMessage(updatedStatus));
+          return;
+        }
         toast.success('Status updated successfully');
       } else {
         const newStatus: Omit<IStatus, 'status_id'> = {
@@ -90,7 +94,11 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
           order_number: statusOrder,
           created_by: userId
         };
-        await createStatus(newStatus);
+        const createdStatus = await createStatus(newStatus);
+        if (isStatusActionError(createdStatus)) {
+          toast.error(statusActionErrorMessage(createdStatus));
+          return;
+        }
         toast.success('Status created successfully');
       }
       

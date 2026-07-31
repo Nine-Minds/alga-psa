@@ -70,6 +70,10 @@ const mockWithTransaction = vi.fn(
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => mockCreateTenantKnex(...args),
   withTransaction: (...args: unknown[]) => mockWithTransaction(...args),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -236,5 +240,62 @@ describe('updateDefaultBillingSettings — default currency', () => {
     expect(mockState.updates[0]?.payload).toMatchObject({
       default_currency_code: 'USD',
     });
+  });
+});
+
+// The billing settings page's sections each save against the same row. A
+// section's save must write only its own keys — a renewal save carrying a
+// stale snapshot used to revert a just-saved currency change (prod repro).
+describe('updateDefaultBillingSettings — partial saves do not clobber other sections', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockState.existingSettings = {
+      tenant: 'tenant-1',
+      zero_dollar_invoice_handling: 'normal',
+      suppress_zero_dollar_invoices: false,
+      default_currency_code: 'GBP',
+    };
+    mockState.updates = [];
+    mockState.inserts = [];
+  });
+
+  it('a renewal-only save leaves default_currency_code unwritten', async () => {
+    const { updateDefaultBillingSettings } = await import(
+      '../src/actions/billingSettingsActions'
+    );
+
+    const result = await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultRenewalMode: 'manual', defaultNoticePeriodDays: 30 }
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(mockState.updates).toHaveLength(1);
+    expect(mockState.updates[0]?.payload).toMatchObject({
+      default_renewal_mode: 'manual',
+      default_notice_period_days: 30,
+    });
+    expect(mockState.updates[0]?.payload).not.toHaveProperty('default_currency_code');
+    expect(mockState.updates[0]?.payload).not.toHaveProperty('zero_dollar_invoice_handling');
+  });
+
+  it('a currency-only save writes only the currency column', async () => {
+    const { updateDefaultBillingSettings } = await import(
+      '../src/actions/billingSettingsActions'
+    );
+
+    const result = await updateDefaultBillingSettings(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { defaultCurrencyCode: 'EUR' }
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(mockState.updates).toHaveLength(1);
+    expect(Object.keys(mockState.updates[0]?.payload ?? {}).sort()).toEqual([
+      'default_currency_code',
+      'updated_at',
+    ]);
   });
 });

@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TestContext } from '../../../../test-utils/testContext';
 import { ScheduleEntry } from '@alga-psa/scheduling';
 import { IEditScope } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;
@@ -16,6 +17,10 @@ function parsePattern(val: unknown): Record<string, unknown> {
 
 describe('Schedule entry recurrence integration', () => {
   let ctx: TestContext;
+
+  function tenantTable(table: string) {
+    return tenantDb(ctx.db, ctx.tenantId).table(table);
+  }
 
   beforeAll(async () => {
     ctx = await helpers.beforeAll({
@@ -32,8 +37,8 @@ describe('Schedule entry recurrence integration', () => {
 
   beforeEach(async () => {
     ctx = await helpers.beforeEach();
-    await ctx.db('schedule_entry_assignees').where({ tenant: ctx.tenantId }).del();
-    await ctx.db('schedule_entries').where({ tenant: ctx.tenantId }).del();
+    await tenantTable('schedule_entry_assignees').where({ tenant: ctx.tenantId }).del();
+    await tenantTable('schedule_entries').where({ tenant: ctx.tenantId }).del();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -65,10 +70,10 @@ describe('Schedule entry recurrence integration', () => {
     };
 
     const data = { ...defaults, ...overrides, entry_id: overrides.entry_id || entryId };
-    await ctx.db('schedule_entries').insert(data);
+    await tenantTable('schedule_entries').insert(data);
 
     // Add assignee
-    await ctx.db('schedule_entry_assignees').insert({
+    await tenantTable('schedule_entry_assignees').insert({
       tenant: ctx.tenantId,
       entry_id: data.entry_id,
       user_id: ctx.userId,
@@ -146,7 +151,7 @@ describe('Schedule entry recurrence integration', () => {
     it('includes non-recurring entries alongside virtual instances', async () => {
       // Create a regular (non-recurring) entry
       const regularId = uuidv4();
-      await ctx.db('schedule_entries').insert({
+      await tenantTable('schedule_entries').insert({
         entry_id: regularId,
         tenant: ctx.tenantId,
         title: 'One-off meeting',
@@ -157,7 +162,7 @@ describe('Schedule entry recurrence integration', () => {
         is_recurring: false,
         is_private: false,
       });
-      await ctx.db('schedule_entry_assignees').insert({
+      await tenantTable('schedule_entry_assignees').insert({
         tenant: ctx.tenantId,
         entry_id: regularId,
         user_id: ctx.userId,
@@ -251,7 +256,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(result).toBe(true);
 
       // Verify the exception was added to the master's recurrence_pattern
-      const masterAfter = await ctx.db('schedule_entries')
+      const masterAfter = await tenantTable('schedule_entries')
         .where({ entry_id: entry.entry_id, tenant: ctx.tenantId })
         .first();
 
@@ -284,13 +289,13 @@ describe('Schedule entry recurrence integration', () => {
       expect(result).toBe(true);
 
       // Original master should be gone
-      const originalMaster = await ctx.db('schedule_entries')
+      const originalMaster = await tenantTable('schedule_entries')
         .where({ entry_id: originalEntryId, tenant: ctx.tenantId })
         .first();
       expect(originalMaster).toBeUndefined();
 
       // A new master should have been created
-      const newMasters = await ctx.db('schedule_entries')
+      const newMasters = await tenantTable('schedule_entries')
         .where({ tenant: ctx.tenantId, is_recurring: true })
         .select('*');
 
@@ -332,7 +337,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(result).toBe(true);
 
       // Verify the master's pattern now has an endDate before the target
-      const masterAfter = await ctx.db('schedule_entries')
+      const masterAfter = await tenantTable('schedule_entries')
         .where({ entry_id: entry.entry_id, tenant: ctx.tenantId })
         .first();
 
@@ -370,13 +375,13 @@ describe('Schedule entry recurrence integration', () => {
       expect(result).toBe(true);
 
       // Master should be gone from DB
-      const masterAfter = await ctx.db('schedule_entries')
+      const masterAfter = await tenantTable('schedule_entries')
         .where({ entry_id: entry.entry_id, tenant: ctx.tenantId })
         .first();
       expect(masterAfter).toBeUndefined();
 
       // Assignees should be gone
-      const assigneesAfter = await ctx.db('schedule_entry_assignees')
+      const assigneesAfter = await tenantTable('schedule_entry_assignees')
         .where({ entry_id: entry.entry_id, tenant: ctx.tenantId })
         .select('*');
       expect(assigneesAfter.length).toBe(0);
@@ -421,7 +426,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(updated!.is_recurring).toBe(false);
 
       // Verify a standalone entry was created in the DB
-      const standaloneEntry = await ctx.db('schedule_entries')
+      const standaloneEntry = await tenantTable('schedule_entries')
         .where({ entry_id: updated!.entry_id, tenant: ctx.tenantId })
         .first();
       expect(standaloneEntry).toBeDefined();
@@ -429,7 +434,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(standaloneEntry.is_recurring).toBe(false);
 
       // Verify exception was added to master
-      const masterAfter = await ctx.db('schedule_entries')
+      const masterAfter = await tenantTable('schedule_entries')
         .where({ entry_id: entry.entry_id, tenant: ctx.tenantId })
         .first();
       const pattern = parsePattern(masterAfter.recurrence_pattern);
@@ -466,7 +471,7 @@ describe('Schedule entry recurrence integration', () => {
       );
 
       // Check the assignee was copied
-      const assignees = await ctx.db('schedule_entry_assignees')
+      const assignees = await tenantTable('schedule_entry_assignees')
         .where({ entry_id: updated!.entry_id, tenant: ctx.tenantId })
         .select('user_id');
       expect(assignees.length).toBe(1);
@@ -504,7 +509,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(updated!.is_recurring).toBe(true);
 
       // Verify original master was truncated
-      const originalMaster = await ctx.db('schedule_entries')
+      const originalMaster = await tenantTable('schedule_entries')
         .where({ entry_id: entry.entry_id, tenant: ctx.tenantId })
         .first();
       const originalPattern = parsePattern(originalMaster.recurrence_pattern);
@@ -513,7 +518,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(originalEnd.getTime()).toBeLessThan(targetDate.getTime());
 
       // Verify new master was created
-      const newMaster = await ctx.db('schedule_entries')
+      const newMaster = await tenantTable('schedule_entries')
         .where({ entry_id: updated!.entry_id, tenant: ctx.tenantId })
         .first();
       expect(newMaster).toBeDefined();
@@ -521,7 +526,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(newMaster.is_recurring).toBe(true);
 
       // We now have 2 recurring masters in the DB
-      const allMasters = await ctx.db('schedule_entries')
+      const allMasters = await tenantTable('schedule_entries')
         .where({ tenant: ctx.tenantId, is_recurring: true })
         .select('*');
       expect(allMasters.length).toBe(2);
@@ -553,7 +558,7 @@ describe('Schedule entry recurrence integration', () => {
       await ScheduleEntry.delete(ctx.db, ctx.tenantId, target.entry_id, IEditScope.SINGLE);
 
       // Verify exception exists
-      const masterMid = await ctx.db('schedule_entries')
+      const masterMid = await tenantTable('schedule_entries')
         .where({ entry_id: entry.entry_id, tenant: ctx.tenantId })
         .first();
       const midPattern = parsePattern(masterMid.recurrence_pattern);
@@ -573,7 +578,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(updated!.is_recurring).toBe(true);
 
       // Verify DB was updated
-      const masterAfter = await ctx.db('schedule_entries')
+      const masterAfter = await tenantTable('schedule_entries')
         .where({ entry_id: entry.entry_id, tenant: ctx.tenantId })
         .first();
       expect(masterAfter.title).toBe('Updated daily standup');
@@ -654,7 +659,7 @@ describe('Schedule entry recurrence integration', () => {
   describe('non-recurring entry operations', () => {
     it('update() on a non-recurring entry performs a simple update', async () => {
       const entryId = uuidv4();
-      await ctx.db('schedule_entries').insert({
+      await tenantTable('schedule_entries').insert({
         entry_id: entryId,
         tenant: ctx.tenantId,
         title: 'Regular meeting',
@@ -665,7 +670,7 @@ describe('Schedule entry recurrence integration', () => {
         is_recurring: false,
         is_private: false,
       });
-      await ctx.db('schedule_entry_assignees').insert({
+      await tenantTable('schedule_entry_assignees').insert({
         tenant: ctx.tenantId,
         entry_id: entryId,
         user_id: ctx.userId,
@@ -682,7 +687,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(updated!.title).toBe('Renamed meeting');
 
       // Verify in DB
-      const dbEntry = await ctx.db('schedule_entries')
+      const dbEntry = await tenantTable('schedule_entries')
         .where({ entry_id: entryId, tenant: ctx.tenantId })
         .first();
       expect(dbEntry.title).toBe('Renamed meeting');
@@ -690,7 +695,7 @@ describe('Schedule entry recurrence integration', () => {
 
     it('delete() on a non-recurring entry removes it completely', async () => {
       const entryId = uuidv4();
-      await ctx.db('schedule_entries').insert({
+      await tenantTable('schedule_entries').insert({
         entry_id: entryId,
         tenant: ctx.tenantId,
         title: 'To be deleted',
@@ -701,7 +706,7 @@ describe('Schedule entry recurrence integration', () => {
         is_recurring: false,
         is_private: false,
       });
-      await ctx.db('schedule_entry_assignees').insert({
+      await tenantTable('schedule_entry_assignees').insert({
         tenant: ctx.tenantId,
         entry_id: entryId,
         user_id: ctx.userId,
@@ -711,13 +716,13 @@ describe('Schedule entry recurrence integration', () => {
       expect(result).toBe(true);
 
       // Should be gone from DB
-      const dbEntry = await ctx.db('schedule_entries')
+      const dbEntry = await tenantTable('schedule_entries')
         .where({ entry_id: entryId, tenant: ctx.tenantId })
         .first();
       expect(dbEntry).toBeUndefined();
 
       // Assignees should be gone too
-      const assignees = await ctx.db('schedule_entry_assignees')
+      const assignees = await tenantTable('schedule_entry_assignees')
         .where({ entry_id: entryId, tenant: ctx.tenantId })
         .select('*');
       expect(assignees.length).toBe(0);
@@ -752,7 +757,7 @@ describe('Schedule entry recurrence integration', () => {
       expect(created.is_recurring).toBe(true);
 
       // Verify in DB
-      const dbEntry = await ctx.db('schedule_entries')
+      const dbEntry = await tenantTable('schedule_entries')
         .where({ entry_id: created.entry_id, tenant: ctx.tenantId })
         .first();
       expect(dbEntry.is_recurring).toBe(true);

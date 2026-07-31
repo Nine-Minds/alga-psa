@@ -6,6 +6,18 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
   auditLog: vi.fn(async () => undefined),
@@ -30,13 +42,6 @@ vi.mock('@shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders', 
 
 vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => ({
   generateInvoiceNumber: vi.fn(async () => 'INV-001'),
-}));
-
-vi.mock('../../../../../packages/billing/src/actions/creditReconciliationActions', () => ({
-  validateCreditBalanceWithoutCorrection: vi.fn(async () => ({
-    isValid: true,
-    actualBalance: 0,
-  })),
 }));
 
 vi.mock('../../../../../packages/billing/src/models/clientContractLine', () => ({
@@ -150,11 +155,18 @@ function createCreditApplicationTrx() {
     }
 
     if (tableName === 'credit_tracking') {
+      let summing = false;
       const builder: any = {
         where: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
+        andWhere: vi.fn((_criteriaOrColumn: any, _value?: any, _extra?: any) => builder),
         whereNot: vi.fn(() => builder),
         orderBy: vi.fn(() => builder),
-        first: vi.fn(async () => undefined),
+        sum: vi.fn(() => { summing = true; return builder; }),
+        first: vi.fn(async () =>
+          summing
+            ? { total: state.creditEntries.reduce((acc, row) => acc + Number(row.remaining_amount), 0) }
+            : undefined,
+        ),
         then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
           Promise.resolve(state.creditEntries).then(resolve, reject),
         [Symbol.asyncIterator]: undefined,
@@ -241,7 +253,10 @@ describe('credit application post-drop behavior', () => {
       ),
     ).resolves.toBeUndefined();
 
-    expect(state.client.credit_balance).toBe(2000);
+    // The client cache column no longer exists; the balance is derived from
+    // credit_tracking, so the mock client row must be untouched.
+    expect(state.client.credit_balance).toBe(5000);
+    expect(state.client.updated_at).toBeNull();
     expect(state.invoice.credit_applied).toBe(3000);
     // Invoice totals are immutable after finalization; only credit_applied moves
     // (balance due is derived as total − credit − payments).

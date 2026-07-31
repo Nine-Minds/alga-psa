@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server';
-import { OpenRouterChatModel } from '../models/OpenRouterChatModel';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+
+import { toAiCreditsError } from '../lib/aiGateway/errors';
+import type { AiFeature } from '../lib/aiGateway/types';
+import { parseAssistantContent } from '../utils/chatContent';
+import { resolveChatProvider } from './chatProviderResolver';
 
 interface StreamRequestBody {
   inputs: any[];
@@ -12,147 +16,71 @@ interface StreamRequestBody {
 }
 
 export class ChatStreamService {
-  private static async getOpenRouterModel() {
-    const secretProvider = await getSecretProviderInstance();
-    const apiKey =
-      (await secretProvider.getAppSecret('OPENROUTER_API_KEY')) ||
-      process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      console.error('[ChatStreamService] Missing OpenRouter API key');
-      throw new Error('OpenRouter API key is not configured');
-    }
-    return new OpenRouterChatModel(apiKey);
+  private static streamResponse(content: string, type: 'text' | 'error'): Response {
+    return new Response(`data: ${JSON.stringify({ content, type })}\n\n`, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    });
   }
 
-  static async handleChatStream(req: NextRequest) {
+  private static async handleStream(req: NextRequest, feature: AiFeature): Promise<Response> {
     const requestId = Math.random().toString(36).substring(7);
 
     try {
       const body = (await req.json()) as StreamRequestBody;
-      const transformStream = new TransformStream({
-        transform: (chunk, controller) => {
-          if (chunk.content === '[DONE]') {
-            controller.terminate();
-          } else {
-            controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
-          }
-        },
+      const currentUser = await getCurrentUser();
+      if (!currentUser?.tenant) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const provider = await resolveChatProvider(currentUser.tenant, feature);
+      const completion = await provider.client.chat.completions.create({
+        model: provider.model,
+        messages: body.inputs,
+        max_tokens: 4096,
+        temperature: 1.0,
+        top_p: 0.95,
+        ...provider.requestOverrides.resolveTurnOverrides(),
       });
-
-      const writer = transformStream.writable.getWriter();
-
-      (async () => {
-        try {
-          const model = await this.getOpenRouterModel();
-          const response = await model.sendMessage(body.inputs);
-          writer.write({
-            content: response.text,
-            type: response.error ? 'error' : 'text',
-          });
-          writer.write({ content: '[DONE]' });
-          writer.close();
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error occurred';
-          console.error(
-            `[ChatStreamService][${requestId}] Stream processing error:`,
-            errorMessage,
-          );
-          writer.write({
-            content: "An error occurred during streaming",
-            type: 'error',
-          });
-          writer.write({ content: '[DONE]' });
-          writer.close();
-        }
-      })();
-
-      return new Response(transformStream.readable, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        },
-      });
+      const message = completion.choices?.[0]?.message;
+      const parsed = parseAssistantContent(
+        message?.content,
+        (message as { reasoning?: string } | undefined)?.reasoning,
+      );
+      return this.streamResponse(parsed.display || parsed.raw, 'text');
     } catch (error) {
+      const creditsError = toAiCreditsError(error);
+      if (creditsError) {
+        return new Response(JSON.stringify({
+          type: 'ai_credits',
+          reason: creditsError.reason,
+        }), {
+          status: 402,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error occurred';
       console.error(
-        `[ChatStreamService][${requestId}] Fatal error:`,
+        `[ChatStreamService][${requestId}] ${feature} stream error:`,
         errorMessage,
       );
-      return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      return this.streamResponse('An error occurred during streaming', 'error');
     }
   }
 
-  static async handleTitleStream(req: NextRequest) {
-    const requestId = Math.random().toString(36).substring(7);
-    try {
-      const body = (await req.json()) as StreamRequestBody;
-      const model = await this.getOpenRouterModel();
+  static async handleChatStream(req: NextRequest): Promise<Response> {
+    return this.handleStream(req, 'chat');
+  }
 
-      const transformStream = new TransformStream({
-        transform: (chunk, controller) => {
-          if (chunk.content === '[DONE]') {
-            controller.terminate();
-          } else {
-            controller.enqueue(`data: ${JSON.stringify(chunk)}\n\n`);
-          }
-        },
-      });
-
-      const writer = transformStream.writable.getWriter();
-
-      (async () => {
-        try {
-          const response = await model.sendMessage(body.inputs);
-          writer.write({
-            content: response.text,
-            type: response.error ? 'error' : 'text',
-          });
-          writer.write({ content: '[DONE]' });
-          writer.close();
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error occurred';
-          console.error(
-            `[ChatStreamService][${requestId}] Title stream error:`,
-            errorMessage,
-          );
-          writer.write({
-            content: "An error occurred during streaming",
-            type: 'error',
-          });
-          writer.write({ content: '[DONE]' });
-          writer.close();
-        }
-      })();
-
-      return new Response(transformStream.readable, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        },
-      });
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error(
-        `[ChatStreamService][${requestId}] Fatal error in title stream:`,
-        errorMessage,
-      );
-      return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-    }
+  static async handleTitleStream(req: NextRequest): Promise<Response> {
+    return this.handleStream(req, 'chat-title');
   }
 }

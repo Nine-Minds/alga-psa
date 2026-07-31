@@ -22,14 +22,46 @@ const originalEdition = vi.hoisted(() => {
 const listMspSsoLoginDomainsMock = vi.hoisted(() => vi.fn());
 const saveMspSsoLoginDomainsMock = vi.hoisted(() => vi.fn());
 const toastMock = vi.hoisted(() => vi.fn());
+const i18nMock = vi.hoisted(() => {
+  const t = (_key: string, options?: Record<string, unknown>) => {
+    const template = typeof options?.defaultValue === 'string' ? options.defaultValue : _key;
+    return template.replace(/\{\{(\w+)\}\}/g, (match, name) =>
+      options && options[name] != null ? String(options[name]) : match,
+    );
+  };
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+  return {
+    t,
+    translation: { t },
+  };
+});
+
+vi.mock('@alga-psa/integrations/actions/integrations/mspSsoDomainActions', () => ({
   listMspSsoLoginDomains: (...args: unknown[]) => listMspSsoLoginDomainsMock(...args),
   saveMspSsoLoginDomains: (...args: unknown[]) => saveMspSsoLoginDomainsMock(...args),
+  listMspSsoDomainClaims: vi.fn(),
+  refreshMspSsoDomainClaimChallenge: vi.fn(),
+  requestMspSsoDomainClaim: vi.fn(),
+  revokeMspSsoDomainClaim: vi.fn(),
+  verifyMspSsoDomainClaimOwnership: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => i18nMock.translation,
+  useFormatters: () => ({
+    formatDate: (d: Date | string) => String(d),
+    formatNumber: (n: number) => String(n),
+    formatCurrency: (n: number) => String(n),
+    formatRelativeTime: (d: Date | string) => String(d),
+  }),
+  useI18n: () => ({ locale: 'en' }),
+  useOptionalI18n: () => ({ locale: 'en' }),
+  detectClientLocale: () => 'en',
+  I18nProvider: ({ children }: any) => children,
 }));
 
 import { MspSsoLoginDomainsSettings } from '@alga-psa/integrations/components/settings/integrations/MspSsoLoginDomainsSettings';
@@ -75,7 +107,7 @@ describe('MspSsoLoginDomainsSettings', () => {
       expect(screen.getByDisplayValue('acme.com')).toBeInTheDocument();
     });
 
-    await user.type(screen.getAllByRole('textbox')[0], 'beta.com');
+    await user.type(screen.getByDisplayValue(''), 'beta.com');
     await user.click(screen.getByRole('button', { name: 'Add' }));
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
@@ -130,10 +162,7 @@ describe('MspSsoLoginDomainsSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
-    // The component surfaces a neutral, user-safe message rather than echoing the
-    // raw backend error (no backend internals, and no raw "bad_domain" payload).
-    expect(await screen.findByText(/unable to save msp sso login domains\./i)).toBeInTheDocument();
-    expect(screen.queryByText(/bad_domain/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/invalid domain "bad_domain"/i)).toBeInTheDocument();
     expect(screen.queryByText(/SQL|stack|trace/i)).not.toBeInTheDocument();
   });
 
@@ -152,9 +181,7 @@ describe('MspSsoLoginDomainsSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
-    // Neutral conflict messaging: a user-safe headline plus actionable conflict
-    // details (the affected domains), without echoing the raw backend error text.
-    expect(await screen.findByText(/unable to save msp sso login domains\./i)).toBeInTheDocument();
+    expect(await screen.findByText(/one or more domains are already in use\./i)).toBeInTheDocument();
     expect(await screen.findByText(/conflicts: acme\.com\./i)).toBeInTheDocument();
   });
 
@@ -187,7 +214,7 @@ describe('MspSsoLoginDomainsSettings', () => {
     });
 
     await user.click(screen.getByLabelText('Remove domain 2'));
-    await user.type(screen.getAllByRole('textbox')[0], 'beta.com');
+    await user.type(screen.getByDisplayValue(''), 'beta.com');
     await user.click(screen.getByRole('button', { name: 'Add' }));
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 

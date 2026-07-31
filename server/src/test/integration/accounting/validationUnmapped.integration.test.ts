@@ -46,7 +46,7 @@ describe('Accounting export validation – unmapped services', () => {
     await ctx.db('service_catalog').where({ tenant: ctx.tenantId }).del();
   }, HOOK_TIMEOUT);
 
-afterEach(async () => {
+  afterEach(async () => {
     vi.restoreAllMocks();
     await helpers.afterEach();
   }, HOOK_TIMEOUT);
@@ -89,6 +89,22 @@ afterEach(async () => {
       tax_amount: 0,
       tax_region: options.taxRegion ?? null,
       is_manual: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    // Map the customer so batch validation doesn't additionally flag
+    // missing_customer_mapping — this suite exercises service/tax/term/realm
+    // gaps, not the customer-provisioning gate.
+    await ctx.db('tenant_external_entity_mappings').insert({
+      id: uuidv4(),
+      tenant: ctx.tenantId,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'client',
+      alga_entity_id: ctx.clientId,
+      external_entity_id: 'QB-CUST-1',
+      external_realm_id: null,
+      sync_status: 'synced',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
@@ -196,8 +212,8 @@ afterEach(async () => {
       line_id: uuidv4(),
       batch_id: batchId,
       tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
+      document_id: invoiceId,
+      document_line_id: chargeId,
       client_id: ctx.clientId,
       amount_cents: 5000,
       currency_code: 'USD',
@@ -272,8 +288,8 @@ afterEach(async () => {
       line_id: uuidv4(),
       batch_id: batchId,
       tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
+      document_id: invoiceId,
+      document_line_id: chargeId,
       client_id: ctx.clientId,
       amount_cents: 5000,
       currency_code: 'USD',
@@ -339,8 +355,8 @@ afterEach(async () => {
       line_id: uuidv4(),
       batch_id: batchId,
       tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
+      document_id: invoiceId,
+      document_line_id: chargeId,
       client_id: ctx.clientId,
       amount_cents: 5000,
       currency_code: 'USD',
@@ -402,8 +418,8 @@ afterEach(async () => {
       line_id: uuidv4(),
       batch_id: batchId,
       tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
+      document_id: invoiceId,
+      document_line_id: chargeId,
       client_id: ctx.clientId,
       amount_cents: 5000,
       currency_code: 'USD',

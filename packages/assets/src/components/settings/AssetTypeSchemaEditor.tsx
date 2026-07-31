@@ -13,7 +13,7 @@ import {
   ASSET_TYPE_FIELD_KINDS,
   generateAssetTypeSlug,
   type FieldSchemaIssue,
-} from '../../lib/assetTypeRegistry';
+} from '../../lib/assetTypeSchema';
 
 export interface SchemaEditorField {
   key: string;

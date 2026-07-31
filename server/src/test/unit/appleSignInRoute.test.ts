@@ -79,8 +79,10 @@ function makeFakeKnex() {
     _whereRaw: null as { sql: string; bindings: unknown[] } | null,
     _insertRow: undefined as Record<string, unknown> | undefined,
 
-    where(w: Record<string, unknown>) {
-      this._where.push(w);
+    where(w: Record<string, unknown> | string, value?: unknown) {
+      // tenantDb scopes the root query with where('apple_user_identities.tenant', tenant);
+      // normalize the qualified column to its bare name so tenant scoping stays visible.
+      this._where.push(typeof w === 'string' ? { [w.split('.').pop() as string]: value } : w);
       return this;
     },
     whereRaw(sql: string, bindings: unknown[]) {
@@ -114,7 +116,7 @@ function makeFakeKnex() {
       return Promise.resolve([]);
     },
     update(patch: Record<string, unknown>) {
-      mockState.updatedRows.push({ where: this._where[0] ?? {}, update: patch });
+      mockState.updatedRows.push({ where: Object.assign({}, ...this._where), update: patch });
       return Promise.resolve(1);
     },
   };
@@ -221,7 +223,7 @@ describe('POST /api/v1/mobile/auth/apple — existing link path', () => {
 
     const touched = mockState.updatedRows.find((u) => 'last_sign_in_at' in u.update);
     expect(touched).toBeDefined();
-    expect(touched?.where).toMatchObject({ apple_user_id: '001234.user' });
+    expect(touched?.where).toMatchObject({ tenant: 'tenant-1', apple_user_id: '001234.user' });
   });
 
   it('upgrades a null stored refresh token when a fresh authorization code is sent', async () => {

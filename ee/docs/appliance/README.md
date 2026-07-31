@@ -21,6 +21,7 @@ Ubuntu Server 24.04 LTS is the supported appliance OS path for v1. Talos applian
 
 ## Support Boundary
 
-- Supported v1 update automation: Alga app-channel updates (`stable`/`nightly`) through host status UI.
+- Supported v1 update automation: Alga app-channel updates (`stable`/`nightly`) through the host status UI. Updates are operator-initiated — the appliance surfaces "Update available" but never applies an app update on its own.
+- Applied automatically: the appliance control plane (setup/status UI) refreshes to the channel's current image at boot when the registry is reachable; it can also be upgraded in place from Manage → Control-plane.
 - Not automated in v1: Ubuntu package updates and k3s version upgrades.
 - v2 direction: managed maintenance windows for OS/k3s upgrades, with preflight, history, and remediation guidance.

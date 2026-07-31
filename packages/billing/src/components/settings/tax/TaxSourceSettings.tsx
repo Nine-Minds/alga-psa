@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -16,7 +22,7 @@ import { TaxSource } from '@alga-psa/types';
 import {
   getTenantTaxSettings,
   updateTenantTaxSettings,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 interface LocalTaxSettings {
   default_tax_source: TaxSource;
@@ -26,6 +32,11 @@ interface LocalTaxSettings {
 interface TaxSourceSettingsProps {
   isReadOnly?: boolean;
 }
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps) {
   const { t } = useTranslation('msp/billing-settings');
@@ -41,6 +52,10 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
     setIsLoading(true);
     try {
       const fetchedSettings = await getTenantTaxSettings();
+      if (isReturnedActionError(fetchedSettings)) {
+        handleError(fetchedSettings, t('tax.source.errors.load', { defaultValue: 'Failed to load tax source settings.' }));
+        return;
+      }
       if (fetchedSettings) {
         const mappedSettings: LocalTaxSettings = {
           default_tax_source: fetchedSettings.default_tax_source,
@@ -64,10 +79,14 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
     setIsSaving(true);
     try {
       // Always set allow_external_tax_override to true
-      await updateTenantTaxSettings({
+      const result = await updateTenantTaxSettings({
         ...settings,
         allow_external_tax_override: true,
       });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       setOriginalSettings({ ...settings, allow_external_tax_override: true });
       toast.success(t('tax.source.toast.saved', { defaultValue: 'Tax source settings saved successfully.' }));
     } catch (error: any) {

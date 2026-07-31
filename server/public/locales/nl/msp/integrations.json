@@ -346,16 +346,363 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Annuleren",
+          "connect": "Verbinden",
+          "connecting": "Verbinden...",
+          "test": "Verbinding testen",
+          "testing": "Testen…"
+        },
+        "description": "Voer uw CIPP-instantie-URL en een API-token in om Alga toegang te geven om Entra-gegevens te ontdekken en te synchroniseren.",
+        "encryptionNote": "De API-sleutel wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
+        "errors": {
+          "missingFields": "Zowel Basis-URL als API-token zijn vereist.",
+          "testFirst": "Test de verbinding voordat u opslaat.",
+          "unknown": "Er is een onbekende fout opgetreden."
+        },
+        "fields": {
+          "apiToken": "API-token",
+          "apiTokenHelp": "In CIPP: Instellingen → CIPP → API-toegang. Kopieer de API-sleutel, niet een Azure-clientgeheim.",
+          "apiTokenPlaceholder": "Voer token in...",
+          "baseUrl": "CIPP-basis-URL",
+          "baseUrlHelp": "Dit is de host van de CIPP-API function app (bijvoorbeeld my-cipp-api.azurewebsites.net), niet de CIPP-frontend waarop u zich aanmeldt.",
+          "baseUrlPlaceholder": "https://cipp.uwdomein.com"
+        },
+        "test": {
+          "passed": "CIPP antwoordde. {{count}} tenants zichtbaar.",
+          "required": "Test de verbinding voordat u opslaat."
+        },
+        "title": "CIPP verbinden"
+      },
+      "console": {
+        "actions": {
+          "pause": "Sync pauzeren",
+          "resume": "Sync hervatten",
+          "syncNeedsClients": "Koppel ten minste één klant voordat u synchroniseert.",
+          "syncNeedsConnection": "Herstel de verbinding voordat u synchroniseert.",
+          "syncNow": "Nu synchroniseren",
+          "syncingNow": "Starten…"
+        },
+        "attention": {
+          "actions": {
+            "fixConnection": "Verbinding herstellen",
+            "mapClients": "Klanten koppelen",
+            "openSchedule": "Inschakelen",
+            "review": "Beoordelen",
+            "viewClients": "Klanten bekijken"
+          },
+          "connection": "De verbinding werkt niet. Er wordt niets gesynchroniseerd tot dit is opgelost.",
+          "connectionDetail": "Herstel eerst de verbinding — tot die werkt mislukt elke klant op dezelfde manier.",
+          "empty": "Er is niets dat aandacht vraagt.",
+          "failedClients": "{{count}} klanten zijn niet schoon gesynchroniseerd.",
+          "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} klant is niet schoon gesynchroniseerd.",
+          "neverSynced": "{{count}} gekoppelde klanten zijn nooit gesynchroniseerd.",
+          "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} gekoppelde klant is nooit gesynchroniseerd.",
+          "noClients": "Er zijn geen klanten gekoppeld, dus er kan niets synchroniseren.",
+          "noClientsDetail": "Koppel een Microsoft-tenant aan een klant om contacten te gaan synchroniseren.",
+          "reviewQueue": "{{count}} identiteiten wachten op een beslissing.",
+          "reviewQueueAtLeast": "Minstens {{count}} identiteiten wachten op een beslissing.",
+          "reviewQueueDetail": "Twee of meer contacten delen één Microsoft-e-mailadres, dus er gebeurt niets tot u kiest.",
+          "reviewQueueOne": "{{count}} identiteit wacht op een beslissing.",
+          "scheduleNotApplied": "Automatische synchronisatie staat aan, maar het schema is nooit toegepast.",
+          "scheduleNotAppliedDetail": "Tot die tijd draait er niets vanzelf. Sla het schema opnieuw op om het te herhalen.",
+          "scheduleOff": "Automatische synchronisatie staat uit.",
+          "scheduleOffDetail": "Contacten veranderen alleen als iemand handmatig een synchronisatie start.",
+          "severity": {
+            "blocking": "Blokkerend",
+            "info": "Ter informatie",
+            "warning": "Waarschuwing"
+          },
+          "title": "Vraagt aandacht"
+        },
+        "clients": {
+          "columns": {
+            "lastSync": "Laatste sync",
+            "tenant": "Microsoft-tenant",
+            "users": "Gebruikers"
+          },
+          "empty": "Geen klanten voldoen aan deze zoekopdracht.",
+          "filters": {
+            "all": "Alle",
+            "failing": "Mislukt",
+            "never-synced": "Nooit gesynchroniseerd",
+            "synced": "Gesynchroniseerd"
+          },
+          "searchPlaceholder": "Zoek klanten of domeinen",
+          "sync": "Synchroniseren",
+          "unlink": "Ontkoppelen",
+          "status": {
+            "failed": "Mislukt",
+            "neverSynced": "Nooit gesynchroniseerd",
+            "partlyFailed": "Deels mislukt",
+            "synced": "Gesynchroniseerd",
+            "syncing": "Bezig met synchroniseren"
+          },
+          "emptyTitle": "Nog geen klanten gekoppeld",
+          "emptyDescription": "Koppel een Microsoft-tenant aan een klant op het tabblad Verbinding. Gekoppelde klanten verschijnen hier.",
+          "emptyAction": "Tabblad Verbinding openen",
+          "clearFilters": "Filters wissen",
+          "unlinkConfirm": {
+            "body": "{{client}} synchroniseert niet meer, nu niet en volgens de planning niet. De contacten blijven zoals ze zijn en houden hun Microsoft-koppeling. De tenant keert terug naar de koppeltabel op het tabblad Verbinding.",
+            "title": "Stoppen met synchroniseren van {{client}}?"
+          },
+          "unlinked": "{{client}} synchroniseert niet meer.",
+          "unlinkFailed": "Die klant kon niet worden ontkoppeld.",
+          "hidePreview": "Voorbeeld verbergen",
+          "previewLoading": "Directory van {{client}} wordt gelezen bij Microsoft…",
+          "previewLoadingHint": "Hoe lang dit duurt hangt af van het aantal gebruikers van de klant.",
+          "previousCount": "Vorige",
+          "syncFinished": "Synchronisatie voltooid voor {{client}}.",
+          "syncing": "Bezig met synchroniseren…",
+          "syncTrackingFailed": "De synchronisatie is gestart, maar deze pagina kon deze niet tot voltooiing volgen. Vernieuw om het nieuwste resultaat te bekijken."
+        },
+        "connection": {
+          "changeAction": "Verbinding wijzigen",
+          "exportRecord": "Verbindingsrecord exporteren",
+          "mappingDescription": "Bekijk of wijzig bij welke klant elke Microsoft-tenant hoort.",
+          "mappingTitle": "Tenantkoppeling",
+          "methodLabel": "Methode",
+          "permissionsTitle": "Geldende machtigingen",
+          "rotate": "Referentie roteren",
+          "validate": "Verbinding testen",
+          "validated": "De verbinding werkt.",
+          "validating": "Testen…"
+        },
+        "errors": {
+          "loadFailed": "Dit scherm kon niet worden geladen, dus wat het toont kan onvolledig zijn.",
+          "syncFailed": "De synchronisatie kon niet worden gestart.",
+          "syncNotStarted": "De synchronisatie is niet gestart: de achtergrondverwerker is niet beschikbaar. Er is niets gewijzigd — probeer het opnieuw zodra die terug is.",
+          "validateFailed": "De verbinding kon niet worden gecontroleerd."
+        },
+        "health": {
+          "checking": "Controleren…",
+          "failingClients": "{{count}} klanten mislukken",
+          "failingClientsOne": "{{count}} klant mislukt",
+          "healthy": "Gezond",
+          "unknown": "Status onbekend"
+        },
+        "history": {
+          "allClients": "Alle klanten",
+          "columns": {
+            "clients": "Klanten",
+            "failed": "Mislukt",
+            "scope": "Bereik",
+            "succeeded": "Geslaagd",
+            "trigger": "Trigger",
+            "when": "Wanneer"
+          },
+          "empty": "Geen runs voldoen aan deze filters.",
+          "export": "CSV exporteren",
+          "includePreviews": "Previews meenemen",
+          "next": "Volgende",
+          "onlyFailures": "Alleen fouten",
+          "page": "Pagina {{page}} van {{pages}}",
+          "previewBadge": "preview",
+          "previous": "Vorige",
+          "triggers": {
+            "all": "Alle runs",
+            "manual": "Handmatig",
+            "scheduled": "Gepland"
+          }
+        },
+        "lastRun": {
+          "columns": {
+            "client": "Klant",
+            "created": "Aangemaakt",
+            "inactivated": "Inactief gemaakt",
+            "linked": "Gekoppeld",
+            "result": "Resultaat",
+            "updated": "Gewijzigd"
+          },
+          "empty": "Er is nog geen synchronisatie uitgevoerd.",
+          "progress": "{{processed}} van {{total}} klanten tot nu toe klaar.",
+          "results": {
+            "done": "Klaar",
+            "failed": "Mislukt",
+            "partlyFailed": "Deels mislukt",
+            "running": "Bezig met synchroniseren",
+            "toReview": "{{count}} te beoordelen"
+          },
+          "showAll": "Bekijk alle {{count}} klanten in deze uitvoering",
+          "stats": {
+            "created": "Aangemaakt",
+            "createdSub": "nieuwe contacten",
+            "failed": "Mislukt",
+            "failedSub": "klanten",
+            "inactivated": "Inactief gemaakt",
+            "inactivatedSub": "accounts uitgeschakeld",
+            "linked": "Gekoppeld",
+            "linkedSub": "bestaande contacten",
+            "updated": "Gewijzigd",
+            "updatedSub": "waar u dat toestond"
+          },
+          "summaries": {
+            "completed": "Voltooid {{time}}.",
+            "failed": "Mislukt {{time}}.",
+            "partial": "Voltooid {{time}}, met fouten.",
+            "running": "Gestart {{time}} en nog bezig.",
+            "unknown": "Laatste uitvoering {{time}}."
+          },
+          "title": "Laatste synchronisatie",
+          "unavailable": "De uitvoeringsgeschiedenis kon niet worden gelezen."
+        },
+        "lead": "{{clients}} klanten gekoppeld · verbonden via {{method}}",
+        "overwrites": {
+          "change": "Veldregels wijzigen",
+          "inactivateOff": "Uitgeschakelde Microsoft-accounts blijven ongemoeid.",
+          "inactivateOn": "Uitgeschakelde Microsoft-accounts worden als inactief gemarkeerd.",
+          "none": "Er wordt niets overschreven.",
+          "title": "Toegestane overschrijvingen"
+        },
+        "schedule": {
+          "cadence": {
+            "10080": "elke week",
+            "1440": "elke dag",
+            "240": "elke 4 uur",
+            "60": "elk uur",
+            "720": "elke 12 uur"
+          },
+          "changeAction": "Schema wijzigen",
+          "description": "Wanneer aan, synchroniseert Alga elke gekoppelde klant met dit ritme. Uitzetten stopt geplande runs; handmatig synchroniseren blijft mogelijk.",
+          "enablePrompt": "De pilot is geslaagd. Zet automatische synchronisatie aan om contacten bij te houden zonder handmatige runs.",
+          "intervalLabel": "Uitvoeren elke",
+          "intervals": {
+            "10080": "Week",
+            "1440": "Dag",
+            "240": "4 uur",
+            "60": "Uur",
+            "720": "12 uur"
+          },
+          "pause": "Pauzeren",
+          "pauseHint": "Gepauzeerd. Sla op om toe te passen.",
+          "paused": "Automatische synchronisatie gepauzeerd.",
+          "resumed": "Automatische synchronisatie hervat.",
+          "save": "Planning opslaan",
+          "saveFailed": "De planning kon niet worden opgeslagen.",
+          "saved": "Planning opgeslagen.",
+          "savedPending": "Instelling opgeslagen. De planning wordt bijgewerkt bij de volgende reconciliatie door de worker.",
+          "saving": "Opslaan…",
+          "title": "Automatische synchronisatie"
+        },
+        "sideRail": {
+          "runs": "Draait {{cadence}}",
+          "runsMinutes": "Draait elke {{minutes}} minuten",
+          "scheduleOff": "Uit"
+        },
+        "syncStarted": "Synchronisatie gestart voor alle gekoppelde klanten.",
+        "tabs": {
+          "clients": "Klanten",
+          "connection": "Verbinding",
+          "fieldRules": "Veldregels",
+          "history": "Geschiedenis",
+          "overview": "Overzicht",
+          "reviewQueue": "Beoordelingswachtrij",
+          "schedule": "Synchronisatie en planning"
+        }
+      },
+      "pilot": {
+        "actions": {
+          "createAndSync": "Goedgekeurde klanten maken en synchroniseren",
+          "preview": "Wijzigingen bekijken",
+          "previewing": "Bezig met bekijken…",
+          "syncOne": "Deze klant synchroniseren",
+          "syncOneNamed": "Alleen {{client}} synchroniseren",
+          "syncRemaining": "De resterende {{count}} synchroniseren",
+          "syncingOne": "Starten…",
+          "syncingRemaining": "Starten…"
+        },
+        "clientLabel": "Pilotklant",
+        "empty": "Bevestig eerst een tenant-naar-klant koppeling; er valt nog niets te piloten.",
+        "errors": {
+          "loadMappings": "De gekoppelde klanten konden niet worden geladen.",
+          "preflightFailed": "De preview kon niet worden voltooid.",
+          "syncFailed": "De synchronisatie kon niet worden gestart."
+        },
+        "gateNote": "Synchroniseer eerst één klant. De rest komt vrij zodra die run klaar is.",
+        "pendingCreate": "Goedgekeurde nieuwe klanten ({{count}}) worden door deze expliciete synchronisatie gemaakt. Geplande synchronisaties kunnen ze niet maken.",
+        "previewPrompt": "Bekijk de wijzigingen voor deze klant voordat er iets wordt weggeschreven.",
+        "remainingStarted": "Synchronisatie gestart voor de resterende {{count}} klanten.",
+        "started": "Synchronisatie gestart voor {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "Geen contact bij deze klant komt overeen met het e-mailadres, dus er zou er een worden aangemaakt.",
+            "label": "Nieuwe contacten"
+          },
+          "link": {
+            "description": "Een bestaand contact komt overeen op e-mail en zou worden gekoppeld, en bijgewerkt waar uw veldregels dat toestaan.",
+            "label": "Gekoppeld aan bestaande contacten"
+          },
+          "markInactive": {
+            "description": "Het Microsoft-account is uitgeschakeld, dus het gekoppelde contact zou als inactief worden gemarkeerd. Er wordt niets verwijderd.",
+            "label": "Als inactief gemarkeerd"
+          },
+          "needsDecision": {
+            "description": "Meer dan één contact komt overeen, dus de synchronisatie gokt niet. Deze komen in de beoordelingswachtrij.",
+            "label": "Vraagt een beslissing"
+          },
+          "noChange": {
+            "description": "Al gekoppeld, en niets wat uw regels synchroniseren is gewijzigd.",
+            "label": "Geen wijziging"
+          }
+        },
+        "checkAgain": "Opnieuw controleren",
+        "checkedLabel": "Gecontroleerd",
+        "hideNames": "Namen verbergen",
+        "moreNames": "en nog {{count}}",
+        "nothingWritten": "Nog niets weggeschreven",
+        "showNames": "Namen tonen",
+        "summary": "{{count}} identiteiten gecontroleerd om {{time}}. Er is niets gewijzigd.",
+        "summaryNoTime": "{{count}} identiteiten gecontroleerd. Er is niets gewijzigd.",
+        "title": "Wat deze synchronisatie zou doen"
+      },
+      "reconciliation": {
+        "actions": {
+          "dismiss": "Negeren",
+          "refresh": "Vernieuwen",
+          "resolveExisting": "Oplossen naar bestaand",
+          "resolveNew": "Oplossen naar nieuw"
+        },
+        "candidate": {
+          "fallback": "kandidaat",
+          "label": "Kandidaat-contacten: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Bestaand contact",
+          "placeholder": "Selecteer bestaand contact..."
+        },
+        "empty": "Er wachten geen dubbelzinnige overeenkomsten op controle.",
+        "errors": {
+          "enterContactId": "Voer een contact-ID in om naar een bestaand contact op te lossen.",
+          "loadQueue": "Kan afstemmingswachtrij niet laden.",
+          "resolveFailed": "Kan wachtrij-item niet oplossen."
+        },
+        "loading": "Wachtrij laden…",
+        "noEmailIdentity": "Geen e-mailidentiteit",
+        "queuedAt": "{{identity}} · in wachtrij geplaatst {{time}}",
+        "scopedToMappedClient": "Bestaande contactopties zijn beperkt tot deze toegewezen klant.",
+        "success": {
+          "dismissed": "{{identity}} genegeerd. Het komt bij de volgende synchronisatie niet terug.",
+          "resolvedExisting": "Wachtrij-item {{queueItemId}} opgelost naar bestaand contact {{contactNameId}}.",
+          "resolvedNew": "Wachtrij-item {{queueItemId}} opgelost door contact {{contactNameId}} aan te maken."
+        },
+        "title": "Wachtrij voor dubbelzinnige overeenkomsten"
+      },
       "settings": {
         "actions": {
+          "cancel": "Annuleren",
           "disconnect": "Verbinding verbreken",
-          "reconnect": "Opnieuw verbinden",
+          "hideReviewRemap": "Controleren / Opnieuw toewijzen verbergen",
+          "reconnect": "{{connectionType}} opnieuw verbinden",
           "reconnecting": "Opnieuw verbinden…",
           "refresh": "Vernieuwen",
           "resetFieldSync": "Resetten",
           "reviewMappings": "Toewijzingen controleren",
           "reviewRemap": "Controleren / Opnieuw toewijzen",
-          "hideReviewRemap": "Controleren / Opnieuw toewijzen verbergen",
           "runDiscovery": "Ontdekking uitvoeren",
           "runDiscoveryAgain": "Ontdekking opnieuw uitvoeren",
           "runDiscoveryRunning": "Ontdekking uitvoeren…",
@@ -367,21 +714,30 @@
           "syncAllStarting": "Starten…"
         },
         "badges": {
-          "enterprise": "Enterprise",
+          "pro": "Pro",
           "reviewBeforeInitialSync": "Controleer voor initiële synchronisatie"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft heeft u aangemeld maar toegang tot uw lijst met beheerde tenants geweigerd. Een globale beheerder moet beheerderstoestemming verlenen voor de gevraagde machtigingen. Er is niets opgeslagen — probeer het opnieuw zodra de toestemming is verleend.",
+            "expired": "De verbindingspoging is verlopen voordat deze was voltooid. Er is niets opgeslagen — start de verbinding opnieuw.",
+            "generic": "Microsoft Entra is niet verbonden en er is niets opgeslagen. Probeer het opnieuw.",
+            "validationFailed": "Microsoft heeft u aangemeld, maar uw lijst met beheerde tenants kon niet worden gelezen, dus er is niets opgeslagen. Controleer de machtigingen van de verbinding en probeer het opnieuw."
+          },
+          "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Verbinden...)",
-          "details": "Verbindingsdetails",
+          "details": "Verbindingsgegevens",
           "directCredentialSourceLabel": "Bron van inloggegevens:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Microsoft-tenant:",
-          "cippServerLabel": "CIPP-server:",
+          "directTenantLabel": "Microsoft-tenant",
           "notAvailable": "Niet beschikbaar",
           "notConfigured": "Niet geconfigureerd",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Verbindingsopties",
-          "promptDetails": "Verbind Entra om providerdetails in te vullen."
+          "promptDetails": "Verbind Entra om providerdetails in te vullen.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Direct"
+          }
         },
         "currentStep": {
           "connect": {
@@ -408,6 +764,12 @@
           "description": "De Entra-integratie-UI is momenteel uitgeschakeld voor deze tenant.",
           "title": "Microsoft Entra-integratie"
         },
+        "disconnectConfirm": {
+          "keeps": "Contactpersonen, klantkoppelingen en synchronisatiegeschiedenis blijven ongewijzigd behouden. Er wordt niets verwijderd.",
+          "reconnect": "Later opnieuw verbinden herstelt de synchronisatie zonder uw koppelingen opnieuw te maken.",
+          "stops": "Geplande en handmatige synchronisaties stoppen en de opgeslagen inloggegevens worden verwijderd.",
+          "title": "Microsoft Entra loskoppelen?"
+        },
         "discovery": {
           "completed": "Ontdekking voltooid. {{count}} tenants ontdekt.",
           "completedOne": "Ontdekking voltooid. {{count}} tenant ontdekt.",
@@ -432,6 +794,10 @@
               "description": "Sta toe dat Entra-e-mail/UPN het contact-e-mailadres van gekoppelde contacten overschrijft.",
               "label": "E-mail"
             },
+            "markInactiveWhenDisabled": {
+              "description": "Gekoppelde contacten worden als inactief gemarkeerd, nooit verwijderd. Schakel dit uit om contacten met rust te laten wanneer hun account wordt uitgeschakeld.",
+              "label": "Contacten als inactief markeren wanneer het Microsoft-account is uitgeschakeld"
+            },
             "phone": {
               "description": "Sta toe dat Entra-telefoonwaarden het contacttelefoonnummer van gekoppelde contacten overschrijven.",
               "label": "Telefoon"
@@ -445,11 +811,22 @@
               "label": "UPN"
             }
           },
-          "title": "Veldsynchronisatiebesturingselementen"
+          "preview": "Effect bekijken",
+          "previewClientEmpty": "Geen gekoppelde klant komt overeen met die zoekopdracht.",
+          "previewClientLabel": "Klant",
+          "previewClientSearch": "Gekoppelde klanten zoeken",
+          "previewDescription": "Past de bewerkte regels toe op één klant en schrijft niets, zodat u het effect ziet voordat het voor iedereen geldt.",
+          "previewTitle": "Test de regels voordat u ze opslaat",
+          "previewing": "Bezig met bekijken…",
+          "save": "Regels opslaan",
+          "saveFailed": "De veldregels konden niet worden opgeslagen.",
+          "saved": "Veldregels opgeslagen.",
+          "saving": "Opslaan…",
+          "title": "Veldregels"
         },
         "guidedStep": {
-          "current": "huidig",
           "complete": "voltooid",
+          "current": "huidig",
           "locked": "vergrendeld",
           "stepLabel": "Stap {{number}}",
           "thisIsCurrent": "Dit is uw huidige onboarding-stap."
@@ -483,12 +860,9 @@
           "title": "Doorlopende operaties"
         },
         "overview": {
-          "connectionLabel": "Verbinding:",
           "connectionTypeLabel": "Verbindingstype:",
           "label": "Overzicht",
-          "mappedTenantsLabel": "Toegewezen tenants:",
-          "nextSyncIntervalEvery": "Elke {{minutes}} minuten",
-          "nextSyncIntervalLabel": "Volgende synchronisatie-interval:"
+          "mappedTenantsLabel": "Toegewezen tenants:"
         },
         "skipped": {
           "empty": "Momenteel zijn er geen tenants gemarkeerd als overgeslagen.",
@@ -498,7 +872,14 @@
         },
         "status": {
           "connectionHealth": "Verbindingsgezondheid",
-          "label": "Status"
+          "label": "Status",
+          "values": {
+            "connected": "Verbonden",
+            "disconnected": "Verbinding verbroken",
+            "not_connected": "Niet verbonden",
+            "unknown": "Onbekend",
+            "validation_failed": "Verbonden, maar validatie mislukt"
+          }
         },
         "syncAll": {
           "failed": "Kan volledige Entra-synchronisatie niet starten.",
@@ -506,10 +887,14 @@
           "startedNoId": "Synchronisatiestartverzoek geaccepteerd."
         },
         "title": "Microsoft Entra-integratie",
+        "unmapConfirm": {
+          "body": "Hiermee wordt de opgeslagen koppelingsbeslissing voor {{tenant}} verwijderd, zodat deze weer in de koppelingstabel verschijnt. Reeds gesynchroniseerde contactpersonen worden niet gewijzigd.",
+          "title": "Deze tenant opnieuw koppelen?"
+        },
         "validation": {
           "label": "Validatie en ontdekking",
           "lastDiscoveryLabel": "Laatste ontdekking:",
-          "lastValidatedLabel": "Laatst gevalideerd:",
+          "lastValidatedLabel": "Laatst gecontroleerd",
           "neverFormatted": "Nooit",
           "noneValidationError": "Geen",
           "validationErrorLabel": "Validatiefout:"
@@ -533,8 +918,143 @@
           }
         }
       },
+      "setup": {
+        "backToCurrentStep": "Terug naar {{step}}",
+        "chooser": {
+          "cipp": {
+            "description": "Alga leest tenants via de CIPP-instantie die u al draait.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "De host van de CIPP-API function app, niet de CIPP-frontend.",
+              "apiKey": "Een CIPP API-sleutel met toegang tot de tenantlijst.",
+              "instance": "Een draaiende CIPP-instantie."
+            }
+          },
+          "cippReassurance": "Alga test de verbinding voordat deze wordt opgeslagen.",
+          "continue": "Doorgaan",
+          "continueCipp": "CIPP-verbinding instellen",
+          "continueDirect": "Doorgaan met Direct",
+          "continuing": "Bezig…",
+          "direct": {
+            "description": "Alga praat met Microsoft Graph via uw partnerrelatie.",
+            "label": "Directe Microsoft-partner",
+            "prerequisites": {
+              "appRegistration": "Microsoft OAuth-gegevens die voor deze tenant zijn geconfigureerd.",
+              "globalAdmin": "Een globale beheerder die de machtigingen kan goedkeuren.",
+              "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert."
+            }
+          },
+          "directReassurance": "U ziet de toestemmingsvraag voordat er iets wordt verleend.",
+          "prerequisitesTitle": "U heeft nodig",
+          "recommendation": "De meeste MSP's kiezen het beste Direct. Kies CIPP alleen als u al een instantie draait.",
+          "recommendedBadge": "Aanbevolen",
+          "title": "Kies hoe u verbindt"
+        },
+        "connectedVia": "Verbonden via {{method}}",
+        "description": "Breng de mensen uit de Microsoft-tenants die u beheert als klantcontacten naar Alga. Er wordt niets naar uw contacten geschreven totdat u een voorbeeld hebt gezien en goedgekeurd.",
+        "directConsent": {
+          "adminNote": "Een globale beheerder moet deze machtigingen goedkeuren. Zo niet, dan lukt de aanmelding wel maar wordt de verbinding geweigerd en wordt er niets opgeslagen.",
+          "cancel": "Annuleren",
+          "continue": "Doorgaan naar Microsoft",
+          "intro": "U verlaat Alga en meldt zich aan bij Microsoft. Dit zijn de machtigingen die worden gevraagd.",
+          "redirecting": "Doorsturen…",
+          "servicePrincipalNote": "De verbinding draait daarna als service-principal en niet onder uw aanmelding, zodat ze blijft werken als u er niet bent.",
+          "title": "Voordat u doorgaat naar Microsoft"
+        },
+        "disclosure": {
+          "capabilities": {
+            "noMailbox": "Leest nooit e-mail, bestanden, agenda's of Teams-berichten",
+            "noWrite": "Schrijft nooit iets terug naar Microsoft",
+            "readTenants": "De lijst met Microsoft-tenants die u beheert lezen",
+            "readUsers": "Gebruikers in die tenants lezen — naam, e-mail, telefoon, functie"
+          },
+          "capabilitiesTitle": "Wat Alga mag doen",
+          "contacts": {
+            "ambiguous": "Delen twee contacten een e-mailadres? Dat wordt apart gezet zodat u beslist — nooit geraden.",
+            "creation": "Een identiteit zonder match wordt een nieuw contact bij die klant.",
+            "deletion": "Er wordt nooit iets verwijderd.",
+            "matching": "Contacten worden gematcht op e-mailadres binnen de klant waaraan u de tenant koppelt.",
+            "overwrite": "Bestaande namen, e-mails, telefoonnummers en functies worden niet overschreven tenzij u dat inschakelt."
+          },
+          "contactsTitle": "Wat er met uw contacten gebeurt",
+          "copied": "Gekopieerd",
+          "copy": "Kopiëren voor een wijzigingsdossier",
+          "description": "Lees dit voordat u autoriseert. U kunt het naar een wijzigingsdossier kopiëren.",
+          "inactiveNote": "Een uitgeschakeld Microsoft-account markeert het contact als inactief. U kunt dat in stap 4 uitzetten.",
+          "recordGeneratedAt": "Opgesteld {{time}}",
+          "recordHeading": "Microsoft Entra-integratie — wijzigingsdossier",
+          "scopes": {
+            "directory": "Leest directorygegevens in uw eigen tenant. Wordt alleen gebruikt door de eigen-tenant testmodus.",
+            "managedTenants": "Somt de klanttenants op die uw partnerrelatie dekt, en de gebruikers daarin. Zo worden klanten en contacten ontdekt.",
+            "offlineAccess": "Houdt de verbinding werkend nadat u de browser sluit, zodat geplande synchronisaties kunnen draaien.",
+            "unknown": "Gevraagd door de verbinding.",
+            "userRead": "Bevestigt wie zich aanmeldt. Leest alleen uw eigen profiel."
+          },
+          "scopesAllReadOnly": "Allemaal alleen-lezen.",
+          "scopesTitle": "Gevraagde machtigingen",
+          "title": "Wat Alga leest en wat het wijzigt"
+        },
+        "stepLabel": "Stap {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Kies hoe Alga Microsoft bereikt en autoriseer het.",
+            "short": "Verbinden",
+            "title": "Microsoft Entra verbinden"
+          },
+          "discover": {
+            "description": "Vraag Microsoft welke klanttenants uw partnerrelatie dekt.",
+            "short": "Tenants zoeken",
+            "title": "Beheerde tenants ontdekken"
+          },
+          "map": {
+            "description": "Bepaal bij welke Alga-klant elke Microsoft-tenant hoort. Er wordt niets gesynchroniseerd tot dit bevestigd is.",
+            "short": "Aan klanten koppelen",
+            "title": "Tenants aan klanten koppelen"
+          },
+          "sync": {
+            "description": "Haal contacten op voor de gekoppelde klanten.",
+            "short": "Voorbeeld & pilot",
+            "title": "Eerste synchronisatie uitvoeren"
+          }
+        },
+        "title": "Microsoft Entra instellen"
+      },
+      "summary": {
+        "backToIntegrations": "Terug naar integraties",
+        "description": "Ontdek de tenants die u beheert, koppel ze aan klanten en houd contacten gelijk.",
+        "open": "Openen",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Details verbergen",
+          "refresh": "Vernieuwen",
+          "viewDetails": "Details bekijken"
+        },
+        "details": {
+          "noResults": "Geen tenantresultaten geregistreerd.",
+          "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "onbekend"
+        },
+        "empty": "Nog geen synchronisatieruns gevonden.",
+        "errors": {
+          "loadDetailFailed": "Kan rundetails niet laden.",
+          "loadFailed": "Kan synchronisatiegeschiedenis niet laden.",
+          "loadRunFailed": "Kan run {{runId}} niet laden."
+        },
+        "loading": "Synchronisatiegeschiedenis laden…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "Bezig",
+          "tenants": "Tenants: {{processed}}/{{total}} · Succes: {{success}} · Mislukt: {{failed}}",
+          "timing": "Gestart {{started}} · Voltooid {{completed}}"
+        },
+        "title": "Recente synchronisatieruns"
+      },
       "tenantMapping": {
         "actions": {
+          "cancel": "Annuleren",
           "confirmSelected": "Geselecteerde toewijzingen bevestigen",
           "confirming": "Bevestigen…",
           "import": "Importeren als nieuwe klant",
@@ -565,6 +1085,11 @@
           "confirmed": "{{count}} toewijzingen bevestigd.",
           "confirmedOne": "{{count}} toewijzing bevestigd."
         },
+        "importConfirm": {
+          "body": "Er wordt een nieuwe klant gemaakt op basis van de Entra-tenant {{tenant}}, en de tenant wordt daaraan gekoppeld.",
+          "similarWarning": "Deze bestaande klanten hebben vergelijkbare namen — koppel in plaats daarvan aan een van hen als dit dezelfde organisatie is:",
+          "title": "Importeren als nieuwe klant?"
+        },
         "noSuggestion": "Geen suggestie",
         "picker": {
           "placeholder": "Selecteer klant...",
@@ -583,82 +1108,6 @@
           "unmatched": "Niet gekoppeld"
         },
         "title": "Tenant-toewijzingsvoorbeeld"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Annuleren",
-          "connect": "Verbinden",
-          "connecting": "Verbinden..."
-        },
-        "description": "Voer uw CIPP-instantie-URL en een API-token in om Alga toegang te geven om Entra-gegevens te ontdekken en te synchroniseren.",
-        "errors": {
-          "missingFields": "Zowel Basis-URL als API-token zijn vereist.",
-          "unknown": "Er is een onbekende fout opgetreden."
-        },
-        "fields": {
-          "apiToken": "API-token",
-          "apiTokenPlaceholder": "Voer token in...",
-          "baseUrl": "CIPP-basis-URL",
-          "baseUrlPlaceholder": "https://cipp.uwdomein.com"
-        },
-        "title": "CIPP verbinden"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Vernieuwen",
-          "resolveExisting": "Oplossen naar bestaand",
-          "resolveNew": "Oplossen naar nieuw"
-        },
-        "candidate": {
-          "fallback": "kandidaat",
-          "label": "Kandidaat-contacten: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Bestaand contact",
-          "placeholder": "Selecteer bestaand contact..."
-        },
-        "errors": {
-          "enterContactId": "Voer een contact-ID in om naar een bestaand contact op te lossen.",
-          "loadQueue": "Kan afstemmingswachtrij niet laden.",
-          "resolveFailed": "Kan wachtrij-item niet oplossen."
-        },
-        "empty": "Er wachten geen dubbelzinnige overeenkomsten op controle.",
-        "loading": "Wachtrij laden…",
-        "noEmailIdentity": "Geen e-mailidentiteit",
-        "queuedAt": "{{identity}} · in wachtrij geplaatst {{time}}",
-        "scopedToMappedClient": "Bestaande contactopties zijn beperkt tot deze toegewezen klant.",
-        "success": {
-          "resolvedExisting": "Wachtrij-item {{queueItemId}} opgelost naar bestaand contact {{contactNameId}}.",
-          "resolvedNew": "Wachtrij-item {{queueItemId}} opgelost door contact {{contactNameId}} aan te maken."
-        },
-        "title": "Wachtrij voor dubbelzinnige overeenkomsten"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Details verbergen",
-          "refresh": "Vernieuwen",
-          "viewDetails": "Details bekijken"
-        },
-        "details": {
-          "noResults": "Geen tenantresultaten geregistreerd.",
-          "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "onbekend"
-        },
-        "empty": "Nog geen synchronisatieruns gevonden.",
-        "errors": {
-          "loadDetailFailed": "Kan rundetails niet laden.",
-          "loadFailed": "Kan synchronisatiegeschiedenis niet laden.",
-          "loadRunFailed": "Kan run {{runId}} niet laden."
-        },
-        "loading": "Synchronisatiegeschiedenis laden…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "Bezig",
-          "tenants": "Tenants: {{processed}}/{{total}} · Succes: {{success}} · Mislukt: {{failed}}",
-          "timing": "Gestart {{started}} · Voltooid {{completed}}"
-        },
-        "title": "Recente synchronisatieruns"
       }
     },
     "google": {
@@ -668,7 +1117,8 @@
           "resetProviders": "Google-providers resetten",
           "resetting": "Resetten…",
           "save": "Opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "disconnectProviders": "Disconnect Google providers"
         },
         "afterSaveNotice": "Ga na het opslaan naar de integraties voor inkomende e-mail en agenda en autoriseer de providers opnieuw. Bestaande Google-providers worden niet gemigreerd.",
         "consoleLink": "Google Cloud Console",
@@ -693,7 +1143,8 @@
           "sectionTitle": "OAuth-app",
           "shareApp": "Dezelfde OAuth-app gebruiken voor Gmail en Calendar",
           "shareAppHelp": "Aanbevolen. U kunt nog steeds afzonderlijke Google-accounts per integratie autoriseren.",
-          "storedSecret": "Opgeslagen secret: {{secret}}"
+          "storedSecret": "Opgeslagen secret: {{secret}}",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
         },
         "redirectUrisLabel": "Redirect-URI's (kopiëren naar de Google OAuth-client)",
         "scopes": "Scopes",
@@ -702,7 +1153,8 @@
         "serviceAccount": {
           "alreadyStored": "Er is al een service-accountsleutel opgeslagen (niet weergegeven).",
           "description": "Plak de JSON-sleutel van het tenant-eigen service account dat wordt gebruikt om Pub/Sub te provisioneren.",
-          "title": "Pub/Sub-service-account (vereist voor Gmail)"
+          "title": "Pub/Sub-service-account (vereist voor Gmail)",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
         },
         "setupGuide": "Installatiehandleiding",
         "title": "Google",
@@ -714,7 +1166,16 @@
           "savedDescription": "De Google-configuratie van de tenant is succesvol bijgewerkt.",
           "savedTitle": "Google-instellingen opgeslagen",
           "unknownError": "Onbekende fout"
-        }
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
+        "oauthValues": {
+          "title": "Google OAuth app values"
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
       }
     },
     "hudu": {
@@ -1017,6 +1478,27 @@
         },
         "toasts": {
           "errorTitle": "Hudu-verbindingsfout"
+        },
+        "sync": {
+          "title": "Synchronisatie en automatisering",
+          "description": "Importeer activa voor alle gekoppelde klanten in één keer en houd ze automatisch up-to-date. Het koppelen van een bedrijf of lay-out configureert alleen de integratie — activa verschijnen pas na een import.",
+          "summary": "{{created}} aangemaakt · {{updated}} bijgewerkt · {{skipped}} overgeslagen · {{failed}} mislukt",
+          "toastErrorTitle": "Hudu-synchronisatiefout",
+          "importDoneTitle": "Hudu-import voltooid",
+          "syncDoneTitle": "Hudu-synchronisatie voltooid",
+          "importing": "Bezig met importeren…",
+          "importAll": "Alle gekoppelde klanten importeren",
+          "syncing2": "Bezig met synchroniseren…",
+          "syncAll": "Alles synchroniseren",
+          "autoSyncLabel": "Dagelijkse automatische synchronisatie",
+          "autoSyncHint": "Importeert automatisch nieuwe activa en vernieuwt bestaande één keer per dag voor elke gekoppelde klant.",
+          "neverRun": "Nog geen tenant-brede uitvoering.",
+          "lastRun": "Laatste uitvoering {{at}}: {{created}} aangemaakt · {{updated}} bijgewerkt · {{skipped}} overgeslagen · {{failed}} mislukt",
+          "status": {
+            "syncing": "Bezig…",
+            "completed": "Voltooid",
+            "error": "Fout"
+          }
         }
       }
     },
@@ -1028,7 +1510,8 @@
           "openTeamsSetup": "Teams-installatie openen",
           "refresh": "Vernieuwen",
           "resetProviders": "Microsoft-providers resetten",
-          "resetting": "Resetten…"
+          "resetting": "Resetten…",
+          "disconnectProviders": "Disconnect Microsoft providers"
         },
         "archiveDialog": {
           "archiving": "Archiveren…",
@@ -1044,19 +1527,21 @@
           "needsAttention": "Vereist aandacht",
           "saving": "Opslaan…",
           "selectProfile": "Selecteer een profiel",
-          "unbound": "Niet gekoppeld"
+          "unbound": "Niet gekoppeld",
+          "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "{{consumer}} is gekoppeld aan {{profile}}.",
+          "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Momenteel is er geen Microsoft-profiel gekoppeld aan {{consumer}}.",
           "summaryUnavailable": "{{consumer}} is gekoppeld aan een niet-beschikbaar profiel.",
-          "warningArchived": "{{consumer}} is nog steeds gekoppeld aan een gearchiveerd profiel. Koppel opnieuw aan een actief profiel.",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
           "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
-          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel."
+          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel.",
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
         },
-        "bindingsAlertCe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van het MSP SSO-profiel. Configureer aanmeldingsdomeinen apart na het kiezen van het gekoppelde profiel.",
-        "bindingsAlertEe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van MSP SSO-, e-mail-, agenda- en Teams-profielen.",
         "consumerBindings": {
           "descriptionCe": "Koppel één Microsoft-profiel aan MSP SSO voor aanmelding en gebruik van aanmeldingsdomein.",
           "descriptionEe": "Koppel één Microsoft-profiel per ondersteunde consumer. Het opnieuw toewijzen van één consumer wijzigt de andere niet.",
@@ -1102,7 +1587,9 @@
           "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
           "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
           "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Microsoft-profiel aanmaken",
@@ -1156,7 +1643,9 @@
           "storedSecret": "Opgeslagen secret",
           "teamsAppIdUri": "Teams Application ID URI",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Bijwerken…"
+          "updating": "Bijwerken…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Gebruik dit als u inloggegevens roteert of opzettelijk Outlook-e-mail of de agenda aan een ander Microsoft-profiel koppelt.",
@@ -1199,6 +1688,15 @@
           "clientSecretRequired": "Microsoft OAuth Client Secret is verplicht",
           "displayNameRequired": "Weergavenaam van Microsoft-profiel is verplicht",
           "tenantIdRequired": "Microsoft Tenant ID is verplicht"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
+        "profileLibrary": {
+          "description": "Named Microsoft app registrations that services can bind to.",
+          "title": "Profile library"
         }
       }
     },
@@ -1299,6 +1797,8 @@
         "refreshTokenExpiry": "QuickBooks-token verloopt op {{date}}",
         "refreshTokenExpired": "QuickBooks-token verlopen — maak opnieuw verbinding om de synchronisatie te hervatten.",
         "autoSyncLabel": "Automatische synchronisatie ingeschakeld",
+        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
+        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
         "syncNowButton": "Nu synchroniseren",
         "syncNowRunning": "Synchroniseren…",
         "syncNowSuccess": "Synchronisatie voltooid.",
@@ -1315,7 +1815,8 @@
         "makeDefault": "Als standaard instellen",
         "noDefault": "Geen standaard",
         "saving": "Opslaan…",
-        "undepositedFunds": "Niet-gestorte middelen (standaard)"
+        "undepositedFunds": "Niet-gestorte middelen (standaard)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
@@ -1334,6 +1835,8 @@
           },
           "connected": "Verbonden met NinjaOne",
           "connectedWithErrors": "NinjaOne verbonden met synchronisatiefouten",
+          "reconnectRequired": "NinjaOne opnieuw verbinden vereist",
+          "reconnectRequiredDescription": "De NinjaOne-autorisatie kan niet meer worden vernieuwd (token verlopen of ingetrokken). Maak opnieuw verbinding om apparaatsynchronisatie, meldingen en externe toegang te herstellen.",
           "instanceLabel": "Instantie:",
           "organizations": "{{count}} organisaties",
           "devices": "{{count}} apparaten",
@@ -1584,6 +2087,14 @@
           "unavailable": "Webhook-informatie niet beschikbaar. (Vereist leesrechten voor instellingen.)",
           "url": "Webhook-URL",
           "urlCopied": "Webhook-URL naar klembord gekopieerd."
+        },
+        "mappings": {
+          "org": "Tactical-organisatie",
+          "client": "Alga-klant",
+          "defaultContact": "Standaardcontact"
+        },
+        "contact": {
+          "select": "Contact selecteren"
         }
       },
       "tanium": {
@@ -1635,7 +2146,9 @@
           "mappedClient": "Toegewezen klant",
           "noScopes": "Nog geen Tanium-scopes ontdekt.",
           "scopeIdLabel": "ID: {{id}}",
-          "unmapped": "Niet toegewezen"
+          "unmapped": "Niet toegewezen",
+          "defaultContact": "Standaardcontact",
+          "selectContact": "Contact selecteren"
         },
         "status": {
           "connected": "Verbonden",
@@ -1701,7 +2214,9 @@
           "loading": "Laden…",
           "mappedClient": "Toegewezen klant",
           "noGroups": "Nog geen groepen gedetecteerd. Voer eerst Groepen detecteren uit.",
-          "unmapped": "Niet toegewezen"
+          "unmapped": "Niet toegewezen",
+          "defaultContact": "Standaardcontact",
+          "selectContact": "Contact selecteren"
         },
         "status": {
           "connected": "Verbonden",
@@ -1733,6 +2248,76 @@
           "title": "Waarschuwingswebhook",
           "url": "Webhook-URL"
         }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Huntress-organisatie",
+          "client": "Alga-klant",
+          "defaultContact": "Standaardcontact",
+          "createTickets": "Tickets aanmaken",
+          "status": "Status"
+        },
+        "selectContact": "Contact selecteren",
+        "status": {
+          "autoMatched": "Automatisch gekoppeld",
+          "mapped": "Gekoppeld",
+          "unmapped": "Niet gekoppeld → triage"
+        },
+        "title": "Organisatiekoppeling",
+        "description": "Koppel Huntress-organisaties aan klanten. Incidenten van niet-gekoppelde organisaties gaan naar de fallbackklant en het triageboard.",
+        "unmappedSuffix": "({{count}} niet gekoppeld)",
+        "syncButton": "Organisaties synchroniseren",
+        "loading": "Laden…",
+        "empty": "Nog geen organisaties — klik op \"Organisaties synchroniseren\".",
+        "errors": {
+          "load": "Kan organisatiekoppelingen niet laden",
+          "sync": "Synchronisatie mislukt",
+          "updateMapping": "Kan koppeling niet bijwerken",
+          "updateContact": "Kan standaardcontact niet bijwerken"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "NinjaOne-organisatie",
+          "company": "Alga-bedrijf",
+          "defaultContact": "Standaardcontact",
+          "autoSync": "Automatisch synchroniseren",
+          "status": "Status"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Bedrijf selecteren",
+        "selectContact": "Contact selecteren",
+        "status": {
+          "mapped": "Gekoppeld",
+          "unmapped": "Niet gekoppeld"
+        },
+        "title": "Organisatiekoppelingen",
+        "description": "Koppel NinjaOne-organisaties aan Alga-bedrijven om apparaatsynchronisatie in te schakelen.",
+        "loading": "Organisatiekoppelingen laden...",
+        "syncing": "Synchroniseren...",
+        "refreshButton": "Organisaties vernieuwen",
+        "summary": {
+          "mapped": "{{count}} gekoppeld",
+          "unmapped": "{{count}} niet gekoppeld"
+        },
+        "empty": {
+          "title": "Nog geen organisaties gesynchroniseerd.",
+          "hint": "Klik op \"Organisaties vernieuwen\" om organisaties op te halen uit NinjaOne."
+        },
+        "unmappedNote": "Apparaten van niet-gekoppelde organisaties worden niet gesynchroniseerd. Koppel elke organisatie aan een Alga-bedrijf om apparaatsynchronisatie in te schakelen.",
+        "success": {
+          "synced": "{{processed}} organisaties gesynchroniseerd ({{created}} nieuw, {{updated}} bijgewerkt)",
+          "mappingUpdated": "Koppeling succesvol bijgewerkt",
+          "contactUpdated": "Standaardcontact succesvol bijgewerkt"
+        },
+        "errors": {
+          "load": "Kan organisatiekoppelingen niet laden",
+          "sync": "Kan organisaties niet synchroniseren",
+          "updateMapping": "Kan koppeling niet bijwerken",
+          "updateContact": "Kan standaardcontact niet bijwerken",
+          "updateAutoSync": "Kan instelling voor automatisch synchroniseren niet bijwerken"
+        }
       }
     },
     "sso": {
@@ -1759,6 +2344,11 @@
         },
         "descriptionCe": "Registreer adviesdomeinen voor de detectie van MSP-aanmeldings-SSO. Eigendomsverificatie wordt niet afgedwongen in Community Edition, en onbeheerde domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
         "descriptionEe": "Beheer de levenscyclus van domeinclaims voor de detectie van MSP-aanmeldings-SSO-providers. Niet-geclaimde of niet-geschikte domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Voeg het DNS TXT-record toe en klik vervolgens op Verifiëren:",
         "dnsValue": "Waarde:",
@@ -1908,6 +2498,12 @@
             "description": "Breng technici op de hoogte wanneer werk wordt toegewezen.",
             "label": "Toewijzingsgebeurtenissen"
           },
+          "channel": {
+            "activityFeed": "Activiteitenfeed",
+            "botDm": "Direct bericht van de bot",
+            "both": "Beide",
+            "label": "Bezorgkanaal"
+          },
           "customerReply": {
             "description": "Breng technici op de hoogte wanneer klanten reageren.",
             "label": "Klantreacties"
@@ -2036,6 +2632,10 @@
             "help": "Bij het opslaan wordt de Microsoft Entra-object-ID die voor Graph-vergaderaanroepen wordt gebruikt, omgezet en opgeslagen.",
             "resolved": "Omgezette object-ID: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Agenda-uitnodigingen naar deelnemers verzenden",
+            "description": "Deelnemers ontvangen native Outlook/Teams-agenda-uitnodigingen voor gegenereerde vergaderingen."
+          },
           "downloadRecordings": {
             "label": "Opnamen downloaden naar interne opslag",
             "description": "Indien ingeschakeld worden opname-blobs naar de tenantopslag gekopieerd, naast de geverifieerde Graph-proxy."
@@ -2044,6 +2644,218 @@
             "label": "Opnamen en transcripties in het klantportaal weergeven",
             "description": "Standaard uitgeschakeld; MSP-gebruikers kunnen artefacten nog steeds bekijken via de interactie- en afspraakdetails."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Voer hieronder de diagnostiek uit voor details.",
+          "message": "De Teams-bot kan niet antwoorden: de bot-connectorreferenties (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) zijn niet geconfigureerd op de server."
+        },
+        "wizard": {
+          "title": "Begeleide Teams-installatie",
+          "description": "Voltooi elke stap om Microsoft Teams voor deze tenant te laten werken.",
+          "status": {
+            "complete": "Voltooid",
+            "current": "Huidig",
+            "incomplete": "Onvolledig"
+          },
+          "validate": {
+            "error": "Validatie mislukt",
+            "validating": "Valideren...",
+            "profile": "Microsoft-profiel valideren",
+            "profileOk": "De referenties van het Microsoft-profiel zijn geldig.",
+            "permissions": "Graph-machtigingen controleren",
+            "permissionsOk": "Alle vereiste Graph-machtigingen zijn verleend.",
+            "permissionGranted": "Verleend",
+            "permissionMissing": "Ontbreekt",
+            "bot": "Bot Framework-connector valideren",
+            "botOk": "De Bot Framework-referenties zijn geldig ({{appId}})."
+          },
+          "activationBlocked": "Valideer het Microsoft-profiel hierboven voordat u Teams activeert.",
+          "step": {
+            "microsoftProfile": {
+              "title": "Microsoft-profiel",
+              "description": "Selecteer het Microsoft-profiel voor Teams en valideer de bijbehorende Graph-referenties."
+            },
+            "graphPermissions": {
+              "title": "Graph-machtigingen",
+              "description": "Bevestig dat de vereiste Microsoft Graph-toepassingsmachtigingen zijn verleend en toegestaan."
+            },
+            "botFramework": {
+              "title": "Bot Framework-registratie",
+              "description": "Registreer de Azure Bot en valideer de referenties van de bot-connector van de implementatie."
+            },
+            "activate": {
+              "title": "Teams activeren",
+              "description": "Activeer de Teams-integratie zodra het Microsoft-profiel is gevalideerd."
+            },
+            "package": {
+              "title": "Het pakket genereren en downloaden",
+              "description": "Bouw het Teams-app-pakket voor het geselecteerde profiel en de base URL van de implementatie.",
+              "hint": "Gebruik de kaart Teams-pakket hieronder om het app-pakket te genereren en te downloaden."
+            },
+            "sideload": {
+              "title": "De app sideloaden",
+              "description": "Upload het app-pakket naar Teams zodat gebruikers het kunnen installeren.",
+              "body": "Upload het gedownloade pakket naar het Teams-beheercentrum (Apps beheren en vervolgens Nieuwe app uploaden) of sideload het vanuit de Teams-client."
+            },
+            "verify": {
+              "title": "Verifiëren",
+              "description": "Voer diagnostische gegevens uit en verstuur een testbericht om te bevestigen dat de integratie van begin tot eind werkt.",
+              "hint": "Gebruik de kaart Diagnostiek en testbericht hieronder om de installatie van begin tot eind te verifiëren."
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "Installatiegids bekijken"
+        },
+        "deliveryLog": {
+          "title": "Teams-bezorglogboek",
+          "description": "Elke bezorgpoging van een Teams-melding die voor deze tenant is vastgelegd.",
+          "error": "Teams-bezorglogboek kan niet worden geladen",
+          "forbidden": "U hebt geen toestemming om het Teams-bezorglogboek te bekijken.",
+          "empty": "Nog geen Teams-bezorgingen vastgelegd.",
+          "refresh": "Vernieuwen",
+          "loadMore": "Meer laden",
+          "loading": "Laden...",
+          "filter": {
+            "statusLabel": "Status",
+            "statusAll": "Alle statussen",
+            "categoryLabel": "Categorie",
+            "categoryAll": "Alle categorieën"
+          },
+          "columns": {
+            "createdAt": "Tijd",
+            "category": "Categorie",
+            "destination": "Bestemming",
+            "status": "Status",
+            "errorCode": "Foutcode",
+            "errorMessage": "Foutmelding"
+          },
+          "status": {
+            "delivered": "Bezorgd",
+            "sent": "Verzonden",
+            "failed": "Mislukt",
+            "skipped": "Overgeslagen"
+          },
+          "category": {
+            "assignment": "Toewijzing",
+            "customer_reply": "Reactie van klant",
+            "approval_request": "Goedkeuringsverzoek",
+            "escalation": "Escalatie",
+            "sla_risk": "SLA-risico"
+          }
+        },
+        "auditLog": {
+          "title": "Teams-auditlogboek",
+          "description": "Wijzigingen uitgevoerd vanuit de Teams-bot, de berichtextensie en de oppervlakken voor snelle acties.",
+          "error": "Teams-auditlogboek kan niet worden geladen",
+          "forbidden": "U hebt geen toestemming om het Teams-auditlogboek te bekijken.",
+          "empty": "Nog geen Teams-auditgebeurtenissen vastgelegd.",
+          "refresh": "Vernieuwen",
+          "loadMore": "Meer laden",
+          "loading": "Laden...",
+          "filter": {
+            "surfaceLabel": "Oppervlak",
+            "surfaceAll": "Alle oppervlakken",
+            "actionLabel": "Actie-id",
+            "actionPlaceholder": "bijv. assign_ticket"
+          },
+          "surface": {
+            "bot": "Bot",
+            "message_extension": "Berichtextensie",
+            "quick_action": "Snelle actie",
+            "tab": "Tabblad"
+          },
+          "columns": {
+            "createdAt": "Tijd",
+            "surface": "Oppervlak",
+            "action": "Actie",
+            "target": "Doel",
+            "result": "Resultaat",
+            "errorCode": "Foutcode"
+          },
+          "result": {
+            "success": "Geslaagd",
+            "failure": "Mislukt"
+          }
+        },
+        "troubleshooting": {
+          "title": "Referentie voor bezorgfouten",
+          "description": "Wat elke Teams-bezorgfoutcode betekent en hoe u deze oplost.",
+          "show": "Foutreferentie tonen",
+          "hide": "Foutreferentie verbergen",
+          "columns": {
+            "code": "Foutcode",
+            "cause": "Oorzaak",
+            "remedy": "Oplossing"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "Microsoft Graph heeft het toepassingstoken geweigerd (401/403); voor een vereiste Graph-toepassingsmachtiging is geen toestemming gegeven.",
+              "remedy": "Verleen beheerderstoestemming voor de vereiste Graph-machtigingen (bijvoorbeeld TeamsActivity.Send) in de Azure-app-registratie."
+            },
+            "user_not_mapped": {
+              "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij Alga PSA, dus er bestaat geen accountkoppeling.",
+              "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
+            },
+            "addon_inactive": {
+              "cause": "De Teams-invoegtoepassing is verlopen of afwezig, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
+              "remedy": "Vernieuw de Teams-invoegtoepassing voor deze tenant."
+            },
+            "integration_inactive": {
+              "cause": "De Teams-integratie is niet actief voor deze tenant.",
+              "remedy": "Activeer de Teams-integratie in de instellingen."
+            },
+            "package_misconfigured": {
+              "cause": "Het app-pakket is nooit gegenereerd, of de vereisten voor bezorging (app ID, base URL) ontbreken.",
+              "remedy": "Genereer het Teams-app-pakket in de instellingen en probeer het opnieuw."
+            },
+            "graph_not_found": {
+              "cause": "De Teams-app is niet geïnstalleerd voor de ontvanger, dus Microsoft Graph kan deze niet bereiken (404).",
+              "remedy": "Installeer de Alga PSA-app voor die gebruiker of sta deze organisatiebreed toe."
+            },
+            "graph_throttled": {
+              "cause": "Microsoft Graph heeft de aanvraag beperkt (429).",
+              "remedy": "Tijdelijk; Alga PSA probeert het opnieuw met backoff. Onderzoek dit alleen als het aanhoudt."
+            },
+            "graph_server_error": {
+              "cause": "Microsoft Graph heeft een serverfout geretourneerd (5xx).",
+              "remedy": "Tijdelijke Graph-storing; Alga PSA probeert het opnieuw. Wacht en controleer de servicestatus van Microsoft als het aanhoudt."
+            },
+            "transient": {
+              "cause": "Een tijdelijke fout (netwerk of time-out) heeft de bezorging onderbroken.",
+              "remedy": "Wordt automatisch opnieuw geprobeerd; geen actie nodig tenzij de fouten aanhouden."
+            },
+            "unknown": {
+              "cause": "De fout kon niet aan een bekende oorzaak worden gekoppeld.",
+              "remedy": "Controleer de serverlogboeken voor de details van de bezorgfout en voer de diagnostiek opnieuw uit."
+            }
+          }
+        },
+        "paywall": {
+          "title": "Microsoft Teams-invoegtoepassing",
+          "description": "Voor de Microsoft Teams-integratie is de Teams-invoegtoepassing voor deze tenant vereist.",
+          "includedTitle": "Wat is inbegrepen",
+          "feature": {
+            "tab": "Persoonlijk tabblad: open Alga PSA binnen Microsoft Teams.",
+            "bot": "Persoonlijke en groepschat-bot voor tickets, goedkeuringen, tijd en notities.",
+            "messageExtension": "Berichtextensie en snelle acties om vanuit elk bericht op PSA-records te reageren.",
+            "meetings": "Teams-vergaderingen bij goedkeuringen van afspraken met echte Outlook/Teams-agenda-uitnodigingen.",
+            "recordings": "Automatische vastlegging van vergaderopnamen en transcripties in interacties.",
+            "notifications": "Meldingen via activiteitenfeed en bot-DM voor toewijzingen, reacties, goedkeuringen en SLA-risico."
+          },
+          "cta": "Teams-invoegtoepassing kopen",
+          "nonBilling": "Neem contact op met een factureringsbeheerder om de Teams-invoegtoepassing voor deze tenant te kopen."
+        },
+        "addonExpiredBanner": {
+          "title": "Microsoft Teams-invoegtoepassing verlopen",
+          "message": "De Microsoft Teams-invoegtoepassing is verlopen. Uw configuratie en bezorggeschiedenis blijven behouden, maar Teams-meldingen worden overgeslagen totdat de invoegtoepassing wordt vernieuwd.",
+          "cta": "Teams-invoegtoepassing vernieuwen"
+        },
+        "staleManifest": {
+          "title": "Teams-app-pakket is verouderd",
+          "warning": "Uw Teams-app-pakket is verouderd — genereer het opnieuw en upload het opnieuw.",
+          "regenerate": "Pakket opnieuw genereren",
+          "regenerating": "Opnieuw genereren..."
         }
       }
     },
@@ -2320,9 +3132,29 @@
         "secretKeyFormat": "Secret key moet beginnen met sk_",
         "publishableKeyFormat": "Publishable key moet beginnen met pk_"
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
+      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Gmail inbound email and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selectorLabel": "Provider credential paths",
+      "title": "Provider Credentials"
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Bedrijf selecteren"
   }
 }

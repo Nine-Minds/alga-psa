@@ -28,8 +28,12 @@
         "group": "Gruppe",
         "servicePeriod": "Leistungszeitraum",
         "invoiceWindow": "Rechnungsfenster",
-        "included": "Im Lieferumfang enthalten"
-      }
+        "included": "Im Lieferumfang enthalten",
+        "charge": "Leistung",
+        "status": "Status",
+        "amount": "Betrag"
+      },
+      "pageScopeNote": "{{count}} Gruppe(n) auf dieser Seite"
     },
     "groups": {
       "item": "{{count}}-Element",
@@ -41,9 +45,6 @@
       "line": "{{count}}-Zeile",
       "line_one": "{{count}}-Zeile",
       "line_other": "{{count}}-Zeilen",
-      "obligationCount": "{{count}}-Verpflichtung",
-      "obligationCount_one": "{{count}}-Verpflichtung",
-      "obligationCount_other": "{{count}}-Verpflichtungen",
       "includedCount": "{{count}}-Artikel enthalten",
       "includedCount_one": "{{count}}-Artikel enthalten",
       "includedCount_other": "{{count}}-Artikel enthalten",
@@ -208,7 +209,13 @@
         "scheduleKey": "Zeitplanschlüssel"
       },
       "reviewLink": "Überprüfen Sie die Servicezeiträume",
-      "helpText": "Reparieren Sie die kanonischen Servicezeitraumdatensätze, anstatt eine Kompatibilitätsrechnungszeile zu erstellen."
+      "helpText": "Reparieren Sie die kanonischen Servicezeitraumdatensätze, anstatt eine Kompatibilitätsrechnungszeile zu erstellen.",
+      "fixAll": "Alle reparieren",
+      "fixAllBusy": "Wird neu aufgebaut…",
+      "fixAllResult": "{{schedules}} Zeitplan/Zeitpläne über {{clients}} Kunde(n) neu aufgebaut.",
+      "fixAllNoop": "Alle Abrechnungspläne sind bereits aktuell. Alles, was unten noch aufgeführt ist, muss einzeln geprüft werden.",
+      "fixAllError": "Leistungszeiträume konnten nicht neu aufgebaut werden. Bitte versuchen Sie es erneut.",
+      "fixAllDenied": "Sie haben keine Berechtigung, Leistungszeiträume neu aufzubauen."
     },
     "errors": {
       "title": "Beim Abschluss der Rechnungen sind Fehler aufgetreten:",
@@ -217,6 +224,61 @@
     },
     "loading": {
       "billingData": "Abrechnungsdaten werden geladen"
+    },
+    "views": {
+      "all": "Alle",
+      "ready": "Bereit",
+      "combinable": "Kombinierbar",
+      "attention": "Aufmerksamkeit nötig",
+      "notYetDue": "Noch nicht fällig"
+    },
+    "status": {
+      "ready": "Bereit",
+      "combine": "Kombinieren",
+      "separate": "Getrennt",
+      "notYetDue": "Noch nicht fällig",
+      "approval": "Freigabe",
+      "blocked": "Blockiert"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} ausgewählt",
+      "breakdown": "{{invoices}} Rechnung(en) · {{combine}} kombiniert · {{separate}} getrennt",
+      "knownNow": "jetzt bekannt",
+      "knownPlusAtGeneration": "jetzt bekannt · {{count}} bei Erstellung berechnet",
+      "atGenerationLines": "{{count}} Posten",
+      "empty": "Wählen Sie Gruppen oder Posten, um Rechnungen anzuzeigen oder zu erstellen.",
+      "pageScope": "{{groups}} Gruppe(n) · {{obligations}} Posten"
+    },
+    "amount": {
+      "atGeneration": "Bei Erstellung berechnet",
+      "plusAtGeneration": "+ {{count}} bei Erstellung"
+    },
+    "window": {
+      "open": "Offen",
+      "opensOn": "Öffnet {{date}}",
+      "notOpen": "Noch nicht offen"
+    },
+    "legend": {
+      "confirmed": "Betrag jetzt bekannt",
+      "atGeneration": "Bei Erstellung berechnet",
+      "combine": "Zu einer Rechnung kombinieren",
+      "separate": "Muss getrennt abgerechnet werden",
+      "notYetDue": "Noch nicht fällig"
+    },
+    "filters": {
+      "title": "Filter",
+      "windowOpen": "Fenster offen",
+      "charge": "Leistung",
+      "currency": "Währung",
+      "any": "alle",
+      "clear": "Zurücksetzen",
+      "countSummary": "{{groups}} Gruppe(n) · {{obligations}} Posten"
     }
   },
   "manualInvoices": {
@@ -227,11 +289,15 @@
     "fields": {
       "client": "Kunde",
       "invoiceNumber": "Rechnungsnummer",
-      "invoiceNumberOptional": "Rechnungsnummer (optional)"
+      "invoiceNumberOptional": "Rechnungsnummer (optional)",
+      "sourceSalesOrder": "Source sales order (optional)"
     },
     "placeholders": {
       "selectClient": "Wählen Sie einen Kunden aus",
-      "invoiceNumberOptional": "Für die automatische Generierung leer lassen"
+      "invoiceNumberOptional": "Für die automatische Generierung leer lassen",
+      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
+      "searchSalesOrders": "Search sales orders...",
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
     },
     "automatedItems": {
       "title": "Automatisierte Werbebuchungen",
@@ -248,7 +314,9 @@
       "addDiscount": "Rabatt hinzufügen",
       "generate": "Rechnung erstellen",
       "saveChanges": "Änderungen speichern",
-      "processing": "Wird verarbeitet..."
+      "processing": "Wird verarbeitet...",
+      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
       "total": "Gesamt"
@@ -270,11 +338,29 @@
       "loadItems": "Fehler beim Laden der Rechnungspositionen",
       "refresh": "Beim Aktualisieren der Rechnungsdaten ist ein Fehler aufgetreten.",
       "updateFailed": "Fehler beim Aktualisieren der Rechnung",
-      "generateFailed": "Fehler beim Generieren der Rechnung"
+      "generateFailed": "Fehler beim Generieren der Rechnung",
+      "NO_BILLING_EMAIL": "Für {{clientName}} ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege eine E-Mail-Adresse am Rechnungsstandort des Kunden fest und versuche es erneut.",
+      "CLIENT_NOT_FOUND": "Der ausgewählte Kunde wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
+      "SERVICE_NOT_FOUND": "Der Dienst {{serviceId}} wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
+      "INVALID_QUANTITY": "Die Menge muss größer als null sein.",
+      "NO_TAX_RATE": "Für {{region}} wurde am {{date}} kein aktiver Steuersatz gefunden.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Der Dienst {{serviceId}} für diesen Rabatt wurde nicht gefunden.",
+      "INVOICE_NUMBER_CONFLICT": "Diese Rechnungsnummer wird bereits verwendet.",
+      "PERMISSION_DENIED": "Du hast keine Berechtigung, diese Rechnung zu erstellen oder zu aktualisieren.",
+      "UNEXPECTED": "Beim Generieren der Rechnung ist ein Fehler aufgetreten. Gib bei der Kontaktaufnahme mit dem Support die Referenz {{ref}} an.",
+      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
+      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung eine E-Mail-Adresse am Rechnungsstandort fest."
     },
     "errorFallback": {
       "title": "Etwas ist schief gelaufen",
       "retry": "Erneut versuchen"
+    },
+    "salesOrderContext": {
+      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
     }
   },
   "draftsTab": {
@@ -370,7 +456,8 @@
       "pdfFailed": "PDF konnte nicht generiert werden. Bitte versuchen Sie es erneut.",
       "bulkPdfFailed": "PDFs konnten nicht generiert werden. Bitte versuchen Sie es erneut.",
       "unfinalizeFailed": "Die Rechnung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
-      "bulkUnfinalizeFailed": "Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
+      "bulkUnfinalizeFailed": "Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
+      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} konnte nicht wieder geöffnet werden: {{reason}}"
     }
   },
   "recurringServicePeriods": {
@@ -597,6 +684,8 @@
     "error": "Vorschau konnte nicht angezeigt werden",
     "errorDescription": "Vorschau konnte nicht angezeigt werden. Möglicherweise fehlen Daten.",
     "errors": {
+      "notFound": "Rechnung nicht gefunden.",
+      "noTemplates": "Keine Rechnungsvorlagen verfügbar.",
       "loadFailed": "Vorschau konnte nicht geladen werden: {{message}}",
       "actionFailed": "Fehler bei {{action}}. Bitte versuchen Sie es erneut.",
       "actionLabels": {
@@ -920,7 +1009,9 @@
       "description": "Beschreibung",
       "quantity": "Menge",
       "rate": "Satz",
-      "amount": "Betrag"
+      "amount": "Betrag",
+      "salesOrder": "Kundenauftrag",
+      "cogsMargin": "Wareneinsatz / Marge"
     },
     "labels": {
       "contractSubtotal": "Vertragszwischensumme:",
@@ -934,7 +1025,8 @@
     "tabs": {
       "generate": "Erzeugen",
       "drafts": "Entwürfe",
-      "finalized": "Finalisiert"
+      "finalized": "Finalisiert",
+      "projectBilling": "Project Billing"
     }
   },
   "invoiceSyncBadge": {
@@ -1569,6 +1661,66 @@
     },
     "dragOverlay": {
       "component": "Komponente"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
+    "bulkActions": "Actions ({{count}})",
+    "loading": "Loading project billing queue...",
+    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "columns": {
+      "project": "Project",
+      "client": "Client",
+      "description": "Description",
+      "amount": "Amount",
+      "trigger": "Trigger",
+      "daysWaiting": "Days waiting",
+      "actions": "Actions"
+    },
+    "trigger": {
+      "phase": "Phase {{phase}} completed {{date}}",
+      "date": "Date reached",
+      "manual": "Manual"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approveInvoiceNow": "Approve & invoice now",
+      "hold": "Hold",
+      "cancel": "Cancel",
+      "approveSelected": "Approve selected",
+      "holdSelected": "Hold selected"
+    },
+    "toasts": {
+      "approved": "Entry approved.",
+      "approvedWithWarning": "Entry approved. {{warning}}",
+      "invoiced": "Entry approved and invoiced.",
+      "bulkApproved": "{{count}} entries approved.",
+      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
+      "held": "Entry placed on hold.",
+      "bulkHeld": "{{count}} entries placed on hold.",
+      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
+      "canceled": "Entry canceled."
+    },
+    "errors": {
+      "loadFailed": "Failed to load the project billing review queue. Please try again.",
+      "approveFailed": "Failed to approve the entry.",
+      "invoiceFailed": "Failed to approve and invoice the entry.",
+      "holdFailed": "Failed to place the entry on hold.",
+      "cancelFailed": "Failed to cancel the entry."
+    },
+    "holdDialog": {
+      "title": "Hold entry",
+      "titlePlural": "Hold {{count}} entries",
+      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
+      "reasonPlaceholder": "Reason for holding...",
+      "cancel": "Cancel",
+      "confirm": "Hold"
+    },
+    "cancelDialog": {
+      "title": "Cancel entry",
+      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
+      "confirm": "Cancel entry",
+      "dismiss": "Keep entry"
     }
   }
 }

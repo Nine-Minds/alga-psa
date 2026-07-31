@@ -17,6 +17,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Temporal } from '@js-temporal/polyfill';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // Helper to get the last inclusive day from an exclusive end_date
 // end_date is the day AFTER the period ends (exclusive boundary)
@@ -35,6 +36,7 @@ const TimePeriodList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const handleTimePeriodCreated = (newPeriod: ITimePeriodView) => {
     if (mode === 'edit') {
@@ -85,10 +87,24 @@ const TimePeriodList: React.FC = () => {
           getTimePeriodSettings(),
           fetchAllTimePeriods()
         ]);
+        if (isActionMessageError(timePeriodSettings) || isActionPermissionError(timePeriodSettings)) {
+          setLoadError(getErrorMessage(timePeriodSettings));
+          setSettings(null);
+          setTimePeriods([]);
+          return;
+        }
+        if (isActionMessageError(allTimePeriods) || isActionPermissionError(allTimePeriods)) {
+          setLoadError(getErrorMessage(allTimePeriods));
+          setSettings(timePeriodSettings);
+          setTimePeriods([]);
+          return;
+        }
         setSettings(timePeriodSettings);
         setTimePeriods(allTimePeriods);
+        setLoadError(null);
       } catch (error) {
         console.error('Error fetching time period data:', error);
+        setLoadError('Failed to load time periods.');
       } finally {
         setIsLoading(false);
       }
@@ -160,6 +176,11 @@ const TimePeriodList: React.FC = () => {
         <CardDescription>View and manage time entry periods for time tracking</CardDescription>
       </CardHeader>
       <CardContent>
+        {loadError && (
+          <div className="text-red-600 mb-4">
+            {loadError}
+          </div>
+        )}
         <Button
           id="create-time-period-button"
           className="mb-4"

@@ -18,7 +18,7 @@ describe('default contact email consumer compatibility contracts', () => {
     expect(registrationHelpersSource).toContain("'contacts.email': email.toLowerCase()");
     expect(registrationHelpersSource).toContain(".where('contacts.email', email)");
     expect(registrationActionsSource).toContain(".where('contacts.email', email)");
-    expect(tenantRecoverySource).toContain("'contacts.email': email.toLowerCase()");
+    expect(tenantRecoverySource).toContain(".where('contacts.email', email.toLowerCase())");
   });
 
   it('T047: ticket, project, survey, billing, and scheduling sends still use the default contact email field', () => {

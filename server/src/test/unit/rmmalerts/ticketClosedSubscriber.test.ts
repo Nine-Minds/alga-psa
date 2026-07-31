@@ -18,10 +18,12 @@ function createFakeKnex(state: DbState) {
     const qb: any = {
       join: () => qb,
       where(arg1: any, arg2?: any) {
+        // tenantDb qualifies the tenant predicate ('a.tenant' / 'rmm_alerts.tenant');
+        // strip the qualifier so the fake rows still enforce the tenant filter.
         if (typeof arg1 === 'object') {
           for (const [k, v] of Object.entries(arg1)) wheres.push([k, v]);
         } else {
-          wheres.push([String(arg1).replace(/^a\./, ''), arg2]);
+          wheres.push([String(arg1).split('.').pop() as string, arg2]);
         }
         return qb;
       },
@@ -29,7 +31,7 @@ function createFakeKnex(state: DbState) {
         return qb.where(arg1, arg2);
       },
       whereIn(col: string, values: any[]) {
-        whereIns.push([String(col).replace(/^a\./, ''), values]);
+        whereIns.push([String(col).split('.').pop() as string, values]);
         return qb;
       },
       filtered() {
@@ -38,7 +40,12 @@ function createFakeKnex(state: DbState) {
         for (const [k, values] of whereIns) rows = rows.filter((r) => values.includes(r[k]));
         return rows;
       },
-      select: (..._cols: string[]) => Promise.resolve(qb.filtered()),
+      // select stays chainable so tenantJoin can still attach the join before
+      // the query is awaited (qb is thenable, like a real knex builder).
+      select: (..._cols: string[]) => qb,
+      then(onFulfilled: any, onRejected?: any) {
+        return Promise.resolve(qb.filtered()).then(onFulfilled, onRejected);
+      },
       first: (..._cols: string[]) => Promise.resolve(qb.filtered()[0]),
       update: (patch: any) => {
         const rows = qb.filtered();

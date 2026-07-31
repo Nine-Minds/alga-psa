@@ -129,6 +129,23 @@ const COPY = {
     textView: 'Zobacz wpis czasu na',
   },
 };
+SUBJECTS.pt = 'Lançamento de horas rejeitado';
+COPY.pt = {
+  headerLabel: 'Lançamento de horas rejeitado',
+  intro: 'Seu lançamento de horas foi rejeitado.',
+  date: 'Data',
+  duration: 'Duração',
+  project: 'Projeto',
+  task: 'Tarefa',
+  rejectedBy: 'Rejeitado por',
+  reason: 'Motivo',
+  viewButton: 'Ver lançamento de horas',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Lançamento de horas rejeitado',
+  textIntro: 'Seu lançamento de horas foi rejeitado:',
+  textView: 'Ver lançamento de horas em',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

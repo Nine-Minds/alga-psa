@@ -8,15 +8,18 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where('tenant', tenant),
+  }),
 }));
 
-vi.mock('../../lib/search/upsert', () => ({
+vi.mock('@alga-psa/search/upsert', () => ({
   upsertSearchDoc: mocks.upsertSearchDoc,
   deleteSearchDoc: mocks.deleteSearchDoc,
 }));
 
 import { searchVisibleUserReindexHandler } from '../../lib/jobs/handlers/searchVisibleUserReindexHandler';
-import { documentIndexer } from '../../lib/search/indexers/document';
+import { documentIndexer } from '@alga-psa/search/indexers/document';
 import type { SearchDoc } from '@alga-psa/types';
 
 describe('search visible-user reindex job', () => {

@@ -78,7 +78,7 @@ export const useImportActions = () => {
       }
     } catch (error) {
       console.error('[ImportActions] fetchData error', error);
-      setError(error instanceof Error ? error.message : t('importExport.messages.error.loadImportData'));
+      setError(t('importExport.messages.error.loadImportData'));
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +131,7 @@ export const useImportActions = () => {
         await fetchData();
       } catch (error) {
         console.error('[ImportActions] createPreview error', error);
-        setError(error instanceof Error ? error.message : t('importExport.messages.error.createPreview'));
+        setError(t('importExport.messages.error.createPreview'));
       } finally {
         setIsLoading(false);
       }
@@ -154,7 +154,7 @@ export const useImportActions = () => {
         await fetchData();
       } catch (error) {
         console.error('[ImportActions] approveImport error', error);
-        setError(error instanceof Error ? error.message : t('importExport.messages.error.startImportJob'));
+        setError(t('importExport.messages.error.startImportJob'));
       } finally {
         setIsApproving(false);
       }
@@ -171,7 +171,7 @@ export const useImportActions = () => {
         setSelectedJobDetails(details);
       } catch (error) {
         console.error('[ImportActions] getImportJobDetails error', error);
-        setDetailsError(error instanceof Error ? error.message : t('importExport.messages.error.loadJobDetails'));
+        setDetailsError(t('importExport.messages.error.loadJobDetails'));
         setSelectedJobDetails(null);
       } finally {
         setIsLoadingDetails(false);
@@ -196,7 +196,7 @@ export const useImportActions = () => {
       }
     } catch (error) {
       console.error('[ImportActions] refreshHistory error', error);
-      setError(error instanceof Error ? error.message : t('importExport.messages.error.refreshHistory'));
+      setError(t('importExport.messages.error.refreshHistory'));
     } finally {
       setIsRefreshingHistory(false);
     }

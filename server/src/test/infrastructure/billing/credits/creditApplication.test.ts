@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
   createTestService,
+  createFixedPlanAssignment,
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
@@ -15,13 +18,13 @@ import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate } from '../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { createClient } from '../../../../../test-utils/testDataFactory';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
+
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
@@ -67,14 +70,10 @@ vi.mock('@alga-psa/users/actions', () => ({
   }))
 }));
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -89,6 +88,13 @@ const {
 
 let context: TestContext;
 
+function tenantTable<Row extends object = Record<string, unknown>>(
+  context: TestContext,
+  tableExpression: string
+) {
+  return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
+}
+
 function parseInvoiceTotals(invoice: Record<string, unknown>) {
   const subtotal = Number(invoice.subtotal ?? 0);
   const tax = Number(invoice.tax ?? 0);
@@ -100,7 +106,9 @@ function parseInvoiceTotals(invoice: Record<string, unknown>) {
     creditApplied,
     totalAmount,
     totalBeforeCredit: subtotal + tax,
-    amountDue: totalAmount
+    // Invoice totals are immutable after finalization; balance due is derived
+    // (total - credit) rather than written back to total_amount.
+    amountDue: totalAmount - creditApplied
   };
 }
 
@@ -108,12 +116,12 @@ async function ensureClientBillingSettings(
   clientId: string,
   overrides: Record<string, unknown> = {}
 ) {
-  await context.db('client_billing_settings')
+  await tenantTable(context, 'client_billing_settings')
     .where({ client_id: clientId, tenant: context.tenantId })
     .del();
 
   const now = new Date().toISOString();
-  await context.db('client_billing_settings').insert({
+  await tenantTable(context, 'client_billing_settings').insert({
     client_id: clientId,
     tenant: context.tenantId,
     zero_dollar_invoice_handling: 'normal',
@@ -129,35 +137,16 @@ async function ensureClientContractLine(
   clientId: string,
   startDate: string
 ): Promise<void> {
-  const existing = await context.db('client_contract_lines')
-    .where({ client_id: clientId, tenant: context.tenantId, is_active: true })
-    .first();
-
-  if (existing) {
-    return;
-  }
-
-  const contractLineId = uuidv4();
-  await context.db('contract_lines').insert({
-    contract_line_id: contractLineId,
-    tenant: context.tenantId,
-    contract_line_name: 'Test Contract Line',
-    billing_frequency: 'monthly',
-    is_custom: false,
-    contract_line_type: 'Fixed',
-    custom_rate: 0,
-    enable_proration: false,
-    billing_cycle_alignment: 'start',
-    billing_timing: 'arrears'
+  // The legacy client_contract_lines/contract_lines fixture this helper used
+  // was dropped from the schema (20251207140000_drop_redundant_client_contract_tables).
+  // The shared schema-aware fixture creates the contracts/client_contracts chain.
+  const anchorServiceId = await createTestService(context, {
+    service_name: 'Contract Line Anchor Service'
   });
-
-  await context.db('client_contract_lines').insert({
-    client_contract_line_id: uuidv4(),
-    client_id: clientId,
-    contract_line_id: contractLineId,
-    tenant: context.tenantId,
-    start_date: startDate,
-    is_active: true
+  await createFixedPlanAssignment(context, anchorServiceId, {
+    clientId,
+    startDate,
+    planName: 'Credit Test Plan'
   });
 }
 
@@ -181,12 +170,39 @@ async function generateInvoiceFromChargesForClient(
   charges: IBillingCharge[],
   overrides: Partial<Pick<IBillingResult, 'discounts' | 'adjustments' | 'finalAmount'>> = {}
 ) {
-  const cycleRecord = await context.db('client_billing_cycles')
+  const cycleRecord = await tenantTable(context, 'client_billing_cycles')
     .where({ billing_cycle_id: billingCycleId, tenant: context.tenantId })
     .first();
 
   if (!cycleRecord) {
     throw new Error(`Billing cycle ${billingCycleId} not found`);
+  }
+
+  // persistInvoiceCharges marks each usage charge's source usage_tracking row
+  // invoiced (and throws if it is missing), so back every fabricated usageId
+  // with a real row.
+  for (const charge of charges) {
+    // persistInvoiceCharges requires a config_id on recurring charges that
+    // carry service-period fields (invoice_charge_details has no FK on it, so
+    // a synthetic id satisfies the linkage for credit-math tests).
+    if (!(charge as { config_id?: string }).config_id) {
+      (charge as { config_id?: string }).config_id = uuidv4();
+    }
+    const usageId = (charge as { usageId?: string }).usageId;
+    if (charge.type === 'usage' && usageId) {
+      await tenantTable(context, 'usage_tracking')
+        .insert({
+          tenant: context.tenantId,
+          usage_id: usageId,
+          service_id: (charge as { serviceId?: string }).serviceId,
+          client_id: clientId,
+          usage_date: (charge as { servicePeriodStart?: string }).servicePeriodStart ?? cycleRecord.period_start_date,
+          quantity: (charge as { quantity?: number }).quantity ?? 1,
+          invoiced: false
+        })
+        .onConflict(['tenant', 'usage_id'])
+        .ignore();
+    }
   }
 
   const totalAmount = charges.reduce(
@@ -212,7 +228,7 @@ async function generateInvoiceFromChargesForClient(
     context.userId
   );
 
-  const invoiceRow = await context.db('invoices')
+  const invoiceRow = await tenantTable(context, 'invoices')
     .where({ invoice_id: createdInvoice.invoice_id, tenant: context.tenantId })
     .first();
 
@@ -351,18 +367,19 @@ describe('Credit Application Tests', () => {
 
     await finalizeInvoice(invoiceId);
 
-    const finalizedInvoice = await context.db('invoices')
+    const finalizedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
 
     const totals = parseInvoiceTotals(finalizedInvoice);
     expect(totals.creditApplied).toBe(5000);
-    expect(totals.totalAmount).toBe(totals.totalBeforeCredit - 5000);
+    expect(totals.totalAmount).toBe(totals.totalBeforeCredit);
+    expect(totals.amountDue).toBe(totals.totalBeforeCredit - 5000);
 
     const remainingCredit = await ClientContractLine.getClientCredit(clientId);
     expect(remainingCredit).toBe(0);
 
-    const creditTransaction = await context.db('transactions')
+    const creditTransaction = await tenantTable(context, 'transactions')
       .where({
         client_id: clientId,
         invoice_id: invoiceId,
@@ -432,12 +449,12 @@ describe('Credit Application Tests', () => {
 
     await finalizeInvoice(invoiceId);
 
-    const finalizedInvoice = await context.db('invoices')
+    const finalizedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
 
     const totals = parseInvoiceTotals(finalizedInvoice);
-    expect(totals.totalAmount).toBe(0);
+    expect(totals.amountDue).toBe(0);
     expect(totals.creditApplied).toBe(totals.totalBeforeCredit);
 
     const remainingCredit = await ClientContractLine.getClientCredit(clientId);
@@ -525,13 +542,14 @@ describe('Credit Application Tests', () => {
 
     await finalizeInvoice(invoiceId);
 
-    const finalizedInvoice = await context.db('invoices')
+    const finalizedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
 
     const totals = parseInvoiceTotals(finalizedInvoice);
     expect(totals.creditApplied).toBe(10000);
-    expect(totals.totalAmount).toBe(totals.totalBeforeCredit - 10000);
+    expect(totals.totalAmount).toBe(totals.totalBeforeCredit);
+    expect(totals.amountDue).toBe(totals.totalBeforeCredit - 10000);
 
     const remainingCredit = await ClientContractLine.getClientCredit(clientId);
     expect(remainingCredit).toBe(0);
@@ -611,13 +629,13 @@ describe('Credit Application Tests', () => {
 
     await finalizeInvoice(invoiceId);
 
-    const finalizedInvoice = await context.db('invoices')
+    const finalizedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
 
     const totals = parseInvoiceTotals(finalizedInvoice);
     expect(totals.creditApplied).toBe(Math.min(8000, totals.totalBeforeCredit));
-    expect(totals.totalAmount).toBe(totals.totalBeforeCredit - totals.creditApplied);
+    expect(totals.amountDue).toBe(totals.totalBeforeCredit - totals.creditApplied);
 
     const remainingCredit = await ClientContractLine.getClientCredit(clientId);
     expect(remainingCredit).toBe(8000 - totals.creditApplied);
@@ -711,7 +729,7 @@ describe('Credit Application Tests', () => {
     const clientCredit = await ClientContractLine.getClientCredit(clientId);
     expect(clientCredit).toBe(12500);
 
-    const creditTransaction = await context.db('transactions')
+    const creditTransaction = await tenantTable(context, 'transactions')
       .where({
         client_id: clientId,
         invoice_id: invoiceId,
@@ -787,7 +805,7 @@ describe('Credit Application Tests', () => {
 
     await finalizeInvoice(invoiceId);
 
-    const creditTracking = await context.db('credit_tracking')
+    const creditTracking = await tenantTable(context, 'credit_tracking')
       .where({ client_id: clientId, tenant: context.tenantId })
       .first();
 
@@ -805,11 +823,11 @@ describe('Credit Application Tests', () => {
   });
 
   it('should use default billing settings for credit expiration when client settings are not available', async () => {
-    await context.db('default_billing_settings')
+    await tenantTable(context, 'default_billing_settings')
       .where({ tenant: context.tenantId })
       .del();
 
-    await context.db('default_billing_settings').insert({
+    await tenantTable(context, 'default_billing_settings').insert({
       tenant: context.tenantId,
       enable_credit_expiration: true,
       credit_expiration_days: 60,
@@ -877,7 +895,7 @@ describe('Credit Application Tests', () => {
 
     await finalizeInvoice(invoiceId);
 
-    const creditTracking = await context.db('credit_tracking')
+    const creditTracking = await tenantTable(context, 'credit_tracking')
       .where({ client_id: clientId, tenant: context.tenantId })
       .first();
 
@@ -969,7 +987,7 @@ describe('Credit Application Tests', () => {
 
     await finalizeInvoice(invoiceId);
 
-    const creditEntries = await context.db('credit_tracking')
+    const creditEntries = await tenantTable(context, 'credit_tracking')
       .where({ client_id: clientId, tenant: context.tenantId })
       .orderBy('expiration_date', 'asc');
 
@@ -1199,7 +1217,7 @@ describe('Credit Application Tests', () => {
 
     await applyCreditToInvoice(clientId, invoiceId, 3000);
 
-    const invoiceAfterManualApply = await context.db('invoices')
+    const invoiceAfterManualApply = await tenantTable(context, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
 

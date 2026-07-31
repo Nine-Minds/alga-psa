@@ -490,7 +490,6 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
                   disabled={isWatchListSaving}
                   onChange={(event) => void handleToggleWatcher(entry.email, event.target.checked)}
                   size="sm"
-                  containerClassName=""
                   skipRegistration
                 />
                 <div className="flex-1 min-w-0">

@@ -25,4 +25,4 @@ export { default as WorkflowRunLogModelV2 } from './workflowRunLogModelV2';
 // Export task-related types and model
 export { default as WorkflowTaskModel } from './workflowTaskModel';
 export type { TaskDetails } from './taskInboxInterfaces';
-export { WorkflowTaskStatus } from './workflowTaskModel';
+export { WorkflowTaskStatus } from './workflowTaskStatus';

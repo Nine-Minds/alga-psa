@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const backfillMigration = require('../../../migrations/20260513100500_backfill_comment_threads.cjs');
@@ -9,6 +10,42 @@ const taskCommentBackfillMigration = backfillMigration;
 
 describe('comment_threads migrations', () => {
   let knex: Knex;
+
+  function scopedDb(tenant: string) {
+    return tenantDb(knex, tenant);
+  }
+
+  function tenantTable(tenant: string, table: string) {
+    return scopedDb(tenant).table(table);
+  }
+
+  function schemaTable(table: string, reason: string) {
+    return tenantDb(knex, '__test_schema__').unscoped(table, reason);
+  }
+
+  async function ticketUserContext() {
+    const discoveryDb = tenantDb(knex, '__test_discovery__');
+    const query = discoveryDb.unscoped(
+      'tickets as t',
+      'test discovery of seeded ticket/user context for comment thread migration'
+    );
+    discoveryDb.tenantJoin(query, 'users as u', 'u.tenant', 't.tenant');
+    return query
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+  }
+
+  async function taskUserContext() {
+    const discoveryDb = tenantDb(knex, '__test_discovery__');
+    const query = discoveryDb.unscoped(
+      'project_tasks as pt',
+      'test discovery of seeded project task/user context for comment thread migration'
+    );
+    discoveryDb.tenantJoin(query, 'users as u', 'u.tenant', 'pt.tenant');
+    return query
+      .select('pt.tenant', 'pt.task_id', 'u.user_id')
+      .first();
+  }
 
   beforeAll(async () => {
     knex = await createTestDbConnection();
@@ -42,7 +79,7 @@ describe('comment_threads migrations', () => {
       await expect(knex.schema.hasColumn('comment_threads', column)).resolves.toBe(true);
     }
 
-    const constraints = await knex('pg_constraint as c')
+    const constraints = await schemaTable('pg_constraint as c', 'test schema assertion for comment thread migration constraints')
       .join('pg_class as rel', 'rel.oid', 'c.conrelid')
       .select('c.conname', 'c.contype', knex.raw('pg_get_constraintdef(c.oid) as definition'))
       .where('rel.relname', 'comment_threads');
@@ -68,7 +105,7 @@ describe('comment_threads migrations', () => {
   });
 
   it('T002: creates comment_threads lookup indexes for parent lists and email message IDs', async () => {
-    const indexes = await knex('pg_indexes')
+    const indexes = await schemaTable('pg_indexes', 'test schema assertion for comment thread migration indexes')
       .select('indexname', 'indexdef')
       .where({ schemaname: 'public', tablename: 'comment_threads' });
 
@@ -93,7 +130,7 @@ describe('comment_threads migrations', () => {
       await expect(knex.schema.hasColumn('comments', column)).resolves.toBe(true);
     }
 
-    const columns = await knex('information_schema.columns')
+    const columns = await schemaTable('information_schema.columns', 'test schema assertion for comment thread migration columns')
       .select('column_name', 'is_nullable')
       .where({ table_schema: 'public', table_name: 'comments' })
       .whereIn('column_name', ['thread_id', 'parent_comment_id', 'deleted_at']);
@@ -102,7 +139,7 @@ describe('comment_threads migrations', () => {
     expect(nullableByColumn.get('parent_comment_id')).toBe('YES');
     expect(nullableByColumn.get('deleted_at')).toBe('YES');
 
-    const foreignKeys = await knex('pg_constraint as c')
+    const foreignKeys = await schemaTable('pg_constraint as c', 'test schema assertion for comment thread migration constraints')
       .join('pg_class as rel', 'rel.oid', 'c.conrelid')
       .select('c.conname', 'c.contype', knex.raw('pg_get_constraintdef(c.oid) as definition'))
       .where('rel.relname', 'comments')
@@ -125,7 +162,7 @@ describe('comment_threads migrations', () => {
       await expect(knex.schema.hasColumn('project_task_comments', column)).resolves.toBe(true);
     }
 
-    const columns = await knex('information_schema.columns')
+    const columns = await schemaTable('information_schema.columns', 'test schema assertion for comment thread migration columns')
       .select('column_name', 'is_nullable')
       .where({ table_schema: 'public', table_name: 'project_task_comments' })
       .whereIn('column_name', ['thread_id', 'parent_comment_id', 'deleted_at']);
@@ -134,7 +171,7 @@ describe('comment_threads migrations', () => {
     expect(nullableByColumn.get('parent_comment_id')).toBe('YES');
     expect(nullableByColumn.get('deleted_at')).toBe('YES');
 
-    const foreignKeys = await knex('pg_constraint as c')
+    const foreignKeys = await schemaTable('pg_constraint as c', 'test schema assertion for comment thread migration constraints')
       .join('pg_class as rel', 'rel.oid', 'c.conrelid')
       .select('c.conname', 'c.contype', knex.raw('pg_get_constraintdef(c.oid) as definition'))
       .where('rel.relname', 'project_task_comments')
@@ -153,10 +190,7 @@ describe('comment_threads migrations', () => {
   });
 
   it('T005: backfills legacy ticket comments into one thread per comment', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const generated = await knex.raw('SELECT gen_random_uuid() AS comment_id');
@@ -168,7 +202,7 @@ describe('comment_threads migrations', () => {
     });
 
     try {
-      await knex('comments').insert({
+      await tenantTable(context.tenant, 'comments').insert({
         tenant: context.tenant,
         comment_id: commentId,
         ticket_id: context.ticket_id,
@@ -182,13 +216,13 @@ describe('comment_threads migrations', () => {
 
       await commentBackfillMigration.up(knex);
 
-      const comment = await knex('comments')
+      const comment = await tenantTable(context.tenant, 'comments')
         .select('thread_id')
         .where({ tenant: context.tenant, comment_id: commentId })
         .first();
       expect(comment?.thread_id).toBe(commentId);
 
-      const thread = await knex('comment_threads')
+      const thread = await tenantTable(context.tenant, 'comment_threads')
         .select('thread_id', 'ticket_id', 'root_comment_id', 'is_internal', 'reply_count', 'created_by')
         .where({ tenant: context.tenant, thread_id: commentId })
         .first();
@@ -201,8 +235,8 @@ describe('comment_threads migrations', () => {
         created_by: context.user_id,
       });
     } finally {
-      await knex('comments').where({ tenant: context.tenant, comment_id: commentId }).delete();
-      await knex('comment_threads').where({ tenant: context.tenant, thread_id: commentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: commentId }).delete();
+      await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: commentId }).delete();
       await knex.schema.alterTable('comments', (table) => {
         table.uuid('thread_id').notNullable().alter();
       });
@@ -210,10 +244,7 @@ describe('comment_threads migrations', () => {
   });
 
   it('T006: backfills comment thread email_message_id from comment email metadata', async () => {
-    const context = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const context = await ticketUserContext();
     expect(context).toBeTruthy();
 
     const generated = await knex.raw('SELECT gen_random_uuid() AS comment_id');
@@ -225,7 +256,7 @@ describe('comment_threads migrations', () => {
     });
 
     try {
-      await knex('comments').insert({
+      await tenantTable(context.tenant, 'comments').insert({
         tenant: context.tenant,
         comment_id: commentId,
         ticket_id: context.ticket_id,
@@ -239,14 +270,14 @@ describe('comment_threads migrations', () => {
 
       await commentBackfillMigration.up(knex);
 
-      const thread = await knex('comment_threads')
+      const thread = await tenantTable(context.tenant, 'comment_threads')
         .select('email_message_id')
         .where({ tenant: context.tenant, thread_id: commentId })
         .first();
       expect(thread?.email_message_id).toBe(messageId);
     } finally {
-      await knex('comments').where({ tenant: context.tenant, comment_id: commentId }).delete();
-      await knex('comment_threads').where({ tenant: context.tenant, thread_id: commentId }).delete();
+      await tenantTable(context.tenant, 'comments').where({ tenant: context.tenant, comment_id: commentId }).delete();
+      await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: commentId }).delete();
       await knex.schema.alterTable('comments', (table) => {
         table.uuid('thread_id').notNullable().alter();
       });
@@ -254,7 +285,8 @@ describe('comment_threads migrations', () => {
   });
 
   it('T007: rerunning ticket and task backfills does not duplicate threads', async () => {
-    const before = await knex('comment_threads')
+    const before = await tenantDb(knex, '__test_migration_idempotency__')
+      .unscoped('comment_threads', 'backfill idempotency compares all comment thread rows before rerun')
       .count<{ count: string }[]>({ count: '*' })
       .first();
     const beforeCount = Number(before?.count ?? 0);
@@ -262,7 +294,8 @@ describe('comment_threads migrations', () => {
     await commentBackfillMigration.up(knex);
     await taskCommentBackfillMigration.up(knex);
 
-    const after = await knex('comment_threads')
+    const after = await tenantDb(knex, '__test_migration_idempotency__')
+      .unscoped('comment_threads', 'backfill idempotency compares all comment thread rows after rerun')
       .count<{ count: string }[]>({ count: '*' })
       .first();
     const afterCount = Number(after?.count ?? 0);
@@ -271,10 +304,7 @@ describe('comment_threads migrations', () => {
   });
 
   it('T008: backfills legacy project task comments into one thread per comment', async () => {
-    const context = await knex('project_tasks as pt')
-      .join('users as u', 'u.tenant', 'pt.tenant')
-      .select('pt.tenant', 'pt.task_id', 'u.user_id')
-      .first();
+    const context = await taskUserContext();
     expect(context).toBeTruthy();
 
     const generated = await knex.raw('SELECT gen_random_uuid() AS task_comment_id');
@@ -286,7 +316,7 @@ describe('comment_threads migrations', () => {
     });
 
     try {
-      await knex('project_task_comments').insert({
+      await tenantTable(context.tenant, 'project_task_comments').insert({
         tenant: context.tenant,
         task_comment_id: taskCommentId,
         task_id: context.task_id,
@@ -299,13 +329,13 @@ describe('comment_threads migrations', () => {
 
       await taskCommentBackfillMigration.up(knex);
 
-      const comment = await knex('project_task_comments')
+      const comment = await tenantTable(context.tenant, 'project_task_comments')
         .select('thread_id')
         .where({ tenant: context.tenant, task_comment_id: taskCommentId })
         .first();
       expect(comment?.thread_id).toBe(taskCommentId);
 
-      const thread = await knex('comment_threads')
+      const thread = await tenantTable(context.tenant, 'comment_threads')
         .select('thread_id', 'project_task_id', 'root_comment_id', 'is_internal', 'reply_count', 'created_by')
         .where({ tenant: context.tenant, thread_id: taskCommentId })
         .first();
@@ -318,8 +348,8 @@ describe('comment_threads migrations', () => {
         created_by: context.user_id,
       });
     } finally {
-      await knex('project_task_comments').where({ tenant: context.tenant, task_comment_id: taskCommentId }).delete();
-      await knex('comment_threads').where({ tenant: context.tenant, thread_id: taskCommentId }).delete();
+      await tenantTable(context.tenant, 'project_task_comments').where({ tenant: context.tenant, task_comment_id: taskCommentId }).delete();
+      await tenantTable(context.tenant, 'comment_threads').where({ tenant: context.tenant, thread_id: taskCommentId }).delete();
       await knex.schema.alterTable('project_task_comments', (table) => {
         table.uuid('thread_id').notNullable().alter();
       });
@@ -327,16 +357,10 @@ describe('comment_threads migrations', () => {
   });
 
   it('T009: rejects null thread_id inserts after NOT NULL enforcement', async () => {
-    const ticketContext = await knex('tickets as t')
-      .join('users as u', 'u.tenant', 't.tenant')
-      .select('t.tenant', 't.ticket_id', 'u.user_id')
-      .first();
+    const ticketContext = await ticketUserContext();
     expect(ticketContext).toBeTruthy();
 
-    const taskContext = await knex('project_tasks as pt')
-      .join('users as u', 'u.tenant', 'pt.tenant')
-      .select('pt.tenant', 'pt.task_id', 'u.user_id')
-      .first();
+    const taskContext = await taskUserContext();
     expect(taskContext).toBeTruthy();
 
     const ids = await knex.raw(`
@@ -345,7 +369,7 @@ describe('comment_threads migrations', () => {
         gen_random_uuid() AS task_comment_id
     `);
 
-    await expect(knex('comments').insert({
+    await expect(tenantTable(ticketContext.tenant, 'comments').insert({
       tenant: ticketContext.tenant,
       comment_id: ids.rows[0].comment_id,
       ticket_id: ticketContext.ticket_id,
@@ -356,7 +380,7 @@ describe('comment_threads migrations', () => {
       is_resolution: false,
     })).rejects.toThrow(/null value in column "thread_id"/);
 
-    await expect(knex('project_task_comments').insert({
+    await expect(tenantTable(taskContext.tenant, 'project_task_comments').insert({
       tenant: taskContext.tenant,
       task_comment_id: ids.rows[0].task_comment_id,
       task_id: taskContext.task_id,
@@ -371,7 +395,7 @@ describe('comment_threads migrations', () => {
     await expect(knex.schema.hasColumn('email_sending_logs', 'comment_thread_id')).resolves.toBe(true);
 
     const tenantColumn = await knex.schema.hasColumn('email_sending_logs', 'tenant') ? 'tenant' : 'tenant_id';
-    const foreignKeys = await knex('pg_constraint as c')
+    const foreignKeys = await schemaTable('pg_constraint as c', 'test schema assertion for comment thread migration constraints')
       .join('pg_class as rel', 'rel.oid', 'c.conrelid')
       .select('c.conname', 'c.contype', knex.raw('pg_get_constraintdef(c.oid) as definition'))
       .where('rel.relname', 'email_sending_logs')
@@ -383,7 +407,7 @@ describe('comment_threads migrations', () => {
       String(constraint.definition).includes('REFERENCES comment_threads(tenant, thread_id)')
     )).toBe(true);
 
-    const index = await knex('pg_indexes')
+    const index = await schemaTable('pg_indexes', 'test schema assertion for comment thread migration indexes')
       .select('indexdef')
       .where({
         schemaname: 'public',
@@ -396,11 +420,16 @@ describe('comment_threads migrations', () => {
   });
 
   it('T072: deleting a ticket cascades to comment_threads', async () => {
-    const context = await knex('tickets as t')
-      .join('statuses as s', 's.tenant', 't.tenant')
-      .join('priorities as p', 'p.tenant', 't.tenant')
-      .join('boards as b', 'b.tenant', 't.tenant')
-      .join('clients as c', 'c.tenant', 't.tenant')
+    const discoveryDb = tenantDb(knex, '__test_discovery__');
+    const contextQuery = discoveryDb.unscoped(
+      'tickets as t',
+      'test discovery of seeded ticket cascade context for comment thread migration'
+    );
+    discoveryDb.tenantJoin(contextQuery, 'statuses as s', 's.tenant', 't.tenant');
+    discoveryDb.tenantJoin(contextQuery, 'priorities as p', 'p.tenant', 't.tenant');
+    discoveryDb.tenantJoin(contextQuery, 'boards as b', 'b.tenant', 't.tenant');
+    discoveryDb.tenantJoin(contextQuery, 'clients as c', 'c.tenant', 't.tenant');
+    const context = await contextQuery
       .select('t.tenant', 's.status_id', 'p.priority_id', 'b.board_id', 'c.client_id')
       .first();
     expect(context).toBeTruthy();
@@ -414,7 +443,8 @@ describe('comment_threads migrations', () => {
     const rollback = new Error('rollback T072');
 
     await knex.transaction(async (trx) => {
-      await trx('tickets').insert({
+      const trxTenantDb = tenantDb(trx, context.tenant);
+      await trxTenantDb.table('tickets').insert({
         tenant: context.tenant,
         ticket_id: generated.rows[0].ticket_id,
         ticket_number: `T072-${Date.now()}`,
@@ -427,7 +457,7 @@ describe('comment_threads migrations', () => {
         updated_at: new Date(),
       });
 
-      await trx('comment_threads').insert({
+      await trxTenantDb.table('comment_threads').insert({
         tenant: context.tenant,
         thread_id: generated.rows[0].thread_id,
         ticket_id: generated.rows[0].ticket_id,
@@ -436,11 +466,11 @@ describe('comment_threads migrations', () => {
         reply_count: 0,
       });
 
-      await trx('tickets')
+      await trxTenantDb.table('tickets')
         .where({ tenant: context.tenant, ticket_id: generated.rows[0].ticket_id })
         .delete();
 
-      const thread = await trx('comment_threads')
+      const thread = await trxTenantDb.table('comment_threads')
         .where({ tenant: context.tenant, thread_id: generated.rows[0].thread_id })
         .first();
       expect(thread).toBeUndefined();
@@ -454,10 +484,13 @@ describe('comment_threads migrations', () => {
   });
 
   it('T073: deleting a project task cascades to comment_threads', async () => {
-    const context = await knex('project_phases as pp')
-      .join('project_status_mappings as psm', function() {
-        this.on('psm.tenant', 'pp.tenant').andOn('psm.project_id', 'pp.project_id');
-      })
+    const discoveryDb = tenantDb(knex, '__test_discovery__');
+    const contextQuery = discoveryDb.unscoped(
+      'project_phases as pp',
+      'test discovery of seeded project task cascade context for comment thread migration'
+    );
+    discoveryDb.tenantJoin(contextQuery, 'project_status_mappings as psm', 'psm.project_id', 'pp.project_id');
+    const context = await contextQuery
       .select('pp.tenant', 'pp.phase_id', 'psm.project_status_mapping_id')
       .first();
     expect(context).toBeTruthy();
@@ -471,7 +504,8 @@ describe('comment_threads migrations', () => {
     const rollback = new Error('rollback T073');
 
     await knex.transaction(async (trx) => {
-      await trx('project_tasks').insert({
+      const trxTenantDb = tenantDb(trx, context.tenant);
+      await trxTenantDb.table('project_tasks').insert({
         tenant: context.tenant,
         task_id: generated.rows[0].task_id,
         phase_id: context.phase_id,
@@ -480,7 +514,7 @@ describe('comment_threads migrations', () => {
         wbs_code: 'T073',
       });
 
-      await trx('comment_threads').insert({
+      await trxTenantDb.table('comment_threads').insert({
         tenant: context.tenant,
         thread_id: generated.rows[0].thread_id,
         project_task_id: generated.rows[0].task_id,
@@ -489,11 +523,11 @@ describe('comment_threads migrations', () => {
         reply_count: 0,
       });
 
-      await trx('project_tasks')
+      await trxTenantDb.table('project_tasks')
         .where({ tenant: context.tenant, task_id: generated.rows[0].task_id })
         .delete();
 
-      const thread = await trx('comment_threads')
+      const thread = await trxTenantDb.table('comment_threads')
         .where({ tenant: context.tenant, thread_id: generated.rows[0].thread_id })
         .first();
       expect(thread).toBeUndefined();
@@ -507,8 +541,13 @@ describe('comment_threads migrations', () => {
   });
 
   it('T074: comment_threads exactly-one parent check rejects missing or double parents', async () => {
-    const context = await knex('tickets as t')
-      .join('project_tasks as pt', 'pt.tenant', 't.tenant')
+    const discoveryDb = tenantDb(knex, '__test_discovery__');
+    const contextQuery = discoveryDb.unscoped(
+      'tickets as t',
+      'test discovery of seeded ticket/task context for comment thread parent check'
+    );
+    discoveryDb.tenantJoin(contextQuery, 'project_tasks as pt', 'pt.tenant', 't.tenant');
+    const context = await contextQuery
       .select('t.tenant', 't.ticket_id', 'pt.task_id')
       .first();
     expect(context).toBeTruthy();
@@ -521,7 +560,7 @@ describe('comment_threads migrations', () => {
         gen_random_uuid() AS double_parent_root_id
     `);
 
-    await expect(knex('comment_threads').insert({
+    await expect(tenantTable(context.tenant, 'comment_threads').insert({
       tenant: context.tenant,
       thread_id: generated.rows[0].no_parent_thread_id,
       root_comment_id: generated.rows[0].no_parent_root_id,
@@ -529,7 +568,7 @@ describe('comment_threads migrations', () => {
       reply_count: 0,
     })).rejects.toThrow(/comment_threads_exactly_one_parent_check|violates check constraint/);
 
-    await expect(knex('comment_threads').insert({
+    await expect(tenantTable(context.tenant, 'comment_threads').insert({
       tenant: context.tenant,
       thread_id: generated.rows[0].double_parent_thread_id,
       ticket_id: context.ticket_id,

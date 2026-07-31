@@ -1,5 +1,6 @@
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin';
 import { getFormValidationService } from '@shared/task-inbox';
+import { tenantDb } from '@alga-psa/db';
 import {
   WorkflowRuntimeV2,
   workflowDefinitionSchema,
@@ -10,6 +11,8 @@ import {
   generateIdempotencyKey,
   initializeWorkflowRuntimeV2,
   createSecretResolverFromProvider,
+  applyRedactions,
+  safeSerialize,
   type Envelope,
   type InputMapping,
   type SecretResolver,
@@ -33,6 +36,15 @@ import {
 } from '@alga-psa/workflows/persistence';
 import { workflowStepQuotaService } from '@alga-psa/workflows/runtime/core';
 
+const WORKFLOW_RUNTIME_SYSTEM_CATALOG_TENANT = '__workflow_runtime_system_catalog__';
+const ACTION_ERROR_JSON_MAX_BYTES = 32 * 1024;
+const ACTION_ERROR_SENSITIVE_KEY_PATTERN = /(secret|token|password|api[_-]?key|authorization)/i;
+
+const systemCatalogTenant = (tenantId: string | null | undefined): string => {
+  const tenant = String(tenantId ?? '').trim();
+  return tenant || WORKFLOW_RUNTIME_SYSTEM_CATALOG_TENANT;
+};
+
 export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
   runId: string;
   workflowId: string;
@@ -40,19 +52,17 @@ export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
 }): Promise<{ definition: WorkflowDefinition; initialScopes: WorkflowRuntimeV2ScopeState }> {
   const knex = await getAdminConnection();
 
-  const run = await knex('workflow_runs')
-    .where({ run_id: input.runId })
-    .first();
+  const run = await WorkflowRunModelV2.getById(knex, input.runId);
   if (!run) {
     throw new Error(`Run ${input.runId} not found`);
   }
 
-  const definitionRecord = await knex('workflow_definition_versions')
-    .where({
-      workflow_id: input.workflowId,
-      version: input.workflowVersion,
-    })
-    .first();
+  const definitionRecord = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(
+    knex,
+    input.workflowId,
+    input.workflowVersion,
+    run.tenant
+  );
 
   if (!definitionRecord) {
     throw new Error(`Workflow definition ${input.workflowId} v${input.workflowVersion} not found`);
@@ -104,14 +114,13 @@ export async function completeWorkflowRuntimeV2Run(input: {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      await knex('workflow_runs')
-        .where({ run_id: input.runId })
-        .update({
-          status: input.status,
-          node_path: null,
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
+      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      if (!run) return;
+      await WorkflowRunModelV2.update(knex, input.runId, {
+        status: input.status,
+        node_path: null,
+        completed_at: new Date().toISOString(),
+      }, run.tenant);
     },
     { logLabel: 'completeWorkflowRuntimeV2Run' }
   );
@@ -133,7 +142,7 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
       if (run.tenant) {
         const reservation = await workflowStepQuotaService.reserveStepStart(knex, run.tenant);
         if (!reservation.allowed) {
-          const existingWait = await knex('workflow_run_waits')
+          const existingWait = await tenantDb(knex, run.tenant).table('workflow_run_waits')
             .where({
               run_id: input.runId,
               step_path: input.stepPath,
@@ -155,7 +164,7 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
             await WorkflowRunWaitModelV2.update(knex, existingWait.wait_id, {
               timeout_at: reservation.summary.periodEnd,
               payload,
-            });
+            }, run.tenant);
           } else {
             await WorkflowRunWaitModelV2.create(knex, {
               run_id: input.runId,
@@ -178,7 +187,7 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
               at: new Date().toISOString(),
               data: payload,
             },
-          });
+          }, run.tenant);
           return {
             stepId: null,
             quotaPaused: true,
@@ -186,7 +195,7 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
         }
       }
 
-      const latest = await WorkflowRunStepModelV2.getLatestByRunAndPath(knex, input.runId, input.stepPath);
+      const latest = await WorkflowRunStepModelV2.getLatestByRunAndPath(knex, input.runId, input.stepPath, run.tenant);
       const attempt = (latest?.attempt ?? 0) + 1;
       const step = await WorkflowRunStepModelV2.create(knex, {
         run_id: input.runId,
@@ -199,7 +208,7 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
       await WorkflowRunModelV2.update(knex, input.runId, {
         node_path: input.stepPath,
         status: 'RUNNING',
-      });
+      }, run.tenant);
       return {
         stepId: step.step_id,
       };
@@ -219,9 +228,14 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
     async () => {
       const knex = await getAdminConnection();
       const now = new Date().toISOString();
-      const step = await knex('workflow_run_steps')
+      const step = await tenantDb(knex, '__workflow_step_completion_discovery__')
+        .unscoped<{ step_id: string; started_at?: string | null; tenant?: string | null }>(
+          'workflow_run_steps',
+          'workflow step completion resolves the tenant and duration from step_id before updating'
+        )
         .where({ step_id: input.stepId })
         .first();
+      const tenant = step?.tenant ?? null;
       const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
       const durationMs = Math.max(Date.now() - startedAt, 0);
 
@@ -232,7 +246,7 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
         error_json: input.status === 'FAILED' && input.errorMessage
           ? { message: input.errorMessage }
           : null,
-      });
+      }, tenant);
 
       await WorkflowRunModelV2.update(knex, input.runId, {
         status: input.status === 'FAILED'
@@ -243,7 +257,7 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
         error_json: input.status === 'FAILED' && input.errorMessage
           ? { message: input.errorMessage, nodePath: input.stepPath }
           : null,
-      });
+      }, tenant);
     },
     { logLabel: 'projectWorkflowRuntimeV2StepCompletion' }
   );
@@ -290,10 +304,11 @@ export async function projectWorkflowRuntimeV2TimeWaitResolved(input: {
     async () => {
       const knex = await getAdminConnection();
       const now = new Date().toISOString();
+      const run = await WorkflowRunModelV2.getById(knex, input.runId);
       await WorkflowRunWaitModelV2.update(knex, input.waitId, {
         status: input.status,
         resolved_at: now,
-      });
+      }, run?.tenant);
     },
     { logLabel: 'projectWorkflowRuntimeV2TimeWaitResolved' }
   );
@@ -346,7 +361,15 @@ export async function projectWorkflowRuntimeV2EventWaitResolved(input: {
     async () => {
       const knex = await getAdminConnection();
       const now = new Date().toISOString();
-      const existing = await knex('workflow_run_waits').where({ wait_id: input.waitId }).first(['payload']);
+      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const waitQuery = run?.tenant
+        ? tenantDb(knex, run.tenant).table('workflow_run_waits')
+        : tenantDb(knex, '__workflow_event_wait_resolution_discovery__')
+          .unscoped(
+            'workflow_run_waits',
+            'workflow event wait resolution falls back to wait_id lookup when the run tenant is unavailable'
+          );
+      const existing = await waitQuery.where({ wait_id: input.waitId }).first(['payload']);
       const payload = isRecord(existing?.payload) ? existing.payload : {};
       await WorkflowRunWaitModelV2.update(knex, input.waitId, {
         status: input.status,
@@ -356,7 +379,7 @@ export async function projectWorkflowRuntimeV2EventWaitResolved(input: {
           matchedEventId: input.matchedEventId ?? null,
           resolvedAt: now,
         },
-      });
+      }, run?.tenant);
     },
     { logLabel: 'projectWorkflowRuntimeV2EventWaitResolved' }
   );
@@ -426,7 +449,15 @@ export async function resolveWorkflowRuntimeV2HumanTaskWait(input: {
     async () => {
       const knex = await getAdminConnection();
       const now = new Date().toISOString();
-      const existing = await knex('workflow_run_waits').where({ wait_id: input.waitId }).first(['payload']);
+      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const waitQuery = run?.tenant
+        ? tenantDb(knex, run.tenant).table('workflow_run_waits')
+        : tenantDb(knex, '__workflow_human_wait_resolution_discovery__')
+          .unscoped(
+            'workflow_run_waits',
+            'workflow human wait resolution falls back to wait_id lookup when the run tenant is unavailable'
+          );
+      const existing = await waitQuery.where({ wait_id: input.waitId }).first(['payload']);
       const currentPayload = isRecord(existing?.payload) ? existing.payload : {};
       await WorkflowRunWaitModelV2.update(knex, input.waitId, {
         status: input.status,
@@ -436,7 +467,7 @@ export async function resolveWorkflowRuntimeV2HumanTaskWait(input: {
           ...input.payload,
           resolvedAt: now,
         },
-      });
+      }, run?.tenant);
     },
     { logLabel: 'resolveWorkflowRuntimeV2HumanTaskWait' }
   );
@@ -657,7 +688,8 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
   const definitionVersion = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(
     knex,
     input.workflowId,
-    input.workflowVersion
+    input.workflowVersion,
+    childTenantId
   );
   if (!definitionVersion) {
     throw new Error(`Child workflow definition not found: ${input.workflowId}@${input.workflowVersion}`);
@@ -687,7 +719,7 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
       await WorkflowRunModelV2.update(knex, childRunId, {
         parent_run_id: parentRun.run_id,
         root_run_id: rootRunId,
-      });
+      }, childTenantId);
 
       return {
         childRunId,
@@ -710,14 +742,16 @@ async function resolveTaskFormSchema(
 ): Promise<{ formId: string; formType: string; schema: Record<string, unknown> | null } | null> {
   if (!taskType) return null;
 
-  const systemTask = await knex('system_workflow_task_definitions')
+  // System workflow task and form definitions are global catalogs; tenant-specific definitions are resolved below.
+  const systemCatalogDb = tenantDb(knex, systemCatalogTenant(tenantId));
+  const systemTask = await systemCatalogDb.table('system_workflow_task_definitions')
     .where({ task_type: taskType })
     .first();
   if (systemTask) {
     const formId = systemTask.form_id as string;
     const formType = systemTask.form_type ?? 'system';
     if (formType === 'system') {
-      const form = await knex('system_workflow_form_definitions')
+      const form = await systemCatalogDb.table('system_workflow_form_definitions')
         .where({ name: formId })
         .first();
       return {
@@ -729,15 +763,15 @@ async function resolveTaskFormSchema(
   }
 
   if (tenantId) {
-    const tenantTask = await knex('workflow_task_definitions')
-      .where({ tenant: tenantId, name: taskType })
+    const tenantTask = await tenantDb(knex, tenantId).table('workflow_task_definitions')
+      .where({ name: taskType })
       .first();
     if (tenantTask) {
       const formId = tenantTask.form_id as string;
       const formType = tenantTask.form_type ?? 'tenant';
       if (formType === 'tenant') {
-        const formSchema = await knex('workflow_form_schemas')
-          .where({ tenant: tenantId, form_id: formId })
+        const formSchema = await tenantDb(knex, tenantId).table('workflow_form_schemas')
+          .where({ form_id: formId })
           .first();
         return {
           formId,
@@ -825,7 +859,8 @@ async function executeActionInvocation(input: {
     input.knex,
     input.actionId,
     input.version,
-    idempotencyKey
+    idempotencyKey,
+    input.tenantId
   );
   if (existing?.status === 'SUCCEEDED') {
     return action.outputSchema.parse(existing.output_json ?? {});
@@ -862,15 +897,29 @@ async function executeActionInvocation(input: {
       status: 'SUCCEEDED',
       output_json: parsedOutput as Record<string, unknown>,
       completed_at: new Date().toISOString(),
-    });
+    }, input.tenantId);
     return parsedOutput;
   } catch (error) {
     const runtimeError = normalizeActionRuntimeError(error, input.stepPath);
-    await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
+    const errorJson = prepareActionInvocationErrorJson(runtimeError);
+    const failureUpdate = {
       status: 'FAILED',
       error_message: runtimeError.message,
       completed_at: new Date().toISOString(),
-    });
+    };
+    try {
+      await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
+        ...failureUpdate,
+        error_json: errorJson,
+      }, input.tenantId);
+    } catch (persistError) {
+      // The worker can deploy ahead of the server migration that adds
+      // error_json; keep the failure record rather than losing it to 42703.
+      if ((persistError as { code?: string } | null)?.code !== '42703') {
+        throw persistError;
+      }
+      await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, failureUpdate, input.tenantId);
+    }
     throw runtimeError;
   }
 }
@@ -913,4 +962,127 @@ function isRuntimeErrorPayload(value: unknown): value is RuntimeErrorPayload {
     && typeof value === 'object'
     && typeof (value as Record<string, unknown>).category === 'string'
     && typeof (value as Record<string, unknown>).message === 'string';
+}
+
+function prepareActionInvocationErrorJson(error: RuntimeErrorPayload): Record<string, unknown> {
+  const base = redactActionErrorSensitiveValues(
+    stripStackProperties(applyRedactions(safeSerializeActionError(error), []))
+  ) as RuntimeErrorPayload;
+  const prepared: Record<string, unknown> = {
+    category: base.category,
+    message: base.message,
+    nodePath: base.nodePath,
+    at: base.at,
+  };
+  if (typeof base.code === 'string') {
+    prepared.code = base.code;
+  }
+  if ('details' in base && base.details !== undefined) {
+    prepared.details = base.details;
+  }
+
+  const size = serializedSize(prepared);
+  if (size <= ACTION_ERROR_JSON_MAX_BYTES) {
+    return prepared;
+  }
+
+  const truncated: Record<string, unknown> = {
+    ...prepared,
+    details: {
+      truncated: true,
+      size,
+      max: ACTION_ERROR_JSON_MAX_BYTES,
+    },
+  };
+
+  if (serializedSize(truncated) <= ACTION_ERROR_JSON_MAX_BYTES) {
+    return truncated;
+  }
+
+  const message = typeof truncated.message === 'string' ? truncated.message : String(truncated.message ?? '');
+  return {
+    ...truncated,
+    message: truncateStringToJsonBudget(message, ACTION_ERROR_JSON_MAX_BYTES, truncated),
+  };
+}
+
+function safeSerializeActionError(error: RuntimeErrorPayload): unknown {
+  try {
+    return safeSerialize(error);
+  } catch {
+    return {
+      category: error.category,
+      code: error.code,
+      message: error.message,
+      nodePath: error.nodePath,
+      at: error.at,
+      details: {
+        truncated: true,
+        reason: 'serialization_failed',
+      },
+    };
+  }
+}
+
+function stripStackProperties(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => stripStackProperties(entry));
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (key === 'stack') {
+      continue;
+    }
+    result[key] = stripStackProperties(val);
+  }
+  return result;
+}
+
+function redactActionErrorSensitiveValues(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactActionErrorSensitiveValues(entry));
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (ACTION_ERROR_SENSITIVE_KEY_PATTERN.test(key)) {
+      result[key] = '[REDACTED]';
+      continue;
+    }
+    result[key] = redactActionErrorSensitiveValues(val);
+  }
+  return result;
+}
+
+function serializedSize(value: unknown): number {
+  try {
+    return Buffer.byteLength(JSON.stringify(value), 'utf8');
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+// A slice landing between the halves of a surrogate pair yields a lone
+// surrogate, which JSON.stringify escapes as \udXXX — and Postgres jsonb
+// rejects that, failing the very write that records the failure.
+function sliceWithoutSplittingSurrogates(value: string, length: number): string {
+  const sliced = value.slice(0, length);
+  const lastCode = sliced.charCodeAt(sliced.length - 1);
+  return lastCode >= 0xd800 && lastCode <= 0xdbff ? sliced.slice(0, -1) : sliced;
+}
+
+function truncateStringToJsonBudget(value: string, maxBytes: number, container: Record<string, unknown>): string {
+  const marker = '...[truncated]';
+  let available = Math.max(0, maxBytes - serializedSize({ ...container, message: '' }) - marker.length - 2);
+  let truncated = `${sliceWithoutSplittingSurrogates(value, available)}${marker}`;
+  while (serializedSize({ ...container, message: truncated }) > maxBytes && available > 0) {
+    available = Math.floor(available * 0.9);
+    truncated = `${sliceWithoutSplittingSurrogates(value, available)}${marker}`;
+  }
+  return truncated;
 }

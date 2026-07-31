@@ -7,10 +7,11 @@
  */
 
 import type { BaseService, ListOptions } from '../controllers/types';
+import { NotImplementedError } from '../middleware/apiMiddleware';
 
 export class ApiSearchService implements BaseService {
   private unsupported(): never {
-    throw new Error('Search resource does not support this operation');
+    throw new NotImplementedError('Search resource does not support this operation');
   }
 
   async list(_options: ListOptions, _context: any): Promise<{ data: any[]; total: number }> {

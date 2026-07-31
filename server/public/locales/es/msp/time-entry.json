@@ -29,7 +29,9 @@
       "viewDetails": "Ver detalles",
       "manageTimePeriods": "Administrar períodos de tiempo",
       "selectWorkItem": "Seleccionar elemento de trabajo",
-      "clearFilter": "Borrar filtro"
+      "clearFilter": "Borrar filtro",
+      "remove": "Eliminar",
+      "clear": "Limpiar"
     },
     "states": {
       "inProgress": "En progreso",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "No hay entradas"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} seleccionado(s)"
+    },
+    "delete": {
+      "success": "{{count}} hoja(s) de horas eliminada(s)",
+      "partialFailure": "No se pudieron eliminar {{count}} hoja(s) de horas",
+      "error": "No se pudieron eliminar las hojas de horas"
+    },
+    "removePeriod": {
+      "success": "{{count}} período(s) eliminado(s)",
+      "partialFailure": "No se pudieron eliminar {{count}} período(s)",
+      "error": "No se pudieron eliminar los períodos"
+    },
+    "remove": {
+      "title": "Eliminar elementos no utilizados",
+      "message": "¿Eliminar {{count}} período(s) seleccionado(s)? Los períodos de pago no utilizados se eliminan para toda la organización, junto con cualquier borrador vacío registrado en ellos. Esto no se puede deshacer.",
+      "timesheetMessage": "¿Eliminar {{count}} hoja(s) de horas no utilizada(s)? Solo se eliminan los borradores de hojas de horas vacíos y esto no se puede deshacer."
     }
   },
   "timeEntryForm": {
@@ -148,7 +168,9 @@
     "empty": {
       "searching": "Búsqueda...",
       "noWorkItems": "No se encontraron elementos de trabajo"
-    }
+    },
+    "paymentWarningTitle": "Advertencia de requisito de pago",
+    "paymentWarning": "Se requiere el pago de un hito de facturación del proyecto marcado y aún no se ha confirmado. Confirme el pago antes de continuar el trabajo."
   },
   "workItemList": {
     "meta": {
@@ -428,7 +450,8 @@
     "taskUpdated": "Tarea actualizada correctamente",
     "saveChangesFailed": "Error al guardar los cambios",
     "changesSaved": "Cambios guardados correctamente",
-    "workItemDeleted": "Elemento de trabajo eliminado correctamente"
+    "workItemDeleted": "Elemento de trabajo eliminado correctamente",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Este ticket está agrupado bajo {{number}}. El tiempo del grupo se suele registrar en el ticket maestro.",

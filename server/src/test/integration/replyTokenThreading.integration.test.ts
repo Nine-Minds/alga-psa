@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { findTicketByReplyToken, createCommentFromEmail } from '@alga-psa/workflows/actions/emailWorkflowActions';
+import { tenantDb } from '@alga-psa/db';
 
 describe('Reply Token Threading Logic', () => {
   let knex: Knex;
@@ -12,35 +13,39 @@ describe('Reply Token Threading Logic', () => {
   let boardId: string;
   const cleanup: (() => Promise<void>)[] = [];
 
+  function scopedDb(tenant = testTenant) {
+    return tenantDb(knex, tenant);
+  }
+
   beforeAll(async () => {
     // Create test database with migrations and seeds
     knex = await createTestDbConnection();
 
     // Get the tenant that was created by seeds
-    const tenant = await knex('tenants').first('tenant');
+    const tenant = await tenantDb(knex, '__test_discovery__')
+      .unscoped('tenants', 'test discovery of seeded tenant for reply token threading')
+      .first('tenant');
     if (!tenant) {
       throw new Error('No tenant found in database after seeds');
     }
     testTenant = tenant.tenant;
 
     // Get or create a test client
-    const client = await knex('clients').where({ tenant: testTenant }).first('client_id');
+    const client = await scopedDb().table('clients').first('client_id');
     if (!client) {
       throw new Error('No client found in database after seeds');
     }
     testClientId = client.client_id;
 
     // Find or create Status
-    const existingStatus = await knex('statuses')
-      .where({ tenant: testTenant })
-      .first();
+    const existingStatus = await scopedDb().table('statuses').first();
     
     if (existingStatus) {
       statusId = existingStatus.status_id;
     } else {
       statusId = uuidv4();
       // Try to satisfy both potential schema requirements
-      await knex('statuses').insert({
+      await scopedDb().table('statuses').insert({
         tenant: testTenant,
         status_id: statusId,
         name: 'Open',
@@ -51,15 +56,13 @@ describe('Reply Token Threading Logic', () => {
     }
 
     // Find or create Board
-    const existingBoard = await knex('boards')
-      .where({ tenant: testTenant })
-      .first();
+    const existingBoard = await scopedDb().table('boards').first();
 
     if (existingBoard) {
       boardId = existingBoard.board_id;
     } else {
       boardId = uuidv4();
-      await knex('boards').insert({
+      await scopedDb().table('boards').insert({
         tenant: testTenant,
         board_id: boardId,
         board_name: 'Support',
@@ -98,7 +101,7 @@ describe('Reply Token Threading Logic', () => {
     it('should find ticket by valid reply token', async () => {
       // Setup: Create a test ticket
       const ticketId = uuidv4();
-      await knex('tickets').insert({
+      await scopedDb().table('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -110,12 +113,14 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
+        await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
       // Create a reply token for this ticket
       const replyToken = `token-${uuidv4()}`;
-      await knex('email_reply_tokens').insert({
+      await scopedDb().table('email_reply_tokens').insert({
         tenant: testTenant,
         token: replyToken,
         ticket_id: ticketId,
@@ -126,7 +131,7 @@ describe('Reply Token Threading Logic', () => {
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('email_reply_tokens').where({ tenant: testTenant, token: replyToken }).del();
+        await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
       });
 
       // Test: Find the ticket by reply token
@@ -142,9 +147,10 @@ describe('Reply Token Threading Logic', () => {
     it('should find comment ID when token is for a comment reply', async () => {
       const ticketId = uuidv4();
       const commentId = uuidv4();
+      const threadId = uuidv4();
 
       // Create ticket
-      await knex('tickets').insert({
+      await scopedDb().table('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -156,26 +162,36 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
+        await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
-      // Create comment to satisfy FK
-      await knex('comments').insert({
+      // Create thread + comment to satisfy FKs (comments.thread_id is NOT NULL)
+      await scopedDb().table('comment_threads').insert({
+        tenant: testTenant,
+        thread_id: threadId,
+        ticket_id: ticketId,
+        root_comment_id: commentId
+      });
+      await scopedDb().table('comments').insert({
         tenant: testTenant,
         comment_id: commentId,
         ticket_id: ticketId,
+        thread_id: threadId,
         note: 'Original comment',
         is_internal: false,
         is_resolution: false,
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('comments').where({ tenant: testTenant, comment_id: commentId }).del();
+        await scopedDb().table('comments').where({ comment_id: commentId }).del();
+        await scopedDb().table('comment_threads').where({ thread_id: threadId }).del();
       });
 
       // Create reply token with comment ID
       const replyToken = `token-${uuidv4()}`;
-      await knex('email_reply_tokens').insert({
+      await scopedDb().table('email_reply_tokens').insert({
         tenant: testTenant,
         token: replyToken,
         ticket_id: ticketId,
@@ -187,7 +203,7 @@ describe('Reply Token Threading Logic', () => {
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('email_reply_tokens').where({ tenant: testTenant, token: replyToken }).del();
+        await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
       });
 
       const result = await findTicketByReplyToken(replyToken, testTenant);
@@ -201,9 +217,10 @@ describe('Reply Token Threading Logic', () => {
       const projectId = uuidv4();
       
       // Create project
-      await knex('projects').insert({
+      await scopedDb().table('projects').insert({
         tenant: testTenant,
         project_id: projectId,
+        project_number: `PRJ-${Date.now()}`,
         client_id: testClientId,
         project_name: 'Test Project',
         status: statusId,
@@ -212,11 +229,11 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('projects').where({ tenant: testTenant, project_id: projectId }).del();
+        await scopedDb().table('projects').where({ project_id: projectId }).del();
       });
 
       const replyToken = `token-${uuidv4()}`;
-      await knex('email_reply_tokens').insert({
+      await scopedDb().table('email_reply_tokens').insert({
         tenant: testTenant,
         token: replyToken,
         project_id: projectId,
@@ -227,7 +244,7 @@ describe('Reply Token Threading Logic', () => {
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('email_reply_tokens').where({ tenant: testTenant, token: replyToken }).del();
+        await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
       });
 
       const result = await findTicketByReplyToken(replyToken, testTenant);
@@ -255,9 +272,10 @@ describe('Reply Token Threading Logic', () => {
       const otherClientId = uuidv4();
       const otherStatusId = uuidv4();
       const otherBoardId = uuidv4();
+      const otherTenantDb = scopedDb(otherTenant);
 
       // Create other tenant
-      await knex('tenants').insert({
+      await otherTenantDb.table('tenants').insert({
         tenant: otherTenant,
         client_name: 'Other Tenant',
         email: 'other@example.com',
@@ -266,7 +284,7 @@ describe('Reply Token Threading Logic', () => {
       });
 
       // Create client for other tenant
-      await knex('clients').insert({
+      await otherTenantDb.table('clients').insert({
         client_id: otherClientId,
         tenant: otherTenant,
         client_name: 'Other Tenant Client',
@@ -275,7 +293,7 @@ describe('Reply Token Threading Logic', () => {
       });
 
       // Create status for other tenant
-      await knex('statuses').insert({
+      await otherTenantDb.table('statuses').insert({
         tenant: otherTenant,
         status_id: otherStatusId,
         name: 'Open',
@@ -285,7 +303,7 @@ describe('Reply Token Threading Logic', () => {
       });
 
       // Create board for other tenant
-      await knex('boards').insert({
+      await otherTenantDb.table('boards').insert({
         tenant: otherTenant,
         board_id: otherBoardId,
         board_name: 'Default',
@@ -293,7 +311,7 @@ describe('Reply Token Threading Logic', () => {
       });
 
       // Create ticket in other tenant
-      await knex('tickets').insert({
+      await otherTenantDb.table('tickets').insert({
         tenant: otherTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -305,16 +323,16 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: otherTenant, ticket_id: ticketId }).del();
-        await knex('boards').where({ tenant: otherTenant, board_id: otherBoardId }).del();
-        await knex('statuses').where({ tenant: otherTenant, status_id: otherStatusId }).del();
-        await knex('clients').where({ tenant: otherTenant, client_id: otherClientId }).del();
-        await knex('tenants').where({ tenant: otherTenant }).del();
+        await otherTenantDb.table('tickets').where({ ticket_id: ticketId }).del();
+        await otherTenantDb.table('boards').where({ board_id: otherBoardId }).del();
+        await otherTenantDb.table('statuses').where({ status_id: otherStatusId }).del();
+        await otherTenantDb.table('clients').where({ client_id: otherClientId }).del();
+        await otherTenantDb.table('tenants').del();
       });
 
       // Create token in other tenant
       const replyToken = `token-${uuidv4()}`;
-      await knex('email_reply_tokens').insert({
+      await otherTenantDb.table('email_reply_tokens').insert({
         tenant: otherTenant,
         token: replyToken,
         ticket_id: ticketId,
@@ -325,7 +343,7 @@ describe('Reply Token Threading Logic', () => {
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('email_reply_tokens').where({ tenant: otherTenant, token: replyToken }).del();
+        await otherTenantDb.table('email_reply_tokens').where({ token: replyToken }).del();
       });
 
       // Try to find from our test tenant - should not find it
@@ -339,7 +357,7 @@ describe('Reply Token Threading Logic', () => {
     it('should create comment on ticket identified by reply token', async () => {
       // Setup: Create ticket and reply token
       const ticketId = uuidv4();
-      await knex('tickets').insert({
+      await scopedDb().table('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -351,11 +369,13 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
+        await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
       const replyToken = `token-${uuidv4()}`;
-      await knex('email_reply_tokens').insert({
+      await scopedDb().table('email_reply_tokens').insert({
         tenant: testTenant,
         token: replyToken,
         ticket_id: ticketId,
@@ -366,7 +386,7 @@ describe('Reply Token Threading Logic', () => {
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('email_reply_tokens').where({ tenant: testTenant, token: replyToken }).del();
+        await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
       });
 
       // Simulate workflow: First find ticket by token
@@ -397,7 +417,7 @@ describe('Reply Token Threading Logic', () => {
       );
 
       cleanup.push(async () => {
-        await knex('comments').where({ tenant: testTenant, comment_id: commentId }).del();
+        await scopedDb().table('comments').where({ comment_id: commentId }).del();
       });
 
       // Verify comment was created
@@ -405,8 +425,8 @@ describe('Reply Token Threading Logic', () => {
       expect(typeof commentId).toBe('string');
 
       // Verify comment is linked to the correct ticket
-      const createdComment = await knex('comments')
-        .where({ tenant: testTenant, comment_id: commentId })
+      const createdComment = await scopedDb().table('comments')
+        .where({ comment_id: commentId })
         .first();
 
       expect(createdComment).toBeDefined();
@@ -418,8 +438,9 @@ describe('Reply Token Threading Logic', () => {
     it('should preserve reply token metadata in comment', async () => {
       const ticketId = uuidv4();
       const commentIdFromToken = uuidv4();
+      const threadId = uuidv4();
 
-      await knex('tickets').insert({
+      await scopedDb().table('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: `#${Date.now()}`,
@@ -431,25 +452,35 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
+        await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
-      // Create the referenced comment
-      await knex('comments').insert({
+      // Create the referenced comment (with its thread; comments.thread_id is NOT NULL)
+      await scopedDb().table('comment_threads').insert({
+        tenant: testTenant,
+        thread_id: threadId,
+        ticket_id: ticketId,
+        root_comment_id: commentIdFromToken
+      });
+      await scopedDb().table('comments').insert({
         tenant: testTenant,
         comment_id: commentIdFromToken,
         ticket_id: ticketId,
+        thread_id: threadId,
         note: 'Original comment for metadata test',
         is_internal: false,
         is_resolution: false,
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('comments').where({ tenant: testTenant, comment_id: commentIdFromToken }).del();
+        await scopedDb().table('comments').where({ comment_id: commentIdFromToken }).del();
+        await scopedDb().table('comment_threads').where({ thread_id: threadId }).del();
       });
 
       const replyToken = `token-${uuidv4()}`;
-      await knex('email_reply_tokens').insert({
+      await scopedDb().table('email_reply_tokens').insert({
         tenant: testTenant,
         token: replyToken,
         ticket_id: ticketId,
@@ -461,7 +492,7 @@ describe('Reply Token Threading Logic', () => {
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('email_reply_tokens').where({ tenant: testTenant, token: replyToken }).del();
+        await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
       });
 
       const tokenResult = await findTicketByReplyToken(replyToken, testTenant);
@@ -490,11 +521,11 @@ describe('Reply Token Threading Logic', () => {
       );
 
       cleanup.push(async () => {
-        await knex('comments').where({ tenant: testTenant, comment_id: newCommentId }).del();
+        await scopedDb().table('comments').where({ comment_id: newCommentId }).del();
       });
 
-      const createdComment = await knex('comments')
-        .where({ tenant: testTenant, comment_id: newCommentId })
+      const createdComment = await scopedDb().table('comments')
+        .where({ comment_id: newCommentId })
         .first();
 
       expect(createdComment).toBeDefined();
@@ -513,7 +544,7 @@ describe('Reply Token Threading Logic', () => {
       // 1. Setup: Create initial ticket
       const ticketId = uuidv4();
       const ticketNumber = `#${Date.now()}`;
-      await knex('tickets').insert({
+      await scopedDb().table('tickets').insert({
         tenant: testTenant,
         ticket_id: ticketId,
         ticket_number: ticketNumber,
@@ -525,12 +556,14 @@ describe('Reply Token Threading Logic', () => {
         updated_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+        // createCommentFromEmail writes ticket_audit_logs rows whose FK blocks ticket deletion.
+        await scopedDb().table('ticket_audit_logs').where({ ticket_id: ticketId }).del();
+        await scopedDb().table('tickets').where({ ticket_id: ticketId }).del();
       });
 
       // 2. Simulate outbound email: Create reply token
       const replyToken = `token-${uuidv4()}`;
-      await knex('email_reply_tokens').insert({
+      await scopedDb().table('email_reply_tokens').insert({
         tenant: testTenant,
         token: replyToken,
         ticket_id: ticketId,
@@ -544,7 +577,7 @@ describe('Reply Token Threading Logic', () => {
         created_at: new Date()
       });
       cleanup.push(async () => {
-        await knex('email_reply_tokens').where({ tenant: testTenant, token: replyToken }).del();
+        await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
       });
 
       // 3. Simulate inbound email: Parse reply token from email body
@@ -582,12 +615,12 @@ describe('Reply Token Threading Logic', () => {
       );
 
       cleanup.push(async () => {
-        await knex('comments').where({ tenant: testTenant, comment_id: commentId }).del();
+        await scopedDb().table('comments').where({ comment_id: commentId }).del();
       });
 
       // 6. Verify the complete flow succeeded
-      const comment = await knex('comments')
-        .where({ tenant: testTenant, comment_id: commentId })
+      const comment = await scopedDb().table('comments')
+        .where({ comment_id: commentId })
         .first();
 
       expect(comment).toBeDefined();
@@ -605,8 +638,8 @@ describe('Reply Token Threading Logic', () => {
       expect(comment.author_type).toBe('client');
 
       // Verify ticket still exists and wasn't duplicated
-      const tickets = await knex('tickets')
-        .where({ tenant: testTenant, ticket_id: ticketId });
+      const tickets = await scopedDb().table('tickets')
+        .where({ ticket_id: ticketId });
 
       expect(tickets).toHaveLength(1);
 

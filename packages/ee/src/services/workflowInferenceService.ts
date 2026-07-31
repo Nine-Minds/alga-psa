@@ -1,6 +1,7 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
+import { toAiCreditsError } from '../lib/aiGateway/errors';
 import { resolveChatProvider, type ChatProviderId, type ResolvedChatProvider } from './chatProviderResolver';
 
 type WorkflowJsonSchema = {
@@ -213,7 +214,11 @@ export async function inferWorkflowStructuredOutput(
 
   for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRIES; attempt += 1) {
     try {
-      provider = await resolveChatProvider(request.providerOverride);
+      provider = await resolveChatProvider(
+        request.tenantId,
+        'workflow-inference',
+        request.providerOverride,
+      );
       const completion = await provider.client.chat.completions.create(
         createStructuredOutputRequest(provider, request)
       );
@@ -245,6 +250,32 @@ export async function inferWorkflowStructuredOutput(
       if (attempt < MAX_RATE_LIMIT_RETRIES && isRateLimitError(error)) {
         await sleep(readRetryDelayMs(error, attempt));
         continue;
+      }
+
+      const creditsError = toAiCreditsError(error);
+      if (creditsError) {
+        if (request.tenantId) {
+          // Resolved by the `@alga-psa/ee-stubs` build alias: the EE server
+          // implementation in EE builds, the log-only CE stub otherwise.
+          const { notifyAiCreditsUnavailable } = await import(
+            '@alga-psa/ee-stubs/lib/aiGateway/notifications'
+          );
+          await notifyAiCreditsUnavailable(
+            request.tenantId,
+            'workflow-inference',
+            creditsError,
+          );
+        }
+        throw new WorkflowInferenceServiceError({
+          category: 'ActionError',
+          code: 'AI_CREDITS_UNAVAILABLE',
+          message: `AI inference is unavailable: ${creditsError.reason}`,
+          details: {
+            reason: creditsError.reason,
+            runId: request.runId,
+            stepPath: request.stepPath,
+          },
+        });
       }
 
       throw normalizeProviderError(error, provider, request);

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
   addBasicFormFieldToDefinitionDraft,
@@ -20,6 +21,15 @@ import {
 describe('service request basic form builder', () => {
   let db: Knex;
 
+  function tenantTable(tenant: string, table: string) {
+    return tenantDb(db, tenant).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, '__test_tenant_fixture__')
+      .unscoped('tenants', 'test fixture creates and removes tenant rows');
+  }
+
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
   });
@@ -34,7 +44,7 @@ describe('service request basic form builder', () => {
     const tenant = uuidv4();
     const actor = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
@@ -97,7 +107,7 @@ describe('service request basic form builder', () => {
       },
     });
 
-    const saved = await db('service_request_definitions')
+    const saved = await tenantTable(tenant, 'service_request_definitions')
       .where({ tenant, definition_id: definition.definition_id })
       .first('form_schema');
 
@@ -125,7 +135,7 @@ describe('service request basic form builder', () => {
     const tenant = uuidv4();
     const actor = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
@@ -155,7 +165,7 @@ describe('service request basic form builder', () => {
       },
     });
 
-    await db('service_request_definitions')
+    await tenantTable(tenant, 'service_request_definitions')
       .where({ tenant, definition_id: definition.definition_id })
       .update({
         execution_config: {
@@ -172,7 +182,7 @@ describe('service request basic form builder', () => {
       publishedBy: actor,
     });
 
-    const publishedVersion = await db('service_request_definition_versions')
+    const publishedVersion = await tenantTable(tenant, 'service_request_definition_versions')
       .where({ tenant, version_id: version.version_id })
       .first('form_schema_snapshot');
 
@@ -194,7 +204,7 @@ describe('service request basic form builder', () => {
     const tenant = uuidv4();
     const actor = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
@@ -229,7 +239,7 @@ describe('service request basic form builder', () => {
       field: { type: 'checkbox', label: 'Manager Approved', required: false },
     });
 
-    const beforeReorder = await db('service_request_definitions')
+    const beforeReorder = await tenantTable(tenant, 'service_request_definitions')
       .where({ tenant, definition_id: definition.definition_id })
       .first('form_schema');
     const originalKeys = ((beforeReorder?.form_schema as any).fields as any[]).map(
@@ -264,7 +274,7 @@ describe('service request basic form builder', () => {
       updatedBy: actor,
     });
 
-    const afterEdits = await db('service_request_definitions')
+    const afterEdits = await tenantTable(tenant, 'service_request_definitions')
       .where({ tenant, definition_id: definition.definition_id })
       .first('form_schema');
     const remainingFields = (afterEdits?.form_schema as any).fields as any[];
@@ -281,7 +291,7 @@ describe('service request basic form builder', () => {
     const tenant = uuidv4();
     const actor = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,

@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateMock = vi.fn(async () => 1);
-const whereNullMock = vi.fn(() => ({ update: updateMock }));
-const whereMock = vi.fn(() => ({ whereNull: whereNullMock }));
+const firstMock = vi.fn(async () => ({ revoked_at: null }));
+const builder = {
+  where: vi.fn(() => builder),
+  whereNull: vi.fn(() => builder),
+  select: vi.fn(() => builder),
+  first: firstMock,
+  update: updateMock,
+};
 
 const knexFn = Object.assign(
-  vi.fn((_table: string) => ({ where: whereMock })),
+  vi.fn((_table: string) => builder),
   { fn: { now: () => '__now__' } },
 );
 
@@ -26,9 +32,30 @@ describe('UserSession.extendExpiry', () => {
     await UserSession.extendExpiry('tenant-1', 'sess-1', expiresAt);
 
     expect(getConnectionMock).toHaveBeenCalledWith('tenant-1');
-    expect(whereMock).toHaveBeenCalledWith({ tenant: 'tenant-1', session_id: 'sess-1' });
+    expect(knexFn).toHaveBeenCalledWith('sessions');
+    expect(builder.where).toHaveBeenCalledWith('sessions.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenCalledWith({ session_id: 'sess-1' });
     // Guard: never resurrect a revoked session.
-    expect(whereNullMock).toHaveBeenCalledWith('revoked_at');
+    expect(builder.whereNull).toHaveBeenCalledWith('revoked_at');
     expect(updateMock).toHaveBeenCalledWith({ expires_at: expiresAt, updated_at: '__now__' });
+  });
+
+  it('reads durable revocation state on every request', async () => {
+    firstMock.mockResolvedValue({ revoked_at: null });
+
+    await expect(UserSession.isRevoked('tenant-1', 'scim-session-open')).resolves.toBe(false);
+    firstMock.mockResolvedValue({ revoked_at: new Date() });
+    await expect(UserSession.isRevoked('tenant-1', 'scim-session-open')).resolves.toBe(true);
+
+    expect(firstMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not cache a revoked answer', async () => {
+    firstMock.mockResolvedValue({ revoked_at: new Date() });
+
+    await expect(UserSession.isRevoked('tenant-1', 'scim-session-revoked')).resolves.toBe(true);
+    await expect(UserSession.isRevoked('tenant-1', 'scim-session-revoked')).resolves.toBe(true);
+
+    expect(firstMock).toHaveBeenCalledTimes(2);
   });
 });

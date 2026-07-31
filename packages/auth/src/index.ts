@@ -66,7 +66,11 @@ export { verifyAuthenticator } from './lib/authenticator/authenticator';
 export { getAuthOptions } from './lib/nextAuthOptions';
 
 // Current user helper
-export { getCurrentUser } from './lib/getCurrentUser';
+export {
+  getCurrentUser,
+  getCurrentUserWithRevocationCheck
+} from './lib/getCurrentUser';
+export { runWithApiKeyUser, getApiKeyUserOverride } from './lib/apiKeyUserContext';
 
 // Deletion pre-check (auth-guarded validation)
 export { preCheckDeletion } from './lib/preCheckDeletion';

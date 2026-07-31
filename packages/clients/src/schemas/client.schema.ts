@@ -5,6 +5,13 @@
  */
 
 import { z } from 'zod';
+import type { ClientLifecycleStatus } from '@alga-psa/types';
+
+export const ClientLifecycleStatusSchema: z.ZodType<ClientLifecycleStatus> = z.enum([
+  'prospect',
+  'active',
+  'former',
+]);
 
 /**
  * Schema for client properties (JSON field)
@@ -39,13 +46,15 @@ export const ClientSchema = z.object({
   client_id: z.string(),
   client_name: z.string(),
   phone_no: z.string(),
-  credit_balance: z.number().default(0),
+  // Derived from credit_tracking at read time; not a stored column.
+  credit_balance: z.number().optional(),
   email: z.string().email(),
   url: z.string().url(),
   address: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
   is_inactive: z.boolean(),
+  lifecycle_status: ClientLifecycleStatusSchema.default('active'),
   client_type: z.string().optional(),
   tax_id_number: z.string().optional(),
   notes: z.string().optional(),
@@ -67,6 +76,7 @@ export const ClientSchema = z.object({
 export const CreateClientSchema = z.object({
   client_name: z.string().min(1, 'Client name is required'),
   client_type: z.enum(['company', 'individual']).optional(),
+  lifecycle_status: ClientLifecycleStatusSchema.default('active'),
   url: z.string().url().optional().or(z.literal('')),
   phone_no: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),

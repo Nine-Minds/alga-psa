@@ -20,10 +20,8 @@ import {
   getHuduCompanyPasswords,
   revealHuduPassword,
 } from '../../../lib/actions/integrations/huduDataActions';
-import type {
-  HuduClientContext,
-  HuduCompanyDataResult,
-} from '../../../lib/actions/integrations/huduDataActions';
+import type { HuduClientContext } from '../../../lib/actions/integrations/huduDataActions';
+import type { HuduCompanyDataResult } from '../../../lib/integrations/hudu/huduDataTypes';
 import type { HuduAssetPasswordSummary } from '../../../lib/integrations/hudu/contracts';
 
 export interface HuduClientPasswordsTabProps {

@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
@@ -11,12 +11,19 @@ interface UpdateNumberResponse {
   settings?: any;
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 export const getTicketNumberSettings = withAuth(async (_user, { tenant }) => {
   const { knex: db } = await createTenantKnex();
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const settings = await trx('next_number')
+    const settings = await tenantScopedTable(trx, 'next_number', tenant)
       .where('entity_type', 'TICKET')
-      .andWhere('tenant', tenant)
       .first();
     return settings;
   });
@@ -25,9 +32,8 @@ export const getTicketNumberSettings = withAuth(async (_user, { tenant }) => {
 export const updateTicketPrefix = withAuth(async (_user, { tenant }, prefix: string) => {
   const { knex: db } = await createTenantKnex();
   await withTransaction(db, async (trx: Knex.Transaction) => {
-    await trx('next_number')
+    await tenantScopedTable(trx, 'next_number', tenant)
       .where('entity_type', 'TICKET')
-      .andWhere('tenant', tenant)
       .update({
         prefix: prefix
       });
@@ -58,9 +64,8 @@ export const updateInitialValue = withAuth(async (_user, { tenant }, value: numb
 
     // Update the initial value
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      await trx('next_number')
+      await tenantScopedTable(trx, 'next_number', tenant)
         .where('entity_type', 'TICKET')
-        .andWhere('tenant', tenant)
         .update({
           initial_value: value
         });
@@ -99,9 +104,8 @@ export const updateLastNumber = withAuth(async (_user, { tenant }, value: number
 
     // Update the last number
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      await trx('next_number')
+      await tenantScopedTable(trx, 'next_number', tenant)
         .where('entity_type', 'TICKET')
-        .andWhere('tenant', tenant)
         .update({
           last_number: value
         });
@@ -126,9 +130,8 @@ export const updatePaddingLength = withAuth(async (_user, { tenant }, value: num
 
     // Update the padding length
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      await trx('next_number')
+      await tenantScopedTable(trx, 'next_number', tenant)
         .where('entity_type', 'TICKET')
-        .andWhere('tenant', tenant)
         .update({
           padding_length: value
         });

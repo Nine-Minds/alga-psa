@@ -43,7 +43,7 @@ describe('Credits locale smoke and parity contract', () => {
 
     expect(italian).toContain('più');
     expect(italian).toContain("Si è verificato");
-    expect(italian).toContain('Tutti gli stati');
+    expect(italian).toContain('Tutti i clienti');
     expect(italian).not.toContain('piu');
     expect(italian).not.toContain('Si e verificato');
   });
@@ -72,15 +72,12 @@ describe('Credits locale smoke and parity contract', () => {
     );
     const pageSource = read('../src/components/credits/CreditsPageClient.tsx');
     const addButtonSource = read('../src/components/credits/AddCreditButton.tsx');
-    const backButtonSource = read('../src/components/credits/BackButton.tsx');
 
     expect(getLeaf(en, 'page.title')).toBe('Credit Management');
-    expect(getLeaf(en, 'page.creditsOverview')).toBe('Credits Overview');
+    expect(getLeaf(en, 'actions.transfer')).toBe('Transfer');
     expect(getLeaf(en, 'actions.addCredit')).toBe('Add Credit');
-    expect(getLeaf(en, 'actions.backToCredits')).toBe('Back to Credits');
     expect(pageSource).toContain("useTranslation('msp/credits')");
     expect(addButtonSource).toContain("useTranslation('msp/credits')");
-    expect(backButtonSource).toContain("useTranslation('msp/credits')");
   });
 
   it('T030: german credits management/reconciliation locale values differ from english for representative dashboard keys', () => {
@@ -93,12 +90,9 @@ describe('Credits locale smoke and parity contract', () => {
 
     const representativeKeys = [
       'management.title',
-      'charts.expirationSummary',
       'stats.totalActiveCredits',
-      'reconciliation.title',
-      'reconciliation.reconciliationReports',
-      'charts.statusDistribution',
-      'status.inReview',
+      'filters.allClients',
+      'status.expired',
     ];
 
     for (const key of representativeKeys) {
@@ -107,19 +101,16 @@ describe('Credits locale smoke and parity contract', () => {
     }
   });
 
-  it('T031: xx pseudo-locale exposes representative pseudo fill across credits page, management, reconciliation, application, and expiration flows', () => {
+  it('T031: xx pseudo-locale exposes representative pseudo fill across credits page, management, application, and expiration flows', () => {
     const xx = readJson<Record<string, unknown>>(
       '../../../server/public/locales/xx/msp/credits.json',
     );
 
     const pseudoKeys = [
       'page.title',
-      'actions.backToCredits',
       'actions.addCredit',
       'management.title',
-      'management.recentCredits',
-      'reconciliation.title',
-      'reconciliation.reconciliationReports',
+      'filters.allClients',
       'application.title',
       'application.noCreditsAvailable',
       'expiration.appliedCredits',
@@ -131,9 +122,6 @@ describe('Credits locale smoke and parity contract', () => {
       expect(getLeaf(xx, key)).toBe('11111');
     }
 
-    expect(getLeaf(xx, 'reconciliation.validationResult')).toBe(
-      '11111 {{balanceCount}} 11111 {{trackingCount}} 11111',
-    );
     expect(getLeaf(xx, 'expiration.creditsAppliedToInvoice')).toBe(
       '11111 {{amount}} 11111',
     );

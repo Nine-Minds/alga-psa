@@ -1,7 +1,7 @@
 "use server";
 
 import { getAdminConnection } from "@alga-psa/db/admin";
-import { getTenantIdBySlug } from "@alga-psa/db";
+import { getTenantIdBySlug, tenantDb } from "@alga-psa/db";
 import logger from "@alga-psa/core/logger";
 import { TIER_FEATURES } from "@alga-psa/types";
 import { ensureSsoSettingsPermission } from "@ee/lib/actions/auth/ssoPermissions";
@@ -46,13 +46,14 @@ export async function getLinkedSsoProvidersAction(
       tenantId = await getTenantIdBySlug(input.tenantSlug.trim().toLowerCase());
     }
 
-    const userQuery = knex('users')
+    const db = tenantDb(knex, tenantId ?? "__linked_sso_provider_login_discovery__");
+    const userQuery = tenantId
+      ? db.table('users')
+      : db.unscoped('users', 'linked SSO provider lookup discovers tenant by email before tenant context exists');
+
+    userQuery
       .select('user_id', 'tenant', 'two_factor_enabled')
       .where({ email, user_type: input.userType });
-
-    if (tenantId) {
-      userQuery.andWhere({ tenant: tenantId });
-    }
 
     const userRecord = await userQuery.first();
 
@@ -62,9 +63,10 @@ export async function getLinkedSsoProvidersAction(
 
     await assertTenantTierAccess(userRecord.tenant, TIER_FEATURES.SSO);
 
-    const links = await knex('user_auth_accounts')
+    const links = await tenantDb(knex, userRecord.tenant)
+      .table('user_auth_accounts')
       .select('provider')
-      .where({ tenant: userRecord.tenant, user_id: userRecord.user_id });
+      .where({ user_id: userRecord.user_id });
 
     const providers = Array.from(new Set(links.map((link) => link.provider))).filter(Boolean);
 

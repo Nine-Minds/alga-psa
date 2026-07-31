@@ -1,36 +1,40 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function (knex) {
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { db, tenantId } = context;
 
     // Get contract lines
-    const wonderlandBasic = await knex('contract_lines')
-        .where({ tenant: tenant.tenant, contract_line_name: 'Wonderland Basic' })
+    const wonderlandBasic = await db.table('contract_lines')
+        .where({ contract_line_name: 'Wonderland Basic' })
         .select('contract_line_id')
         .first();
 
-    const ozPremium = await knex('contract_lines')
-        .where({ tenant: tenant.tenant, contract_line_name: 'Oz Premium' })
+    const ozPremium = await db.table('contract_lines')
+        .where({ contract_line_name: 'Oz Premium' })
         .select('contract_line_id')
         .first();
 
     // Get services
-    const rabbitTracking = await knex('service_catalog')
-        .where({ tenant: tenant.tenant, service_name: 'Rabbit Tracking' })
+    const rabbitTracking = await db.table('service_catalog')
+        .where({ service_name: 'Rabbit Tracking' })
         .select('service_id')
         .first();
 
-    const lookingGlass = await knex('service_catalog')
-        .where({ tenant: tenant.tenant, service_name: 'Looking Glass Maintenance' })
+    const lookingGlass = await db.table('service_catalog')
+        .where({ service_name: 'Looking Glass Maintenance' })
         .select('service_id')
         .first();
 
-    const yellowBrick = await knex('service_catalog')
-        .where({ tenant: tenant.tenant, service_name: 'Yellow Brick Road Repair' })
+    const yellowBrick = await db.table('service_catalog')
+        .where({ service_name: 'Yellow Brick Road Repair' })
         .select('service_id')
         .first();
 
-    const emeraldSecurity = await knex('service_catalog')
-        .where({ tenant: tenant.tenant, service_name: 'Emerald City Security' })
+    const emeraldSecurity = await db.table('service_catalog')
+        .where({ service_name: 'Emerald City Security' })
         .select('service_id')
         .first();
 
@@ -38,7 +42,7 @@ exports.seed = async function (knex) {
 
     if (wonderlandBasic && rabbitTracking) {
         recordsToInsert.push({
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contract_line_id: wonderlandBasic.contract_line_id,
             service_id: rabbitTracking.service_id,
             quantity: 10,
@@ -48,7 +52,7 @@ exports.seed = async function (knex) {
 
     if (wonderlandBasic && lookingGlass) {
         recordsToInsert.push({
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contract_line_id: wonderlandBasic.contract_line_id,
             service_id: lookingGlass.service_id,
             quantity: 1,
@@ -58,7 +62,7 @@ exports.seed = async function (knex) {
 
     if (ozPremium && yellowBrick) {
         recordsToInsert.push({
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contract_line_id: ozPremium.contract_line_id,
             service_id: yellowBrick.service_id,
             quantity: 20,
@@ -68,7 +72,7 @@ exports.seed = async function (knex) {
 
     if (ozPremium && emeraldSecurity) {
         recordsToInsert.push({
-            tenant: tenant.tenant,
+            tenant: tenantId,
             contract_line_id: ozPremium.contract_line_id,
             service_id: emeraldSecurity.service_id,
             quantity: 1,
@@ -77,6 +81,6 @@ exports.seed = async function (knex) {
     }
 
     if (recordsToInsert.length > 0) {
-        await knex('contract_line_services').insert(recordsToInsert);
+        await db.table('contract_line_services').insert(recordsToInsert);
     }
 };

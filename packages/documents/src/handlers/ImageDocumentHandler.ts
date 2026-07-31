@@ -1,6 +1,7 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { documentPreviewErrorMessage } from './previewErrors';
 
 async function loadSharp() {
   try {
@@ -85,7 +86,7 @@ export class ImageDocumentHandler extends BaseDocumentHandler {
       console.error(`[ImageDocumentHandler] Error generating preview for document ${document.document_id}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate image document preview'
+        error: documentPreviewErrorMessage(error, 'Failed to generate image document preview')
       };
     }
   }

@@ -40,8 +40,11 @@ export type { LabelResolutionMap } from './curatedTicketDiff';
 export {
   readTicketActivity,
   buildUnifiedTicketTimeline,
+  mergeTimelineEntries,
 } from './readTicketActivity';
 export type {
   TicketTimelineEntry,
   TicketTimelineEntryType,
+  TicketTimelineTimeEntry,
+  TicketTimelineAlert,
 } from './readTicketActivity';

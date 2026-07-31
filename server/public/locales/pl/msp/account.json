@@ -63,7 +63,6 @@
   "features": {
     "integrations": "Integracje — połącz kalendarz, Microsoft Teams, Entra i inne usługi zewnętrzne",
     "extensions": "Rozszerzenia — instaluj i zarządzaj rozszerzeniami z marketplace w swoim obszarze roboczym",
-    "managedEmail": "Zarządzana Poczta — skonfiguruj hostowane dostarczanie poczty z Alga PSA",
     "sso": "Logowanie Jednokrotne — skonfiguruj SSO i dostawców tożsamości OAuth dla swojego zespołu",
     "advancedAssets": "Zaawansowane Zasoby — odblokuj odkrywanie zasobów powiązanych z RMM i bogatsze mechanizmy kontroli zasobów",
     "clientPortalAdmin": "Administracja Portalem Klienta — zarządzaj zaawansowanym brandingiem i administracją portalu klienta",
@@ -72,7 +71,8 @@
     "entraSync": "Microsoft Entra Sync — automatycznie wykrywaj tenanty i synchronizuj kontakty z Entra ID",
     "cipp": "Integracja CIPP — połącz swoją instancję CIPP do zarządzania wielotenantowego Entra",
     "teamsIntegration": "Microsoft Teams — integracja spotkań i bot Teams do powiadomień o zgłoszeniach",
-    "advancedAuthorizationBundles": "Zaawansowane Pakiety Autoryzacji — twórz i zarządzaj premium pakietami zawężającymi ABAC"
+    "advancedAuthorizationBundles": "Zaawansowane Pakiety Autoryzacji — twórz i zarządzaj premium pakietami zawężającymi ABAC",
+    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
   },
   "summary": {
     "licensesUsed": "Wykorzystane Licencje",
@@ -316,6 +316,45 @@
     "newSubNote": "Zostanie utworzona nowa subskrypcja. Ta zmiana wchodzi w życie natychmiast.",
     "perMonthSuffix": "/mies."
   },
+  "productUpgrade": {
+    "cardTitle": "Przejdź na AlgaPSA",
+    "cardDescription": "Przenieś ten obszar roboczy z AlgaDesk na pełną platformę AlgaPSA.",
+    "currentPlanLabel": "Bieżący plan",
+    "algadeskPlanName": "AlgaDesk",
+    "currentPerSeatLabel": "Bieżąca cena za stanowisko",
+    "perSeatValue": "${{amount}} za stanowisko",
+    "cardCta": "Odblokuj rozliczenia, projekty, zasoby i pełny zestaw funkcji PSA.",
+    "openButton": "Przejdź na AlgaPSA",
+    "dialogTitle": "Przejdź na AlgaPSA",
+    "intro": "Przenosisz ten obszar roboczy z <strong>AlgaDesk</strong> na <strong>AlgaPSA</strong>.",
+    "targetPerSeatLabel": "Cena AlgaPSA za stanowisko",
+    "seatCountLabel": "Stanowiska",
+    "billingIntervalLabel": "Interwał rozliczeń",
+    "intervalMonth": "Miesięczny",
+    "intervalYear": "Roczny",
+    "dueTodayLabel": "Proporcjonalna kwota należna dzisiaj",
+    "dueTodayUnknown": "Zostanie wyświetlona przy potwierdzeniu",
+    "prorationFallback": "Dokładna proporcjonalna kwota zostanie wyświetlona przy potwierdzeniu w Stripe.",
+    "confirm": "Potwierdź Aktualizację",
+    "confirming": "Rozpoczynanie aktualizacji...",
+    "cancel": "Anuluj",
+    "inProgressTitle": "Aktualizowanie do AlgaPSA...",
+    "inProgressBody": "Może to potrwać minutę. Pozostaw to okno otwarte do zakończenia procesu.",
+    "currentStepLabel": "Bieżący krok",
+    "preparingStep": "Przygotowywanie...",
+    "completedStepsLabel": "Ukończone kroki",
+    "successTitle": "Witamy w AlgaPSA!",
+    "successBody": "Twój obszar roboczy został zaktualizowany i pełny zestaw funkcji PSA jest już dostępny.",
+    "successReloginNotice": "Inni zalogowani użytkownicy muszą się wylogować i zalogować ponownie, zanim zobaczą AlgaPSA.",
+    "successDone": "Gotowe",
+    "failedTitle": "Aktualizacja nie została ukończona",
+    "failedBody": "Podczas aktualizacji wystąpił problem. Żadne zmiany nie zostały utracone — możesz bezpiecznie spróbować ponownie.",
+    "retry": "Spróbuj ponownie",
+    "retrying": "Ponawianie próby...",
+    "close": "Zamknij",
+    "previewFailed": "Nie udało się załadować szczegółów aktualizacji",
+    "startFailed": "Nie udało się rozpocząć aktualizacji"
+  },
   "downgradeDialog": {
     "title": "Obniż do Solo",
     "downgrading": "Obniżanie...",
@@ -386,6 +425,76 @@
       "switchingCompetitor": "Przełączam się do konkurencji",
       "noLongerNeed": "Nie potrzebuję już usługi",
       "other": "Inne"
+    }
+  },
+  "aiUsage": {
+    "title": "Użycie AI",
+    "subtitle": "Rozliczenia oparte na kredytach za funkcje AI Alga",
+    "refresh": "Odśwież",
+    "errors": {
+      "loadSummary": "Nie udało się załadować szczegółów użycia AI",
+      "loadHistory": "Nie udało się załadować historii użycia",
+      "subscribe": "Nie udało się rozpocząć płatności",
+      "topup": "Nie udało się rozpocząć płatności za doładowanie",
+      "autoTopup": "Nie udało się zapisać ustawień automatycznego doładowania",
+      "unavailable": "Szczegóły użycia AI są obecnie niedostępne. Spróbuj ponownie za chwilę."
+    },
+    "upsell": {
+      "heading": "Dodaj AI do swojego obszaru roboczego",
+      "body": "Subskrybuj dodatek AI, aby odblokować Alga AI w czacie, segregowaniu e-maili i nie tylko. Twój plan miesięczny obejmuje przydział kredytów; kupuj jednorazowe doładowania lub włącz automatyczne doładowanie w dowolnym momencie.",
+      "subscribe": "Subskrybuj dodatek AI",
+      "subscribing": "Przekierowywanie…"
+    },
+    "grace": {
+      "title": "Kredyty wyczerpane — używany jest bufor bezpieczeństwa",
+      "body": "AI nadal działa w ramach niewielkiego buforu bezpieczeństwa wynoszącego {{grace}} kredytów. Doładuj, aby uniknąć całkowitego zatrzymania."
+    },
+    "lowBalance": {
+      "title": "Niski stan kredytów",
+      "body": "Rozważ doładowanie lub włączenie automatycznego doładowania, aby uniknąć przerw."
+    },
+    "balance": {
+      "total": "Łączne saldo",
+      "creditsUnit": "kredyty",
+      "included": "W pakiecie (miesięcznie)",
+      "resetsMonthly": "resetuje się co cykl",
+      "topup": "Doładowanie (nie wygasa)",
+      "carriesOver": "przechodzi dalej"
+    },
+    "cycle": {
+      "label": "Cykl rozliczeniowy",
+      "resetsIn": "Reset za {{days}} dni"
+    },
+    "topup": {
+      "title": "Kup kredyty doładowania",
+      "description": "Jednorazowe pakiety kredytów, które nigdy nie wygasają.",
+      "noPacks": "Nie skonfigurowano jeszcze pakietów doładowań.",
+      "packWithCredits": "{{label}} ({{credits}} kredytów)"
+    },
+    "autoTopup": {
+      "title": "Automatyczne doładowanie",
+      "description": "Automatycznie kupuje pakiet, gdy saldo spadnie poniżej progu.",
+      "enable": "Włącz automatyczne doładowanie",
+      "enableHelp": "Używa zapisanej metody płatności do obciążeń poza sesją.",
+      "threshold": "Próg (kredyty)",
+      "pack": "Pakiet do zakupu",
+      "selectPack": "Wybierz pakiet",
+      "save": "Zapisz automatyczne doładowanie",
+      "saved": "Zapisano ustawienia automatycznego doładowania",
+      "saving": "Zapisywanie…"
+    },
+    "history": {
+      "title": "Historia użycia",
+      "description": "Zużycie kredytów na żądanie.",
+      "allFeatures": "Wszystkie funkcje",
+      "date": "Data",
+      "feature": "Funkcja",
+      "model": "Model",
+      "tokens": "Tokeny",
+      "credits": "Kredyty",
+      "empty": "Nie zarejestrowano jeszcze użycia.",
+      "loading": "Ładowanie…",
+      "loadMore": "Załaduj więcej"
     }
   }
 }

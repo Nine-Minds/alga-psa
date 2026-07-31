@@ -1,8 +1,9 @@
 'use server'
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
-import { deleteEntityWithValidation, unparseCSV, isEnterprise } from '@alga-psa/core';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { unparseCSV, isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
@@ -16,9 +17,8 @@ import {
 } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
-import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { createTag } from '@alga-psa/tags/actions';
+import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -31,16 +31,78 @@ import {
 } from '@alga-psa/workflow-streams';
 import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
+import { normalizeClientType } from '../lib/normalizeClientType';
 
-const CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
-const CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
   'industry',
   'company_size',
   'annual_revenue',
 ]);
+type ClientUpdateActionError = ActionMessageError | ActionPermissionError;
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+function updateClientExpectedErrorFrom(error: unknown, clientName?: string | null): ClientUpdateActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
+      return permissionError('You must be signed in to manage clients.');
+    }
+    if (error.message === 'Client not found') {
+      return actionError('Client not found');
+    }
+  }
+
+  const dbError = error as { code?: string; constraint?: string; column?: string; message?: string };
+  if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('clients_tenant_client_name_unique')) {
+      return actionError(`A client with the name "${clientName || 'this name'}" already exists. Please choose a different name.`);
+    }
+    return actionError('A client with these details already exists. Please check the client name.');
+  }
+  if (dbError?.code === '23503') {
+    return actionError('Referenced data not found. Please check account manager, billing contact, and related client settings.');
+  }
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected client values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('Invalid client data provided. Please check all fields and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required client field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+
+  return null;
+}
+
+function clientActionMessageFrom(error: unknown, fallback: string, clientName?: string | null): string {
+  const expected = updateClientExpectedErrorFrom(error, clientName);
+  if (expected) {
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? fallback);
+  }
+
+  return fallback;
+}
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
@@ -111,36 +173,34 @@ async function cleanupEntraReferencesBeforeClientDelete(
   const now = trx.fn.now();
 
   if (existingTables.has('entra_sync_run_tenants')) {
-    await trx('entra_sync_run_tenants')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_sync_run_tenants', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_links')) {
-    await trx('entra_contact_links')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_contact_links', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_contact_reconciliation_queue')) {
-    await trx('entra_contact_reconciliation_queue')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 
   if (existingTables.has('entra_client_tenant_mappings')) {
-    const activeMappings = await trx('entra_client_tenant_mappings')
+    const activeMappings = await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
       .where({
-        tenant: tenantId,
         client_id: clientId,
         is_active: true,
       })
       .select('managed_tenant_id');
 
     if (activeMappings.length > 0) {
-      await trx('entra_client_tenant_mappings')
+      await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
         .where({
-          tenant: tenantId,
           client_id: clientId,
           is_active: true,
         })
@@ -162,24 +222,30 @@ async function cleanupEntraReferencesBeforeClientDelete(
         updated_at: now,
       }));
 
-      await trx('entra_client_tenant_mappings').insert(unmappedRows);
+      await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId).insert(unmappedRows);
     }
 
-    await trx('entra_client_tenant_mappings')
-      .where({ tenant: tenantId, client_id: clientId })
+    await tenantScopedTable(trx, 'entra_client_tenant_mappings', tenantId)
+      .where({ client_id: clientId })
       .update({ client_id: null, updated_at: now });
   }
 }
 
-export const updateClient = withAuth(async (user, { tenant }, clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient> => {
-  await assertMspOrClientPortalOwnClientPermission(
-    user,
-    tenant,
-    clientId,
-    'client',
-    'update',
-    'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.'
-  );
+export const updateClient = withAuth(async (user, { tenant }, clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient | ClientUpdateActionError> => {
+  try {
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      clientId,
+      'client',
+      'update',
+      'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.'
+    );
+  } catch (error) {
+    const expected = updateClientExpectedErrorFrom(error, updateData.client_name);
+    if (expected) return expected;
+    throw error;
+  }
 
   const isClientPortalUpdate = isClientPortalUser(user);
   const permittedUpdateData = isClientPortalUpdate
@@ -198,8 +264,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       };
 
       // First, get the current client data to properly merge properties
-      const currentClient = await trx<IClient>('clients')
-        .where({ client_id: clientId, tenant })
+      const currentClient = await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
 
       if (!currentClient) {
@@ -262,13 +328,13 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
       console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
 
-      const [updatedClient] = await trx<IClient>('clients')
-        .where({ client_id: clientId, tenant })
+      const [updatedClient] = await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .update(updateObject)
         .returning('*');
 
       if (!updatedClient) {
-        throw new Error('Failed to fetch updated client');
+        throw new Error('Client update completed without returning the updated record.');
       }
 
       return {
@@ -307,6 +373,26 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
         }),
         ctx: { tenantId: tenant, occurredAt, actor },
         idempotencyKey: `client_status_changed:${clientId}:${occurredAt}`,
+      });
+    }
+
+    const previousClientLifecycleStatus = (updateResult.before as any)?.lifecycle_status;
+    const newClientLifecycleStatus = (updateResult.after as any)?.lifecycle_status;
+    if (
+      typeof previousClientLifecycleStatus === 'string' &&
+      typeof newClientLifecycleStatus === 'string' &&
+      previousClientLifecycleStatus !== newClientLifecycleStatus
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId,
+          previousStatus: previousClientLifecycleStatus,
+          newStatus: newClientLifecycleStatus,
+          changedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_lifecycle_status_changed:${clientId}:${occurredAt}`,
       });
     }
 
@@ -387,16 +473,18 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     return updatedClientWithLogo;
   } catch (error) {
     console.error('Error updating client:', error);
-    throw new Error('Failed to update client');
+    const expected = updateClientExpectedErrorFrom(error, permittedUpdateData.client_name);
+    if (expected) return expected;
+    throw error;
   }
 });
 
 export const createClient = withAuth(async (user, { tenant }, client: Omit<IClient, 'client_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: IClient } | { success: false; error: string }> => {
-  await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
-
-  const { knex } = await createTenantKnex();
-
   try {
+    await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
+
+    const { knex } = await createTenantKnex();
+
     // Ensure website field is synchronized between properties.website and url
     const clientData = { ...client };
 
@@ -417,15 +505,14 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     // (default_billing_settings.default_currency_code) instead of leaving it null and
     // letting downstream `... || 'USD'` fallbacks fire. 'USD' remains the final fallback.
     if (!clientData.default_currency_code) {
-      const billingSettings = await knex('default_billing_settings')
-        .where({ tenant })
+      const billingSettings = await tenantScopedTable(knex, 'default_billing_settings', tenant)
         .select('default_currency_code')
         .first();
       clientData.default_currency_code = billingSettings?.default_currency_code || 'USD';
     }
 
     const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await trx<IClient>('clients')
+      const [created] = await tenantScopedTable(trx, 'clients', tenant)
         .insert({
           ...clientData,
           tenant,
@@ -443,7 +530,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     });
 
     if (!createdClient) {
-      throw new Error('Failed to create client');
+      throw new Error('Client insert completed without returning the created record.');
     }
 
     // Create default tax settings for the new client
@@ -476,6 +563,17 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
   } catch (error: any) {
     console.error('Error creating client:', error);
 
+    const expected = updateClientExpectedErrorFrom(error, client.client_name);
+    if (expected) {
+      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+      return {
+        success: false,
+        error: typeof candidate.permissionError === 'string'
+          ? candidate.permissionError
+          : String(candidate.actionError ?? 'Failed to create client'),
+      };
+    }
+
     // Handle specific database constraint violations
     if (error.code === '23505') { // PostgreSQL unique constraint violation
       if (error.constraint && error.constraint.includes('clients_tenant_client_name_unique')) {
@@ -501,7 +599,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     }
 
     // Default fallback for system errors
-    throw new Error('Failed to create client. Please try again.');
+    throw error;
   }
 });
 
@@ -512,6 +610,7 @@ export interface ClientPaginationParams {
   includeInactive?: boolean;
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
+  lifecycleFilter?: 'all' | 'prospect' | 'active' | 'former';
   loadLogos?: boolean; // Option to load logos or not
   selectedTags?: string[]; // Filter by tags
   /**
@@ -538,184 +637,8 @@ export interface BillingCycleDateRange {
   to?: string;
 }
 
-function buildClientListSearchPrefixTsquery(raw: string): string | null {
-  const tokens = raw
-    .toLowerCase()
-    .replace(CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
-
-  if (tokens.length === 0) {
-    return null;
-  }
-
-  return tokens.map((token) => `${token}:*`).join(' & ');
-}
-
-function applyClientListIndexedSearchFilter(
-  baseQuery: Knex.QueryBuilder,
-  tenant: string,
-  user: { user_id: string; user_type?: string; clientId?: string | null },
-  rawSearchInput: string | undefined,
-  permissions: string[]
-): Knex.QueryBuilder {
-  const rawSearch = rawSearchInput?.replace(/\s+/g, ' ').trim();
-  if (!rawSearch) {
-    return baseQuery;
-  }
-
-  const prefixTsquery = buildClientListSearchPrefixTsquery(rawSearch);
-  const identifier = rawSearch.match(CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
-  const isInternalUser = user.user_type !== 'client';
-  const clientScopePredicate = isInternalUser
-    ? 'TRUE'
-    : user.clientId
-      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
-      : 'si.client_scope_id IS NULL';
-  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
-  const ilikePattern = `%${rawSearch}%`;
-
-  // Citus cannot push down an OR that mixes correlated EXISTS across multiple
-  // distributed tables (app_search_index, interactions, document_associations,
-  // client_locations). Rewrite as UNION ALL of single-distributed-table legs
-  // producing (client_id, tenant); each leg is independently pushdown-safe and
-  // the outer INNER JOIN is co-located on the distribution column. Mirrors the
-  // ticket search rewrite in optimizedTicketActions.ts (PR #2547).
-  const qCte = `
-    CROSS JOIN (
-      SELECT
-        websearch_to_tsquery('english', ?) AS tsq,
-        CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-        ?::text AS raw,
-        ?::text AS identifier
-    ) q
-  `;
-  const qBindings: Knex.RawBinding[] = [rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier];
-
-  const siFilters = `
-    AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
-    AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-    AND (si.is_internal_only = false OR ?::boolean = true)
-    AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-    AND ${clientScopePredicate}
-    AND (
-      si.search_vector @@ q.tsq
-      OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
-      OR si.title ILIKE '%' || q.raw || '%'
-      OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-      OR si.title % q.raw
-      OR coalesce(si.subtitle, '') % q.raw
-      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
-      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
-    )
-  `;
-  const siFilterBindings: Knex.RawBinding[] = [
-    permissions,
-    user.user_id,
-    isInternalUser,
-    user.user_id,
-    ...clientScopeBindings,
-  ];
-
-  const legA = `
-    SELECT si.object_id::uuid AS client_id, si.tenant
-    FROM app_search_index si
-    ${qCte}
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'client'
-      ${siFilters}
-  `;
-  const legABindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
-
-  const legB = `
-    SELECT im.client_id AS client_id, im.tenant
-    FROM app_search_index si
-    ${qCte}
-    JOIN interactions im
-      ON im.tenant = si.tenant
-     AND im.interaction_id::text = si.object_id
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'interaction'
-      ${siFilters}
-  `;
-  const legBBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
-
-  const legC = `
-    SELECT da.entity_id::uuid AS client_id, da.tenant
-    FROM app_search_index si
-    ${qCte}
-    JOIN document_associations da
-      ON da.tenant = si.tenant
-     AND da.document_id::text = si.object_id
-     AND da.entity_type = 'client'
-    WHERE si.tenant = ?::uuid
-      AND si.object_type = 'document'
-      ${siFilters}
-  `;
-  const legCBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
-
-  const legD = `
-    SELECT c2.client_id, c2.tenant
-    FROM clients c2
-    WHERE c2.tenant = ?::uuid
-      AND (
-        c2.client_name ILIKE ?
-        OR c2.billing_email ILIKE ?
-        OR c2.url ILIKE ?
-        OR c2.notes ILIKE ?
-      )
-  `;
-  const legDBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern, ilikePattern, ilikePattern];
-
-  const legE = `
-    SELECT cl_search.client_id, cl_search.tenant
-    FROM client_locations cl_search
-    WHERE cl_search.tenant = ?::uuid
-      AND (
-        cl_search.phone ILIKE ?
-        OR cl_search.email ILIKE ?
-        OR cl_search.address_line1 ILIKE ?
-        OR cl_search.address_line2 ILIKE ?
-        OR cl_search.city ILIKE ?
-        OR cl_search.state_province ILIKE ?
-        OR cl_search.postal_code ILIKE ?
-        OR cl_search.country_name ILIKE ?
-      )
-  `;
-  const legEBindings: Knex.RawBinding[] = [
-    tenant,
-    ilikePattern, ilikePattern, ilikePattern, ilikePattern,
-    ilikePattern, ilikePattern, ilikePattern, ilikePattern,
-  ];
-
-  const unionSql = `
-    INNER JOIN (
-      SELECT DISTINCT client_id, tenant FROM (
-        ${legA}
-        UNION ALL
-        ${legB}
-        UNION ALL
-        ${legC}
-        UNION ALL
-        ${legD}
-        UNION ALL
-        ${legE}
-      ) u
-    ) as sm ON sm.client_id = c.client_id AND sm.tenant = c.tenant
-  `;
-
-  return baseQuery.joinRaw(unionSql, [
-    ...legABindings,
-    ...legBBindings,
-    ...legCBindings,
-    ...legDBindings,
-    ...legEBindings,
-  ] as unknown as Knex.Value[]);
-}
-
 function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
-  return trx('client_locations')
+  return tenantScopedTable(trx, 'client_locations', tenant)
     .select(
       'tenant',
       'client_id',
@@ -736,7 +659,7 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
         ) as rn
       `)
     )
-    .where({ tenant, is_default: true })
+    .where({ is_default: true })
     .as('cl');
 }
 
@@ -756,6 +679,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     includeInactive = true,
     searchTerm,
     clientTypeFilter = 'all',
+    lifecycleFilter = 'all',
     loadLogos = true,
     statusFilter,
     selectedTags,
@@ -771,17 +695,17 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     // Use a transaction to get paginated client data
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build the base query with client_locations join
-      let baseQuery = trx('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
-        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.rn', '=', trx.raw('1'));
-        })
-        .where({ 'c.tenant': tenant });
+      const scopedDb = tenantDb(trx, tenant);
+      let baseQuery = scopedDb.table('clients as c');
+      scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
+        type: 'left',
+        rootTenantColumn: 'c.tenant',
+        joinedTenantColumn: 'cl.tenant',
+        on(join) {
+          join.andOn('cl.rn', '=', trx.raw('1'));
+        },
+      });
 
       if (statusFilter === 'active') {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -792,25 +716,25 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       }
 
       // Apply filters
-      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
+      baseQuery = applyClientListIndexedSearchFilter(trx, baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
       }
 
+      if (lifecycleFilter !== 'all') {
+        baseQuery = baseQuery.where('c.lifecycle_status', lifecycleFilter);
+      }
+
       // Apply tag filter using new tag structure
       if (selectedTags && selectedTags.length > 0) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('tm.tagged_id')
-            .from('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tagged_type', 'client')
-            .where('tm.tenant', tenant)
-            .whereIn('td.tag_text', selectedTags);
-        });
+        const tagSubquery = scopedDb.table('tag_mappings as tm')
+          .select('tm.tagged_id');
+        scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+        tagSubquery
+          .where('tm.tagged_type', 'client')
+          .whereIn('td.tag_text', selectedTags);
+        baseQuery = baseQuery.whereIn('c.client_id', tagSubquery);
       }
 
       // Get total count
@@ -818,11 +742,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
       // Get paginated clients with location data and default flag
-      let clientsQuery = baseQuery
-        .leftJoin('tenant_companies as tc', function() {
-          this.on('c.client_id', '=', 'tc.client_id')
-              .andOn('c.tenant', '=', 'tc.tenant');
-        })
+      let clientsQuery = scopedDb
+        .tenantJoin(baseQuery, 'tenant_companies as tc', 'c.client_id', 'tc.client_id', { type: 'left' })
         .select(
           'c.*',
           'tc.is_default',
@@ -877,20 +798,20 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     });
 
     // Process clients to add logoUrl if requested
-    let clientsWithLogos = result.clients;
+    let clientsWithLogos = result.clients as IClientWithLocation[];
 
     if (loadLogos && clientsWithLogos.length > 0) {
-      const clientIds = clientsWithLogos.map(c => c.client_id);
+      const clientIds = clientsWithLogos.map((c: IClientWithLocation) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
 
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: logoUrlsMap.get(client.client_id) || null,
       }));
     } else {
       // If not loading logos, ensure logoUrl is null
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: null,
@@ -944,17 +865,17 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     const offset = (page - 1) * pageSize;
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      let baseQuery = trx('clients as c')
-        .leftJoin('users as u', function() {
-          this.on('c.account_manager_id', '=', 'u.user_id')
-              .andOn('c.tenant', '=', 'u.tenant');
-        })
-        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.rn', '=', trx.raw('1'));
-        })
-        .where({ 'c.tenant': tenant });
+      const scopedDb = tenantDb(trx, tenant);
+      let baseQuery = scopedDb.table('clients as c');
+      scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
+        type: 'left',
+        rootTenantColumn: 'c.tenant',
+        joinedTenantColumn: 'cl.tenant',
+        on(join) {
+          join.andOn('cl.rn', '=', trx.raw('1'));
+        },
+      });
 
       if (statusFilter === 'active') {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
@@ -964,54 +885,46 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 
-      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
+      baseQuery = applyClientListIndexedSearchFilter(trx, baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
       }
 
       if (selectedTags && selectedTags.length > 0) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('tm.tagged_id')
-            .from('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tagged_type', 'client')
-            .where('tm.tenant', tenant)
-            .whereIn('td.tag_text', selectedTags);
-        });
+        const tagSubquery = scopedDb.table('tag_mappings as tm')
+          .select('tm.tagged_id');
+        scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+        tagSubquery
+          .where('tm.tagged_type', 'client')
+          .whereIn('td.tag_text', selectedTags);
+        baseQuery = baseQuery.whereIn('c.client_id', tagSubquery);
       }
 
       if (dateRange?.from || dateRange?.to) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('cbc.client_id')
-            .from('client_billing_cycles as cbc')
-            .where('cbc.tenant', tenant);
+        const billingCycleSubquery = tenantScopedTable(trx, 'client_billing_cycles as cbc', tenant)
+          .select('cbc.client_id');
 
-          if (dateRange?.from) {
-            const rangeFrom = dateRange.from;
-            this.andWhere(function() {
-              this.whereNull('cbc.period_end_date')
-                .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
-            });
-          }
+        if (dateRange?.from) {
+          const rangeFrom = dateRange.from;
+          billingCycleSubquery.andWhere(function() {
+            this.whereNull('cbc.period_end_date')
+              .orWhereRaw('cbc.period_end_date >= ?', [rangeFrom]);
+          });
+        }
 
-          if (dateRange?.to) {
-            this.andWhere('cbc.period_start_date', '<=', dateRange.to);
-          }
-        });
+        if (dateRange?.to) {
+          billingCycleSubquery.andWhere('cbc.period_start_date', '<=', dateRange.to);
+        }
+
+        baseQuery = baseQuery.whereIn('c.client_id', billingCycleSubquery);
       }
 
       const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
-      let clientsQuery = baseQuery
-        .leftJoin('tenant_companies as tc', function() {
-          this.on('c.client_id', '=', 'tc.client_id')
-              .andOn('c.tenant', '=', 'tc.tenant');
-        })
+      let clientsQuery = scopedDb
+        .tenantJoin(baseQuery, 'tenant_companies as tc', 'c.client_id', 'tc.client_id', { type: 'left' })
         .select(
           'c.*',
           'tc.is_default',
@@ -1057,19 +970,19 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
       return { clients, totalCount };
     });
 
-    let clientsWithLogos = result.clients;
+    let clientsWithLogos = result.clients as IClientWithLocation[];
 
     if (loadLogos && clientsWithLogos.length > 0) {
-      const clientIds = clientsWithLogos.map(c => c.client_id);
+      const clientIds = clientsWithLogos.map((c: IClientWithLocation) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
 
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: logoUrlsMap.get(client.client_id) || null,
       }));
     } else {
-      clientsWithLogos = clientsWithLogos.map((client) => ({
+      clientsWithLogos = clientsWithLogos.map((client: IClientWithLocation) => ({
         ...client,
         properties: client.properties || {},
         logoUrl: null,
@@ -1107,8 +1020,8 @@ export const validateClientDeletion = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx('clients')
-      .where({ client_id: clientId, tenant })
+    return await tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: clientId })
       .first();
   });
 
@@ -1123,10 +1036,9 @@ export const validateClientDeletion = withAuth(async (
   }
 
   const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const tenantClient = await trx('tenant_companies')
+    const tenantClient = await tenantScopedTable(trx, 'tenant_companies', tenant)
       .where({
         client_id: clientId,
-        tenant,
         is_default: true
       })
       .first();
@@ -1185,15 +1097,22 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
   counts?: Record<string, number>;
 }> => {
   if (!await hasMspPermission(user, 'client', 'delete')) {
-    throw new Error('Permission denied: Cannot delete clients');
+    return {
+      success: false,
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: Cannot delete clients',
+      dependencies: [],
+      alternatives: []
+    };
   }
 
   try {
     const { knex: db } = await createTenantKnex();
 
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('clients')
-        .where({ client_id: clientId, tenant })
+      return await tenantScopedTable(trx, 'clients', tenant)
+        .where({ client_id: clientId })
         .first();
     });
 
@@ -1209,10 +1128,9 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     }
 
     const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenantClient = await trx('tenant_companies')
+      const tenantClient = await tenantScopedTable(trx, 'tenant_companies', tenant)
         .where({
           client_id: clientId,
-          tenant,
           is_default: true
         })
         .first();
@@ -1233,40 +1151,40 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     const result = await deleteEntityWithValidation('client', clientId, db, tenant, async (trx, tenantId) => {
       await deleteEntityTags(trx, clientId, 'client');
 
-      const deletedTaxSettings = await trx('client_tax_settings')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedTaxSettings = await tenantScopedTable(trx, 'client_tax_settings', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedTaxSettings > 0) {
         console.log(`Deleted ${deletedTaxSettings} client tax settings records`);
       }
 
-      const deletedTaxRates = await trx('client_tax_rates')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedTaxRates = await tenantScopedTable(trx, 'client_tax_rates', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedTaxRates > 0) {
         console.log(`Deleted ${deletedTaxRates} client tax rate records`);
       }
 
-      const deletedContracts = await trx('client_contracts')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedContracts = await tenantScopedTable(trx, 'client_contracts', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedContracts > 0) {
         console.log(`Deleted ${deletedContracts} client contract records`);
       }
 
-      const deletedBillingCycles = await trx('client_billing_cycles')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedBillingCycles = await tenantScopedTable(trx, 'client_billing_cycles', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedBillingCycles > 0) {
         console.log(`Deleted ${deletedBillingCycles} client billing cycle records`);
       }
 
-      const deletedBillingSettings = await trx('client_billing_settings')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedBillingSettings = await tenantScopedTable(trx, 'client_billing_settings', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedBillingSettings > 0) {
@@ -1274,8 +1192,8 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       }
 
       if (isEnterprise) {
-        const deletedPaymentCustomers = await trx('client_payment_customers')
-          .where({ client_id: clientId, tenant: tenantId })
+        const deletedPaymentCustomers = await tenantScopedTable(trx, 'client_payment_customers', tenantId)
+          .where({ client_id: clientId })
           .delete();
 
         if (deletedPaymentCustomers > 0) {
@@ -1283,39 +1201,39 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
         }
       }
 
-      const deletedLocations = await trx('client_locations')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deletedLocations = await tenantScopedTable(trx, 'client_locations', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (deletedLocations > 0) {
         console.log(`Deleted ${deletedLocations} client location records`);
       }
 
-      const clientRecord = await trx('clients')
-        .where({ client_id: clientId, tenant: tenantId })
+      const clientRecord = await tenantScopedTable(trx, 'clients', tenantId)
+        .where({ client_id: clientId })
         .select('notes_document_id')
         .first();
 
       if (clientRecord?.notes_document_id) {
         console.log(`Cleaning up notes document: ${clientRecord.notes_document_id}`);
 
-        await trx('document_block_content')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_block_content', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
 
-        await trx('document_associations')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'document_associations', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
 
-        await trx('documents')
-          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
+        await tenantScopedTable(trx, 'documents', tenantId)
+          .where({ document_id: clientRecord.notes_document_id })
           .delete();
       }
 
       await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, clientId);
 
-      const deleted = await trx('clients')
-        .where({ client_id: clientId, tenant: tenantId })
+      const deleted = await tenantScopedTable(trx, 'clients', tenantId)
+        .where({ client_id: clientId })
         .delete();
 
       if (!deleted || deleted === 0) {
@@ -1359,39 +1277,48 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to delete client',
+      message: clientActionMessageFrom(error, 'Failed to delete client'),
       dependencies: [],
       alternatives: []
     };
   }
 });
 
-export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: IClient[]): Promise<string> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot export clients');
+export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: IClient[]): Promise<string | ClientUpdateActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot export clients');
+  } catch (error) {
+    const expected = updateClientExpectedErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
   const exportData = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Fetch location data for all clients
     const clientIds = clients.map(c => c.client_id);
-    const locations = await trx('client_locations')
+    const locations = await tenantScopedTable(trx, 'client_locations', tenant)
       .whereIn('client_id', clientIds)
-      .andWhere('tenant', tenant)
       .andWhere('is_default', true);
 
     // Create a map of client_id to location
     const locationMap = new Map();
-    locations.forEach(loc => {
+    locations.forEach((loc: { client_id: string }) => {
       locationMap.set(loc.client_id, loc);
     });
 
     // Fetch tags for all clients
-    const { findTagsByEntityIds } = await import('@alga-psa/tags/actions');
+    const { findTagsByEntityIds, isTagActionError: isImportedTagActionError } = await import('@alga-psa/tags/actions');
     const tags = await findTagsByEntityIds(clientIds, 'client');
+    const safeTags = isImportedTagActionError(tags) ? [] : tags;
+    if (isImportedTagActionError(tags)) {
+      console.warn('[exportClientsToCSV] Failed to load client tags:', tags);
+    }
 
     // Create a map of client_id to tags
     const tagMap = new Map<string, string[]>();
-    tags.forEach(tag => {
+    safeTags.forEach(tag => {
       if (!tagMap.has(tag.tagged_id)) {
         tagMap.set(tag.tagged_id, []);
       }
@@ -1494,8 +1421,14 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
   selectedTags?: string[];
-} = {}): Promise<string[]> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+} = {}): Promise<string[] | ClientUpdateActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+  } catch (error) {
+    const expected = updateClientExpectedErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex: db } = await createTenantKnex();
 
@@ -1509,15 +1442,16 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build the base query - same filtering logic as getAllClientsPaginated
-      let baseQuery = trx('clients as c')
-        .where({ 'c.tenant': tenant });
+      const scopedDb = tenantDb(trx, tenant);
+      let baseQuery = scopedDb.table('clients as c');
 
       // Join with locations for search if needed
       if (searchTerm) {
-        baseQuery = baseQuery.leftJoin('client_locations as cl', function() {
-          this.on('c.client_id', '=', 'cl.client_id')
-              .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
+        baseQuery = scopedDb.tenantJoin(baseQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+          type: 'left',
+          on: (join) => {
+            join.andOn('cl.is_default', '=', trx.raw('true'));
+          },
         });
       }
 
@@ -1546,21 +1480,16 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
 
       // Apply tag filter using new tag structure
       if (selectedTags && selectedTags.length > 0) {
-        baseQuery = baseQuery.whereIn('c.client_id', function() {
-          this.select('tm.tagged_id')
-            .from('tag_mappings as tm')
-            .join('tag_definitions as td', function() {
-              this.on('tm.tenant', '=', 'td.tenant')
-                  .andOn('tm.tag_id', '=', 'td.tag_id');
-            })
-            .where('tm.tagged_type', 'client')
-            .where('tm.tenant', tenant)
-            .whereIn('td.tag_text', selectedTags);
-        });
+        const tagQuery = scopedDb.table('tag_mappings as tm').select('tm.tagged_id');
+        scopedDb.tenantJoin(tagQuery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+        tagQuery
+          .where('tm.tagged_type', 'client')
+          .whereIn('td.tag_text', selectedTags);
+        baseQuery = baseQuery.whereIn('c.client_id', tagQuery);
       }
 
       // Get all client IDs
-      const clients = await baseQuery.select('c.client_id');
+      const clients: Array<{ client_id: string }> = await baseQuery.select({ client_id: 'c.client_id' });
       return clients.map(c => c.client_id);
     });
   } catch (error) {
@@ -1573,16 +1502,21 @@ export const checkExistingClients = withAuth(async (
   user,
   { tenant },
   clientNames: string[]
-): Promise<IClient[]> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+): Promise<IClient[] | ClientUpdateActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+  } catch (error) {
+    const expected = updateClientExpectedErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex: db } = await createTenantKnex();
 
   const existingClients = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return await trx('clients')
+    return await tenantScopedTable(trx, 'clients', tenant)
       .select('*')
       .whereIn('client_name', clientNames)
-      .andWhere('tenant', tenant);
   });
 
   return existingClients;
@@ -1593,6 +1527,19 @@ export interface ImportClientResult {
   message: string;
   client?: IClient;
   originalData: Record<string, any>;
+  skipped?: boolean;
+}
+
+function clientImportFailureResults(
+  clientsData: Array<Record<string, any>> | null | undefined,
+  message: string
+): ImportClientResult[] {
+  const rows = clientsData && clientsData.length > 0 ? clientsData : [{}];
+  return rows.map((originalData) => ({
+    success: false,
+    message,
+    originalData,
+  }));
 }
 
 export const importClientsFromCSV = withAuth(async (
@@ -1601,10 +1548,12 @@ export const importClientsFromCSV = withAuth(async (
   clientsData: Array<Record<string, any>>,
   updateExisting: boolean = false
 ): Promise<ImportClientResult[]> => {
-  await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
+  if (!await hasMspPermission(user, 'client', 'create')) {
+    return clientImportFailureResults(clientsData, 'Permission denied: Cannot create clients');
+  }
 
   if (updateExisting && !await hasMspPermission(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
+    return clientImportFailureResults(clientsData, 'Permission denied: Cannot update clients');
   }
 
   const results: ImportClientResult[] = [];
@@ -1612,58 +1561,119 @@ export const importClientsFromCSV = withAuth(async (
 
   // Resolve the tenant's configured default currency once for the whole import so new
   // clients adopt it instead of inserting null (which downstream resolves to 'USD').
-  const tenantDefaultBillingSettings = await db('default_billing_settings')
-    .where({ tenant })
+  const tenantDefaultBillingSettings = await tenantScopedTable(db, 'default_billing_settings', tenant)
     .select('default_currency_code')
     .first();
   const tenantDefaultCurrencyCode = tenantDefaultBillingSettings?.default_currency_code || 'USD';
 
-  // Start a transaction to ensure all operations succeed or fail together
-  await withTransaction(db, async (trx: Knex.Transaction) => {
-    for (const clientData of clientsData) {
-      try {
-        if (!clientData.client_name) {
-          throw new Error('Client name is required');
-        }
+  const parseCsvBoolean = (value: unknown): boolean =>
+    value === true || value === 'true' || value === 'Yes';
 
-        const existingClient = await trx('clients')
-          .where({ client_name: clientData.client_name, tenant })
+  const hasLocationData = (row: Record<string, any>): boolean =>
+    Boolean(row.email || row.phone_number || row.address_line1 || row.city || row.location_name);
+
+  const locationFieldsFromRow = (row: Record<string, any>) => ({
+    location_name: row.location_name || 'Main Office',
+    address_line1: row.address_line1 || '',
+    address_line2: row.address_line2 || '',
+    city: row.city || '',
+    state_province: row.state_province || '',
+    postal_code: row.postal_code || '',
+    country_code: 'US',
+    country_name: row.country || 'United States',
+    phone: row.phone_number || '',
+    email: row.email || ''
+  });
+
+  // Each row gets its own transaction: a failed row rolls back alone instead of
+  // aborting a shared transaction and taking every later row down with it.
+  // LEVERAGE: pattern csv-import-row-isolation — tickets importer solves the same problem with savepoints (ticketImportActions safeInsert); contacts/phase-tasks/xero importers still share one abortable transaction
+  for (const clientData of clientsData) {
+    try {
+      if (!clientData.client_name) {
+        throw new Error('Client name is required');
+      }
+
+      let savedClient: IClient | undefined;
+      let created = false;
+      let skipped = false;
+
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        const existingClient = await tenantScopedTable(trx, 'clients', tenant)
+          .where({ client_name: clientData.client_name })
           .first();
 
         if (existingClient && !updateExisting) {
-          results.push({
-            success: false,
-            message: `Client with name ${clientData.client_name} already exists`,
-            originalData: clientData
-          });
-          continue;
+          skipped = true;
+          return;
         }
 
-        let savedClient: IClient;
-
-        if (existingClient && updateExisting) {
-          // Keep the existing tenant when updating
-          const { tenant: _, ...safeClientData } = clientData; // Remove tenant from spread to prevent override
-          const { account_manager_id, ...restOfSafeData } = safeClientData;
-          const updateData = {
-            ...restOfSafeData,
-            account_manager_id: account_manager_id === '' ? null : account_manager_id,
-            tenant: existingClient.tenant, // Explicitly set correct tenant
+        if (existingClient) {
+          // Map CSV fields onto real clients columns only — location data lives
+          // in client_locations, and tenant must never be part of the SET list.
+          const updateData: Record<string, any> = {
             updated_at: new Date().toISOString()
           };
+          if (clientData.website !== undefined || clientData.url !== undefined) {
+            updateData.url = clientData.website || clientData.url || '';
+          }
+          if (clientData.client_type !== undefined) {
+            updateData.client_type = normalizeClientType(clientData.client_type);
+          }
+          if (clientData.is_inactive !== undefined) {
+            updateData.is_inactive = parseCsvBoolean(clientData.is_inactive);
+          }
+          if (clientData.is_tax_exempt !== undefined) {
+            updateData.is_tax_exempt = parseCsvBoolean(clientData.is_tax_exempt);
+          }
+          if (clientData.auto_invoice !== undefined) {
+            updateData.auto_invoice = parseCsvBoolean(clientData.auto_invoice);
+          }
+          if (clientData.notes !== undefined) {
+            updateData.notes = clientData.notes || '';
+          }
+          if (clientData.credit_limit !== undefined && clientData.credit_limit !== null && clientData.credit_limit !== '') {
+            updateData.credit_limit = Number(clientData.credit_limit);
+          }
+          if (clientData.account_manager_id !== undefined) {
+            updateData.account_manager_id = clientData.account_manager_id === '' ? null : clientData.account_manager_id;
+          }
 
-          [savedClient] = await trx('clients')
+          [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .where({ client_id: existingClient.client_id })
             .update(updateData)
             .returning('*');
 
-          results.push({
-            success: true,
-            message: 'Client updated',
-            client: savedClient,
-            originalData: clientData
-          });
+          if (hasLocationData(clientData)) {
+            const defaultLocation = await tenantScopedTable(trx, 'client_locations', tenant)
+              .where({ client_id: existingClient.client_id, is_default: true })
+              .first();
+
+            if (defaultLocation) {
+              await tenantScopedTable(trx, 'client_locations', tenant)
+                .where({ location_id: defaultLocation.location_id })
+                .update({
+                  ...locationFieldsFromRow(clientData),
+                  updated_at: new Date().toISOString()
+                });
+            } else {
+              await tenantScopedTable(trx, 'client_locations', tenant).insert({
+                location_id: trx.raw('gen_random_uuid()'),
+                client_id: existingClient.client_id,
+                tenant: tenant,
+                ...locationFieldsFromRow(clientData),
+                is_default: true,
+                is_billing_address: true,
+                is_shipping_address: true,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            }
+          }
         } else {
+          created = true;
+
           // Create new client with synchronized website fields
           const properties = clientData.properties ? { ...clientData.properties } : {};
           const url = clientData.url || '';
@@ -1678,11 +1688,11 @@ export const importClientsFromCSV = withAuth(async (
           }
 
           const clientToCreate = {
-            client_name: clientData.client_name || clientData.client_name,
+            client_name: clientData.client_name,
             url: clientData.website || clientData.url || '',
-            is_inactive: clientData.is_inactive === 'Yes' || clientData.is_inactive === true || false,
+            is_inactive: parseCsvBoolean(clientData.is_inactive),
             is_tax_exempt: clientData.is_tax_exempt || false,
-            client_type: clientData.client_type || 'company',
+            client_type: normalizeClientType(clientData.client_type),
             tenant: tenant,
             properties: properties,
             account_manager_id: clientData.account_manager_id === '' ? null : clientData.account_manager_id,
@@ -1701,76 +1711,76 @@ export const importClientsFromCSV = withAuth(async (
             updated_at: new Date().toISOString()
           };
 
-          [savedClient] = await trx('clients')
+          [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .insert(clientToCreate)
             .returning('*');
 
-          // Create default location if any location data exists in CSV
-          if (clientData.email || clientData.phone_number || clientData.address_line1 ||
-              clientData.city || clientData.location_name) {
-            try {
-              await trx('client_locations').insert({
-                location_id: trx.raw('gen_random_uuid()'),
-                client_id: savedClient.client_id,
-                tenant: tenant,
-                location_name: clientData.location_name || 'Main Office',
-                address_line1: clientData.address_line1 || '',
-                address_line2: clientData.address_line2 || '',
-                city: clientData.city || '',
-                state_province: clientData.state_province || '',
-                postal_code: clientData.postal_code || '',
-                country_code: 'US',
-                country_name: clientData.country || 'United States',
-                phone: clientData.phone_number || '',
-                email: clientData.email || '',
-                is_default: true,
-                is_billing_address: true,
-                is_shipping_address: true,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              });
-            } catch (locationError) {
-              console.error('Failed to create location during CSV import:', locationError);
-              // Don't fail the client import if location creation fails
-            }
+          if (hasLocationData(clientData)) {
+            await tenantScopedTable(trx, 'client_locations', tenant).insert({
+              location_id: trx.raw('gen_random_uuid()'),
+              client_id: savedClient!.client_id,
+              tenant: tenant,
+              ...locationFieldsFromRow(clientData),
+              is_default: true,
+              is_billing_address: true,
+              is_shipping_address: true,
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
           }
-
-          // Handle tags if provided
-          if (clientData.tags) {
-            try {
-              const tagTexts = clientData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-              for (const tagText of tagTexts) {
-                await createTag({
-                  tag_text: tagText,
-                  tagged_id: savedClient.client_id,
-                  tagged_type: 'client',
-                  created_by: user.user_id
-                });
-              }
-            } catch (tagError) {
-              console.error('Failed to create tags during CSV import:', tagError);
-              // Don't fail the client import if tag creation fails
-            }
-          }
-
-          results.push({
-            success: true,
-            message: 'Client created',
-            client: savedClient,
-            originalData: clientData
-          });
         }
-      } catch (error) {
-        console.error('Error processing client:', clientData, error);
+      });
+
+      if (skipped) {
         results.push({
           success: false,
-          message: error instanceof Error ? error.message : 'Unknown error occurred',
+          skipped: true,
+          message: `Client with name ${clientData.client_name} already exists`,
           originalData: clientData
         });
+        continue;
       }
+
+      // Tags run after the row commits: createTag opens its own connection, so
+      // creating them inside the transaction would leak tags for rolled-back rows.
+      if (savedClient && clientData.tags) {
+        try {
+          const tagTexts = clientData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
+          const existingTags = created ? [] : await findTagsByEntityId(savedClient.client_id, 'client');
+          const existingTagTexts = new Set(existingTags.map((tag): string => tag.tag_text.toLowerCase()));
+          for (const tagText of tagTexts) {
+            if (existingTagTexts.has(tagText.toLowerCase())) {
+              continue;
+            }
+            await createTag({
+              tag_text: tagText,
+              tagged_id: savedClient.client_id,
+              tagged_type: 'client',
+              created_by: user.user_id
+            });
+          }
+        } catch (tagError) {
+          console.error('Failed to create tags during CSV import:', tagError);
+          // Don't fail the client import if tag creation fails
+        }
+      }
+
+      results.push({
+        success: true,
+        message: created ? 'Client created' : 'Client updated',
+        client: savedClient,
+        originalData: clientData
+      });
+    } catch (error) {
+      console.error('Error processing client:', clientData, error);
+      results.push({
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+        originalData: clientData
+      });
     }
-  });
+  }
 
   return results;
 });
@@ -1817,7 +1827,7 @@ export const uploadClientLogo = withAuth(async (
     return { success: true, logoUrl: result.imageUrl };
   } catch (error) {
     console.error('[uploadClientLogo] Error during upload process:', error);
-    const message = error instanceof Error ? error.message : 'Failed to upload client logo';
+    const message = clientActionMessageFrom(error, 'Failed to upload client logo');
     return { success: false, message };
   }
 });
@@ -1857,7 +1867,7 @@ export const deleteClientLogo = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error deleting client logo:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete client logo';
+    const message = clientActionMessageFrom(error, 'Failed to delete client logo');
     return { success: false, message };
   }
 });
@@ -1878,10 +1888,12 @@ export const deactivateClientContacts = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Get all active contact IDs for this client
-      const activeContacts = await trx('contacts')
+      const activeContacts = await db.table('contacts')
         .select('contact_name_id')
-        .where({ client_id: clientId, tenant, is_inactive: false });
+        .where({ client_id: clientId, is_inactive: false });
 
       const contactIds = activeContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
@@ -1890,14 +1902,14 @@ export const deactivateClientContacts = withAuth(async (
       }
 
       // Deactivate all contacts
-      await trx('contacts')
-        .where({ client_id: clientId, tenant, is_inactive: false })
+      await db.table('contacts')
+        .where({ client_id: clientId, is_inactive: false })
         .update({ is_inactive: true });
 
       // Deactivate all users associated with these contacts
-      await trx('users')
+      await db.table('users')
         .whereIn('contact_id', contactIds)
-        .andWhere({ tenant, user_type: 'client' })
+        .andWhere({ user_type: 'client' })
         .update({ is_inactive: true });
 
       return { contactsDeactivated: contactIds.length };
@@ -1909,7 +1921,7 @@ export const deactivateClientContacts = withAuth(async (
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error deactivating client contacts:', error);
-    const message = error instanceof Error ? error.message : 'Failed to deactivate client contacts';
+    const message = clientActionMessageFrom(error, 'Failed to deactivate client contacts');
     return { success: false, contactsDeactivated: 0, message };
   }
 });
@@ -1938,26 +1950,27 @@ export const markClientInactiveWithContacts = withAuth(async (
   try {
     const occurredAt = new Date().toISOString();
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       let contactsDeactivated = 0;
 
       if (deactivateContacts) {
         // Get all active contact IDs for this client
-        const activeContacts = await trx('contacts')
+        const activeContacts = await db.table('contacts')
           .select('contact_name_id')
-          .where({ client_id: clientId, tenant, is_inactive: false });
+          .where({ client_id: clientId, is_inactive: false });
 
         const contactIds = activeContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
         if (contactIds.length > 0) {
           // Deactivate all contacts
-          await trx('contacts')
-            .where({ client_id: clientId, tenant, is_inactive: false })
+          await db.table('contacts')
+            .where({ client_id: clientId, is_inactive: false })
             .update({ is_inactive: true });
 
           // Deactivate all users associated with these contacts
-          await trx('users')
+          await db.table('users')
             .whereIn('contact_id', contactIds)
-            .andWhere({ tenant, user_type: 'client' })
+            .andWhere({ user_type: 'client' })
             .update({ is_inactive: true });
 
           contactsDeactivated = contactIds.length;
@@ -1965,8 +1978,8 @@ export const markClientInactiveWithContacts = withAuth(async (
       }
 
       // Mark the client as inactive
-      await trx('clients')
-        .where({ client_id: clientId, tenant })
+      await db.table('clients')
+        .where({ client_id: clientId })
         .update({ is_inactive: true, updated_at: occurredAt });
 
       return { contactsDeactivated };
@@ -1989,7 +2002,7 @@ export const markClientInactiveWithContacts = withAuth(async (
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error marking client and contacts as inactive:', error);
-    const message = error instanceof Error ? error.message : 'Failed to mark client as inactive';
+    const message = clientActionMessageFrom(error, 'Failed to mark client as inactive');
     return { success: false, contactsDeactivated: 0, message };
   }
 });
@@ -2017,31 +2030,32 @@ export const markClientActiveWithContacts = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
       let contactsReactivated = 0;
 
       // Mark the client as active first
-      await trx('clients')
-        .where({ client_id: clientId, tenant })
+      await db.table('clients')
+        .where({ client_id: clientId })
         .update({ is_inactive: false, updated_at: new Date().toISOString() });
 
       if (reactivateContacts) {
         // Get all inactive contact IDs for this client
-        const inactiveContacts = await trx('contacts')
+        const inactiveContacts = await db.table('contacts')
           .select('contact_name_id')
-          .where({ client_id: clientId, tenant, is_inactive: true });
+          .where({ client_id: clientId, is_inactive: true });
 
         const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
         if (contactIds.length > 0) {
           // Reactivate all contacts
-          await trx('contacts')
-            .where({ client_id: clientId, tenant, is_inactive: true })
+          await db.table('contacts')
+            .where({ client_id: clientId, is_inactive: true })
             .update({ is_inactive: false });
 
           // Reactivate all users associated with these contacts
-          await trx('users')
+          await db.table('users')
             .whereIn('contact_id', contactIds)
-            .andWhere({ tenant, user_type: 'client' })
+            .andWhere({ user_type: 'client' })
             .update({ is_inactive: false });
 
           contactsReactivated = contactIds.length;
@@ -2057,7 +2071,7 @@ export const markClientActiveWithContacts = withAuth(async (
     return { success: true, contactsReactivated: result.contactsReactivated };
   } catch (error) {
     console.error('Error marking client and contacts as active:', error);
-    const message = error instanceof Error ? error.message : 'Failed to mark client as active';
+    const message = clientActionMessageFrom(error, 'Failed to mark client as active');
     return { success: false, contactsReactivated: 0, message };
   }
 });
@@ -2078,10 +2092,12 @@ export const reactivateClientContacts = withAuth(async (
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+
       // Get all inactive contact IDs for this client
-      const inactiveContacts = await trx('contacts')
+      const inactiveContacts = await db.table('contacts')
         .select('contact_name_id')
-        .where({ client_id: clientId, tenant, is_inactive: true });
+        .where({ client_id: clientId, is_inactive: true });
 
       const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
@@ -2090,14 +2106,14 @@ export const reactivateClientContacts = withAuth(async (
       }
 
       // Reactivate all contacts
-      await trx('contacts')
-        .where({ client_id: clientId, tenant, is_inactive: true })
+      await db.table('contacts')
+        .where({ client_id: clientId, is_inactive: true })
         .update({ is_inactive: false });
 
       // Reactivate all users associated with these contacts
-      await trx('users')
+      await db.table('users')
         .whereIn('contact_id', contactIds)
-        .andWhere({ tenant, user_type: 'client' })
+        .andWhere({ user_type: 'client' })
         .update({ is_inactive: false });
 
       return { contactsReactivated: contactIds.length };
@@ -2109,7 +2125,7 @@ export const reactivateClientContacts = withAuth(async (
     return { success: true, contactsReactivated: result.contactsReactivated };
   } catch (error) {
     console.error('Error reactivating client contacts:', error);
-    const message = error instanceof Error ? error.message : 'Failed to reactivate client contacts';
+    const message = clientActionMessageFrom(error, 'Failed to reactivate client contacts');
     return { success: false, contactsReactivated: 0, message };
   }
 });

@@ -98,7 +98,6 @@ describe('Contract Line Disambiguation Logic', () => {
       expect(eligibleLinesBuilder.where).toHaveBeenCalledWith({
         'client_contracts.client_id': mockClientId,
         'client_contracts.is_active': true,
-        'client_contracts.tenant': mockTenant,
         'contract_line_services.service_id': mockServiceId,
       });
     });

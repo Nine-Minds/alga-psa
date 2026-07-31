@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { deleteSearchDoc, upsertSearchDoc } from '../../lib/search/upsert';
+import { deleteSearchDoc, upsertSearchDoc } from '@alga-psa/search/upsert';
 import type { SearchDoc } from '@alga-psa/types';
 
 const sampleDoc = (overrides: Partial<SearchDoc> = {}): SearchDoc => ({
@@ -106,8 +106,12 @@ describe('search index upsert helpers', () => {
     ).resolves.toBeUndefined();
 
     expect(knex).toHaveBeenCalledWith('app_search_index');
+    // tenantDb applies the tenant predicate as a qualified column on the root query.
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      'app_search_index.tenant',
+      '11111111-1111-4111-8111-111111111111',
+    );
     expect(queryBuilder.where).toHaveBeenCalledWith({
-      tenant: '11111111-1111-4111-8111-111111111111',
       object_type: 'client',
       object_id: 'client-1',
     });

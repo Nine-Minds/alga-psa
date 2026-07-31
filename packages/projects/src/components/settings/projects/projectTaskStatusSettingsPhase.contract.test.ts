@@ -51,7 +51,7 @@ describe('phase-aware project status settings contracts', () => {
   });
 
   it('T062: status deletion still blocks removing the last remaining status mapping', () => {
-    expect(actionsSource).toContain("const remainingQuery = trx('project_status_mappings')");
+    expect(actionsSource).toContain("const remainingQuery = tenantScopedTable(trx, 'project_status_mappings', tenant)");
     expect(actionsSource).toContain("const remainingCount = await remainingQuery.count('* as count').first();");
     expect(actionsSource).toContain("if (parseInt(remainingCount?.count as string) < 1) {");
     expect(actionsSource).toContain("throw new Error('Cannot delete the last status in a project');");

@@ -8,7 +8,7 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildIntegrationTokenExpiringPayload,
@@ -122,6 +122,20 @@ export interface NinjaOneClientConfig {
     connectionId: string;
     provider: string;
   };
+}
+
+/**
+ * Thrown when a token refresh is short-circuited because the integration's token
+ * lifecycle is already 'reconnect_required' (a prior permanent failure such as
+ * invalid_token). Distinct from a live refresh failure so the caller does NOT
+ * re-publish INTEGRATION_TOKEN_REFRESH_FAILED — the broken state is already known and
+ * surfaced in the integration UI; re-auth clears it.
+ */
+export class NinjaOneReconnectRequiredError extends Error {
+  constructor(tenantId: string) {
+    super(`NinjaOne integration for tenant ${tenantId} requires reconnection (token lifecycle is reconnect_required)`);
+    this.name = 'NinjaOneReconnectRequiredError';
+  }
 }
 
 export class NinjaOneClient {
@@ -298,6 +312,20 @@ export class NinjaOneClient {
   /**
    * Refresh the access token using the refresh token
    */
+  private async isReconnectRequired(): Promise<boolean> {
+    const integrationId = this.workflowContext?.integrationId;
+    if (!integrationId) return false;
+    try {
+      const { knex } = await createTenantKnex(this.tenantId);
+      const row = (await knex('rmm_integrations')
+        .where({ tenant: this.tenantId, integration_id: integrationId })
+        .first('settings')) as { settings?: { tokenLifecycle?: { status?: string } } } | undefined;
+      return row?.settings?.tokenLifecycle?.status === 'reconnect_required';
+    } catch {
+      return false; // fail open — never block a refresh on a lifecycle lookup error
+    }
+  }
+
   private async refreshAccessToken(): Promise<void> {
     // Prevent multiple simultaneous refresh calls
     if (this.refreshPromise) {
@@ -306,6 +334,14 @@ export class NinjaOneClient {
 
     this.refreshPromise = (async () => {
       try {
+        // Short-circuit a token already marked reconnect_required (a prior permanent
+        // failure, e.g. invalid_token). Retrying just re-fails on every reconciliation
+        // and floods INTEGRATION_TOKEN_REFRESH_FAILED. Fail fast — the integration UI
+        // surfaces the reconnect prompt and a successful re-auth clears the lifecycle.
+        if (await this.isReconnectRequired()) {
+          throw new NinjaOneReconnectRequiredError(this.tenantId);
+        }
+
         if (!this.credentials?.refresh_token) {
           throw new Error('No refresh token available');
         }
@@ -359,6 +395,13 @@ export class NinjaOneClient {
           });
         }
       } catch (error) {
+        if (error instanceof NinjaOneReconnectRequiredError) {
+          logger.info('[NinjaOneClient] Skipping token refresh; integration requires reconnect', {
+            tenantId: this.tenantId,
+            integrationId: this.workflowContext?.integrationId,
+          });
+          throw error;
+        }
         logger.error('[NinjaOneClient] Failed to refresh access token:', extractErrorInfo(error));
         void this.maybePublishTokenRefreshFailed(error).catch((publishError) => {
           logger.warn(
@@ -1126,8 +1169,8 @@ async function resolveNinjaOneWorkflowContext(
   if (!integrationId) {
     try {
       const { knex } = await createTenantKnex(tenantId);
-      const row = (await knex('rmm_integrations')
-        .where({ tenant: tenantId, provider: 'ninjaone' })
+      const row = (await tenantDb(knex, tenantId).table('rmm_integrations')
+        .where({ provider: 'ninjaone' })
         .select('integration_id')
         .first()) as { integration_id: string } | undefined;
       integrationId = row?.integration_id;

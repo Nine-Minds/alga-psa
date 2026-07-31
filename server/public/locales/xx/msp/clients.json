@@ -38,7 +38,15 @@
     "no": "11111",
     "yes": "11111"
   },
+  "clientLifecycle": {
+    "prospect": "11111",
+    "active": "11111",
+    "former": "11111",
+    "all": "11111"
+  },
   "clientsPage": {
+    "filterByLifecycle": "11111",
+    "lifecycleFilterLabel": "11111",
     "title": "11111",
     "description": "11111",
     "searchPlaceholder": "11111",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "11111"
   },
   "clientDetails": {
+    "opportunities": "11111",
+    "lifecycleStatus": "11111",
+    "lifecycleStatusHelper": "11111",
     "title": "11111",
     "backToClients": "11111",
     "openInNewTab": "11111",
@@ -195,6 +206,7 @@
     "clientOnly": "11111",
     "accountManager": "11111",
     "clientName": "11111",
+    "clientNameRequired": "11111",
     "clientType": "11111",
     "industry": "11111",
     "companySize": "11111",
@@ -228,9 +240,6 @@
     "entraSyncError": "11111",
     "entraSyncStarted": "11111 {{runId}} 11111",
     "entraSyncStatusUnknown": "11111",
-    "clientNameRequired": "11111",
-    "deactivateClientAndContacts": "11111",
-    "reactivateClientAndContacts": "11111",
     "inboundDomainAdded": "11111",
     "inboundDomainAddFailed": "11111",
     "inboundDomainRemoved": "11111",
@@ -256,6 +265,8 @@
     "syncEntraNow": "11111",
     "deactivateClient": "11111",
     "reactivateClient": "11111",
+    "deactivateClientAndContacts": "11111",
+    "reactivateClientAndContacts": "11111",
     "deactivatePrompt": "11111 {{count}} 11111",
     "reactivatePrompt": "11111 {{count}} 11111",
     "deactivatePortalWarning": "11111",
@@ -278,9 +289,164 @@
     "nameAliasRemoveFailed": "11111",
     "nameAliasRemoved": "11111",
     "nameAliases": "11111",
-    "noNameAliases": "11111"
+    "noNameAliases": "11111",
+    "equipment": "11111",
+    "parentClientSelf": "11111",
+    "parentClientPlaceholder": "11111",
+    "parentClientClear": "11111",
+    "parentClientLegacy": "11111 {{name}} 11111"
+  },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "11111",
+      "documents": "11111",
+      "installBase": "11111",
+      "locations": "11111",
+      "money": "11111",
+      "notes": "11111",
+      "people": "11111",
+      "record": "11111",
+      "service": "11111",
+      "timeline": "11111"
+    },
+    "csatEmpty": "11111",
+    "discardCancel": "11111",
+    "discardConfirm": "11111",
+    "discardMessage": "11111",
+    "discardTitle": "11111",
+    "documents": {
+      "more": "11111 {{count}} 11111",
+      "none": "11111"
+    },
+    "flags": {
+      "clientWaiting": "11111 {{days}} 11111 {{ref}} 11111",
+      "draftInvoices_one": "11111 {{amount}} 11111 {{ref}} 11111",
+      "draftInvoices_other": "11111 {{count}} 11111 {{amount}} 11111 {{ref}} 11111",
+      "rmaOpen_one": "11111 {{days}} 11111",
+      "rmaOpen_other": "11111 {{count}} 11111 {{days}} 11111",
+      "slaAtRisk_one": "11111 {{ref}} 11111",
+      "slaAtRisk_other": "11111 {{count}} 11111 {{ref}} 11111",
+      "slaBreached_one": "11111 {{ref}} 11111",
+      "slaBreached_other": "11111 {{count}} 11111 {{ref}} 11111",
+      "soPartial": "11111 {{ref}} 11111 {{fulfilled}} 11111 {{total}} 11111",
+      "ticketOverdue_one": "11111 {{ref}} 11111 {{days}} 11111",
+      "ticketOverdue_other": "11111 {{count}} 11111 {{ref}} 11111 {{days}} 11111",
+      "ticketUnassigned_one": "11111 {{ref}} 11111",
+      "ticketUnassigned_other": "11111 {{count}} 11111 {{ref}} 11111",
+      "wipAging_one": "11111 {{days}} 11111 {{materials}} 11111",
+      "wipAging_other": "11111 {{count}} 11111 {{days}} 11111 {{materials}} 11111"
+    },
+    "installBase": {
+      "assets": "11111",
+      "assetsLink": "11111",
+      "none": "11111",
+      "rmas": "11111",
+      "sold": "11111",
+      "viewAsset": "11111",
+      "warrantyExpired_one": "11111",
+      "warrantyExpired_other": "11111 {{count}} 11111",
+      "warrantyExpiring_one": "11111",
+      "warrantyExpiring_other": "11111 {{count}} 11111",
+      "warrantyTracked": "11111 {{count}} 11111"
+    },
+    "locations": {
+      "billing": "11111",
+      "manage": "11111",
+      "more": "11111 {{count}} 11111",
+      "none": "11111",
+      "shipping": "11111"
+    },
+    "money": {
+      "activeContracts": "11111",
+      "agingNote": "11111 {{total}} 11111",
+      "billingSetup": "11111",
+      "current": "11111",
+      "draft": "11111",
+      "moreDrafts_one": "11111",
+      "moreDrafts_other": "11111 {{count}} 11111",
+      "nothingOutstanding": "11111",
+      "taxSettings": "11111",
+      "unbilledHours": "11111 {{hours}} 11111",
+      "unbilledMaterials": "11111 {{amount}} 11111",
+      "unbilledWork": "11111"
+    },
+    "notes": {
+      "add": "11111",
+      "lastEdited": "11111 {{days}} 11111",
+      "none": "11111"
+    },
+    "openView": "11111",
+    "people": {
+      "addContact": "11111",
+      "more": "11111 {{count}} 11111",
+      "noContactInfo": "11111",
+      "none": "11111",
+      "primary": "11111"
+    },
+    "pulseError": "11111",
+    "rail": {
+      "close": "11111",
+      "installBase": "11111",
+      "label": "11111",
+      "money": "11111",
+      "more": "11111",
+      "records": "11111",
+      "service": "11111"
+    },
+    "record": {
+      "accountManager": "11111",
+      "additionalInfo": "11111",
+      "clientSince": "11111",
+      "defaultContact": "11111",
+      "edit": "11111",
+      "unset": "11111"
+    },
+    "service": {
+      "newTicket": "11111",
+      "none": "11111",
+      "oldest": "11111",
+      "open": "11111",
+      "overdue": "11111",
+      "overdueTag": "11111",
+      "unassigned": "11111"
+    },
+    "sla": {
+      "atRisk": "11111",
+      "atRiskLeft": "11111 {{left}} 11111",
+      "breached": "11111",
+      "breachedAgo": "11111 {{over}} 11111",
+      "onTrack": "11111",
+      "onTrackLeft": "11111 {{left}} 11111",
+      "paused": "11111"
+    },
+    "timeline": {
+      "daysAgo": "11111 {{count}} 11111",
+      "empty": "11111",
+      "error": "11111",
+      "filterAll": "11111",
+      "filterInteractions": "11111",
+      "filterInventory": "11111",
+      "filterMoney": "11111",
+      "filterService": "11111",
+      "hoursAgo": "11111 {{count}} 11111",
+      "interaction": "11111",
+      "invoiceCreated": "11111",
+      "invoiceFinalized": "11111",
+      "justNow": "11111",
+      "loadMore": "11111",
+      "loading": "11111",
+      "materialAdded": "11111",
+      "quoteActivity": "11111",
+      "rmaClosed": "11111",
+      "rmaOpened": "11111",
+      "soCreated": "11111",
+      "ticketClosed": "11111",
+      "ticketOpened": "11111",
+      "unitDelivered": "11111"
+    }
   },
   "quickAddClient": {
+    "lifecycleStatus": "11111",
     "title": "11111",
     "clientDetails": "11111",
     "clientLocation": "11111",
@@ -328,7 +494,8 @@
     "created": "11111 {{name}} 11111",
     "createAndAddAnother": "11111",
     "createAndView": "11111",
-    "additionalDetails": "11111"
+    "additionalDetails": "11111",
+    "createFailed": "11111"
   },
   "clientCreatedDialog": {
     "title": "11111",
@@ -446,7 +613,8 @@
     "formattingError": "11111",
     "removeAssignmentTitle": "11111",
     "removeAssignmentMessage": "11111",
-    "contracts": "11111"
+    "contracts": "11111",
+    "taxRatesLoadError": "11111"
   },
   "clientBillingSchedule": {
     "title": "11111",
@@ -522,6 +690,17 @@
       "5": "11111",
       "6": "11111",
       "7": "11111"
+    },
+    "reviewError": "11111",
+    "reviewing": "11111",
+    "confirmSave": "11111",
+    "reviewChanges": "11111",
+    "impact": {
+      "title": "11111",
+      "periods": "11111 {{count}} 11111 {{lines}} 11111",
+      "from": "11111 {{date}} 11111",
+      "billedPreserved": "11111",
+      "confirmHint": "11111"
     }
   },
   "clientContractAssignment": {
@@ -583,7 +762,8 @@
     "startDate": "11111",
     "startDateRequired": "11111",
     "updateAssignment": "11111",
-    "useTenantRenewalDefaults": "11111"
+    "useTenantRenewalDefaults": "11111",
+    "saveError": "11111"
   },
   "clientContractLineDashboard": {
     "title": "11111",
@@ -605,7 +785,10 @@
     "noActiveBucketPlans": "11111",
     "noHours": "11111",
     "noInvoices": "11111",
-    "noUsage": "11111"
+    "noUsage": "11111",
+    "retry": "11111",
+    "loadError": "11111",
+    "balanceDue": "11111"
   },
   "clientContractLineGuide": {
     "title": "11111",
@@ -884,8 +1067,15 @@
     "email": "11111",
     "clientName": "11111",
     "importCompleteMessage": "11111 {{count}} 11111",
+    "importCompleteWithErrors": "11111",
+    "importResultSummary": "11111 {{created}} 11111 {{updated}} 11111 {{skipped}} 11111 {{failed}} 11111",
+    "skippedExistingMessage": "11111 {{count}} 11111",
+    "error": "11111",
     "updateExistingTitle": "11111",
-    "updateExistingMessage": "11111 {{count}} 11111"
+    "updateExistingMessage": "11111 {{count}} 11111",
+    "invalidRowsBlocked": "11111 {{count}} 11111",
+    "noValidRows": "11111",
+    "serverFailures": "11111 {{failed}} 11111 {{total}} 11111"
   },
   "clientsList": {
     "name": "11111",
@@ -997,7 +1187,6 @@
     "title": "11111",
     "description": "11111",
     "createDefault": "11111",
-    "goToBillingTaxSettings": "11111",
     "taxExemptStatus": "11111",
     "taxExempt": "11111",
     "taxExemptHelp": "11111",
@@ -1038,12 +1227,13 @@
   "clientNotesPanel": {
     "title": "11111",
     "initialNote": "11111",
-    "lastUpdated": "11111",
+    "lastUpdated": "11111 {{value}} 11111",
     "save": "11111",
     "retry": "11111",
     "loadError": "11111",
     "unknownError": "11111",
-    "loadErrorTitle": "11111"
+    "loadErrorTitle": "11111",
+    "loadErrorDescription": "11111"
   },
   "actions": {
     "cancel": "11111",
@@ -1207,7 +1397,9 @@
         "endRequired": "11111",
         "startRequired": "11111",
         "unavailable": "11111"
-      }
+      },
+      "loadFailed": "11111",
+      "saveFailed": "11111"
     },
     "feed": {
       "addInteraction": "11111",
@@ -1220,7 +1412,9 @@
       "searchPlaceholder": "11111",
       "startDate": "11111",
       "title": "11111",
-      "typePlaceholder": "11111"
+      "typePlaceholder": "11111",
+      "loadFailed": "11111",
+      "typesLoadFailed": "11111"
     },
     "overall": {
       "allContacts": "11111",
@@ -1237,7 +1431,8 @@
       "startTimeLabel": "11111",
       "startTimePlaceholder": "11111",
       "statusPlaceholder": "11111",
-      "title": "11111"
+      "title": "11111",
+      "statusesLoadFailed": "11111"
     }
   },
   "clientDrawer": {
@@ -1256,7 +1451,10 @@
         "serialNumber": "11111",
         "status": "11111",
         "type": "11111",
-        "warrantyEnd": "11111"
+        "warrantyEnd": "11111",
+        "agent": "11111",
+        "patching": "11111",
+        "coverage": "11111"
       },
       "details": {
         "local": "11111",
@@ -1301,7 +1499,9 @@
         "printer": "11111",
         "server": "11111",
         "workstation": "11111"
-      }
+      },
+      "loadError": "11111",
+      "retry": "11111"
     },
     "tickets": {
       "addTicket": "11111",
@@ -1324,6 +1524,36 @@
         "openTicketFailed": "11111",
         "userNotAuthenticated": "11111"
       }
+    }
+  },
+  "clientEquipmentTab": {
+    "retry": "11111",
+    "loadError": "11111",
+    "emptyValue": "11111",
+    "orderNumber": "11111",
+    "status": "11111",
+    "ordered": "11111",
+    "amount": "11111",
+    "product": "11111",
+    "sku": "11111",
+    "serialNumber": "11111",
+    "delivered": "11111",
+    "asset": "11111",
+    "viewAsset": "11111",
+    "rmaNumber": "11111",
+    "opened": "11111",
+    "salesOrders": "11111",
+    "noSalesOrders": "11111",
+    "deliveredUnits": "11111",
+    "noDeliveredEquipment": "11111",
+    "rmas": "11111",
+    "noRmas": "11111"
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "11111",
+      "notFound": "11111",
+      "loadFailed": "11111"
     }
   }
 }

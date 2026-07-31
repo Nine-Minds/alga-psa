@@ -4,12 +4,26 @@ const createTenantKnex = vi.fn();
 const hasPermission = vi.fn();
 const randomUUID = vi.fn();
 
+// Records each tenantDb(...).table(name) access with its tenant so the test can
+// assert tenant isolation now that scoping lives in the facade rather than in the
+// recorded .where() criteria.
+const { tenantScopeSpy } = vi.hoisted(() => ({ tenantScopeSpy: vi.fn() }));
+
 vi.mock('node:crypto', () => ({
   randomUUID: (...args: any[]) => randomUUID(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => {
+      tenantScopeSpy(t, tenant);
+      return conn(t);
+    },
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -153,9 +167,10 @@ describe('renewalsQueueActions create draft behavior', () => {
       use_tenant_renewal_defaults: true,
       is_active: false,
     });
+    // Tenant scoping moved into the tenantDb facade, so the recorded .where()
+    // only carries the row predicate now; the tenant scope is asserted separately.
     expect(clientContractUpdates[0]).toMatchObject({
       where: {
-        tenant: 'tenant-1',
         client_contract_id: 'source-client-contract-id',
       },
       data: expect.objectContaining({
@@ -165,5 +180,6 @@ describe('renewalsQueueActions create draft behavior', () => {
         last_action_note: 'Carry forward',
       }),
     });
+    expect(tenantScopeSpy).toHaveBeenCalledWith('client_contracts', 'tenant-1');
   });
 });

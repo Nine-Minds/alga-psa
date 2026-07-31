@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { AuthorizationEvaluationInput, RelationshipTemplateKey } from '../kernel';
 import type { BundleNarrowingRule } from '../kernel/providers/bundleProvider';
 import { assertBundleRuleCatalogInput } from './catalog';
@@ -103,9 +104,10 @@ export async function ensureDraftBundleRevision(
   }
 ): Promise<{ revisionId: string; created: boolean }> {
   return knex.transaction(async (trx) => {
-    const bundle = await trx('authorization_bundles')
+    const scopedDb = tenantDb(trx, input.tenant);
+
+    const bundle = await scopedDb.table('authorization_bundles')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
       })
       .forUpdate()
@@ -119,9 +121,8 @@ export async function ensureDraftBundleRevision(
       throw new Error('Cannot create or retrieve drafts for an archived bundle.');
     }
 
-    const existingDraft = await trx('authorization_bundle_revisions')
+    const existingDraft = await scopedDb.table('authorization_bundle_revisions')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
         lifecycle_state: 'draft',
       })
@@ -132,9 +133,8 @@ export async function ensureDraftBundleRevision(
       return { revisionId: existingDraft.revision_id, created: false };
     }
 
-    const maxRevisionRow = await trx('authorization_bundle_revisions')
+    const maxRevisionRow = await scopedDb.table('authorization_bundle_revisions')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
       })
       .max<{ max_revision_number: string | null }>('revision_number as max_revision_number')
@@ -144,7 +144,7 @@ export async function ensureDraftBundleRevision(
 
     let draftRevision: { revision_id: string };
     try {
-      [draftRevision] = await trx('authorization_bundle_revisions')
+      [draftRevision] = await scopedDb.table('authorization_bundle_revisions')
         .insert({
           tenant: input.tenant,
           bundle_id: input.bundleId,
@@ -159,9 +159,8 @@ export async function ensureDraftBundleRevision(
         throw error;
       }
 
-      const concurrentDraft = await trx('authorization_bundle_revisions')
+      const concurrentDraft = await scopedDb.table('authorization_bundle_revisions')
         .where({
-          tenant: input.tenant,
           bundle_id: input.bundleId,
           lifecycle_state: 'draft',
         })
@@ -179,9 +178,8 @@ export async function ensureDraftBundleRevision(
       return { revisionId: draftRevision.revision_id, created: true };
     }
 
-    const publishedRules = await trx('authorization_bundle_rules')
+    const publishedRules = await scopedDb.table('authorization_bundle_rules')
       .where({
-        tenant: input.tenant,
         revision_id: bundle.published_revision_id,
       })
       .orderBy('position', 'asc')
@@ -197,7 +195,7 @@ export async function ensureDraftBundleRevision(
       >('resource_type', 'action', 'template_key', 'constraint_key', 'config', 'position');
 
     if (publishedRules.length > 0) {
-      await trx('authorization_bundle_rules').insert(
+      await scopedDb.table('authorization_bundle_rules').insert(
         publishedRules.map((rule) => ({
           tenant: input.tenant,
           bundle_id: input.bundleId,
@@ -225,9 +223,8 @@ export async function listBundleRulesForRevision(
     revisionId: string;
   }
 ): Promise<BundleRuleRecord[]> {
-  const rows = await knex('authorization_bundle_rules')
+  const rows = await tenantDb(knex, input.tenant).table('authorization_bundle_rules')
     .where({
-      tenant: input.tenant,
       revision_id: input.revisionId,
     })
     .orderBy('position', 'asc')
@@ -264,9 +261,10 @@ export async function deleteBundleRule(
   }
 ): Promise<void> {
   await knex.transaction(async (trx) => {
-    const draftRevision = await trx('authorization_bundle_revisions')
+    const scopedDb = tenantDb(trx, input.tenant);
+
+    const draftRevision = await scopedDb.table('authorization_bundle_revisions')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
         revision_id: input.revisionId,
         lifecycle_state: 'draft',
@@ -278,9 +276,8 @@ export async function deleteBundleRule(
       throw new Error('Draft revision not found for bundle in tenant scope.');
     }
 
-    const deleted = await trx('authorization_bundle_rules')
+    const deleted = await scopedDb.table('authorization_bundle_rules')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
         revision_id: input.revisionId,
         rule_id: input.ruleId,
@@ -302,7 +299,9 @@ export async function createAuthorizationBundle(
     throw new Error('Bundle name is required.');
   }
 
-  const [bundle] = await knex('authorization_bundles')
+  const scopedDb = tenantDb(knex, input.tenant);
+
+  const [bundle] = await scopedDb.table('authorization_bundles')
     .insert({
       tenant: input.tenant,
       bundle_key: input.bundleKey ?? null,
@@ -315,7 +314,7 @@ export async function createAuthorizationBundle(
     })
     .returning<{ bundle_id: string }[]>('bundle_id');
 
-  const [revision] = await knex('authorization_bundle_revisions')
+  const [revision] = await scopedDb.table('authorization_bundle_revisions')
     .insert({
       tenant: input.tenant,
       bundle_id: bundle.bundle_id,
@@ -337,13 +336,15 @@ export async function listAuthorizationBundles(
     includeArchived?: boolean;
   }
 ): Promise<AuthorizationBundleLibraryItem[]> {
-  const query = knex('authorization_bundles as b')
-    .leftJoin('authorization_bundle_assignments as a', function joinAssignments() {
-      this.on('a.tenant', '=', 'b.tenant')
-        .andOn('a.bundle_id', '=', 'b.bundle_id')
+  const scopedDb = tenantDb(knex, input.tenant);
+  const query = scopedDb.table('authorization_bundles as b');
+  scopedDb.tenantJoin(query, 'authorization_bundle_assignments as a', 'a.bundle_id', 'b.bundle_id', {
+    type: 'left',
+    on(join) {
+      join
         .andOn(knex.raw("a.status = 'active'"));
-    })
-    .where('b.tenant', input.tenant)
+    },
+  })
     .groupBy([
       'b.bundle_id',
       'b.bundle_key',
@@ -421,9 +422,10 @@ export async function cloneAuthorizationBundle(
   }
 
   return knex.transaction(async (trx) => {
-    const sourceBundle = await trx('authorization_bundles')
+    const scopedDb = tenantDb(trx, input.tenant);
+
+    const sourceBundle = await scopedDb.table('authorization_bundles')
       .where({
-        tenant: input.tenant,
         bundle_id: input.sourceBundleId,
       })
       .first<{
@@ -440,9 +442,8 @@ export async function cloneAuthorizationBundle(
       throw new Error('Cannot clone a bundle with no published revision. Publish the bundle first.');
     }
 
-    const sourceRevision = await trx('authorization_bundle_revisions')
+    const sourceRevision = await scopedDb.table('authorization_bundle_revisions')
       .where({
-        tenant: input.tenant,
         revision_id: sourceBundle.published_revision_id,
       })
       .first<{ revision_id: string }>('revision_id');
@@ -458,9 +459,8 @@ export async function cloneAuthorizationBundle(
       return created;
     }
 
-    const sourceRules = await trx('authorization_bundle_rules')
+    const sourceRules = await scopedDb.table('authorization_bundle_rules')
       .where({
-        tenant: input.tenant,
         revision_id: sourceRevision.revision_id,
       })
       .orderBy('position', 'asc')
@@ -479,7 +479,7 @@ export async function cloneAuthorizationBundle(
       return created;
     }
 
-    await trx('authorization_bundle_rules').insert(
+    await scopedDb.table('authorization_bundle_rules').insert(
       sourceRules.map((rule) => ({
         tenant: input.tenant,
         bundle_id: created.bundleId,
@@ -506,10 +506,12 @@ function ensureUuidLike(value: string, field: string): void {
 }
 
 async function assertTargetExists(trx: Knex | Knex.Transaction, target: BundleAssignmentTarget): Promise<void> {
+  const scopedDb = tenantDb(trx, target.tenant);
+
   switch (target.targetType) {
     case 'role': {
-      const row = await trx('roles')
-        .where({ tenant: target.tenant, role_id: target.targetId })
+      const row = await scopedDb.table('roles')
+        .where({ role_id: target.targetId })
         .first('role_id');
       if (!row) {
         throw new Error('Bundle assignment target role was not found in tenant scope.');
@@ -517,8 +519,8 @@ async function assertTargetExists(trx: Knex | Knex.Transaction, target: BundleAs
       return;
     }
     case 'team': {
-      const row = await trx('teams')
-        .where({ tenant: target.tenant, team_id: target.targetId })
+      const row = await scopedDb.table('teams')
+        .where({ team_id: target.targetId })
         .first('team_id');
       if (!row) {
         throw new Error('Bundle assignment target team was not found in tenant scope.');
@@ -526,8 +528,8 @@ async function assertTargetExists(trx: Knex | Knex.Transaction, target: BundleAs
       return;
     }
     case 'user': {
-      const row = await trx('users')
-        .where({ tenant: target.tenant, user_id: target.targetId })
+      const row = await scopedDb.table('users')
+        .where({ user_id: target.targetId })
         .first('user_id');
       if (!row) {
         throw new Error('Bundle assignment target user was not found in tenant scope.');
@@ -535,8 +537,8 @@ async function assertTargetExists(trx: Knex | Knex.Transaction, target: BundleAs
       return;
     }
     case 'api_key': {
-      const row = await trx('api_keys')
-        .where({ tenant: target.tenant, api_key_id: target.targetId })
+      const row = await scopedDb.table('api_keys')
+        .where({ api_key_id: target.targetId })
         .first('api_key_id');
       if (!row) {
         throw new Error('Bundle assignment target api key was not found in tenant scope.');
@@ -557,15 +559,16 @@ export async function createBundleAssignment(
   ensureUuidLike(input.targetId, 'targetId');
 
   await knex.transaction(async (trx) => {
+    const scopedDb = tenantDb(trx, input.tenant);
+
     await assertTargetExists(trx, {
       tenant: input.tenant,
       targetType: input.targetType,
       targetId: input.targetId,
     });
 
-    const bundle = await trx('authorization_bundles')
+    const bundle = await scopedDb.table('authorization_bundles')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
       })
       .forUpdate()
@@ -579,7 +582,7 @@ export async function createBundleAssignment(
       throw new Error('Cannot create an active assignment for an archived bundle.');
     }
 
-    await trx('authorization_bundle_assignments')
+    await scopedDb.table('authorization_bundle_assignments')
       .insert({
         tenant: input.tenant,
         bundle_id: input.bundleId,
@@ -608,11 +611,14 @@ export async function setBundleAssignmentStatus(
   }
 ): Promise<void> {
   await knex.transaction(async (trx) => {
-    const assignment = await trx('authorization_bundle_assignments as a')
-      .join('authorization_bundles as b', function joinBundle() {
-        this.on('b.tenant', '=', 'a.tenant').andOn('b.bundle_id', '=', 'a.bundle_id');
-      })
-      .where('a.tenant', input.tenant)
+    const scopedDb = tenantDb(trx, input.tenant);
+    const assignmentQuery = scopedDb.table('authorization_bundle_assignments as a');
+    const assignment = await scopedDb.tenantJoin(
+      assignmentQuery,
+      'authorization_bundles as b',
+      'b.bundle_id',
+      'a.bundle_id'
+    )
       .andWhere('a.assignment_id', input.assignmentId)
       .forUpdate()
       .first<{
@@ -628,9 +634,8 @@ export async function setBundleAssignmentStatus(
       throw new Error('Cannot activate an assignment for an archived bundle.');
     }
 
-    await trx('authorization_bundle_assignments')
+    await scopedDb.table('authorization_bundle_assignments')
       .where({
-        tenant: input.tenant,
         assignment_id: input.assignmentId,
       })
       .update({
@@ -650,9 +655,10 @@ export async function archiveBundle(
   }
 ): Promise<void> {
   await knex.transaction(async (trx) => {
-    const bundle = await trx('authorization_bundles')
+    const scopedDb = tenantDb(trx, input.tenant);
+
+    const bundle = await scopedDb.table('authorization_bundles')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
       })
       .forUpdate()
@@ -662,9 +668,8 @@ export async function archiveBundle(
       throw new Error('Bundle not found in tenant scope.');
     }
 
-    await trx('authorization_bundles')
+    await scopedDb.table('authorization_bundles')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
       })
       .update({
@@ -673,9 +678,8 @@ export async function archiveBundle(
         updated_at: trx.fn.now(),
       });
 
-    await trx('authorization_bundle_assignments')
+    await scopedDb.table('authorization_bundle_assignments')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
         status: 'active',
       })
@@ -692,9 +696,10 @@ export async function publishBundleRevision(
   input: PublishBundleRevisionInput
 ): Promise<void> {
   await knex.transaction(async (trx) => {
-    const bundle = await trx('authorization_bundles')
+    const scopedDb = tenantDb(trx, input.tenant);
+
+    const bundle = await scopedDb.table('authorization_bundles')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
       })
       .forUpdate()
@@ -708,9 +713,8 @@ export async function publishBundleRevision(
       throw new Error('Cannot publish revisions for an archived bundle.');
     }
 
-    const revision = await trx('authorization_bundle_revisions')
+    const revision = await scopedDb.table('authorization_bundle_revisions')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
         revision_id: input.revisionId,
       })
@@ -725,9 +729,8 @@ export async function publishBundleRevision(
       throw new Error('Only draft revisions can be published. Refresh bundle state and try again.');
     }
 
-    const draftRuleCountRow = await trx('authorization_bundle_rules')
+    const draftRuleCountRow = await scopedDb.table('authorization_bundle_rules')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
         revision_id: input.revisionId,
       })
@@ -741,9 +744,8 @@ export async function publishBundleRevision(
     }
 
     if (bundle.published_revision_id) {
-      await trx('authorization_bundle_revisions')
+      await scopedDb.table('authorization_bundle_revisions')
         .where({
-          tenant: input.tenant,
           bundle_id: input.bundleId,
           revision_id: bundle.published_revision_id,
           lifecycle_state: 'published',
@@ -755,9 +757,8 @@ export async function publishBundleRevision(
         });
     }
 
-    const published = await trx('authorization_bundle_revisions')
+    const published = await scopedDb.table('authorization_bundle_revisions')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
         revision_id: input.revisionId,
         lifecycle_state: 'draft',
@@ -774,9 +775,8 @@ export async function publishBundleRevision(
       throw new Error('Draft revision changed before publish could complete. Refresh bundle state and try again.');
     }
 
-    await trx('authorization_bundles')
+    await scopedDb.table('authorization_bundles')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
       })
       .update({
@@ -798,9 +798,10 @@ export async function upsertBundleRule(
   });
 
   await knex.transaction(async (trx) => {
-    const draftRevision = await trx('authorization_bundle_revisions')
+    const scopedDb = tenantDb(trx, input.tenant);
+
+    const draftRevision = await scopedDb.table('authorization_bundle_revisions')
       .where({
-        tenant: input.tenant,
         bundle_id: input.bundleId,
         revision_id: input.revisionId,
         lifecycle_state: 'draft',
@@ -831,9 +832,8 @@ export async function upsertBundleRule(
         updatePayload.position = input.position;
       }
 
-      const updated = await trx('authorization_bundle_rules')
+      const updated = await scopedDb.table('authorization_bundle_rules')
         .where({
-          tenant: input.tenant,
           bundle_id: input.bundleId,
           revision_id: input.revisionId,
           rule_id: input.ruleId,
@@ -846,7 +846,7 @@ export async function upsertBundleRule(
       return;
     }
 
-    await trx('authorization_bundle_rules').insert({
+    await scopedDb.table('authorization_bundle_rules').insert({
       ...basePayload,
       position: input.position ?? 0,
       created_by: input.actorUserId ?? null,
@@ -859,8 +859,8 @@ async function resolveRoleIdsForUser(
   tenant: string,
   userId: string
 ): Promise<string[]> {
-  const rows = await knex('user_roles')
-    .where({ tenant, user_id: userId })
+  const rows = await tenantDb(knex, tenant).table('user_roles')
+    .where({ user_id: userId })
     .select<{ role_id: string }[]>('role_id');
   return rows.map((row) => row.role_id);
 }
@@ -870,8 +870,8 @@ async function resolveTeamIdsForUser(
   tenant: string,
   userId: string
 ): Promise<string[]> {
-  const rows = await knex('team_members')
-    .where({ tenant, user_id: userId })
+  const rows = await tenantDb(knex, tenant).table('team_members')
+    .where({ user_id: userId })
     .select<{ team_id: string }[]>('team_id');
   return rows.map((row) => row.team_id);
 }
@@ -922,11 +922,14 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     targetClauses.push({ target_type: 'api_key', ids: [input.subject.apiKeyId] });
   }
 
-  const assignments = await knex('authorization_bundle_assignments as a')
-    .join('authorization_bundles as b', function joinBundle() {
-      this.on('b.tenant', '=', 'a.tenant').andOn('b.bundle_id', '=', 'a.bundle_id');
-    })
-    .where('a.tenant', tenant)
+  const scopedDb = tenantDb(knex, tenant);
+  const assignmentsQuery = scopedDb.table('authorization_bundle_assignments as a');
+  const assignments = await scopedDb.tenantJoin(
+    assignmentsQuery,
+    'authorization_bundles as b',
+    'b.bundle_id',
+    'a.bundle_id'
+  )
     .andWhere('a.status', 'active')
     .andWhere('b.status', 'active')
     .whereNotNull('b.published_revision_id')
@@ -958,8 +961,7 @@ export async function resolveBundleNarrowingRulesForEvaluation(
     return emptyRuleSet();
   }
 
-  const rules = await knex('authorization_bundle_rules')
-    .where({ tenant })
+  const rules = await scopedDb.table('authorization_bundle_rules')
     .whereIn('revision_id', revisionIds)
     .select<
       Array<{

@@ -3,3 +3,4 @@
  */
 
 export * from './tagActions';
+export * from './tagActionErrors';

@@ -129,7 +129,8 @@
     "title": "Termin stornieren",
     "message": "Sind Sie sicher, dass Sie diese Terminanfrage stornieren möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirm": "Ja, stornieren",
-    "messageWithTeamsWarning": "Sind Sie sicher, dass Sie diese Terminanfrage stornieren möchten? Diese Aktion kann nicht rückgängig gemacht werden. Die zugehörige Microsoft Teams-Besprechung wird ebenfalls gelöscht."
+    "messageWithTeamsWarning": "Sind Sie sicher, dass Sie diese Terminanfrage stornieren möchten? Diese Aktion kann nicht rückgängig gemacht werden. Die zugehörige Microsoft Teams-Besprechung wird ebenfalls gelöscht.",
+    "teamsMeetingCleanupNotice": "Das verknüpfte Microsoft-Teams-Meeting wird storniert; die Teilnehmer sehen es in Kürze aus ihren Kalendern entfernt."
   },
   "ticketSection": {
     "title": "Terminanfragen",

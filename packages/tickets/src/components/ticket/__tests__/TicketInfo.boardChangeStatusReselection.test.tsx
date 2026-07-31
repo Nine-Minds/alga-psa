@@ -249,11 +249,13 @@ describe('TicketInfo board change status reselection', () => {
     });
 
     const [statusSelect] = screen.getAllByRole('combobox');
-    const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
-
-    expect(optionLabels).toContain('Board A Default');
-    expect(optionLabels).toContain('Board A Closed');
-    expect(optionLabels).not.toContain('Board B Default');
+    // The mock call resolving is not the render: wait for the options to land.
+    await waitFor(() => {
+      const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
+      expect(optionLabels).toContain('Board A Default');
+      expect(optionLabels).toContain('Board A Closed');
+      expect(optionLabels).not.toContain('Board B Default');
+    });
   });
 
   it('T028: disables the status picker when no board is selected', async () => {
@@ -322,10 +324,13 @@ describe('TicketInfo board change status reselection', () => {
       expect(getTicketStatusesMock).toHaveBeenCalledWith('board-b');
     });
 
-    const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
-    expect(optionLabels).toContain('Board B Default');
-    expect(optionLabels).toContain('Board B Waiting');
-    expect(optionLabels).not.toContain('Board A Default');
+    // The mock call resolving is not the render: wait for the options to land.
+    await waitFor(() => {
+      const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
+      expect(optionLabels).toContain('Board B Default');
+      expect(optionLabels).toContain('Board B Waiting');
+      expect(optionLabels).not.toContain('Board A Default');
+    });
   });
 
   it('clears the current status and blocks save until a destination-board status is selected', async () => {
@@ -361,8 +366,8 @@ describe('TicketInfo board change status reselection', () => {
 
     await waitFor(() => {
       expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
+      expect(statusSelect).toHaveValue('status-a');
     });
-    expect(statusSelect).toHaveValue('status-a');
     expect(saveButton).not.toBeDisabled();
 
     fireEvent.change(boardSelect, { target: { value: 'board-b' } });
@@ -377,6 +382,11 @@ describe('TicketInfo board change status reselection', () => {
     fireEvent.click(saveButton);
     expect(onSaveChanges).not.toHaveBeenCalled();
 
+    // The cleared value shows the board switched, not that the new board's
+    // options rendered — wait for the option before selecting it.
+    await waitFor(() => {
+      expect(statusSelect.querySelector('option[value="status-b"]')).not.toBeNull();
+    });
     fireEvent.change(statusSelect, { target: { value: 'status-b' } });
 
     await waitFor(() => {
@@ -390,6 +400,56 @@ describe('TicketInfo board change status reselection', () => {
         board_id: 'board-b',
         status_id: 'status-b',
       });
+    });
+  });
+
+  it('T035: threads contact suppression options into the entry hero batched save', async () => {
+    getTicketStatusesMock.mockResolvedValue([
+      { status_id: 'status-a', name: 'Board A Default', is_closed: false },
+      { status_id: 'status-a-closed', name: 'Board A Closed', is_closed: true },
+    ]);
+    const onSaveChanges = vi.fn().mockResolvedValue(true);
+
+    render(
+      <TicketInfo
+        id="ticket-info"
+        ticket={baseTicket}
+        conversations={[]}
+        statusOptions={[]}
+        agentOptions={[]}
+        boardOptions={[{ value: 'board-a', label: 'Board A' }]}
+        priorityOptions={[{ value: 'priority-1', label: 'Priority 1' }]}
+        onSelectChange={vi.fn()}
+        onSaveChanges={onSaveChanges}
+        responseStateTrackingEnabled={false}
+      />
+    );
+
+    await waitFor(() => {
+      expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
+    });
+
+    expect(screen.queryByLabelText("Don't notify the customer")).not.toBeInTheDocument();
+
+    const [statusSelect] = screen.getAllByRole('combobox');
+    await waitFor(() => {
+      expect(statusSelect).toHaveValue('status-a');
+      expect(statusSelect.querySelector('option[value="status-a-closed"]')).not.toBeNull();
+    });
+    fireEvent.change(statusSelect, { target: { value: 'status-a-closed' } });
+
+    const contactSuppression = await screen.findByLabelText("Don't notify the customer");
+    fireEvent.click(contactSuppression);
+    fireEvent.click(screen.getByTestId('ticket-info-save-changes-btn'));
+
+    await waitFor(() => {
+      expect(onSaveChanges).toHaveBeenCalledWith(
+        { status_id: 'status-a-closed' },
+        {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        }
+      );
     });
   });
 });

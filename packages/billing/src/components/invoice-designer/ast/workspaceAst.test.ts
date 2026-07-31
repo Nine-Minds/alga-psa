@@ -450,11 +450,15 @@ describe('exportWorkspaceToTemplateAst', () => {
   });
 
   it('roundtrips exported AST deterministically (export -> import -> export)', () => {
+    // Import hydrates schema-default metadata (e.g. a field's placeholder),
+    // so the first cycle may enrich a hand-built workspace. The invariant
+    // that matters for saved templates is stability from the first import
+    // onward: load → save must never churn the document.
     const workspace = createWorkspaceWithFieldAndDynamicTable();
     const ast1 = exportWorkspaceToTemplateAst(workspace);
-    const hydrated = importTemplateAstToWorkspace(ast1);
-    const ast2 = exportWorkspaceToTemplateAst(hydrated);
-    expect(ast2).toEqual(ast1);
+    const ast2 = exportWorkspaceToTemplateAst(importTemplateAstToWorkspace(ast1));
+    const ast3 = exportWorkspaceToTemplateAst(importTemplateAstToWorkspace(ast2));
+    expect(ast3).toEqual(ast2);
   });
 
   it('hydrates imported logo nodes from media width and max-height constraints', () => {
@@ -500,10 +504,10 @@ describe('exportWorkspaceToTemplateAst', () => {
   it('roundtrips transformed AST deterministically (export -> import -> export)', () => {
     const workspace = createWorkspaceWithTransforms();
     const ast1 = exportWorkspaceToTemplateAst(workspace);
-    const hydrated = importTemplateAstToWorkspace(ast1);
-    const ast2 = exportWorkspaceToTemplateAst(hydrated);
+    const ast2 = exportWorkspaceToTemplateAst(importTemplateAstToWorkspace(ast1));
+    const ast3 = exportWorkspaceToTemplateAst(importTemplateAstToWorkspace(ast2));
 
-    expect(ast2).toEqual(ast1);
+    expect(ast3).toEqual(ast2);
   });
 
   it('preserves expression and format semantics when importing existing AST templates', () => {

@@ -8,6 +8,12 @@ import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { useTranslation } from 'react-i18next';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface TaskCommentFormProps {
   taskId: string;
@@ -57,11 +63,15 @@ export function TaskCommentForm({
     try {
       const note = JSON.stringify(blocks);
 
-      await createTaskComment({
+      const result = await createTaskComment({
         taskId: taskId,
         note,
         parent_comment_id: parentCommentId
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
 
       // Clear the editor by replacing content with default empty block
       editorRef.current.replaceBlocks(
@@ -73,7 +83,7 @@ export function TaskCommentForm({
       onCommentAdded();
     } catch (error) {
       console.error('Failed to add comment:', error);
-      // You might want to show an error toast/notification here
+      toast.error(t('comments.addFailed', 'Failed to add comment'));
     } finally {
       setIsSubmitting(false);
     }

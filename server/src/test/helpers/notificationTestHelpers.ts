@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -11,6 +12,14 @@ import { v4 as uuidv4 } from 'uuid';
 // ============================================================================
 // Test Data Factories
 // ============================================================================
+
+function tenantTable<TRecord extends {} = any>(
+  db: Knex,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder<TRecord, TRecord[]> {
+  return tenantDb(db, tenant).table<TRecord>(table);
+}
 
 /**
  * Create a test user in the database
@@ -73,7 +82,7 @@ export async function createTestUser(
     user.hris_id = overrides?.hris_id ?? null;
   }
 
-  await db('users').insert(user);
+  await tenantTable(db, tenant, 'users').insert(user);
   return {
     user_id: userId,
     tenant,
@@ -114,7 +123,7 @@ export async function createTestTicket(
     priority_id: 1
   };
 
-  await db('tickets').insert(ticket);
+  await tenantTable(db, tenant, 'tickets').insert(ticket);
   return ticket;
 }
 
@@ -148,7 +157,7 @@ export async function createTestComment(
     author_type: overrides.author_type || 'internal'
   };
 
-  await db('comments').insert(comment);
+  await tenantTable(db, tenant, 'comments').insert(comment);
   return comment;
 }
 
@@ -214,7 +223,7 @@ export async function createTestNotification(
     delivery_attempts: 0
   };
 
-  const [inserted] = await db('internal_notifications')
+  const [inserted] = await tenantTable(db, tenant, 'internal_notifications')
     .insert(notification)
     .returning('*');
 
@@ -242,7 +251,7 @@ export async function createTestPreference(
     is_enabled: overrides.is_enabled !== undefined ? overrides.is_enabled : true
   };
 
-  const [inserted] = await db('user_internal_notification_preferences')
+  const [inserted] = await tenantTable(db, tenant, 'user_internal_notification_preferences')
     .insert(preference)
     .returning('*');
 
@@ -261,7 +270,7 @@ export async function cleanupNotifications(
   tenant: string,
   userId?: string
 ) {
-  let query = db('internal_notifications').where({ tenant });
+  let query = tenantTable(db, tenant, 'internal_notifications');
 
   if (userId) {
     query = query.andWhere({ user_id: userId });
@@ -278,7 +287,7 @@ export async function cleanupPreferences(
   tenant: string,
   userId?: string
 ) {
-  let query = db('user_internal_notification_preferences').where({ tenant });
+  let query = tenantTable(db, tenant, 'user_internal_notification_preferences');
 
   if (userId) {
     query = query.andWhere({ user_id: userId });
@@ -294,7 +303,7 @@ export async function cleanupUsers(
   db: Knex,
   tenant: string
 ) {
-  await db('users').where({ tenant }).delete();
+  await tenantTable(db, tenant, 'users').delete();
 }
 
 /**
@@ -304,7 +313,7 @@ export async function cleanupTickets(
   db: Knex,
   tenant: string
 ) {
-  await db('tickets').where({ tenant }).delete();
+  await tenantTable(db, tenant, 'tickets').delete();
 }
 
 /**
@@ -314,7 +323,7 @@ export async function cleanupComments(
   db: Knex,
   tenant: string
 ) {
-  await db('comments').where({ tenant }).delete();
+  await tenantTable(db, tenant, 'comments').delete();
 }
 
 /**
@@ -350,8 +359,8 @@ export async function assertNotificationExists(
     is_read?: boolean;
   }
 ) {
-  let query = db('internal_notifications')
-    .where({ tenant, user_id: userId })
+  let query = tenantTable(db, tenant, 'internal_notifications')
+    .where({ user_id: userId })
     .whereNull('deleted_at');
 
   if (expectedProperties.template_name) {
@@ -387,8 +396,8 @@ export async function getNotificationCount(
     category?: string;
   } = {}
 ) {
-  let query = db('internal_notifications')
-    .where({ tenant, user_id: userId })
+  let query = tenantTable(db, tenant, 'internal_notifications')
+    .where({ user_id: userId })
     .whereNull('deleted_at');
 
   if (filters.is_read !== undefined) {
@@ -399,7 +408,8 @@ export async function getNotificationCount(
     query = query.andWhere({ category: filters.category });
   }
 
-  const [{ count }] = await query.count('* as count');
+  const rows = await query.count('* as count');
+  const count = (rows[0] as { count: string | number } | undefined)?.count ?? 0;
 
   return Number(count);
 }
@@ -529,7 +539,7 @@ export class NotificationBuilder {
   }
 
   async create() {
-    const [inserted] = await this.db('internal_notifications')
+    const [inserted] = await tenantTable(this.db, this.tenant, 'internal_notifications')
       .insert(this.notification)
       .returning('*');
     return inserted;

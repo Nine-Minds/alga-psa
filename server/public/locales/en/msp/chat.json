@@ -155,5 +155,23 @@
   },
   "mention": {
     "noResultsFound": "No results found"
+  },
+  "aiCredits": {
+    "indicatorTooltip": "{{credits}} AI credits remaining",
+    "noSubscription": {
+      "title": "AI is a paid add-on",
+      "body": "Subscribe to the AI add-on to use Alga AI. Your plan includes a monthly credit allotment.",
+      "cta": "View AI Usage settings"
+    },
+    "outOfCredits": {
+      "title": "Out of AI credits",
+      "body": "Top up to keep using Alga AI.",
+      "bodyWithBalance": "Your balance is {{balance}} credits. Top up to keep using Alga AI.",
+      "cta": "Buy top-up credits"
+    },
+    "consentRequired": {
+      "title": "Data-sharing consent required",
+      "body": "An administrator must accept AI data-sharing terms on this appliance before AI can be used."
+    }
   }
 }

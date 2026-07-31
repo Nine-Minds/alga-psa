@@ -1,8 +1,10 @@
-import { getAdminConnection } from '@alga-psa/db';
+import { getAdminConnection, tenantDb } from '@alga-psa/db';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import logger from '@alga-psa/core/logger';
 import { CalendarProviderService } from './CalendarProviderService';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 const analytics: { capture: (event: string, payload: Record<string, unknown>) => Promise<void> } | null = null;
 
@@ -71,11 +73,33 @@ export class CalendarWebhookMaintenanceService {
     const now = new Date();
     const threshold = new Date(now.getTime() + lookAheadMinutes * 60000);
 
-    let query = knex('calendar_providers as cp')
-      .join('microsoft_calendar_provider_config as mcp', function() {
-        this.on('cp.id', '=', 'mcp.calendar_provider_id')
-          .andOn('cp.tenant', '=', 'mcp.tenant');
-      })
+    const providerRoot = tenantId
+      ? tenantDb(knex, tenantId).table('calendar_providers as cp')
+      : tenantDb(knex, PROVIDER_TENANT_DISCOVERY).unscoped(
+          'calendar_providers as cp',
+          'cross-tenant Microsoft calendar webhook renewal candidate discovery'
+        );
+
+    let query = providerRoot;
+    if (tenantId) {
+      query = tenantDb(knex, tenantId).tenantJoin(
+        query,
+        'microsoft_calendar_provider_config as mcp',
+        'cp.id',
+        'mcp.calendar_provider_id',
+        { rootTenantColumn: 'cp.tenant' }
+      );
+    } else {
+      query = tenantDb(knex, PROVIDER_TENANT_DISCOVERY).tenantJoin(
+        query,
+        'microsoft_calendar_provider_config as mcp',
+        'cp.id',
+        'mcp.calendar_provider_id',
+        { rootTenantColumn: 'cp.tenant' }
+      );
+    }
+
+    query = query
       .where('cp.provider_type', 'microsoft')
       .andWhere('cp.is_active', true);
 
@@ -88,16 +112,12 @@ export class CalendarWebhookMaintenanceService {
       });
     }
 
-    if (tenantId) {
-      query = query.andWhere('cp.tenant', tenantId);
-    }
-
     if (providerId) {
       query = query.andWhere('cp.id', providerId);
     }
 
     // Select all columns needed to construct CalendarProviderConfig
-    const rows = await query.select(
+    const rows = (await query.select(
       'cp.id',
       'cp.tenant',
       'cp.provider_name',
@@ -122,7 +142,7 @@ export class CalendarWebhookMaintenanceService {
       'mcp.refresh_token',
       'mcp.token_expires_at',
       'mcp.calendar_id as vendor_calendar_id'
-    );
+    )) as Array<{ id: string; tenant: string }>;
 
     // Use CalendarProviderService to properly hydrate the config with decryption
     const providerService = new CalendarProviderService();
@@ -354,9 +374,8 @@ export class CalendarWebhookMaintenanceService {
         updateData.error_message = status.errorMessage;
       }
 
-      await knex('calendar_providers')
+      await tenantDb(knex, tenant).table('calendar_providers')
         .where('id', providerId)
-        .andWhere('tenant', tenant)
         .update(updateData);
     } catch (error) {
       logger.warn(`Failed to update provider status for ${providerId}`, error);
@@ -393,9 +412,8 @@ export class CalendarWebhookMaintenanceService {
       const now = new Date().toISOString();
       
       // Check if health row exists, if not create it
-      const existing = await knex('calendar_provider_health')
+      const existing = await tenantDb(knex, tenant).table('calendar_provider_health')
         .where('calendar_provider_id', providerId)
-        .andWhere('tenant', tenant)
         .first();
 
       const updateData: any = {
@@ -420,12 +438,11 @@ export class CalendarWebhookMaintenanceService {
       }
 
       if (existing) {
-        await knex('calendar_provider_health')
+        await tenantDb(knex, tenant).table('calendar_provider_health')
           .where('calendar_provider_id', providerId)
-          .andWhere('tenant', tenant)
           .update(updateData);
       } else {
-        await knex('calendar_provider_health')
+        await tenantDb(knex, tenant).table('calendar_provider_health')
           .insert({
             calendar_provider_id: providerId,
             tenant: tenant,
@@ -447,9 +464,8 @@ export class CalendarWebhookMaintenanceService {
   } | null> {
     try {
       const knex = await getAdminConnection();
-      const health = await knex('calendar_provider_health')
+      const health = await tenantDb(knex, tenant).table('calendar_provider_health')
         .where('calendar_provider_id', providerId)
-        .andWhere('tenant', tenant)
         .first();
       return health || null;
     } catch (error) {

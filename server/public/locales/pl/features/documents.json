@@ -296,5 +296,6 @@
     "next": "Następna",
     "pageOf": "Strona {{current}} z {{total}}",
     "previous": "Poprzednia"
-  }
+  },
+  "ticketDocuments": "Dokumenty zgłoszenia"
 }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Asset, AssetAssociation, AssetListResponse } from '@alga-psa/types';
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../actions/assetActions';
+import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -29,12 +30,17 @@ import {
     tabToPanelParam,
 } from './AssetDetailDrawer.types';
 
+/** Asset types with dedicated local icons (mirrors the switch in getAssetTypeIcon). */
+const BUILTIN_ICON_TYPES = new Set(['workstation', 'server', 'mobile_device', 'printer', 'network_device', 'unknown']);
+
 interface AssociatedAssetsProps {
     id: string;
     entityId: string;
     entityType: 'ticket' | 'project';
     clientId: string;
     defaultBoardId?: string;
+    /** Server-started associated-assets promise; skips the mount fetch when provided. */
+    initialAssets?: Promise<Asset[]>;
 }
 
 interface SelectedAsset {
@@ -42,12 +48,21 @@ interface SelectedAsset {
     relationshipType: 'affected' | 'related';
 }
 
-export default function AssociatedAssets({ id, entityId, entityType, clientId, defaultBoardId }: AssociatedAssetsProps) {
+export default function AssociatedAssets({ id, entityId, entityType, clientId, defaultBoardId,
+    initialAssets,
+}: AssociatedAssetsProps) {
     const { t } = useTranslation('msp/assets');
-    const assetTypeEntries = useAssetTypeRegistry();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
+    // The type registry only informs CUSTOM asset-type icons; builtin types
+    // render local icons. Fetch it lazily, and only when a custom-typed asset
+    // is actually on screen — most tickets never pay this request.
+    const needsTypeRegistry = associatedAssets.some((association) => {
+        const type = association.asset?.asset_type;
+        return Boolean(type) && !BUILTIN_ICON_TYPES.has(type as string);
+    });
+    const assetTypeEntries = useAssetTypeRegistry(needsTypeRegistry);
 
     // Multi-select state for asset selection
     const [selectedAssets, setSelectedAssets] = useState<Map<string, SelectedAsset>>(new Map());
@@ -94,7 +109,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const loadAssociatedAssets = useCallback(async () => {
         try {
             setIsLoading(true);
-            const assets = await listEntityAssets(entityId, entityType);
+            const assets = unwrapAssetActionResult(await listEntityAssets(entityId, entityType));
 
             // Track associated asset IDs to filter them from available list
             setAssociatedAssetIds(new Set(assets.map(a => a.asset_id)));
@@ -123,19 +138,57 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
         }
     }, [entityId, entityType, t]);
 
+    const skipFirstAssetsFetch = useRef(Boolean(initialAssets));
     useEffect(() => {
+        if (!initialAssets) return;
+        let cancelled = false;
+        // initialAssets may be a React Flight thenable (RSC-streamed) whose
+        // .then() returns undefined; normalize to a real, chainable Promise.
+        Promise.resolve(initialAssets).then((assets) => {
+            if (cancelled) return;
+            const expectedAssets = unwrapAssetActionResult(assets);
+            // Same shaping as loadAssociatedAssets, minus the network round-trip.
+            setAssociatedAssetIds(new Set(expectedAssets.map((a) => a.asset_id)));
+            setAssociatedAssets(expectedAssets.map((asset): AssetAssociation => ({
+                tenant: asset.tenant,
+                asset_id: asset.asset_id,
+                entity_id: entityId,
+                entity_type: entityType,
+                relationship_type: 'affected',
+                created_by: 'system',
+                created_at: new Date().toISOString(),
+                asset,
+            })));
+            setIsLoading(false);
+        }).catch((error) => {
+            if (cancelled) return;
+            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
+                defaultValue: 'Failed to load associated assets'
+            }));
+            setAssociatedAssetIds(new Set());
+            setAssociatedAssets([]);
+            setIsLoading(false);
+        });
+        return () => { cancelled = true; };
+    }, [initialAssets, entityId, entityType]);
+
+    useEffect(() => {
+        if (skipFirstAssetsFetch.current) {
+            skipFirstAssetsFetch.current = false;
+            return;
+        }
         void loadAssociatedAssets();
     }, [loadAssociatedAssets]);
 
     const loadAvailableAssets = useCallback(async () => {
         try {
             setIsLoadingAssets(true);
-            const response: AssetListResponse = await listAssets({
+            const response: AssetListResponse = unwrapAssetActionResult(await listAssets({
                 client_id: clientId,
                 page: currentPage,
                 limit: pageSize,
                 search: searchTerm || undefined
-            });
+            }));
             // Filter out already-associated assets
             const filteredAssets = response.assets.filter(
                 asset => !associatedAssetIds.has(asset.asset_id)
@@ -247,7 +300,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                         entity_id: entityId,
                         entity_type: entityType,
                         relationship_type: relationshipType
-                    })
+                    }).then(unwrapAssetActionResult)
                 )
             );
 
@@ -282,7 +335,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 
     const handleRemoveAsset = async (assetId: string) => {
         try {
-            await removeAssetAssociation(assetId, entityId, entityType);
+            unwrapAssetActionResult(await removeAssetAssociation(assetId, entityId, entityType));
             toast.success(t('associatedAssets.success.removed', {
                 defaultValue: 'Asset association removed'
             }));
@@ -622,7 +675,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                     checked={areAllCurrentPageSelected()}
                                                     indeterminate={areSomeCurrentPageSelected()}
                                                     onChange={handleSelectAll}
-                                                    containerClassName="mb-0"
                                                 />
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -654,7 +706,6 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                             id={`select-asset-${asset.asset_id}`}
                                                             checked={isSelected}
                                                             onChange={() => handleAssetToggle(asset)}
-                                                            containerClassName="mb-0"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3">

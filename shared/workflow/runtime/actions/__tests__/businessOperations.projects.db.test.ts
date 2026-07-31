@@ -1,8 +1,26 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
+
+const SCHEMA_INTROSPECTION_TENANT = '__workflow_projects_db_test_schema__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, SCHEMA_INTROSPECTION_TENANT).unscoped(table, reason);
+}
+
+async function tableExists(db: Knex, tableName: string): Promise<boolean> {
+  const row = await unscopedTable(db, 'information_schema.tables', 'schema table existence check for project DB fixtures')
+    .where({ table_schema: 'public', table_name: tableName })
+    .first('table_name');
+  return Boolean(row);
+}
 
 const runtimeState = vi.hoisted(() => ({
   db: null as Knex | null,
@@ -74,7 +92,7 @@ async function invokeAction(actionId: string, input: Record<string, unknown>, ct
 }
 
 async function getTableColumns(db: Knex, tableName: string): Promise<Set<string>> {
-  const rows = await db('information_schema.columns')
+  const rows = await unscopedTable(db, 'information_schema.columns', 'schema introspection for project DB fixtures')
     .select('column_name')
     .where({ table_schema: 'public', table_name: tableName });
   return new Set(rows.map((row: { column_name: string }) => row.column_name));
@@ -84,7 +102,7 @@ async function createClientOrCompany(db: Knex, tenantId: string): Promise<{ clie
   const nowIso = new Date().toISOString();
   const id = uuidv4();
 
-  const hasClients = await db.schema.hasTable('clients');
+  const hasClients = await tableExists(db, 'clients');
   if (hasClients) {
     const clientColumns = await getTableColumns(db, 'clients');
     const row: Record<string, unknown> = {
@@ -101,7 +119,7 @@ async function createClientOrCompany(db: Knex, tenantId: string): Promise<{ clie
     if (clientColumns.has('credit_balance')) row.credit_balance = 0;
     if (clientColumns.has('properties')) row.properties = {};
 
-    await db('clients').insert(row);
+    await tenantTable(db, tenantId, 'clients').insert(row);
     return { clientId: id, companyId: id };
   }
 
@@ -116,7 +134,7 @@ async function createClientOrCompany(db: Knex, tenantId: string): Promise<{ clie
   if (companyColumns.has('url')) companyRow.url = '';
   if (companyColumns.has('properties')) companyRow.properties = {};
 
-  await db('companies').insert(companyRow);
+  await tenantTable(db, tenantId, 'companies').insert(companyRow);
   return { clientId: id, companyId: id };
 }
 
@@ -127,7 +145,7 @@ async function ensureStatusId(
   fallbackName: string,
   createdByUserId: string
 ): Promise<string> {
-  const existing = await db('statuses')
+  const existing = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: statusType })
     .orderBy('order_number', 'asc')
     .first();
@@ -151,7 +169,7 @@ async function ensureStatusId(
   if (statusColumns.has('is_default')) row.is_default = true;
   if (statusColumns.has('is_inactive')) row.is_inactive = false;
 
-  await db('statuses').insert(row);
+  await tenantTable(db, tenantId, 'statuses').insert(row);
   return statusId;
 }
 
@@ -195,7 +213,7 @@ async function createProject(
   if (columns.has('is_inactive')) row.is_inactive = false;
   if (columns.has('client_portal_config')) row.client_portal_config = JSON.stringify({});
 
-  await db('projects').insert(row);
+  await tenantTable(db, tenantId, 'projects').insert(row);
   return projectId;
 }
 
@@ -224,7 +242,7 @@ async function createPhase(
   if (columns.has('order_number')) row.order_number = options.orderNumber ?? 1;
   if (columns.has('order_key')) row.order_key = options.orderKey ?? `a${Math.max((options.orderNumber ?? 1) - 1, 0)}`;
 
-  await db('project_phases').insert(row);
+  await tenantTable(db, tenantId, 'project_phases').insert(row);
   return phaseId;
 }
 
@@ -261,12 +279,12 @@ async function createTask(
   if (columns.has('project_status_mapping_id')) row.project_status_mapping_id = options.projectStatusMappingId ?? null;
   if (columns.has('order_key')) row.order_key = options.orderKey ?? 'a0';
 
-  await db('project_tasks').insert(row);
+  await tenantTable(db, tenantId, 'project_tasks').insert(row);
 
   if (columns.has('project_status_mapping_id') && !options.projectStatusMappingId) {
     const statusMappingId = uuidv4();
     const projectTaskStatusId = options.statusId ?? await ensureStatusId(db, tenantId, 'project_task', 'To Do', runtimeState.actorUserId);
-    await db('project_status_mappings').insert({
+    await tenantTable(db, tenantId, 'project_status_mappings').insert({
       tenant: tenantId,
       project_status_mapping_id: statusMappingId,
       project_id: projectId,
@@ -281,7 +299,7 @@ async function createTask(
     if (columns.has('status_id') && !options.statusId) {
       updatePayload.status_id = projectTaskStatusId;
     }
-    await db('project_tasks').where({ tenant: tenantId, task_id: taskId }).update(updatePayload);
+    await tenantTable(db, tenantId, 'project_tasks').where({ tenant: tenantId, task_id: taskId }).update(updatePayload);
   }
 
   return taskId;
@@ -299,7 +317,7 @@ async function createProjectStatusMapping(
   } = {}
 ): Promise<string> {
   const mappingId = uuidv4();
-  await db('project_status_mappings').insert({
+  await tenantTable(db, tenantId, 'project_status_mappings').insert({
     tenant: tenantId,
     project_status_mapping_id: mappingId,
     project_id: projectId,
@@ -321,10 +339,10 @@ async function addTaskResource(
   additionalUserId: string,
   role = 'support'
 ): Promise<void> {
-  const hasTaskResources = await db.schema.hasTable('task_resources');
+  const hasTaskResources = await tableExists(db, 'task_resources');
   if (!hasTaskResources) return;
 
-  await db('task_resources').insert({
+  await tenantTable(db, tenantId, 'task_resources').insert({
     tenant: tenantId,
     task_id: taskId,
     assigned_to: assignedTo,
@@ -340,7 +358,7 @@ async function createChecklistItem(
   itemName: string,
   options: { assignedTo?: string | null; description?: string | null; orderNumber?: number } = {}
 ): Promise<string> {
-  const hasChecklist = await db.schema.hasTable('task_checklist_items');
+  const hasChecklist = await tableExists(db, 'task_checklist_items');
   if (!hasChecklist) return uuidv4();
 
   const checklistItemId = uuidv4();
@@ -359,7 +377,7 @@ async function createChecklistItem(
   if (columns.has('created_at')) row.created_at = nowIso;
   if (columns.has('updated_at')) row.updated_at = nowIso;
 
-  await db('task_checklist_items').insert(row);
+  await tenantTable(db, tenantId, 'task_checklist_items').insert(row);
   return checklistItemId;
 }
 
@@ -374,7 +392,7 @@ async function createProjectTicketLink(
   }
 ): Promise<string> {
   const linkId = uuidv4();
-  await db('project_ticket_links').insert({
+  await tenantTable(db, tenantId, 'project_ticket_links').insert({
     tenant: tenantId,
     link_id: linkId,
     project_id: params.projectId,
@@ -414,7 +432,7 @@ async function createTimeEntryForProjectTask(
   if (columns.has('duration_seconds')) row.duration_seconds = 3600;
   if (columns.has('created_at')) row.created_at = now.toISOString();
   if (columns.has('updated_at')) row.updated_at = now.toISOString();
-  await db('time_entries').insert(row);
+  await tenantTable(db, tenantId, 'time_entries').insert(row);
 }
 
 async function createTagMapping(
@@ -425,7 +443,7 @@ async function createTagMapping(
   tagText: string
 ): Promise<void> {
   const tagId = uuidv4();
-  await db('tag_definitions').insert({
+  await tenantTable(db, tenantId, 'tag_definitions').insert({
     tenant: tenantId,
     tag_id: tagId,
     tag_text: tagText,
@@ -434,7 +452,7 @@ async function createTagMapping(
     text_color: '#111111',
     created_at: new Date().toISOString(),
   });
-  await db('tag_mappings').insert({
+  await tenantTable(db, tenantId, 'tag_mappings').insert({
     tenant: tenantId,
     mapping_id: uuidv4(),
     tag_id: tagId,
@@ -474,7 +492,7 @@ async function createTicket(
   if (columns.has('is_closed')) row.is_closed = false;
   if (columns.has('is_inactive')) row.is_inactive = false;
 
-  await db('tickets').insert(row);
+  await tenantTable(db, tenantId, 'tickets').insert(row);
   return ticketId;
 }
 
@@ -730,7 +748,7 @@ describe('project business operation db actions', () => {
     expect(updatedTask.task.task_name).toBe('Updated Task Name');
     expect(updatedTask.task.description).toBe('Updated task description');
 
-    const audits = await db('audit_logs')
+    const audits = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, user_id: runtimeState.actorUserId, table_name: 'workflow_runs' })
       .whereIn('operation', [
         'workflow_action:projects.update',
@@ -794,7 +812,7 @@ describe('project business operation db actions', () => {
     })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
     runtimeState.deniedPermissions.clear();
 
-    const projectAfterDenied = await db('projects')
+    const projectAfterDenied = await tenantTable(db, runtimeState.tenantId, 'projects')
       .where({ tenant: runtimeState.tenantId, project_id: projectId })
       .first('project_name');
     expect(projectAfterDenied?.project_name).toBe('Validation Project');
@@ -838,7 +856,7 @@ describe('project business operation db actions', () => {
       orderKey: 'a0',
     });
 
-    const beforeTask = await db('project_tasks')
+    const beforeTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('wbs_code', 'order_key', 'phase_id');
 
@@ -855,13 +873,13 @@ describe('project business operation db actions', () => {
     expect(moved.wbs_code).not.toBe(beforeTask?.wbs_code ?? null);
     expect(moved.order_key).toBeTruthy();
 
-    const persistedMoved = await db('project_tasks')
+    const persistedMoved = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('order_key', 'phase_id');
     expect(persistedMoved?.order_key).toBe(moved.order_key);
     expect(persistedMoved?.phase_id).toBe(phaseTarget);
 
-    const audit = await db('audit_logs')
+    const audit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:projects.move_task' })
       .orderBy('timestamp', 'desc')
       .first('details');
@@ -916,7 +934,7 @@ describe('project business operation db actions', () => {
     const ticketId = await createTicket(db, runtimeState.tenantId, runtimeState.actorUserId, {
       clientId: entity.clientId,
     });
-    await db('project_ticket_links').insert({
+    await tenantTable(db, runtimeState.tenantId, 'project_ticket_links').insert({
       tenant: runtimeState.tenantId,
       link_id: linkId,
       project_id: sourceProjectId,
@@ -936,7 +954,7 @@ describe('project business operation db actions', () => {
     expect(moved.current_phase_id).toBe(targetPhase);
     expect(moved.current_project_status_mapping_id).toBe(targetMapping);
 
-    const updatedLink = await db('project_ticket_links')
+    const updatedLink = await tenantTable(db, runtimeState.tenantId, 'project_ticket_links')
       .where({ tenant: runtimeState.tenantId, link_id: linkId })
       .first('project_id', 'phase_id');
     expect(updatedLink?.project_id).toBe(targetProjectId);
@@ -1012,12 +1030,12 @@ describe('project business operation db actions', () => {
     expect(result.additional_user_ids).toEqual([nextAdditionalA, nextAdditionalB].sort());
     expect(result.no_op).toBe(false);
 
-    const updatedTask = await db('project_tasks')
+    const updatedTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('assigned_to');
     expect(updatedTask?.assigned_to).toBe(nextPrimary);
 
-    const resources = await db('task_resources')
+    const resources = await tenantTable(db, runtimeState.tenantId, 'task_resources')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .orderBy('additional_user_id', 'asc')
       .select('assigned_to', 'additional_user_id', 'role');
@@ -1025,7 +1043,7 @@ describe('project business operation db actions', () => {
     expect(resources.map((row: { additional_user_id: string }) => row.additional_user_id)).toEqual([nextAdditionalA, nextAdditionalB].sort());
     expect(resources.every((row: { assigned_to: string }) => row.assigned_to === nextPrimary)).toBe(true);
 
-    const audit = await db('audit_logs')
+    const audit = await tenantTable(db, runtimeState.tenantId, 'audit_logs')
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:projects.assign_task' })
       .orderBy('timestamp', 'desc')
       .first('details');
@@ -1055,7 +1073,7 @@ describe('project business operation db actions', () => {
     await addTaskResource(db, runtimeState.tenantId, taskId, primary, additionalA);
     await addTaskResource(db, runtimeState.tenantId, taskId, primary, additionalB);
 
-    const beforeTask = await db('project_tasks')
+    const beforeTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('updated_at');
 
@@ -1070,7 +1088,7 @@ describe('project business operation db actions', () => {
     expect(result.assigned_to).toBe(primary);
     expect([...result.additional_user_ids].sort()).toEqual([additionalA, additionalB].sort());
 
-    const afterTask = await db('project_tasks')
+    const afterTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('updated_at');
     expect(String(afterTask?.updated_at)).toBe(String(beforeTask?.updated_at));
@@ -1113,12 +1131,12 @@ describe('project business operation db actions', () => {
       additional_user_ids: [uuidv4()],
     })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
 
-    const taskAfter = await db('project_tasks')
+    const taskAfter = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first('assigned_to');
     expect(taskAfter?.assigned_to).toBe(primary);
 
-    const resourcesAfter = await db('task_resources')
+    const resourcesAfter = await tenantTable(db, runtimeState.tenantId, 'task_resources')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .select('additional_user_id');
     expect(resourcesAfter.map((row: { additional_user_id: string }) => row.additional_user_id)).toEqual([additional]);
@@ -1171,7 +1189,7 @@ describe('project business operation db actions', () => {
     const sourcePatch: Record<string, unknown> = { description: 'Duplicate core description' };
     if (taskColumns.has('estimated_hours')) sourcePatch.estimated_hours = 12;
     if (taskColumns.has('actual_hours')) sourcePatch.actual_hours = 7;
-    await db('project_tasks')
+    await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: sourceTaskId })
       .update(sourcePatch);
 
@@ -1193,7 +1211,7 @@ describe('project business operation db actions', () => {
       expect(result.target_status_id).toBe(targetStatusId);
     }
 
-    const duplicatedTask = await db('project_tasks')
+    const duplicatedTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
       .first();
     expect(duplicatedTask).toBeDefined();
@@ -1286,29 +1304,29 @@ describe('project business operation db actions', () => {
     expect(result.copied_additional_assignee_count).toBe(2);
     expect(result.copied_ticket_link_count).toBe(2);
 
-    const duplicatedTask = await db('project_tasks')
+    const duplicatedTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
       .first('assigned_to');
     expect(duplicatedTask?.assigned_to).toBe(primary);
 
-    const hasChecklist = await db.schema.hasTable('task_checklist_items');
+    const hasChecklist = await tableExists(db, 'task_checklist_items');
     if (hasChecklist) {
-      const duplicatedChecklist = await db('task_checklist_items')
+      const duplicatedChecklist = await tenantTable(db, runtimeState.tenantId, 'task_checklist_items')
         .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
         .select('item_name');
       expect(duplicatedChecklist).toHaveLength(2);
     }
 
-    const hasTaskResources = await db.schema.hasTable('task_resources');
+    const hasTaskResources = await tableExists(db, 'task_resources');
     if (hasTaskResources) {
-      const duplicatedResources = await db('task_resources')
+      const duplicatedResources = await tenantTable(db, runtimeState.tenantId, 'task_resources')
         .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
         .orderBy('additional_user_id', 'asc')
         .select('additional_user_id');
       expect(duplicatedResources.map((row: { additional_user_id: string }) => row.additional_user_id)).toEqual([additionalA, additionalB].sort());
     }
 
-    const duplicatedLinks = await db('project_ticket_links')
+    const duplicatedLinks = await tenantTable(db, runtimeState.tenantId, 'project_ticket_links')
       .where({ tenant: runtimeState.tenantId, task_id: result.task_id })
       .orderBy('ticket_id', 'asc')
       .select('project_id', 'phase_id', 'ticket_id');
@@ -1347,14 +1365,14 @@ describe('project business operation db actions', () => {
     expect(result.deleted_ticket_link_count).toBeGreaterThanOrEqual(1);
     expect(result.deleted_checklist_item_count).toBeGreaterThanOrEqual(1);
 
-    const deletedTask = await db('project_tasks')
+    const deletedTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first();
     expect(deletedTask).toBeUndefined();
-    const remainingChecklist = await db('task_checklist_items')
+    const remainingChecklist = await tenantTable(db, runtimeState.tenantId, 'task_checklist_items')
       .where({ tenant: runtimeState.tenantId, task_id: taskId });
     expect(remainingChecklist).toHaveLength(0);
-    const remainingLinks = await db('project_ticket_links')
+    const remainingLinks = await tenantTable(db, runtimeState.tenantId, 'project_ticket_links')
       .where({ tenant: runtimeState.tenantId, task_id: taskId });
     expect(remainingLinks).toHaveLength(0);
   });
@@ -1390,14 +1408,14 @@ describe('project business operation db actions', () => {
       code: 'VALIDATION_ERROR',
     });
 
-    const taskAfter = await db('project_tasks')
+    const taskAfter = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: taskId })
       .first();
     expect(taskAfter).toBeDefined();
-    const checklistAfter = await db('task_checklist_items')
+    const checklistAfter = await tenantTable(db, runtimeState.tenantId, 'task_checklist_items')
       .where({ tenant: runtimeState.tenantId, task_id: taskId });
     expect(checklistAfter.length).toBeGreaterThan(0);
-    const linksAfter = await db('project_ticket_links')
+    const linksAfter = await tenantTable(db, runtimeState.tenantId, 'project_ticket_links')
       .where({ tenant: runtimeState.tenantId, task_id: taskId });
     expect(linksAfter.length).toBeGreaterThan(0);
   });
@@ -1417,7 +1435,7 @@ describe('project business operation db actions', () => {
     });
     const phaseDeleteResult = await invokeAction('projects.delete_phase', { phase_id: phaseDeleteId });
     expect(phaseDeleteResult.deleted).toBe(true);
-    const phaseAfter = await db('project_phases')
+    const phaseAfter = await tenantTable(db, runtimeState.tenantId, 'project_phases')
       .where({ tenant: runtimeState.tenantId, phase_id: phaseDeleteId })
       .first();
     expect(phaseAfter).toBeUndefined();
@@ -1446,9 +1464,9 @@ describe('project business operation db actions', () => {
       taskId: deletableTaskId,
       ticketId: deletableTicketId,
     });
-    const hasEmailReplyTokens = await db.schema.hasTable('email_reply_tokens');
+    const hasEmailReplyTokens = await tableExists(db, 'email_reply_tokens');
     if (hasEmailReplyTokens) {
-      await db('email_reply_tokens').insert({
+      await tenantTable(db, runtimeState.tenantId, 'email_reply_tokens').insert({
         tenant: runtimeState.tenantId,
         token: `project-${uuidv4()}`,
         project_id: deletableProjectId,
@@ -1462,21 +1480,21 @@ describe('project business operation db actions', () => {
     expect(deleteProjectResult.can_delete).toBe(true);
     expect(deleteProjectResult.deleted).toBe(true);
 
-    const deletedProject = await db('projects')
+    const deletedProject = await tenantTable(db, runtimeState.tenantId, 'projects')
       .where({ tenant: runtimeState.tenantId, project_id: deletableProjectId })
       .first();
     expect(deletedProject).toBeUndefined();
-    const remainingProjectTags = await db('tag_mappings')
+    const remainingProjectTags = await tenantTable(db, runtimeState.tenantId, 'tag_mappings')
       .where({ tenant: runtimeState.tenantId, tagged_type: 'project', tagged_id: deletableProjectId });
     expect(remainingProjectTags).toHaveLength(0);
-    const remainingTaskTags = await db('tag_mappings')
+    const remainingTaskTags = await tenantTable(db, runtimeState.tenantId, 'tag_mappings')
       .where({ tenant: runtimeState.tenantId, tagged_type: 'project_task', tagged_id: deletableTaskId });
     expect(remainingTaskTags).toHaveLength(0);
-    const remainingProjectLinks = await db('project_ticket_links')
+    const remainingProjectLinks = await tenantTable(db, runtimeState.tenantId, 'project_ticket_links')
       .where({ tenant: runtimeState.tenantId, project_id: deletableProjectId });
     expect(remainingProjectLinks).toHaveLength(0);
     if (hasEmailReplyTokens) {
-      const remainingTokens = await db('email_reply_tokens')
+      const remainingTokens = await tenantTable(db, runtimeState.tenantId, 'email_reply_tokens')
         .where({ tenant: runtimeState.tenantId, project_id: deletableProjectId });
       expect(remainingTokens).toHaveLength(0);
     }
@@ -1531,13 +1549,13 @@ describe('project business operation db actions', () => {
     expect(result.project_ticket_link_created).toBe(true);
     expect(result.ticket_entity_link_created).toBe(true);
 
-    const projectLink = await db('project_ticket_links')
+    const projectLink = await tenantTable(db, runtimeState.tenantId, 'project_ticket_links')
       .where({ tenant: runtimeState.tenantId, task_id: taskId, ticket_id: ticketId })
       .first('project_id', 'phase_id');
     expect(projectLink?.project_id).toBe(projectId);
     expect(projectLink?.phase_id).toBe(phaseId);
 
-    const entityLink = await db('ticket_entity_links')
+    const entityLink = await tenantTable(db, runtimeState.tenantId, 'ticket_entity_links')
       .where({
         tenant: runtimeState.tenantId,
         ticket_id: ticketId,
@@ -1585,10 +1603,10 @@ describe('project business operation db actions', () => {
     expect(second.project_ticket_link_created).toBe(false);
     expect(second.ticket_entity_link_created).toBe(false);
 
-    const projectLinkRows = await db('project_ticket_links')
+    const projectLinkRows = await tenantTable(db, runtimeState.tenantId, 'project_ticket_links')
       .where({ tenant: runtimeState.tenantId, task_id: taskId, ticket_id: ticketId });
     expect(projectLinkRows).toHaveLength(1);
-    const entityLinkRows = await db('ticket_entity_links')
+    const entityLinkRows = await tenantTable(db, runtimeState.tenantId, 'ticket_entity_links')
       .where({
         tenant: runtimeState.tenantId,
         ticket_id: ticketId,
@@ -1623,7 +1641,7 @@ describe('project business operation db actions', () => {
     expect(second.added_count).toBe(0);
     expect(second.existing_count).toBe(2);
 
-    const projectMappings = await db('tag_mappings')
+    const projectMappings = await tenantTable(db, runtimeState.tenantId, 'tag_mappings')
       .where({ tenant: runtimeState.tenantId, tagged_type: 'project', tagged_id: projectId });
     expect(projectMappings).toHaveLength(2);
   });
@@ -1660,7 +1678,7 @@ describe('project business operation db actions', () => {
     expect(second.added_count).toBe(0);
     expect(second.existing_count).toBe(2);
 
-    const taskMappings = await db('tag_mappings')
+    const taskMappings = await tenantTable(db, runtimeState.tenantId, 'tag_mappings')
       .where({ tenant: runtimeState.tenantId, tagged_type: 'project_task', tagged_id: taskId });
     expect(taskMappings).toHaveLength(2);
   });
@@ -1717,7 +1735,7 @@ describe('project business operation db actions', () => {
       taskName: 'Unauthorized Task',
     });
 
-    await db('users')
+    await tenantTable(db, runtimeState.tenantId, 'users')
       .where({ tenant: runtimeState.tenantId, user_id: runtimeState.actorUserId })
       .update({ user_type: 'client', client_id: entityA.clientId });
 
@@ -1769,7 +1787,7 @@ describe('project business operation db actions', () => {
     expect(created.task_id).toBeDefined();
     expect(created.url).toContain(projectId);
 
-    const persistedTask = await db('project_tasks')
+    const persistedTask = await tenantTable(db, runtimeState.tenantId, 'project_tasks')
       .where({ tenant: runtimeState.tenantId, task_id: created.task_id })
       .first('task_name', 'phase_id');
     expect(persistedTask?.task_name).toBe('Compatibility Task');

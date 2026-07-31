@@ -89,6 +89,10 @@ vi.mock('@alga-psa/db/admin', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   getTenantIdBySlug: getTenantIdBySlugMock,
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
+    unscoped: (t: string, _reason?: string) => conn(t),
+  }),
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({

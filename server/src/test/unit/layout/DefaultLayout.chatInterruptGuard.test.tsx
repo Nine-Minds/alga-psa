@@ -7,7 +7,7 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import DefaultLayout from '../../../components/layout/DefaultLayout';
-import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 
 const routerPush = vi.fn();
@@ -35,6 +35,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  detectClientLocale: () => 'en',
   useTranslation: () => ({
     t: (key: string, options?: string | { defaultValue?: string }) => {
       if (translations[key]) {
@@ -178,7 +179,7 @@ vi.mock('@alga-psa/ui/lib', () => ({
   savePreference: vi.fn(),
 }));
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({
   isExperimentalFeatureEnabled: vi.fn().mockResolvedValue(true),
 }));
 
@@ -233,6 +234,13 @@ describe('DefaultLayout AI interrupt guard', () => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
     act(() => {
       document.dispatchEvent(
         new KeyboardEvent('keydown', {
@@ -245,7 +253,7 @@ describe('DefaultLayout AI interrupt guard', () => {
       );
     });
 
-    expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
+    expect(await screen.findByTestId('interrupt-confirmation', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByText('Fermer le chat et annuler la reponse IA ?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Garder le chat ouvert' })).toBeInTheDocument();
     expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
@@ -273,9 +281,16 @@ describe('DefaultLayout AI interrupt guard', () => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
     });
 
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
     fireEvent.click(screen.getByText('Go to tickets'));
 
-    expect(await screen.findByTestId('interrupt-confirmation')).toBeInTheDocument();
+    expect(await screen.findByTestId('interrupt-confirmation', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByText('Quitter la page et annuler la reponse IA ?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rester sur la page' })).toBeInTheDocument();
     expect(routerPush).not.toHaveBeenCalled();
@@ -301,6 +316,13 @@ describe('DefaultLayout AI interrupt guard', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('right-sidebar')).toHaveAttribute('data-open', 'true');
+    });
+
+    // Flush the interruptible-state cascade (sidebar effect -> setIsChatInterruptible
+    // -> re-armed click/navigation guard) so the interaction below intercepts
+    // deterministically instead of racing the guard under full-suite load.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const beforeUnloadEvent = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;

@@ -31,7 +31,7 @@ export function XeroLiveMappingManager({ defaultConnection }: XeroLiveMappingMan
       context={context}
       realmLabel={t('integrations.xero.live.defaultOrganisation', { defaultValue: 'Default Xero Organisation' })}
       tabStyles={tabStyles}
-      defaultTabId="Items / Services"
+      defaultTabId="xero-live-service-mappings"
       urlParamKey="xeroMappingTab"
     />
   );

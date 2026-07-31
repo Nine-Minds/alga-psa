@@ -31,17 +31,24 @@ describe('AutomaticInvoices i18n wiring contract', () => {
 
     expect(source).toContain("const { t } = useTranslation('msp/invoicing');");
 
+    // Pro-Grid redesign + cleanup: the static description/select-all explanation
+    // and page-scope note were dropped; columns are now Client/Group, Status,
+    // Service Period, Amount. Charge moved to an inline tag on the client cell
+    // (chargeTags.*), and Service Period + Invoice Window collapsed into one
+    // column (the open date now rides on the Status pill).
+    // Option-3 data-first toolbar: the redundant "Ready to Invoice" heading was
+    // dropped (the page title + view-tab labels already name the context), and the
+    // quick-filter chips + date range moved behind the Filters popover
+    // (filters.title); dateRange/search still resolve from inside it.
     const keyChecks = [
-      'automaticInvoices.ready.title',
-      'automaticInvoices.ready.description',
-      'automaticInvoices.ready.selectAllExplanation',
+      'automaticInvoices.filters.title',
       'automaticInvoices.ready.dateRange',
       'automaticInvoices.ready.search',
       'automaticInvoices.ready.filterPlaceholder',
       'automaticInvoices.ready.columns.group',
+      'automaticInvoices.ready.columns.status',
       'automaticInvoices.ready.columns.servicePeriod',
-      'automaticInvoices.ready.columns.invoiceWindow',
-      'automaticInvoices.ready.columns.included',
+      'automaticInvoices.ready.columns.amount',
       'automaticInvoices.actions.previewSelected',
       'automaticInvoices.actions.generateSelected',
     ];
@@ -58,18 +65,27 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       '../../../server/public/locales/en/msp/invoicing.json',
     );
 
+    // Single-charge groups name their contract line; only multi-charge groups
+    // render a count ('groups.item'). The per-contract / per-line count chips
+    // were removed to avoid the redundant "1 line item · 1 contract · 1 line".
     const directKeyChecks = [
       'automaticInvoices.groups.item',
-      'automaticInvoices.groups.contract',
-      'automaticInvoices.groups.line',
     ];
 
     const namespaceKeyChecks = [
+      // combinabilitySummaryKey domain (backs resolveStatusKey)
       'automaticInvoices.groups.ready',
       'automaticInvoices.groups.canCombine',
       'automaticInvoices.groups.separate',
       'automaticInvoices.groups.blocked',
       'automaticInvoices.groups.notReady',
+      // Pro-Grid status pill labels (what the grid actually renders)
+      'automaticInvoices.status.ready',
+      'automaticInvoices.status.combine',
+      'automaticInvoices.status.separate',
+      'automaticInvoices.status.notYetDue',
+      'automaticInvoices.status.approval',
+      'automaticInvoices.status.blocked',
       'automaticInvoices.incompatibilityReasons.invoiceWindowDiffers',
       'automaticInvoices.incompatibilityReasons.clientDiffers',
       'automaticInvoices.incompatibilityReasons.poScopeDiffers',
@@ -80,7 +96,11 @@ describe('AutomaticInvoices i18n wiring contract', () => {
 
     expect(source).toContain('AUTOMATIC_INVOICE_GROUP_LABELS');
     expect(source).toContain('AUTOMATIC_INVOICE_INCOMPATIBILITY_LABELS');
-    expect(source).toContain('t(`automaticInvoices.groups.${record.parentSummary.combinabilitySummaryKey}`');
+    // The combinability badge resolves through the status pill, which maps a
+    // resolved status key to STATUS_PILL_META[key].labelKey (automaticInvoices.status.*).
+    expect(source).toContain('STATUS_PILL_META');
+    expect(source).toContain('resolveStatusKey');
+    expect(source).toContain('t(meta.labelKey, { defaultValue: meta.default })');
     expect(source).toContain('t(`automaticInvoices.incompatibilityReasons.${reasonKey}`');
 
     for (const key of directKeyChecks) {
@@ -99,11 +119,11 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       '../../../server/public/locales/en/msp/invoicing.json',
     );
 
+    // Pro-Grid redesign flattened the child row: cadence + billing timing render
+    // inline (formatCadenceSourceBadge + recurringServicePeriods.values.*), and the
+    // per-field "Cadence/Billing timing/Service period" labels and pendingAmount copy
+    // were dropped (service period and amount are their own columns now).
     const keyChecks = [
-      'automaticInvoices.executionRows.labels.cadence',
-      'automaticInvoices.executionRows.labels.billingTiming',
-      'automaticInvoices.executionRows.labels.servicePeriod',
-      'automaticInvoices.executionRows.pendingAmount',
       'automaticInvoices.executionRows.attributionWarning',
       'automaticInvoices.executionRows.blockedUntilApproval',
       'automaticInvoices.executionRows.assignmentContext.unresolvedTimeEntry',
@@ -207,7 +227,7 @@ describe('AutomaticInvoices i18n wiring contract', () => {
     }
   });
 
-  it('T010: materialization-gap panel and recurring-history error/loading copy resolve through msp/invoicing', () => {
+  it('T010: materialization-gap panel and recurring-history error copy resolve through msp/invoicing', () => {
     const source = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
     const en = readJson<Record<string, unknown>>(
       '../../../server/public/locales/en/msp/invoicing.json',
@@ -224,7 +244,6 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       'automaticInvoices.errors.title',
       'automaticInvoices.errors.loadReady',
       'automaticInvoices.errors.loadHistory',
-      'automaticInvoices.loading.billingData',
       'common.labels.unknownClient',
       'common.actions.retry',
       'common.actions.close',
@@ -242,18 +261,19 @@ describe('AutomaticInvoices i18n wiring contract', () => {
       '../../../server/public/locales/en/msp/invoicing.json',
     );
 
+    // Pro-Grid redesign: the inline selection hints became the sticky
+    // selection-bar prompt (summary.empty). Per-period obligation/included counts
+    // and the redundant filter-bar count readout were removed (the view-tab
+    // badges already carry the group count).
     const keyChecks = [
       'automaticInvoices.ready.groupedPreviewUnavailable',
-      'automaticInvoices.ready.selectionHintCombined',
-      'automaticInvoices.ready.selectionHintSeparate',
+      'automaticInvoices.summary.empty',
       'automaticInvoices.ready.needsApproval.title',
       'automaticInvoices.ready.needsApproval.description',
       'automaticInvoices.ready.needsApproval.labels.servicePeriod',
       'automaticInvoices.ready.needsApproval.labels.invoiceWindow',
       'automaticInvoices.ready.needsApproval.unapprovedEntries',
       'automaticInvoices.ready.needsApproval.actions.reviewApprovals',
-      'automaticInvoices.groups.obligationCount',
-      'automaticInvoices.groups.includedCount',
       'automaticInvoices.groups.attributionMetadataMissing',
       'automaticInvoices.groups.actions.expand',
       'automaticInvoices.groups.actions.collapse',
@@ -263,7 +283,7 @@ describe('AutomaticInvoices i18n wiring contract', () => {
     ];
 
     expect(source).toContain('formatPoLabel');
-    expect(source).toContain('formatBlockedReason(record.parentSummary.blockedReason)');
+    expect(source).toContain('formatBlockedReason(group.parentSummary.blockedReason)');
     expect(source).toContain("t('common.labels.unknownClient'");
 
     for (const key of keyChecks) {

@@ -1,6 +1,7 @@
 const { randomUUID } = require('node:crypto');
 
 const { buildBasePayloadForEvent, buildMarker, pickUser } = require('./notification-fixture.cjs');
+const { deleteTenantRows, selectTenantRows } = require('./tenant-sql.cjs');
 
 async function publishWorkflow(ctx, { workflowId, version }) {
   await ctx.http.request(`/api/workflow-definitions/${workflowId}/${version}/publish`, {
@@ -26,33 +27,37 @@ async function getExportedDraftDefinition(ctx, { workflowId }) {
 }
 
 async function getNextPublishVersion(ctx, { workflowId }) {
-  const rows = await ctx.db.query(
-    `select max(version) as max_version from workflow_definition_versions where workflow_id = $1`,
-    [workflowId]
-  );
+  const rows = await selectTenantRows(ctx, {
+    table: 'workflow_definition_versions',
+    columns: 'max(version) as max_version',
+    tenantId: ctx.config.tenantId,
+    where: 'workflow_id = $2',
+    params: [workflowId]
+  });
   const max = rows[0]?.max_version ?? null;
   const n = max === null || max === undefined ? 0 : Number(max);
   return Number.isFinite(n) && n > 0 ? n + 1 : 1;
 }
 
 async function listNotifications(ctx, { tenantId, userId, limit = 200 }) {
-  return ctx.db.query(
-    `
-      select internal_notification_id, title, message, created_at
-      from internal_notifications
-      where tenant = $1 and user_id = $2
-      order by created_at desc
-      limit ${Number(limit) || 200}
-    `,
-    [tenantId, userId]
-  );
+  return selectTenantRows(ctx, {
+    table: 'internal_notifications',
+    columns: 'internal_notification_id, title, message, created_at',
+    tenantId,
+    where: 'user_id = $2',
+    params: [userId],
+    orderBy: 'created_at desc',
+    limit: Number(limit) || 200
+  });
 }
 
 async function cleanupNotifications(ctx, { tenantId, userId, marker, dedupeKey }) {
-  await ctx.dbWrite.query(
-    `delete from internal_notifications where tenant = $1 and user_id = $2 and title like $3 and message like $4`,
-    [tenantId, userId, `%${marker}%`, `%${dedupeKey}%`]
-  );
+  await deleteTenantRows(ctx, {
+    table: 'internal_notifications',
+    tenantId,
+    where: ['user_id = $2', 'title like $3', 'message like $4'],
+    params: [userId, `%${marker}%`, `%${dedupeKey}%`]
+  });
 }
 
 async function runCallWorkflowFixture(ctx, { fixtureName, eventName, schemaRef }) {
@@ -135,4 +140,3 @@ async function runCallWorkflowFixture(ctx, { fixtureName, eventName, schemaRef }
 }
 
 module.exports = { runCallWorkflowFixture };
-

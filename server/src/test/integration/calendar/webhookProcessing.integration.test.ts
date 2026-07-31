@@ -52,7 +52,8 @@ function buildDbExports() {
   };
 }
 
-vi.mock('../../../lib/db/index.tsx', () => buildDbExports());
+// The server db module moved from index.tsx to index.ts — mock the current file.
+vi.mock('../../../lib/db/index.ts', () => buildDbExports());
 vi.mock('../../../db.ts', () => buildDbExports());
 
 describe('Calendar webhook processing', () => {
@@ -65,6 +66,23 @@ describe('Calendar webhook processing', () => {
       throw new Error('Test database not initialized');
     }
     return connection;
+  };
+
+  // The Google webhook flow upserts calendar_provider_health, which has an FK
+  // to calendar_providers — seed a matching provider row so the health write
+  // doesn't abort the test transaction.
+  const seedProviderRow = async (provider: { id: string; tenant: string; provider_type: string }) => {
+    await getActiveDb()('calendar_providers').insert({
+      id: provider.id,
+      tenant: provider.tenant,
+      provider_type: provider.provider_type,
+      provider_name: `Test ${provider.provider_type} provider`,
+      calendar_id: 'primary',
+      status: 'connected',
+      vendor_config: {},
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
   };
 
   const buildMicrosoftProvider = (overrides?: Record<string, unknown>) => {
@@ -136,6 +154,8 @@ describe('Calendar webhook processing', () => {
       last_sync_at: null,
     };
 
+    await seedProviderRow(provider);
+
     const googleChanges = {
       changes: [{ id: 'google-event-1', changeType: 'updated' as const }],
       nextSyncToken: 'next-token',
@@ -200,6 +220,8 @@ describe('Calendar webhook processing', () => {
       status: 'connected',
       last_sync_at: null,
     };
+
+    await seedProviderRow(provider);
 
     await getActiveDb()('calendar_event_mappings').insert({
       id: uuidv4(),

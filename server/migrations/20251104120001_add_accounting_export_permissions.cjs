@@ -13,9 +13,15 @@ const PERMISSIONS = [
 ];
 
 const TARGET_ROLES = ['admin', 'owner', 'finance'];
+const MIGRATION_TENANT = 'migration:20251104120001_add_accounting_export_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for accounting export permission backfill';
 
-async function insertPermission(knex, tenant, resource, action, description) {
-  const existing = await knex('permissions')
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
+async function insertPermission(knex, db, tenant, resource, action, description) {
+  const existing = await db.table('permissions')
     .where({ tenant, resource, action })
     .first();
 
@@ -23,7 +29,7 @@ async function insertPermission(knex, tenant, resource, action, description) {
     return existing.permission_id;
   }
 
-  const [permission] = await knex('permissions')
+  const [permission] = await db.table('permissions')
     .insert({
       tenant,
       permission_id: knex.raw('gen_random_uuid()'),
@@ -39,18 +45,18 @@ async function insertPermission(knex, tenant, resource, action, description) {
   return permission.permission_id;
 }
 
-async function grantPermissionToRoles(knex, tenant, permissionId) {
-  const roles = await knex('roles')
+async function grantPermissionToRoles(db, knex, tenant, permissionId) {
+  const roles = await db.table('roles')
     .where({ tenant })
     .whereIn(knex.raw('LOWER(role_name)'), TARGET_ROLES.map((name) => name.toLowerCase()));
 
   for (const role of roles) {
-    const exists = await knex('role_permissions')
+    const exists = await db.table('role_permissions')
       .where({ tenant, role_id: role.role_id, permission_id: permissionId })
       .first();
 
     if (!exists) {
-      await knex('role_permissions').insert({
+      await db.table('role_permissions').insert({
         tenant,
         role_id: role.role_id,
         permission_id: permissionId
@@ -60,33 +66,40 @@ async function grantPermissionToRoles(knex, tenant, permissionId) {
 }
 
 exports.up = async function up(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) {
     return;
   }
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     for (const permission of PERMISSIONS) {
       const permissionId = await insertPermission(
         knex,
+        db,
         tenant,
         permission.resource,
         permission.action,
         permission.description
       );
-      await grantPermissionToRoles(knex, tenant, permissionId);
+      await grantPermissionToRoles(db, knex, tenant, permissionId);
     }
   }
 };
 
 exports.down = async function down(knex) {
-  const tenants = await knex('tenants').select('tenant');
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
   if (!tenants.length) {
     return;
   }
 
   for (const { tenant } of tenants) {
-    const permissionIds = await knex('permissions')
+    const db = tenantDb(knex, tenant);
+    const permissionIds = await db.table('permissions')
       .where({ tenant, resource: 'accountingExports' })
       .select('permission_id');
 
@@ -96,12 +109,12 @@ exports.down = async function down(knex) {
 
     const ids = permissionIds.map((p) => p.permission_id);
 
-    await knex('role_permissions')
+    await db.table('role_permissions')
       .where({ tenant })
       .whereIn('permission_id', ids)
       .del();
 
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource: 'accountingExports' })
       .del();
   }

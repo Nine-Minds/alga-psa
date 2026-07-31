@@ -1,0 +1,38 @@
+[
+  {
+    "id": "F001",
+    "description": "The reactivation request authenticates the selected license count with the email and timestamp.",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Reactivation token creation signs a validated license count into the token payload.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F003",
+    "description": "Token reservation returns the license count verified from the signed payload.",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "The token exchange endpoint returns the original license count to nm-store.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Invalid license counts fail before token creation or reservation.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F006",
+    "description": "Login win-back tokens continue to carry an explicit one-license quantity.",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  }
+]

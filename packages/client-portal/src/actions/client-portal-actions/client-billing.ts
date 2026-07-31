@@ -2,9 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
 
-import { getConnection } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { getConnection, createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   IClientContractLine,
@@ -30,54 +28,89 @@ import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
-import { JobService } from '@alga-psa/jobs';
-import { JobStatus } from '@alga-psa/jobs';
+import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import {
+  getClientIdFromPortalUser as getClientIdFromUser,
+  hasClientBillingReadPermission as hasBillingPermission,
+} from './clientBillingPermissions';
 
-/**
- * Get clientId from user's contact - avoids nested withAuth calls
- */
-async function getClientIdFromUser(
-  trx: Knex.Transaction,
-  user: IUserWithRoles,
-  tenant: string
-): Promise<string | null> {
-  if (!user.contact_id) return null;
+export type ClientBillingActionError =
+  | { readonly actionError: string }
+  | { readonly permissionError: string };
 
-  const contact = await trx('contacts')
-    .where({
-      contact_name_id: user.contact_id,
-      tenant
-    })
-    .select('client_id')
-    .first();
+export type ClientBillingActionResult<T> = T | ClientBillingActionError;
 
-  return contact?.client_id || null;
+function actionError(message: string): ClientBillingActionError {
+  return { actionError: message };
 }
 
-/**
- * Check if user has billing read permission - avoids nested withAuth calls
- */
-async function hasBillingPermission(
-  trx: Knex.Transaction,
-  user: IUserWithRoles,
-  tenant: string
-): Promise<boolean> {
-  const permissions = await trx('role_permissions as rp')
-    .join('permissions as p', 'rp.permission_id', 'p.permission_id')
-    .join('user_roles as ur', function() {
-      this.on('rp.role_id', '=', 'ur.role_id')
-        .andOn('rp.tenant', '=', 'ur.tenant');
-    })
-    .where({
-      'ur.user_id': user.user_id,
-      'ur.tenant': tenant,
-      'p.resource': 'billing',
-      'p.action': 'read'
-    })
-    .first();
+function permissionError(message: string): ClientBillingActionError {
+  return { permissionError: message };
+}
 
-  return !!permissions;
+function isClientBillingActionError(value: unknown): value is ClientBillingActionError {
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (
+      (typeof candidate.actionError === 'string') ||
+      (typeof candidate.permissionError === 'string')
+    )
+  );
+}
+
+function permissionErrorFrom(error: unknown): ClientBillingActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  if (error.message.startsWith('Unauthorized') || error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+
+  return null;
+}
+
+function billingActionErrorFrom(error: unknown): ClientBillingActionError | null {
+  if (isClientBillingActionError(error)) {
+    return error;
+  }
+
+  const permission = permissionErrorFrom(error);
+  if (permission) {
+    return permission;
+  }
+
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  switch (error.message) {
+    case 'Quote not found after marking viewed':
+      return actionError('Quote not found or access denied');
+    case 'Quote not found after updating selections':
+      return actionError('Quote is no longer available. Refresh the quote and try again.');
+    case 'Quote not found after acceptance':
+      return actionError('Quote is no longer available. Refresh the quote before accepting it.');
+    case 'Quote not found after rejection':
+      return actionError('Quote is no longer available. Refresh the quote before rejecting it.');
+    case 'Invoice not found after authorization':
+      return actionError('Invoice not found or access denied');
+    case 'Job not found':
+      return actionError('Job not found');
+    default:
+      return null;
+  }
+}
+
+class JobNotFoundError extends Error {
+  constructor() {
+    super('Job not found');
+    this.name = 'JobNotFoundError';
+  }
 }
 
 async function getAuthorizedClientQuote(
@@ -86,27 +119,58 @@ async function getAuthorizedClientQuote(
   tenant: string,
   quoteId: string,
   allowedStatuses?: string[]
-): Promise<IQuote> {
+): Promise<ClientBillingActionResult<IQuote>> {
   const clientId = await getClientIdFromUser(trx, user, tenant);
   if (!clientId) {
-    throw new Error('Unauthorized');
+    return permissionError('Unauthorized');
   }
 
   const hasAccess = await hasBillingPermission(trx, user, tenant);
   if (!hasAccess) {
-    throw new Error('Unauthorized to access quote data');
+    return permissionError('Unauthorized to access quote data');
   }
 
   const quote = await Quote.getById(trx, tenant, quoteId);
   if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
-    throw new Error('Quote not found or access denied');
+    return actionError('Quote not found or access denied');
   }
 
   if (allowedStatuses?.length && (!quote.status || !allowedStatuses.includes(quote.status))) {
-    throw new Error('Quote is not in a valid state for this action');
+    return actionError('Quote is not in a valid state for this action');
   }
 
   return quote;
+}
+
+async function validateClientInvoiceAccess(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  invoiceId: string
+): Promise<ClientBillingActionError | null> {
+  const clientId = await getClientIdFromUser(trx, user, tenant);
+  if (!clientId) {
+    return permissionError('Unauthorized');
+  }
+
+  const hasAccess = await hasBillingPermission(trx, user, tenant);
+  if (!hasAccess) {
+    return permissionError('Unauthorized to access invoice data');
+  }
+
+  const invoiceCheck = await tenantDb(trx, tenant).table('invoices')
+    .where({
+      invoice_id: invoiceId,
+      client_id: clientId,
+    })
+    .whereNot('status', 'draft')
+    .first();
+
+  if (!invoiceCheck) {
+    return actionError('Invoice not found or access denied');
+  }
+
+  return null;
 }
 
 async function persistOptionalQuoteSelections(
@@ -122,8 +186,8 @@ async function persistOptionalQuoteSelections(
   const selectedSet = new Set(selectedIds);
 
   for (const item of optionalItems) {
-    await trx('quote_items')
-      .where({ tenant, quote_item_id: item.quote_item_id })
+    await tenantDb(trx, tenant).table('quote_items')
+      .where({ quote_item_id: item.quote_item_id })
       .update({
         is_selected: selectedSet.has(item.quote_item_id),
         updated_at: trx.fn.now(),
@@ -140,34 +204,22 @@ async function persistOptionalQuoteSelections(
   };
 }
 
-export const getClientContractLine = withAuth(async (user, { tenant }): Promise<IClientContractLine | null> => {
+export const getClientContractLine = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<IClientContractLine | null>> => {
   const knex = await getConnection(tenant);
 
   try {
     const plan = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        throw new Error('Unauthorized');
+        return permissionError('Unauthorized');
       }
 
       // Query via client_contracts -> contracts -> contract_lines
       // (contracts are client-specific via client_contracts)
-      return await trx('client_contracts as cc')
-        .join('contracts as c', function() {
-          this.on('cc.contract_id', '=', 'c.contract_id')
-            .andOn('cc.tenant', '=', 'c.tenant');
-        })
-        .join('contract_lines as cl', function() {
-          this.on('c.contract_id', '=', 'cl.contract_id')
-            .andOn('c.tenant', '=', 'cl.tenant');
-        })
-        .leftJoin('service_categories as sc', function() {
-          this.on('cl.service_category', '=', 'sc.category_id')
-            .andOn('sc.tenant', '=', 'cl.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const planQuery = scopedDb.table('client_contracts as cc')
         .where({
           'cc.client_id': clientId,
-          'cc.tenant': tenant
         })
         .select(
           'cl.contract_line_id',
@@ -185,19 +237,31 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
           'sc.category_name as service_category_name'
         )
         .first();
+      scopedDb.tenantJoin(planQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+      scopedDb.tenantJoin(planQuery, 'contract_lines as cl', 'c.contract_id', 'cl.contract_id');
+      scopedDb.tenantJoin(planQuery, 'service_categories as sc', 'cl.service_category', 'sc.category_id', { type: 'left' });
+      return await planQuery as any;
     });
 
-    return plan ? normalizeLiveRecurringStorage(plan) : null;
+    if (isClientBillingActionError(plan)) {
+      return plan;
+    }
+
+    return plan ? normalizeLiveRecurringStorage(plan as any) as IClientContractLine : null;
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error fetching client contract line:', error);
-    throw new Error('Failed to fetch contract line');
+    throw error;
   }
 });
 
 /**
  * Fetch all invoices for the current client
  */
-export const getClientInvoices = withAuth(async (user, { tenant }): Promise<InvoiceViewModel[]> => {
+export const getClientInvoices = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<InvoiceViewModel[]>> => {
   const knex = await getConnection(tenant);
 
   try {
@@ -205,66 +269,88 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Invo
     const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const id = await getClientIdFromUser(trx, user, tenant);
       if (!id) {
-        throw new Error('Unauthorized');
+        return permissionError('Unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        throw new Error('Unauthorized to access invoice data');
+        return permissionError('Unauthorized to access invoice data');
       }
 
       return id;
     });
 
+    if (isClientBillingActionError(clientId)) {
+      return clientId;
+    }
+
     // Directly fetch only invoices for the current client
     const invoices = await fetchInvoicesByClient(clientId);
+    if (isClientBillingActionError(invoices)) {
+      return invoices;
+    }
     // Filter out draft invoices - only finalized invoices should be visible in client portal
     // An invoice is finalized when finalized_at is set (not null)
     return invoices.filter(invoice => invoice.finalized_at != null);
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error fetching client invoices:', error);
-    throw new Error('Failed to fetch invoices');
+    throw error;
   }
 });
 
-export const getClientQuotes = withAuth(async (user, { tenant }): Promise<IQuoteWithClient[]> => {
+export const getClientQuotes = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<IQuoteWithClient[]>> => {
   const knex = await getConnection(tenant);
 
   try {
     const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const id = await getClientIdFromUser(trx, user, tenant);
       if (!id) {
-        throw new Error('Unauthorized');
+        return permissionError('Unauthorized');
       }
 
       const hasAccess = await hasBillingPermission(trx, user, tenant);
       if (!hasAccess) {
-        throw new Error('Unauthorized to access quote data');
+        return permissionError('Unauthorized to access quote data');
       }
 
       return id;
     });
 
+    if (isClientBillingActionError(clientId)) {
+      return clientId;
+    }
+
     const quotes = await Quote.listByClient(knex, tenant, clientId);
     return quotes.filter((quote) => quote.status && quote.status !== 'draft');
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error fetching client quotes:', error);
-    throw new Error('Failed to fetch quotes');
+    throw error;
   }
 });
 
-export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: string): Promise<IQuote> => {
+export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: string): Promise<ClientBillingActionResult<IQuote>> => {
   const knex = await getConnection(tenant);
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId);
+      if (isClientBillingActionError(quote)) {
+        return quote;
+      }
 
       if (!quote.viewed_at) {
         const viewedAt = new Date().toISOString();
 
-        const markedViewed = await trx('quotes')
-          .where({ tenant, quote_id: quoteId })
+        const markedViewed = await tenantDb(trx, tenant).table('quotes')
+          .where({ quote_id: quoteId })
           .whereNull('viewed_at')
           .update({
             viewed_at: viewedAt,
@@ -287,14 +373,18 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
 
       const updatedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!updatedQuote) {
-        throw new Error('Quote not found');
+        return actionError('Quote not found or access denied');
       }
 
       return updatedQuote;
     });
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error fetching client quote details:', error);
-    throw new Error('Failed to fetch quote details');
+    throw error;
   }
 });
 
@@ -303,12 +393,15 @@ export const updateClientQuoteSelections = withAuth(async (
   { tenant },
   quoteId: string,
   selectedOptionalQuoteItemIds: string[]
-): Promise<IQuote> => {
+): Promise<ClientBillingActionResult<IQuote>> => {
   const knex = await getConnection(tenant);
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+      if (isClientBillingActionError(quote)) {
+        return quote;
+      }
 
       await persistOptionalQuoteSelections(
         trx,
@@ -320,14 +413,18 @@ export const updateClientQuoteSelections = withAuth(async (
 
       const updatedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!updatedQuote) {
-        throw new Error('Quote not found after updating selections');
+        return actionError('Quote is no longer available. Refresh the quote and try again.');
       }
 
       return updatedQuote;
     });
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error updating client quote selections:', error);
-    throw new Error('Failed to update quote selections');
+    throw error;
   }
 });
 
@@ -336,12 +433,15 @@ export const acceptClientQuote = withAuth(async (
   { tenant },
   quoteId: string,
   selectedOptionalQuoteItemIds: string[] = []
-): Promise<IQuote> => {
+): Promise<ClientBillingActionResult<IQuote>> => {
   const knex = await getConnection(tenant);
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+      if (isClientBillingActionError(quote)) {
+        return quote;
+      }
 
       const { selectedIds, deselectedIds } = await persistOptionalQuoteSelections(
         trx,
@@ -372,14 +472,20 @@ export const acceptClientQuote = withAuth(async (
 
       const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!acceptedQuote) {
-        throw new Error('Quote not found after acceptance');
+        return actionError('Quote is no longer available. Refresh the quote before accepting it.');
       }
+
+      await onQuoteAccepted(trx, acceptedQuote);
 
       return acceptedQuote;
     });
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error accepting client quote:', error);
-    throw new Error('Failed to accept quote');
+    throw error;
   }
 });
 
@@ -388,17 +494,20 @@ export const rejectClientQuote = withAuth(async (
   { tenant },
   quoteId: string,
   rejectionReason: string
-): Promise<IQuote> => {
+): Promise<ClientBillingActionResult<IQuote>> => {
   const knex = await getConnection(tenant);
   const trimmedReason = rejectionReason.trim();
 
   if (!trimmedReason) {
-    throw new Error('A rejection comment is required');
+    return actionError('A rejection comment is required');
   }
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+      if (isClientBillingActionError(quote)) {
+        return quote;
+      }
 
       const rejectedAt = new Date().toISOString();
       await Quote.update(trx, tenant, quoteId, {
@@ -420,56 +529,53 @@ export const rejectClientQuote = withAuth(async (
 
       const rejectedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!rejectedQuote) {
-        throw new Error('Quote not found after rejection');
+        return actionError('Quote is no longer available. Refresh the quote before rejecting it.');
       }
 
       return rejectedQuote;
     });
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error rejecting client quote:', error);
-    throw new Error('Failed to reject quote');
+    throw error;
   }
 });
 
 /**
  * Get invoice details by ID
  */
-export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId: string): Promise<InvoiceViewModel> => {
+export const getClientInvoiceById = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<InvoiceViewModel>> => {
   const knex = await getConnection(tenant);
 
   try {
     // Get clientId, check permissions, and verify invoice in a single transaction
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await getClientIdFromUser(trx, user, tenant);
-      if (!clientId) {
-        throw new Error('Unauthorized');
-      }
-
-      const hasAccess = await hasBillingPermission(trx, user, tenant);
-      if (!hasAccess) {
-        throw new Error('Unauthorized to access invoice data');
-      }
-
-      // Verify the invoice belongs to the client and is not a draft
-      const invoiceCheck = await trx('invoices')
-        .where({
-          invoice_id: invoiceId,
-          client_id: clientId,
-          tenant
-        })
-        .whereNot('status', 'draft')
-        .first();
-
-      if (!invoiceCheck) {
-        throw new Error('Invoice not found or access denied');
-      }
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return validateClientInvoiceAccess(trx, user, tenant, invoiceId);
     });
 
+    if (accessError) {
+      return accessError;
+    }
+
     // Get full invoice details
-    return await getInvoiceForRendering(invoiceId);
+    const invoice = await getInvoiceForRendering(invoiceId);
+    if (isClientBillingActionError(invoice)) {
+      return invoice;
+    }
+    if (!invoice) {
+      return actionError('Invoice not found or access denied');
+    }
+    return invoice;
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error fetching client invoice details:', error);
-    throw new Error('Failed to fetch invoice details');
+    throw error;
   }
 });
 
@@ -481,50 +587,69 @@ export const getClientInvoiceLineItems = withAuth(async (user, { tenant }, invoi
 
   try {
     // Get clientId, check permissions, and verify invoice in a single transaction
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await getClientIdFromUser(trx, user, tenant);
-      if (!clientId) {
-        throw new Error('Unauthorized');
-      }
-
-      const hasAccess = await hasBillingPermission(trx, user, tenant);
-      if (!hasAccess) {
-        throw new Error('Unauthorized to access invoice data');
-      }
-
-      // Verify the invoice belongs to the client and is not a draft
-      const invoiceCheck = await trx('invoices')
-        .where({
-          invoice_id: invoiceId,
-          client_id: clientId,
-          tenant
-        })
-        .whereNot('status', 'draft')
-        .first();
-
-      if (!invoiceCheck) {
-        throw new Error('Invoice not found or access denied');
-      }
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return validateClientInvoiceAccess(trx, user, tenant, invoiceId);
     });
 
+    if (accessError) {
+      return accessError;
+    }
+
     // Get invoice items
-    return await getInvoiceLineItems(invoiceId);
+    const lineItems = await getInvoiceLineItems(invoiceId);
+    if (isClientBillingActionError(lineItems)) {
+      return lineItems;
+    }
+    return lineItems;
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error fetching client invoice line items:', error);
-    throw new Error('Failed to fetch invoice line items');
+    throw error;
   }
 });
 
 /**
  * Get invoice templates
  */
-export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Promise<IInvoiceTemplate[]> => {
+export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<IInvoiceTemplate[]>> => {
+  const knex = await getConnection(tenant);
+
   try {
+    // Same client-context + billing read gate as the other client billing actions
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access invoice data');
+      }
+
+      return null;
+    });
+
+    if (accessError) {
+      return accessError;
+    }
+
     // Get all templates (both standard and tenant-specific)
-    return await getInvoiceTemplates();
+    const templates = await getInvoiceTemplates();
+    if (isClientBillingActionError(templates)) {
+      return templates;
+    }
+    return templates;
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error fetching invoice templates:', error);
-    throw new Error('Failed to fetch invoice templates');
+    throw error;
   }
 });
 
@@ -540,42 +665,28 @@ export interface DownloadPdfResult {
 /**
  * Download invoice PDF - schedules job, waits for completion, returns file ID
  */
-export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoiceId: string): Promise<DownloadPdfResult> => {
+export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<DownloadPdfResult>> => {
   const knex = await getConnection(tenant);
 
   try {
     // Get clientId, check permissions, and verify invoice in a single transaction
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await getClientIdFromUser(trx, user, tenant);
-      if (!clientId) {
-        throw new Error('Unauthorized');
-      }
-
-      const hasAccess = await hasBillingPermission(trx, user, tenant);
-      if (!hasAccess) {
-        throw new Error('Unauthorized to access invoice data');
-      }
-
-      // Verify the invoice belongs to the client and is not a draft
-      const invoiceCheck = await trx('invoices')
-        .where({
-          invoice_id: invoiceId,
-          client_id: clientId,
-          tenant
-        })
-        .whereNot('status', 'draft')
-        .first();
-
-      if (!invoiceCheck) {
-        throw new Error('Invoice not found or access denied');
-      }
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return validateClientInvoiceAccess(trx, user, tenant, invoiceId);
     });
+
+    if (accessError) {
+      return accessError;
+    }
 
     // Schedule PDF generation
     const result = await scheduleInvoiceZipAction([invoiceId]);
 
+    if (isClientBillingActionError(result)) {
+      return result;
+    }
+
     if (!result?.jobId) {
-      return { success: false, error: 'Failed to start PDF generation' };
+      return actionError('Failed to start PDF generation');
     }
 
     // Poll until job completes
@@ -584,11 +695,15 @@ export const downloadClientInvoicePdf = withAuth(async (user, { tenant }, invoic
     if (status.status === 'completed' && status.fileId) {
       return { success: true, fileId: status.fileId };
     } else {
-      return { success: false, error: status.error || 'PDF generation failed' };
+      return actionError(status.error || 'PDF generation failed');
     }
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error downloading invoice PDF:', error);
-    throw new Error('Failed to download invoice PDF');
+    throw error;
   }
 });
 
@@ -603,42 +718,28 @@ export interface SendEmailResult {
 /**
  * Send invoice email - schedules job, waits for completion
  */
-export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceId: string): Promise<SendEmailResult> => {
+export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<SendEmailResult>> => {
   const knex = await getConnection(tenant);
 
   try {
     // Get clientId, check permissions, and verify invoice in a single transaction
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await getClientIdFromUser(trx, user, tenant);
-      if (!clientId) {
-        throw new Error('Unauthorized');
-      }
-
-      const hasAccess = await hasBillingPermission(trx, user, tenant);
-      if (!hasAccess) {
-        throw new Error('Unauthorized to access invoice data');
-      }
-
-      // Verify the invoice belongs to the client and is not a draft
-      const invoiceCheck = await trx('invoices')
-        .where({
-          invoice_id: invoiceId,
-          client_id: clientId,
-          tenant
-        })
-        .whereNot('status', 'draft')
-        .first();
-
-      if (!invoiceCheck) {
-        throw new Error('Invoice not found or access denied');
-      }
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return validateClientInvoiceAccess(trx, user, tenant, invoiceId);
     });
+
+    if (accessError) {
+      return accessError;
+    }
 
     // Schedule email sending
     const result = await scheduleInvoiceEmailAction([invoiceId]);
 
+    if (isClientBillingActionError(result)) {
+      return result;
+    }
+
     if (!result?.jobId) {
-      return { success: false, error: 'Failed to start email sending' };
+      return actionError('Failed to start email sending');
     }
 
     // Poll until job completes
@@ -647,11 +748,15 @@ export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceI
     if (status.status === 'completed') {
       return { success: true };
     } else {
-      return { success: false, error: status.error || 'Email sending failed' };
+      return actionError(status.error || 'Email sending failed');
     }
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error sending invoice email:', error);
-    throw new Error('Failed to send invoice email');
+    throw error;
   }
 });
 
@@ -668,16 +773,17 @@ export interface ClientJobStatus {
  * Get job status - internal helper for polling
  */
 async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobStatus> {
-  const jobService = await JobService.create();
   const { knex } = await createTenantKnex(tenant);
 
   // Get job record
-  const job = await knex('jobs')
-    .where({ job_id: jobId, tenant })
+  const scopedDb = tenantDb(knex, tenant);
+
+  const job = await scopedDb.table('jobs')
+    .where({ job_id: jobId })
     .first();
 
   if (!job) {
-    throw new Error('Job not found');
+    throw new JobNotFoundError();
   }
 
   // Map job status
@@ -693,10 +799,14 @@ async function getJobStatus(jobId: string, tenant: string): Promise<ClientJobSta
   // If completed, get the file_id from job details
   let fileId: string | undefined;
   if (status === 'completed') {
-    const details = await jobService.getJobDetails(jobId);
+    const details = await scopedDb.table('job_details')
+      .where({ job_id: jobId })
+      .select('metadata');
     // Look for file_id in the metadata of completed steps
     for (const detail of details) {
-      const metadata = detail.metadata as Record<string, unknown> | undefined;
+      const metadata = (typeof detail.metadata === 'string'
+        ? JSON.parse(detail.metadata)
+        : detail.metadata) as Record<string, unknown> | undefined;
       if (metadata?.file_id && typeof metadata.file_id === 'string') {
         fileId = metadata.file_id;
         break;
@@ -744,36 +854,64 @@ async function pollJobUntilComplete(
 /**
  * Get job status for polling - used to check if PDF generation is complete
  */
-export const getClientJobStatus = withAuth(async (user, { tenant }, jobId: string): Promise<ClientJobStatus> => {
+export const getClientJobStatus = withAuth(async (user, { tenant }, jobId: string): Promise<ClientBillingActionResult<ClientJobStatus>> => {
+  const knex = await getConnection(tenant);
+
   try {
-    return await getJobStatus(jobId, tenant);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access invoice data');
+      }
+
+      // Jobs carry no client context — restrict access to jobs the caller
+      // created so a portal user cannot read other users' generated artifact
+      // fileIds. Report foreign/missing jobs identically to avoid an oracle.
+      const job = await tenantDb(trx, tenant).table('jobs')
+        .where({ job_id: jobId })
+        .first('user_id');
+      if (!job || job.user_id !== user.user_id) {
+        return actionError('Job not found');
+      }
+
+      return await getJobStatus(jobId, tenant);
+    });
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error getting job status:', error);
-    throw new Error('Failed to get job status');
+    throw error;
   }
 });
 
-export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
+export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<{
   bucketUsage: IBucketUsage | null;
   services: IService[];
-}> => {
+}>> => {
   const knex = await getConnection(tenant);
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
-        throw new Error('Unauthorized');
+        return permissionError('Unauthorized');
       }
 
       const currentDate = new Date().toISOString().slice(0, 10);
+      const scopedDb = tenantDb(trx, tenant);
 
       // Get current bucket usage if any
-      const bucketUsage = await trx('bucket_usage')
+      const bucketUsage = await scopedDb.table('bucket_usage')
         .select('*')
         .where({
           client_id: clientId,
-          tenant
         })
         .andWhere('period_start', '<=', currentDate)
         .andWhere('period_end', '>', currentDate)
@@ -781,39 +919,31 @@ export const getCurrentUsage = withAuth(async (user, { tenant }): Promise<{
         .first();
 
       // Get all services associated with the client's plan
-      const services = await trx('service_catalog')
+      const servicesQuery = scopedDb.table('service_catalog')
         .select('service_catalog.*')
-        .join('contract_line_services', function() {
-          this.on('service_catalog.service_id', '=', 'contract_line_services.service_id')
-            .andOn('service_catalog.tenant', '=', 'contract_line_services.tenant')
-        })
-        .join('contract_lines as cl', function() {
-          this.on('contract_line_services.contract_line_id', '=', 'cl.contract_line_id')
-            .andOn('contract_line_services.tenant', '=', 'cl.tenant')
-        })
-        .join('client_contracts as cc', function() {
-          this.on('cl.contract_id', '=', 'cc.contract_id')
-            .andOn('cl.tenant', '=', 'cc.tenant')
-        })
         .where({
           'cc.client_id': clientId,
           'cc.is_active': true,
-          'service_catalog.tenant': tenant,
-          'contract_line_services.tenant': tenant,
-          'cl.tenant': tenant,
-          'cc.tenant': tenant
         });
+      scopedDb.tenantJoin(servicesQuery, 'contract_line_services', 'service_catalog.service_id', 'contract_line_services.service_id');
+      scopedDb.tenantJoin(servicesQuery, 'contract_lines as cl', 'contract_line_services.contract_line_id', 'cl.contract_line_id');
+      scopedDb.tenantJoin(servicesQuery, 'client_contracts as cc', 'cl.contract_id', 'cc.contract_id');
+      const services = await servicesQuery;
 
       return {
-        bucketUsage,
-        services
+        bucketUsage: (bucketUsage ?? null) as IBucketUsage | null,
+        services: services as unknown as IService[]
       };
     });
 
     return result;
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error fetching current usage:', error);
-    throw new Error('Failed to fetch current usage');
+    throw error;
   }
 });
 
@@ -826,29 +956,30 @@ export const downloadClientQuotePdf = withAuth(async (
   user,
   { tenant },
   quoteId: string
-): Promise<DownloadPdfResult> => {
+): Promise<ClientBillingActionResult<DownloadPdfResult>> => {
   const knex = await getConnection(tenant);
 
   try {
     const quote = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return getAuthorizedClientQuote(trx, user, tenant, quoteId);
     });
+    if (isClientBillingActionError(quote)) {
+      return quote;
+    }
 
     // Look for an existing stored PDF document
-    const doc = await knex('document_associations as da')
-      .join('documents as d', function () {
-        this.on('da.document_id', 'd.document_id')
-          .andOn('da.tenant', 'd.tenant');
-      })
+    const scopedDb = tenantDb(knex, tenant);
+    const docQuery = scopedDb.table('document_associations as da')
       .where({
         'da.entity_id': quoteId,
         'da.entity_type': 'quote',
-        'da.tenant': tenant,
       })
       .whereNotNull('d.file_id')
       .orderBy('da.created_at', 'desc')
       .select('d.file_id')
       .first<{ file_id: string } | undefined>();
+    scopedDb.tenantJoin(docQuery, 'documents as d', 'da.document_id', 'd.document_id');
+    const doc = await docQuery;
 
     if (doc?.file_id) {
       return { success: true, fileId: doc.file_id };
@@ -865,8 +996,12 @@ export const downloadClientQuotePdf = withAuth(async (
 
     return { success: true, fileId: fileRecord.file_id };
   } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error downloading quote PDF:', error);
-    return { success: false, error: 'Failed to download quote PDF' };
+    throw error;
   }
 });
 
@@ -893,15 +1028,18 @@ export const getLocationsForClientQuote = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<ClientPortalLocationSummary[]> => {
+): Promise<ClientBillingActionResult<ClientPortalLocationSummary[]>> => {
   const knex = await getConnection(tenant);
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     // Authorizes + confirms the quote belongs to this portal user's client.
     const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId);
+    if (isClientBillingActionError(quote)) {
+      return quote;
+    }
     if (!quote.client_id) return [];
 
-    return trx('client_locations')
+    return tenantDb(trx, tenant).table('client_locations')
       .select<ClientPortalLocationSummary[]>(
         'location_id',
         'location_name',
@@ -915,7 +1053,7 @@ export const getLocationsForClientQuote = withAuth(async (
         'country_name',
         'region_code',
       )
-      .where({ tenant, client_id: quote.client_id, is_active: true })
+      .where({ client_id: quote.client_id, is_active: true })
       .orderBy('is_default', 'desc')
       .orderBy('location_name', 'asc');
   });

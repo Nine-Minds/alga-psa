@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
+const tenantDbMock = vi.hoisted(() => vi.fn((conn: any) => ({
+  table: (table: string) => conn(table),
+})));
 const withTransactionMock = vi.hoisted(() => vi.fn());
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const preCheckDeletionMock = vi.hoisted(() => vi.fn());
@@ -26,6 +29,8 @@ vi.mock('@alga-psa/auth', () => ({
   preCheckDeletion: preCheckDeletionMock,
   withAuth: (fn: ServerAction) => (...args: unknown[]) =>
     fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
+  withOptionalAuth: (fn: ServerAction) => (...args: unknown[]) =>
+    fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -36,8 +41,13 @@ vi.mock('@alga-psa/core', () => ({
   },
 }));
 
+vi.mock('@alga-psa/core/server', () => ({
+  deleteEntityWithValidation: deleteEntityWithValidationMock,
+}));
+
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  tenantDb: tenantDbMock,
   withTransaction: withTransactionMock,
 }));
 
@@ -354,12 +364,19 @@ describe('client deletion actions', () => {
   });
 
   describe('deleteClient', () => {
-    it('throws before opening tenant DB access when delete permission is missing', async () => {
+    it('returns a permission status before opening tenant DB access when delete permission is missing', async () => {
       hasPermissionAsyncMock.mockResolvedValue(false);
 
       const { deleteClient } = await import('./clientActions');
 
-      await expect(deleteClient('client-1')).rejects.toThrow('Permission denied: Cannot delete clients');
+      await expect(deleteClient('client-1')).resolves.toEqual({
+        success: false,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message: 'Permission denied: Cannot delete clients',
+        dependencies: [],
+        alternatives: []
+      });
       expect(createTenantKnexMock).not.toHaveBeenCalled();
       expect(deleteEntityWithValidationMock).not.toHaveBeenCalled();
     });

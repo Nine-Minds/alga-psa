@@ -1,7 +1,7 @@
 'use server';
 
 import { Knex } from 'knex';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type {
@@ -14,23 +14,82 @@ import type {
   IProjectTemplateWithDetails,
 } from '@alga-psa/types';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
-import { addDays } from 'date-fns';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import ProjectModel from '@alga-psa/projects/models/project';
-import ProjectTaskModel from '../models/projectTask';
-import { SharedNumberingService } from '@shared/services/numberingService';
-import { getProjectStatuses } from './projectActions';
 import type { IUser } from '@alga-psa/types';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { validateData } from '@alga-psa/validation';
 import {
   createTemplateSchema,
-  updateTemplateSchema,
-  applyTemplateSchema
+  updateTemplateSchema
 } from '../schemas/projectTemplate.schemas';
+import {
+  applyProjectTemplate,
+  type ApplyProjectTemplateInput,
+} from '../services/applyProjectTemplate';
 import { OrderingService } from '../lib/orderingUtils';
 import { getTemplateDefaultStatusMappings } from '../lib/templateStatusMappingUtils';
 import { generateKeyBetween } from 'fractional-indexing';
+
+type ProjectTemplateActionError = ActionMessageError | ActionPermissionError;
+
+const EXPECTED_TEMPLATE_ACTION_MESSAGES = [
+  'Project not found',
+  'Template not found',
+  'No project statuses found',
+  'Invalid task IDs',
+  'A task cannot depend on itself',
+  'This dependency already exists',
+  'Dependency not found',
+  'Phase not found',
+  'Task not found',
+  'Status mapping not found',
+  'Checklist item not found',
+];
+
+function projectTemplateActionErrorFrom(error: unknown): ProjectTemplateActionError | null {
+  if (isActionPermissionError(error) || isActionMessageError(error)) {
+    return error as ProjectTemplateActionError;
+  }
+
+  const issues = (error as { issues?: unknown })?.issues;
+  if (Array.isArray(issues) && issues.length > 0) {
+    return actionError('Template validation failed. Please review the template details and try again.');
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('Template request contains an invalid UUID');
+  }
+
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (
+      EXPECTED_TEMPLATE_ACTION_MESSAGES.some((message) => error.message === message) ||
+      error.message.startsWith('Failed to create custom status')
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  return null;
+}
+
+function returnExpectedTemplateActionError(error: unknown): ProjectTemplateActionError {
+  const expected = projectTemplateActionErrorFrom(error);
+  if (expected) {
+    return expected;
+  }
+  throw error;
+}
 
 async function checkPermission(
   user: IUser,
@@ -44,14 +103,40 @@ async function checkPermission(
   }
 }
 
+type ProjectTemplateStatusMappingRow = {
+  template_status_mapping_id: string;
+  template_id: string;
+  template_phase_id?: string | null;
+  status_id?: string | null;
+  custom_status_name?: string | null;
+  custom_status_color?: string | null;
+  display_order: number;
+};
+
+type WbsCodeRow = {
+  wbs_code: string;
+};
+
+type ProjectTemplateCategoryRow = {
+  category: string | null;
+};
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 async function getScopedTemplateStatusMappings(
   trx: Knex.Transaction,
   tenant: string,
   templateId: string,
   templatePhaseId?: string | null
-) {
-  const query = trx('project_template_status_mappings')
-    .where({ tenant, template_id: templateId })
+): Promise<ProjectTemplateStatusMappingRow[]> {
+  const query = tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+    .where({ template_id: templateId })
     .orderBy('display_order');
 
   if (templatePhaseId) {
@@ -60,7 +145,7 @@ async function getScopedTemplateStatusMappings(
     query.whereNull('template_phase_id');
   }
 
-  return query;
+  return await query as ProjectTemplateStatusMappingRow[];
 }
 
 /**
@@ -83,25 +168,26 @@ export const createTemplateFromProject = withAuth(async (
     copyChecklists?: boolean;
     copyServices?: boolean;
   }
-): Promise<string> => {
-  // Default all options to true if not specified
-  const copyOptions = {
-    copyPhases: options?.copyPhases ?? true,
-    copyStatuses: options?.copyStatuses ?? true,
-    copyTasks: options?.copyTasks ?? true,
-    copyAssignments: options?.copyAssignments ?? false,
-    copyChecklists: options?.copyChecklists ?? true,
-    copyServices: options?.copyServices ?? true
-  };
+): Promise<string | ProjectTemplateActionError> => {
+  try {
+    // Default all options to true if not specified
+    const copyOptions = {
+      copyPhases: options?.copyPhases ?? true,
+      copyStatuses: options?.copyStatuses ?? true,
+      copyTasks: options?.copyTasks ?? true,
+      copyAssignments: options?.copyAssignments ?? false,
+      copyChecklists: options?.copyChecklists ?? true,
+      copyServices: options?.copyServices ?? true
+    };
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'create', trx);
 
     // Verify project exists and user has access
-    const project = await trx('projects')
-      .where({ project_id: projectId, tenant })
+    const project = await tenantScopedTable(trx, 'projects', tenant)
+      .where({ project_id: projectId })
       .first();
 
     if (!project) {
@@ -109,7 +195,7 @@ export const createTemplateFromProject = withAuth(async (
     }
 
     // Create template
-    const [template] = await trx('project_templates')
+    const [template] = await tenantScopedTable(trx, 'project_templates', tenant)
       .insert({
         tenant,
         template_name: templateData.template_name,
@@ -128,8 +214,8 @@ export const createTemplateFromProject = withAuth(async (
     let phases: any[] = [];
 
     if (copyOptions.copyPhases) {
-      phases = await trx('project_phases')
-        .where({ project_id: projectId, tenant })
+      phases = await tenantScopedTable(trx, 'project_phases', tenant)
+        .where({ project_id: projectId })
         .orderBy('order_key');
 
       for (const phase of phases) {
@@ -151,7 +237,7 @@ export const createTemplateFromProject = withAuth(async (
         start_offset_days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
       }
 
-      const [templatePhase] = await trx('project_template_phases')
+      const [templatePhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
         .insert({
           tenant,
           template_id: template.template_id,
@@ -169,15 +255,15 @@ export const createTemplateFromProject = withAuth(async (
 
     // Copy status mappings first to create mapping from project status to template status
     const projectStatusToTemplateStatusMap = new Map<string, string>();
-    const statusMappings = await trx('project_status_mappings')
-      .where({ project_id: projectId, tenant });
+    const statusMappings = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+      .where({ project_id: projectId });
 
     for (const mapping of statusMappings) {
       const templatePhaseId = mapping.phase_id
         ? phaseMap.get(mapping.phase_id) ?? null
         : null;
 
-      const [templateStatusMapping] = await trx('project_template_status_mappings')
+      const [templateStatusMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
         .insert({
           tenant,
           template_id: template.template_id,
@@ -200,8 +286,7 @@ export const createTemplateFromProject = withAuth(async (
       return template.template_id;
     }
 
-    const tasks = await trx('project_tasks')
-      .where('tenant', tenant)
+    const tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
       .whereIn('phase_id', phaseIds)
       .orderBy('order_key');
 
@@ -228,7 +313,7 @@ export const createTemplateFromProject = withAuth(async (
         ? projectStatusToTemplateStatusMap.get(task.project_status_mapping_id)
         : null;
 
-      const [templateTask] = await trx('project_template_tasks')
+      const [templateTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
         .insert({
           tenant,
           template_phase_id: templatePhaseId,
@@ -255,13 +340,13 @@ export const createTemplateFromProject = withAuth(async (
         // Note: Primary assignment (assigned_to) is already copied via the task insert above
 
         // Copy additional agents from task_resources
-        const additionalAgents = await trx('task_resources')
-          .where({ task_id: task.task_id, tenant })
+        const additionalAgents = await tenantScopedTable(trx, 'task_resources', tenant)
+          .where({ task_id: task.task_id })
           .select('additional_user_id');
 
         for (const resource of additionalAgents) {
           if (resource.additional_user_id) {
-            await trx('project_template_task_resources')
+            await tenantScopedTable(trx, 'project_template_task_resources', tenant)
               .insert({
                 tenant,
                 template_task_id: templateTask.template_task_id,
@@ -275,8 +360,7 @@ export const createTemplateFromProject = withAuth(async (
     // Copy dependencies (with remapped IDs)
     const taskIds = Array.from(taskMap.keys());
     if (taskIds.length > 0) {
-      const dependencies = await trx('project_task_dependencies')
-        .where('tenant', tenant)
+      const dependencies = await tenantScopedTable(trx, 'project_task_dependencies', tenant)
         .whereIn('predecessor_task_id', taskIds);
 
       for (const dep of dependencies) {
@@ -284,7 +368,7 @@ export const createTemplateFromProject = withAuth(async (
         const newSuccessorId = taskMap.get(dep.successor_task_id);
 
         if (newPredecessorId && newSuccessorId) {
-          await trx('project_template_dependencies')
+          await tenantScopedTable(trx, 'project_template_dependencies', tenant)
             .insert({
               tenant,
               template_id: template.template_id,
@@ -299,15 +383,14 @@ export const createTemplateFromProject = withAuth(async (
 
       // Copy checklists (if enabled)
       if (copyOptions.copyChecklists) {
-        const checklists = await trx('task_checklist_items')
-          .where('tenant', tenant)
+        const checklists = await tenantScopedTable(trx, 'task_checklist_items', tenant)
           .whereIn('task_id', taskIds);
 
         for (const item of checklists) {
           const newTaskId = taskMap.get(item.task_id);
 
           if (newTaskId) {
-            await trx('project_template_checklist_items')
+            await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
               .insert({
                 tenant,
                 template_task_id: newTaskId,
@@ -321,8 +404,15 @@ export const createTemplateFromProject = withAuth(async (
       }
     }
 
-    return template.template_id;
-  });
+      return template.template_id;
+    });
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -332,537 +422,32 @@ export const applyTemplate = withAuth(async (
   user,
   { tenant },
   templateId: string,
-  projectData: {
-    project_name: string;
-    client_id: string;
-    status_id?: string;
-    start_date?: string;
-    assigned_to?: string;
-    options?: {
-      copyPhases?: boolean;
-      copyStatuses?: boolean;
-      copyTasks?: boolean;
-      copyDependencies?: boolean;
-      copyChecklists?: boolean;
-      copyServices?: boolean;
-      assignmentOption?: 'none' | 'primary' | 'all';
-    };
-  }
-): Promise<string> => {
-  const validatedData = validateData(applyTemplateSchema, {
-    template_id: templateId,
-    ...projectData
-  });
-
-  // Set default options if not provided
-  const options = {
-    copyPhases: validatedData.options?.copyPhases ?? true,
-    copyStatuses: validatedData.options?.copyStatuses ?? true,
-    copyTasks: validatedData.options?.copyTasks ?? true,
-    copyDependencies: validatedData.options?.copyDependencies ?? true,
-    copyChecklists: validatedData.options?.copyChecklists ?? true,
-    copyServices: validatedData.options?.copyServices ?? true,
-    assignmentOption: validatedData.options?.assignmentOption ?? 'primary'
-  };
-
-  const { knex } = await createTenantKnex();
-
-  const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await checkPermission(user, 'project', 'create', trx);
-
-    // Verify template exists
-    const template = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
-      .first();
-
-    if (!template) {
-      throw new Error('Template not found');
-    }
-
-    // 1. Pre-load template statuses
-    const templateStatuses = options.copyStatuses
-      ? await trx('project_template_status_mappings')
-          .where({ template_id: templateId, tenant })
-          .orderBy('display_order')
-      : [];
-
-    // 2. Create project directly (no need to call createProject which has extra overhead)
-    // Get project statuses for the project status field
-    const projectStatuses = await getProjectStatuses();
-    if (isActionPermissionError(projectStatuses)) {
-      throw new Error(projectStatuses.permissionError);
-    }
-    if (projectStatuses.length === 0) {
-      throw new Error('No project statuses found');
-    }
-
-    // Use provided status_id or fall back to first available
-    let defaultProjectStatus = projectStatuses[0];
-    if (validatedData.status_id) {
-      const selectedStatus = projectStatuses.find(s => s.status_id === validatedData.status_id);
-      if (selectedStatus) {
-        defaultProjectStatus = selectedStatus;
-      }
-    }
-
-    // Generate project number and WBS code
-    const projectNumber = await SharedNumberingService.getNextNumber(
-      'PROJECT',
-      { knex: trx, tenant }
-    );
-    const wbsCode = await ProjectModel.generateNextWbsCode(trx, tenant, '');
-
-    console.log(`[applyTemplate] Creating project "${validatedData.project_name}" with number ${projectNumber}`);
-
-    // Create the project record
-    const newProject = await ProjectModel.create(trx, tenant, {
-      project_name: validatedData.project_name,
-      client_id: validatedData.client_id,
-      assigned_to: validatedData.assigned_to ? String(validatedData.assigned_to) : null,
-      start_date: validatedData.start_date ? new Date(String(validatedData.start_date)) : null,
-      end_date: null,
-      description: template.description || null,
-      status: defaultProjectStatus.status_id,
-      status_name: defaultProjectStatus.name,
-      is_closed: defaultProjectStatus.is_closed,
-      is_inactive: false,
-      wbs_code: wbsCode,
-      project_number: projectNumber
+  projectData: ApplyProjectTemplateInput
+): Promise<string | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await checkPermission(user, 'project', 'create', trx);
+      return applyProjectTemplate(trx, tenant, templateId, projectData);
     });
 
-    const newProjectId = newProject.project_id;
-    console.log(`[applyTemplate] Created project ${newProjectId}`);
+    await publishEvent({
+      eventType: 'PROJECT_CREATED',
+      payload: {
+        tenantId: tenant,
+        projectId,
+        userId: user.user_id,
+        timestamp: new Date().toISOString(),
+      },
+    });
 
-    // Apply client_portal_config from template
-    if (template.client_portal_config) {
-      await trx('projects')
-        .where({ project_id: newProjectId, tenant })
-        .update({ client_portal_config: template.client_portal_config });
-    }
-
-    // 3. Load template phases (only if copyPhases is enabled)
-    const templatePhases = options.copyPhases
-      ? await trx('project_template_phases')
-          .where({ template_id: templateId, tenant })
-          .orderBy('order_key')
-      : [];
-
-    const phaseMap = new Map<string, string>(); // template_phase_id → new_phase_id
-
-    // 4. Create phases (only if copyPhases is enabled)
-    if (options.copyPhases) {
-      for (const templatePhase of templatePhases) {
-      const startDate = validatedData.start_date
-        ? addDays(new Date(String(validatedData.start_date)), templatePhase.start_offset_days || 0)
-        : null;
-
-      const endDate = startDate && templatePhase.duration_days
-        ? addDays(startDate, templatePhase.duration_days)
-        : null;
-
-      // Get next phase number for WBS
-      const existingPhases = await trx('project_phases')
-        .where({ project_id: newProjectId, tenant })
-        .select('wbs_code');
-
-      const phaseNumbers = existingPhases
-        .map((phase) => {
-          const parts = phase.wbs_code.split('.');
-          return parseInt(parts[parts.length - 1]);
-        })
-        .filter(num => !isNaN(num));
-
-      const maxPhaseNumber = phaseNumbers.length > 0 ? Math.max(...phaseNumbers) : 0;
-      const newWbsCode = `${newProject.wbs_code}.${maxPhaseNumber + 1}`;
-
-      const [newPhase] = await trx('project_phases')
-        .insert({
-          tenant,
-          project_id: newProjectId,
-          phase_name: templatePhase.phase_name,
-          description: templatePhase.description,
-          start_date: startDate,
-          end_date: endDate,
-          order_key: templatePhase.order_key,
-          order_number: phaseNumbers.length + 1,
-          wbs_code: newWbsCode,
-          status: 'not_started'
-        })
-        .returning('*');
-
-      phaseMap.set(templatePhase.template_phase_id, newPhase.phase_id);
-      }
-    }
-
-    // 5. Handle status mappings BEFORE creating tasks (only if copyStatuses is enabled)
-    let firstStatusMappingId: string | undefined;
-    const templateStatusToProjectStatusMap = new Map<string, string>(); // template_status_mapping_id → project_status_mapping_id
-    const firstStatusMappingIdsByScope = new Map<string, string>();
-
-    const getScopeKey = (templatePhaseId?: string | null) => templatePhaseId ?? '__template_defaults__';
-    const getFallbackStatusMappingIdForPhase = (templatePhaseId?: string | null) => {
-      if (templatePhaseId) {
-        const phaseScopedFallback = firstStatusMappingIdsByScope.get(getScopeKey(templatePhaseId));
-        if (phaseScopedFallback) {
-          return phaseScopedFallback;
-        }
-      }
-
-      return firstStatusMappingIdsByScope.get(getScopeKey()) || firstStatusMappingId;
-    };
-
-    if (options.copyStatuses && templateStatuses.length > 0) {
-      // No need to delete - we passed empty array to createProject so no status mappings were created
-      // Add template status mappings and build mapping
-      console.log(`[applyTemplate] Creating ${templateStatuses.length} status mappings from template`);
-      for (const templateStatus of templateStatuses) {
-        let statusIdToUse = templateStatus.status_id;
-
-        // If it's a custom status (no status_id), look for existing or create a new status
-        if (!templateStatus.status_id && templateStatus.custom_status_name) {
-          try {
-            // First, check if a status with this name already exists for the tenant
-            const existingStatus = await trx('statuses')
-              .where({
-                tenant,
-                status_type: 'project_task',
-                name: templateStatus.custom_status_name
-              })
-              .first();
-
-            if (existingStatus) {
-              // Reuse existing status
-              statusIdToUse = existingStatus.status_id;
-              console.log(`[applyTemplate] Using existing status: "${existingStatus.name}" → status_id=${existingStatus.status_id}`);
-            } else {
-              // Get next order number for the new status
-              const maxOrder = await trx('statuses')
-                .where({ tenant, status_type: 'project_task' })
-                .max('order_number as max')
-                .first();
-              const orderNumber = (maxOrder?.max ?? 0) + 1;
-
-              console.log(`[applyTemplate] Creating custom status: "${templateStatus.custom_status_name}" with order_number=${orderNumber}`);
-
-              const insertResult = await trx('statuses')
-                .insert({
-                  tenant,
-                  item_type: 'project_task',
-                  status_type: 'project_task',
-                  name: templateStatus.custom_status_name,
-                  color: templateStatus.custom_status_color || '#6B7280',
-                  is_closed: false,
-                  order_number: orderNumber,
-                  created_at: new Date().toISOString()
-                })
-                .returning('*');
-
-              if (!insertResult || insertResult.length === 0) {
-                throw new Error(`Failed to create custom status "${templateStatus.custom_status_name}" - insert returned empty result`);
-              }
-
-              const newStatus = insertResult[0];
-              statusIdToUse = newStatus.status_id;
-              console.log(`[applyTemplate] Created custom status: "${newStatus.name}" (${newStatus.color}) → status_id=${newStatus.status_id}`);
-            }
-          } catch (statusError) {
-            console.error(`[applyTemplate] Error creating custom status "${templateStatus.custom_status_name}":`, statusError);
-            throw statusError;
-          }
-        }
-
-        const [newMapping] = await trx('project_status_mappings')
-          .insert({
-            tenant,
-            project_id: newProjectId,
-            phase_id: templateStatus.template_phase_id
-              ? phaseMap.get(templateStatus.template_phase_id) ?? null
-              : null,
-            status_id: statusIdToUse,
-            custom_name: templateStatus.custom_status_name,
-            display_order: templateStatus.display_order,
-            is_visible: true,
-            is_standard: false  // Custom statuses from the statuses table are never standard
-          })
-          .returning('*');
-
-        // Map template status to project status
-        console.log(`[applyTemplate] Mapping: template_status_mapping_id=${templateStatus.template_status_mapping_id} → project_status_mapping_id=${newMapping.project_status_mapping_id} (display_order=${templateStatus.display_order})`);
-        templateStatusToProjectStatusMap.set(
-          templateStatus.template_status_mapping_id,
-          newMapping.project_status_mapping_id
-        );
-
-        const scopeKey = getScopeKey(templateStatus.template_phase_id);
-        if (!firstStatusMappingIdsByScope.has(scopeKey)) {
-          firstStatusMappingIdsByScope.set(scopeKey, newMapping.project_status_mapping_id);
-        }
-
-        // Track first status mapping as fallback
-        if (!firstStatusMappingId) {
-          firstStatusMappingId = newMapping.project_status_mapping_id;
-        }
-      }
-    } else {
-      // Not copying statuses from template - create default status mappings
-      console.log(`[applyTemplate] Creating default status mappings`);
-      const defaultStatuses = await trx('statuses')
-        .where({ tenant, status_type: 'project_task' })
-        .orderBy('order_number')
-        .limit(5);  // Limit to a reasonable number of default statuses
-
-      for (let i = 0; i < defaultStatuses.length; i++) {
-        const status = defaultStatuses[i];
-        const [newMapping] = await trx('project_status_mappings')
-          .insert({
-            tenant,
-            project_id: newProjectId,
-            status_id: status.status_id,
-            custom_name: null,
-            display_order: i + 1,
-            is_visible: true,
-            is_standard: false
-          })
-          .returning('*');
-
-        if (!firstStatusMappingIdsByScope.has(getScopeKey())) {
-          firstStatusMappingIdsByScope.set(getScopeKey(), newMapping.project_status_mapping_id);
-        }
-
-        if (!firstStatusMappingId) {
-          firstStatusMappingId = newMapping.project_status_mapping_id;
-        }
-      }
-    }
-
-    // 6. Create tasks (only if copyTasks is enabled)
-    const templatePhaseIds = Array.from(phaseMap.keys());
-    const taskMap = new Map<string, string>(); // template_task_id → new_task_id
-
-    if (options.copyTasks && templatePhaseIds.length > 0) {
-      const templateTasks = await trx('project_template_tasks')
-        .where('tenant', tenant)
-        .whereIn('template_phase_id', templatePhaseIds)
-        .orderBy('order_key');
-
-      for (const templateTask of templateTasks) {
-      const newPhaseId = phaseMap.get(templateTask.template_phase_id);
-      if (!newPhaseId) continue;
-
-      // Get phase for WBS code
-      const phase = await trx('project_phases')
-        .where({ phase_id: newPhaseId, tenant })
-        .first();
-
-      if (!phase) continue;
-
-      // Get next task number for WBS
-      const existingTasks = await trx('project_tasks')
-        .where({ phase_id: newPhaseId, tenant })
-        .select('wbs_code');
-
-      const taskNumbers = existingTasks
-        .map((task) => {
-          const parts = task.wbs_code.split('.');
-          return parseInt(parts[parts.length - 1]);
-        })
-        .filter(num => !isNaN(num));
-
-      const maxTaskNumber = taskNumbers.length > 0 ? Math.max(...taskNumbers) : 0;
-      const newWbsCode = `${phase.wbs_code}.${maxTaskNumber + 1}`;
-
-      // Calculate task due_date from phase start_date and task duration_days
-      const dueDate = phase.start_date && templateTask.duration_days
-        ? addDays(new Date(phase.start_date), templateTask.duration_days)
-        : null;
-
-      // Determine which status mapping to use for this task
-      let taskStatusMappingId = getFallbackStatusMappingIdForPhase(templateTask.template_phase_id);
-      if (templateTask.template_status_mapping_id) {
-        // Try to map the template status to the project status
-        const mappedStatusId = templateStatusToProjectStatusMap.get(templateTask.template_status_mapping_id);
-        console.log(`[applyTemplate] Task "${templateTask.task_name}": template_status_mapping_id=${templateTask.template_status_mapping_id}, mapped to project_status_mapping_id=${mappedStatusId || 'NOT FOUND'}, using ${mappedStatusId || taskStatusMappingId}`);
-        if (mappedStatusId) {
-          taskStatusMappingId = mappedStatusId;
-        }
-      } else {
-        console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${taskStatusMappingId}`);
-      }
-
-      // Determine assigned_to and assigned_team_id based on assignmentOption
-      let taskAssignedTo: string | null = null;
-      let taskAssignedTeamId: string | null = null;
-      if (options.assignmentOption === 'primary' || options.assignmentOption === 'all') {
-        taskAssignedTo = templateTask.assigned_to || null;
-        taskAssignedTeamId = templateTask.assigned_team_id || null;
-      }
-      // If assignmentOption is 'none', both remain null
-
-      try {
-        const taskInsertData = {
-          tenant,
-          phase_id: newPhaseId,
-          task_name: templateTask.task_name,
-          description: templateTask.description,
-          description_rich_text: templateTask.description_rich_text,
-          estimated_hours: templateTask.estimated_hours,
-          task_type_key: templateTask.task_type_key || 'task',
-          priority_id: templateTask.priority_id,
-          order_key: templateTask.order_key,
-          wbs_code: newWbsCode,
-          project_status_mapping_id: taskStatusMappingId,
-          assigned_to: taskAssignedTo,
-          assigned_team_id: taskAssignedTeamId,
-          due_date: dueDate,
-          service_id: options.copyServices ? (templateTask.service_id || null) : null
-        };
-        console.log(`[applyTemplate] Inserting task:`, JSON.stringify(taskInsertData, null, 2));
-
-        const [newTask] = await trx('project_tasks')
-          .insert(taskInsertData)
-          .returning('*');
-
-        taskMap.set(templateTask.template_task_id, newTask.task_id);
-      } catch (taskError) {
-        console.error(`[applyTemplate] Failed to insert task "${templateTask.task_name}":`, taskError);
-        throw taskError;
-      }
-      }
-
-      // Copy additional agent assignments (only if assignmentOption is 'all')
-      if (options.assignmentOption === 'all' && templatePhaseIds.length > 0) {
-        const templateTaskIds = Array.from(taskMap.keys());
-
-        if (templateTaskIds.length > 0) {
-          // Fetch all template task resources (additional agents)
-          const templateResources = await trx('project_template_task_resources')
-            .where('tenant', tenant)
-            .whereIn('template_task_id', templateTaskIds);
-
-          for (const resource of templateResources) {
-            const newTaskId = taskMap.get(resource.template_task_id);
-            if (!newTaskId) continue;
-
-            // Get the task to find its assigned_to (primary agent)
-            const task = await trx('project_tasks')
-              .where({ task_id: newTaskId, tenant })
-              .first();
-
-            if (!task || !task.assigned_to) continue;
-
-            // Check if user exists and is active
-            const user = await trx('users')
-              .where({ user_id: resource.user_id, tenant })
-              .first();
-
-            if (!user || user.is_inactive) {
-              // Skip assignment if user doesn't exist or is inactive
-              continue;
-            }
-
-            // Only add if additional user is different from primary
-            if (resource.user_id !== task.assigned_to) {
-              try {
-                await ProjectTaskModel.addTaskResource(trx, tenant, newTaskId, resource.user_id);
-              } catch (resourceError) {
-                console.error(`Failed to copy template task resource for user ${resource.user_id}:`, resourceError);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // 7. Create dependencies (REMAP IDs!) - only if copyDependencies and copyTasks are enabled
-    if (options.copyDependencies && options.copyTasks) {
-      const templateDeps = await trx('project_template_dependencies')
-        .where({ template_id: templateId, tenant });
-
-      for (const templateDep of templateDeps) {
-      const newPredecessorId = taskMap.get(templateDep.predecessor_task_id);
-      const newSuccessorId = taskMap.get(templateDep.successor_task_id);
-
-      if (newPredecessorId && newSuccessorId) {
-        await trx('project_task_dependencies')
-          .insert({
-            tenant,
-            predecessor_task_id: newPredecessorId,
-            successor_task_id: newSuccessorId,
-            dependency_type: templateDep.dependency_type,
-            lead_lag_days: templateDep.lead_lag_days || 0,
-            notes: templateDep.notes
-          });
-      }
-      }
-    }
-
-    // 8. Create checklists - only if copyChecklists and copyTasks are enabled
-    if (options.copyChecklists && options.copyTasks) {
-      const templateTaskIds = Array.from(taskMap.keys());
-      if (templateTaskIds.length > 0) {
-        const templateChecklists = await trx('project_template_checklist_items')
-          .where('tenant', tenant)
-          .whereIn('template_task_id', templateTaskIds);
-
-        for (const templateItem of templateChecklists) {
-        const newTaskId = taskMap.get(templateItem.template_task_id);
-
-        if (newTaskId) {
-          await trx('task_checklist_items')
-            .insert({
-              tenant,
-              task_id: newTaskId,
-              item_name: templateItem.item_name,
-              description: templateItem.description,
-              order_number: templateItem.order_number,
-              completed: templateItem.completed ?? false
-            });
-        }
-        }
-      }
-    }
-
-    // 9. Update template usage stats
-    await updateTemplateUsage(trx, templateId, tenant);
-
-    return newProjectId;
-  });
-
-  // Publish project created event AFTER transaction commits successfully
-  // This ensures we don't publish events for projects that fail to be created
-  await publishEvent({
-    eventType: 'PROJECT_CREATED',
-    payload: {
-      tenantId: tenant,
-      projectId: projectId,
-      userId: user.user_id,
-      timestamp: new Date().toISOString()
-    }
-  });
-
-  return projectId;
+    return projectId;
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
-
-/**
- * Helper to update template usage statistics
- */
-async function updateTemplateUsage(
-  trx: Knex.Transaction,
-  templateId: string,
-  tenant: string | null
-): Promise<void> {
-  if (!tenant) {
-    throw new Error('Tenant is required for updating template usage');
-  }
-  await trx('project_templates')
-    .where({ template_id: templateId, tenant })
-    .increment('use_count', 1)
-    .update({
-      last_used_at: trx.fn.now(),
-      updated_at: trx.fn.now()
-    });
-}
-
 /**
  * Get all templates with optional filtering
  */
@@ -878,8 +463,7 @@ export const getTemplates = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
-  let query = knex('project_templates')
-    .where({ tenant });
+  let query = tenantScopedTable(knex, 'project_templates', tenant);
 
   if (filters?.category) {
     query = query.where('category', filters.category);
@@ -907,8 +491,8 @@ export const getTemplateWithDetails = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
-  const template = await knex('project_templates')
-    .where({ template_id: templateId, tenant })
+  const template = await tenantScopedTable(knex, 'project_templates', tenant)
+    .where({ template_id: templateId })
     .first();
 
   if (!template) {
@@ -917,22 +501,22 @@ export const getTemplateWithDetails = withAuth(async (
 
   // Load all related data
   const [phases, dependencies, rawStatusMappings] = await Promise.all([
-    knex('project_template_phases')
-      .where({ template_id: templateId, tenant })
+    tenantScopedTable(knex, 'project_template_phases', tenant)
+      .where({ template_id: templateId })
       .orderBy('order_key'),
-    knex('project_template_dependencies')
-      .where({ template_id: templateId, tenant }),
-    knex('project_template_status_mappings')
-      .where({ template_id: templateId, tenant })
+    tenantScopedTable(knex, 'project_template_dependencies', tenant)
+      .where({ template_id: templateId }),
+    tenantScopedTable(knex, 'project_template_status_mappings', tenant)
+      .where({ template_id: templateId })
       .orderBy('display_order')
-  ]);
+  ]) as [IProjectTemplatePhase[], IProjectTemplateDependency[], ProjectTemplateStatusMappingRow[]];
 
   // Enrich status mappings with actual status information
   const statusMappings = await Promise.all(
-    rawStatusMappings.map(async (mapping: any) => {
+    rawStatusMappings.map(async (mapping) => {
       if (mapping.status_id) {
         // First, try standard_statuses (for standard statuses)
-        const standardStatus = await knex('standard_statuses')
+        const standardStatus = await tenantDb(knex, tenant).table('standard_statuses')
           .where({ standard_status_id: mapping.status_id })
           .first();
 
@@ -947,8 +531,8 @@ export const getTemplateWithDetails = withAuth(async (
         }
 
         // If not found, try statuses table (for custom statuses)
-        const customStatus = await knex('statuses')
-          .where({ status_id: mapping.status_id, tenant })
+        const customStatus = await tenantScopedTable(knex, 'statuses', tenant)
+          .where({ status_id: mapping.status_id })
           .first();
 
         if (customStatus) {
@@ -980,8 +564,7 @@ export const getTemplateWithDetails = withAuth(async (
   console.log(`[getTemplateWithDetails] Template: ${template.template_name}, phaseIds:`, phaseIds);
 
   if (phaseIds.length > 0) {
-    tasks = await knex('project_template_tasks')
-      .where('tenant', tenant)
+    tasks = await tenantScopedTable(knex, 'project_template_tasks', tenant)
       .whereIn('template_phase_id', phaseIds)
       .orderBy('order_key');
 
@@ -993,12 +576,10 @@ export const getTemplateWithDetails = withAuth(async (
     const taskIds = tasks.map(t => t.template_task_id);
     if (taskIds.length > 0) {
       [checklistItems, taskAssignments] = await Promise.all([
-        knex('project_template_checklist_items')
-          .where('tenant', tenant)
+        tenantScopedTable(knex, 'project_template_checklist_items', tenant)
           .whereIn('template_task_id', taskIds)
           .orderBy('order_number'),
-        knex('project_template_task_resources')
-          .where('tenant', tenant)
+        tenantScopedTable(knex, 'project_template_task_resources', tenant)
           .whereIn('template_task_id', taskIds)
       ]);
     }
@@ -1028,11 +609,12 @@ export const updateTemplate = withAuth(async (
     category?: string;
     client_portal_config?: import('@alga-psa/types').IClientPortalConfig;
   }
-): Promise<IProjectTemplate> => {
-  const validatedData = validateData(updateTemplateSchema, data);
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplate | ProjectTemplateActionError> => {
+  try {
+    const validatedData = validateData(updateTemplateSchema, data);
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Handle client_portal_config JSON serialization
@@ -1045,8 +627,8 @@ export const updateTemplate = withAuth(async (
       updateData.client_portal_config = JSON.stringify(client_portal_config);
     }
 
-    const [updated] = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update(updateData)
       .returning('*');
 
@@ -1054,8 +636,15 @@ export const updateTemplate = withAuth(async (
       throw new Error('Template not found');
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -1065,21 +654,29 @@ export const deleteTemplate = withAuth(async (
   user,
   { tenant },
   templateId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'delete', trx);
 
     // Cascade delete handled by FK constraints
-    const deleted = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const deleted = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .delete();
 
     if (deleted === 0) {
       throw new Error('Template not found');
     }
-  });
+    });
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -1091,14 +688,15 @@ export const duplicateTemplate = withAuth(async (
   user,
   { tenant },
   templateId: string
-): Promise<string> => {
-  const { knex } = await createTenantKnex();
+): Promise<string | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'create', trx);
 
-    const originalTemplate = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const originalTemplate = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .first();
 
     if (!originalTemplate) {
@@ -1106,7 +704,7 @@ export const duplicateTemplate = withAuth(async (
     }
 
     // Create new template
-    const [newTemplate] = await trx('project_templates')
+    const [newTemplate] = await tenantScopedTable(trx, 'project_templates', tenant)
       .insert({
         tenant,
         template_name: `${originalTemplate.template_name} (Copy)`,
@@ -1118,14 +716,14 @@ export const duplicateTemplate = withAuth(async (
       .returning('*');
 
     // Copy phases
-    const phases = await trx('project_template_phases')
-      .where({ template_id: templateId, tenant })
+    const phases = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_id: templateId })
       .orderBy('order_key');
 
     const phaseMap = new Map<string, string>();
 
     for (const phase of phases) {
-      const [newPhase] = await trx('project_template_phases')
+      const [newPhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
         .insert({
           tenant,
           template_id: newTemplate.template_id,
@@ -1143,8 +741,7 @@ export const duplicateTemplate = withAuth(async (
     // Copy tasks
     const phaseIds = Array.from(phaseMap.keys());
     if (phaseIds.length > 0) {
-      const tasks = await trx('project_template_tasks')
-        .where('tenant', tenant)
+      const tasks = await tenantScopedTable(trx, 'project_template_tasks', tenant)
         .whereIn('template_phase_id', phaseIds);
 
       const taskMap = new Map<string, string>();
@@ -1153,7 +750,7 @@ export const duplicateTemplate = withAuth(async (
         const newPhaseId = phaseMap.get(task.template_phase_id);
         if (!newPhaseId) continue;
 
-        const [newTask] = await trx('project_template_tasks')
+        const [newTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
           .insert({
             tenant,
             template_phase_id: newPhaseId,
@@ -1172,15 +769,15 @@ export const duplicateTemplate = withAuth(async (
       }
 
       // Copy dependencies
-      const deps = await trx('project_template_dependencies')
-        .where({ template_id: templateId, tenant });
+      const deps = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+        .where({ template_id: templateId });
 
       for (const dep of deps) {
         const newPred = taskMap.get(dep.predecessor_task_id);
         const newSucc = taskMap.get(dep.successor_task_id);
 
         if (newPred && newSucc) {
-          await trx('project_template_dependencies')
+          await tenantScopedTable(trx, 'project_template_dependencies', tenant)
             .insert({
               tenant,
               template_id: newTemplate.template_id,
@@ -1196,14 +793,13 @@ export const duplicateTemplate = withAuth(async (
       // Copy checklists
       const taskIds = Array.from(taskMap.keys());
       if (taskIds.length > 0) {
-        const checklists = await trx('project_template_checklist_items')
-          .where('tenant', tenant)
+        const checklists = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
           .whereIn('template_task_id', taskIds);
 
         for (const item of checklists) {
           const newTaskId = taskMap.get(item.template_task_id);
           if (newTaskId) {
-            await trx('project_template_checklist_items')
+            await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
               .insert({
                 tenant,
                 template_task_id: newTaskId,
@@ -1218,11 +814,11 @@ export const duplicateTemplate = withAuth(async (
     }
 
     // Copy status mappings
-    const statusMappings = await trx('project_template_status_mappings')
-      .where({ template_id: templateId, tenant });
+    const statusMappings = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_id: templateId });
 
     for (const mapping of statusMappings) {
-      await trx('project_template_status_mappings')
+      await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
         .insert({
           tenant,
           template_id: newTemplate.template_id,
@@ -1235,8 +831,15 @@ export const duplicateTemplate = withAuth(async (
         });
     }
 
-    return newTemplate.template_id;
-  });
+      return newTemplate.template_id;
+    });
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -1245,18 +848,26 @@ export const duplicateTemplate = withAuth(async (
 export const getTemplateCategories = withAuth(async (
   user,
   { tenant }
-): Promise<string[]> => {
+): Promise<string[] | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
-  await checkPermission(user, 'project', 'read', knex);
+  try {
+    await checkPermission(user, 'project', 'read', knex);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+    throw error;
+  }
 
-  const results = await knex('project_templates')
-    .where({ tenant })
+  const results = await tenantScopedTable(knex, 'project_templates', tenant)
     .whereNotNull('category')
     .distinct('category')
-    .orderBy('category');
+    .orderBy('category') as ProjectTemplateCategoryRow[];
 
-  return results.map(r => r.category).filter(Boolean);
+  return results
+    .map((r) => r.category)
+    .filter((category): category is string => Boolean(category));
 });
 
 // ============================================================
@@ -1265,6 +876,12 @@ export const getTemplateCategories = withAuth(async (
 
 /**
  * Add a dependency to a template task
+ *
+ * Mirrors addTaskDependency for project tasks: 'blocked_by' is normalized by
+ * swapping the tasks and storing 'blocks' ("A blocked_by B" becomes
+ * "B blocks A"), so stored rows only ever use 'blocks'/'related_to' — the
+ * same set project_task_dependencies enforces via CHECK constraint, which
+ * template application copies into.
  */
 export const addTemplateDependency = withAuth(async (
   user,
@@ -1275,32 +892,47 @@ export const addTemplateDependency = withAuth(async (
   dependencyType: DependencyType,
   leadLagDays: number = 0,
   notes?: string
-): Promise<IProjectTemplateDependency> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<IProjectTemplateDependency | ProjectTemplateActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx) => {
+    // LEVERAGE: pattern blocked-by-normalization — same swap lives in
+    // projectTaskActions.addTaskDependency and applyProjectTemplate.
+    let actualPredecessorId = predecessorTaskId;
+    let actualSuccessorId = successorTaskId;
+    let actualDependencyType = dependencyType;
+    if (dependencyType === 'blocked_by') {
+      actualPredecessorId = successorTaskId;
+      actualSuccessorId = predecessorTaskId;
+      actualDependencyType = 'blocks';
+    }
+
+    return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Validate that both tasks belong to the template
-    const tasks = await trx('project_template_tasks')
-      .where('tenant', tenant)
-      .whereIn('template_task_id', [predecessorTaskId, successorTaskId]);
+    const tasks = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .whereIn('template_task_id', [actualPredecessorId, actualSuccessorId]);
 
     if (tasks.length !== 2) {
       throw new Error('Invalid task IDs');
     }
 
     // Check for self-reference
-    if (predecessorTaskId === successorTaskId) {
+    if (actualPredecessorId === actualSuccessorId) {
       throw new Error('A task cannot depend on itself');
     }
 
-    // Check for existing dependency
-    const existing = await trx('project_template_dependencies')
-      .where({
-        tenant,
-        predecessor_task_id: predecessorTaskId,
-        successor_task_id: successorTaskId
+    // Check for existing dependency (either direction)
+    const existing = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+      .where(function() {
+        this.where({
+          predecessor_task_id: actualPredecessorId,
+          successor_task_id: actualSuccessorId
+        }).orWhere({
+          predecessor_task_id: actualSuccessorId,
+          successor_task_id: actualPredecessorId
+        });
       })
       .first();
 
@@ -1309,20 +941,23 @@ export const addTemplateDependency = withAuth(async (
     }
 
     // Insert new dependency
-    const [dependency] = await trx('project_template_dependencies')
+    const [dependency] = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
       .insert({
         tenant,
         template_id: templateId,
-        predecessor_task_id: predecessorTaskId,
-        successor_task_id: successorTaskId,
-        dependency_type: dependencyType,
+        predecessor_task_id: actualPredecessorId,
+        successor_task_id: actualSuccessorId,
+        dependency_type: actualDependencyType,
         lead_lag_days: leadLagDays,
         notes
       })
       .returning('*');
 
-    return dependency;
-  });
+      return dependency;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1337,23 +972,47 @@ export const updateTemplateDependency = withAuth(async (
     lead_lag_days?: number;
     notes?: string;
   }
-): Promise<IProjectTemplateDependency> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<IProjectTemplateDependency | ProjectTemplateActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx) => {
+    return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const [dependency] = await trx('project_template_dependencies')
-      .where({ template_dependency_id: dependencyId, tenant })
-      .update(data)
+    // Normalize 'blocked_by' the same way addTemplateDependency does:
+    // flip the stored direction and keep the type as 'blocks'.
+    let updateData: Record<string, unknown> = { ...data };
+    if (data.dependency_type === 'blocked_by') {
+      const current = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+        .where({ template_dependency_id: dependencyId })
+        .first();
+
+      if (!current) {
+        throw new Error('Dependency not found');
+      }
+
+      updateData = {
+        ...updateData,
+        dependency_type: 'blocks',
+        predecessor_task_id: current.successor_task_id,
+        successor_task_id: current.predecessor_task_id
+      };
+    }
+
+    const [dependency] = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+      .where({ template_dependency_id: dependencyId })
+      .update(updateData)
       .returning('*');
 
     if (!dependency) {
       throw new Error('Dependency not found');
     }
 
-    return dependency;
-  });
+      return dependency;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1363,20 +1022,24 @@ export const removeTemplateDependency = withAuth(async (
   user,
   { tenant },
   dependencyId: string
-): Promise<void> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx) => {
+    return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const deleted = await trx('project_template_dependencies')
-      .where({ template_dependency_id: dependencyId, tenant })
+    const deleted = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+      .where({ template_dependency_id: dependencyId })
       .delete();
 
     if (!deleted) {
       throw new Error('Dependency not found');
     }
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1391,8 +1054,8 @@ export const getTemplateDependencies = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
-  return await knex('project_template_dependencies')
-    .where({ template_id: templateId, tenant });
+  return await tenantScopedTable(knex, 'project_template_dependencies', tenant)
+    .where({ template_id: templateId });
 });
 
 /**
@@ -1410,21 +1073,20 @@ export const getTaskTemplateDependencies = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
+  const db = tenantDb(knex, tenant);
+  const predecessorsQuery = tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)
+    .where({ 'ptd.successor_task_id': taskId })
+    .select('ptd.*', 'ptt.task_name as predecessor_task_name');
+  db.tenantJoin(predecessorsQuery, 'project_template_tasks as ptt', 'ptd.predecessor_task_id', 'ptt.template_task_id', { type: 'left' });
+
+  const successorsQuery = tenantScopedTable(knex, 'project_template_dependencies as ptd', tenant)
+    .where({ 'ptd.predecessor_task_id': taskId })
+    .select('ptd.*', 'ptt.task_name as successor_task_name');
+  db.tenantJoin(successorsQuery, 'project_template_tasks as ptt', 'ptd.successor_task_id', 'ptt.template_task_id', { type: 'left' });
+
   const [predecessors, successors] = await Promise.all([
-    knex('project_template_dependencies as ptd')
-      .where({ 'ptd.successor_task_id': taskId, 'ptd.tenant': tenant })
-      .leftJoin('project_template_tasks as ptt', function() {
-        this.on('ptd.predecessor_task_id', '=', 'ptt.template_task_id')
-            .andOn('ptd.tenant', '=', 'ptt.tenant');
-      })
-      .select('ptd.*', 'ptt.task_name as predecessor_task_name'),
-    knex('project_template_dependencies as ptd')
-      .where({ 'ptd.predecessor_task_id': taskId, 'ptd.tenant': tenant })
-      .leftJoin('project_template_tasks as ptt', function() {
-        this.on('ptd.successor_task_id', '=', 'ptt.template_task_id')
-            .andOn('ptd.tenant', '=', 'ptt.tenant');
-      })
-      .select('ptd.*', 'ptt.task_name as successor_task_name')
+    predecessorsQuery,
+    successorsQuery
   ]);
 
   return { predecessors, successors };
@@ -1448,15 +1110,16 @@ export const addTemplatePhase = withAuth(async (
     start_offset_days?: number;
   },
   afterPhaseId?: string | null
-): Promise<IProjectTemplatePhase> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplatePhase | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify template exists
-    const template = await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    const template = await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .first();
 
     if (!template) {
@@ -1464,9 +1127,9 @@ export const addTemplatePhase = withAuth(async (
     }
 
     // Get existing phases to determine order_key
-    const existingPhases = await trx('project_template_phases')
-      .where({ template_id: templateId, tenant })
-      .orderBy('order_key');
+    const existingPhases = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_id: templateId })
+      .orderBy('order_key') as IProjectTemplatePhase[];
 
     let orderKey: string;
     if (afterPhaseId) {
@@ -1480,7 +1143,7 @@ export const addTemplatePhase = withAuth(async (
       orderKey = generateKeyBetween(lastKey, null);
     }
 
-    const [newPhase] = await trx('project_template_phases')
+    const [newPhase] = await tenantScopedTable(trx, 'project_template_phases', tenant)
       .insert({
         tenant,
         template_id: templateId,
@@ -1493,12 +1156,15 @@ export const addTemplatePhase = withAuth(async (
       .returning('*');
 
     // Update template timestamp
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
-    return newPhase;
-  });
+      return newPhase;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1514,14 +1180,15 @@ export const updateTemplatePhase = withAuth(async (
     duration_days?: number;
     start_offset_days?: number;
   }
-): Promise<IProjectTemplatePhase> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplatePhase | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const [updated] = await trx('project_template_phases')
-      .where({ template_phase_id: phaseId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: phaseId })
       .update(data)
       .returning('*');
 
@@ -1530,12 +1197,15 @@ export const updateTemplatePhase = withAuth(async (
     }
 
     // Update template timestamp
-    await trx('project_templates')
-      .where({ template_id: updated.template_id, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: updated.template_id })
       .update({ updated_at: trx.fn.now() });
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1545,14 +1215,15 @@ export const deleteTemplatePhase = withAuth(async (
   user,
   { tenant },
   phaseId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: phaseId, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: phaseId })
       .first();
 
     if (!phase) {
@@ -1560,15 +1231,18 @@ export const deleteTemplatePhase = withAuth(async (
     }
 
     // Delete phase (FK cascade handles tasks/checklists)
-    await trx('project_template_phases')
-      .where({ template_phase_id: phaseId, tenant })
+    await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: phaseId })
       .delete();
 
     // Update template timestamp
-    await trx('project_templates')
-      .where({ template_id: phase.template_id, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: phase.template_id })
       .update({ updated_at: trx.fn.now() });
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1580,14 +1254,15 @@ export const reorderTemplatePhase = withAuth(async (
   phaseId: string,
   beforePhaseId: string | null,
   afterPhaseId: string | null
-): Promise<IProjectTemplatePhase> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplatePhase | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: phaseId, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: phaseId })
       .first();
 
     if (!phase) {
@@ -1599,33 +1274,36 @@ export const reorderTemplatePhase = withAuth(async (
     let afterKey: string | null = null;
 
     if (beforePhaseId) {
-      const beforePhase = await trx('project_template_phases')
-        .where({ template_phase_id: beforePhaseId, tenant })
+      const beforePhase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+        .where({ template_phase_id: beforePhaseId })
         .first();
       beforeKey = beforePhase?.order_key || null;
     }
 
     if (afterPhaseId) {
-      const afterPhase = await trx('project_template_phases')
-        .where({ template_phase_id: afterPhaseId, tenant })
+      const afterPhase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+        .where({ template_phase_id: afterPhaseId })
         .first();
       afterKey = afterPhase?.order_key || null;
     }
 
     const newOrderKey = generateKeyBetween(beforeKey, afterKey);
 
-    const [updated] = await trx('project_template_phases')
-      .where({ template_phase_id: phaseId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: phaseId })
       .update({ order_key: newOrderKey })
       .returning('*');
 
     // Update template timestamp
-    await trx('project_templates')
-      .where({ template_id: phase.template_id, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: phase.template_id })
       .update({ updated_at: trx.fn.now() });
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1648,15 +1326,16 @@ export const addTemplateTask = withAuth(async (
     service_id?: string | null;
   },
   afterTaskId?: string | null
-): Promise<IProjectTemplateTask> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateTask | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify phase exists
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: phaseId, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: phaseId })
       .first();
 
     if (!phase) {
@@ -1664,9 +1343,9 @@ export const addTemplateTask = withAuth(async (
     }
 
     // Get existing tasks to determine order_key
-    const existingTasks = await trx('project_template_tasks')
-      .where({ template_phase_id: phaseId, tenant })
-      .orderBy('order_key');
+    const existingTasks = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_phase_id: phaseId })
+      .orderBy('order_key') as IProjectTemplateTask[];
 
     let orderKey: string;
     if (afterTaskId) {
@@ -1680,7 +1359,7 @@ export const addTemplateTask = withAuth(async (
       orderKey = generateKeyBetween(lastKey, null);
     }
 
-    const [newTask] = await trx('project_template_tasks')
+    const [newTask] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
       .insert({
         tenant,
         template_phase_id: phaseId,
@@ -1699,12 +1378,15 @@ export const addTemplateTask = withAuth(async (
       .returning('*');
 
     // Update template timestamp
-    await trx('project_templates')
-      .where({ template_id: phase.template_id, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: phase.template_id })
       .update({ updated_at: trx.fn.now() });
 
-    return newTask;
-  });
+      return newTask;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1729,14 +1411,15 @@ export const updateTemplateTask = withAuth(async (
     order_key?: string;
     service_id?: string | null;
   }
-): Promise<IProjectTemplateTask> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateTask | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const [updated] = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .update(data)
       .returning('*');
 
@@ -1745,18 +1428,21 @@ export const updateTemplateTask = withAuth(async (
     }
 
     // Get phase to update template timestamp
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: updated.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: updated.template_phase_id })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1766,14 +1452,15 @@ export const deleteTemplateTask = withAuth(async (
   user,
   { tenant },
   taskId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -1781,22 +1468,25 @@ export const deleteTemplateTask = withAuth(async (
     }
 
     // Get phase for template update
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: task.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: task.template_phase_id })
       .first();
 
     // Delete task (FK cascade handles checklists)
-    await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .delete();
 
     // Update template timestamp
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1810,14 +1500,15 @@ export const moveTemplateTask = withAuth(async (
   targetStatusMappingId?: string | null,
   beforeTaskId?: string | null,
   afterTaskId?: string | null
-): Promise<IProjectTemplateTask> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateTask | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -1829,15 +1520,15 @@ export const moveTemplateTask = withAuth(async (
     let afterKey: string | null = null;
 
     if (beforeTaskId) {
-      const beforeTask = await trx('project_template_tasks')
-        .where({ template_task_id: beforeTaskId, tenant })
+      const beforeTask = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+        .where({ template_task_id: beforeTaskId })
         .first();
       beforeKey = beforeTask?.order_key || null;
     }
 
     if (afterTaskId) {
-      const afterTask = await trx('project_template_tasks')
-        .where({ template_task_id: afterTaskId, tenant })
+      const afterTask = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+        .where({ template_task_id: afterTaskId })
         .first();
       afterKey = afterTask?.order_key || null;
     }
@@ -1854,24 +1545,27 @@ export const moveTemplateTask = withAuth(async (
       updateData.template_status_mapping_id = targetStatusMappingId;
     }
 
-    const [updated] = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .update(updateData)
       .returning('*');
 
     // Get phase for template update
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: targetPhaseId, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: targetPhaseId })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1884,14 +1578,15 @@ export const updateTemplateTaskStatus = withAuth(async (
   statusMappingId: string,
   beforeTaskId?: string | null,
   afterTaskId?: string | null
-): Promise<IProjectTemplateTask> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateTask | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -1903,23 +1598,23 @@ export const updateTemplateTaskStatus = withAuth(async (
     let afterKey: string | null = null;
 
     if (beforeTaskId) {
-      const beforeTask = await trx('project_template_tasks')
-        .where({ template_task_id: beforeTaskId, tenant })
+      const beforeTask = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+        .where({ template_task_id: beforeTaskId })
         .first();
       beforeKey = beforeTask?.order_key || null;
     }
 
     if (afterTaskId) {
-      const afterTask = await trx('project_template_tasks')
-        .where({ template_task_id: afterTaskId, tenant })
+      const afterTask = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+        .where({ template_task_id: afterTaskId })
         .first();
       afterKey = afterTask?.order_key || null;
     }
 
     const newOrderKey = generateKeyBetween(beforeKey, afterKey);
 
-    const [updated] = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .update({
         template_status_mapping_id: statusMappingId,
         order_key: newOrderKey
@@ -1927,18 +1622,21 @@ export const updateTemplateTaskStatus = withAuth(async (
       .returning('*');
 
     // Get phase for template update
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: task.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: task.template_phase_id })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1952,10 +1650,11 @@ export const addTemplateStatusMapping = withAuth(async (
     status_id: string;
   },
   templatePhaseId?: string | null
-): Promise<any> => {
-  const { knex } = await createTenantKnex();
+): Promise<any | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Get existing mappings to determine display_order
@@ -1970,7 +1669,7 @@ export const addTemplateStatusMapping = withAuth(async (
       ? Math.max(...existingMappings.map(m => m.display_order))
       : 0;
 
-    const [newMapping] = await trx('project_template_status_mappings')
+    const [newMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
       .insert({
         tenant,
         template_id: templateId,
@@ -1981,21 +1680,24 @@ export const addTemplateStatusMapping = withAuth(async (
       .returning('*');
 
     // Enrich with status info
-    const status = await trx('statuses')
-      .where({ status_id: data.status_id, tenant })
+    const status = await tenantScopedTable(trx, 'statuses', tenant)
+      .where({ status_id: data.status_id })
       .first();
 
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
-    return {
-      ...newMapping,
-      status_name: status?.name,
-      color: status?.color || '#6B7280',
-      is_closed: status?.is_closed
-    };
-  });
+      return {
+        ...newMapping,
+        status_name: status?.name,
+        color: status?.color || '#6B7280',
+        is_closed: status?.is_closed
+      };
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2005,14 +1707,15 @@ export const removeTemplateStatusMapping = withAuth(async (
   user,
   { tenant },
   mappingId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const mapping = await trx('project_template_status_mappings')
-      .where({ template_status_mapping_id: mappingId, tenant })
+    const mapping = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_status_mapping_id: mappingId })
       .first();
 
     if (!mapping) {
@@ -2020,19 +1723,22 @@ export const removeTemplateStatusMapping = withAuth(async (
     }
 
     // Clear template_status_mapping_id from tasks that use this status
-    await trx('project_template_tasks')
-      .where({ template_status_mapping_id: mappingId, tenant })
+    await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_status_mapping_id: mappingId })
       .update({ template_status_mapping_id: null });
 
     // Delete the mapping
-    await trx('project_template_status_mappings')
-      .where({ template_status_mapping_id: mappingId, tenant })
+    await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+      .where({ template_status_mapping_id: mappingId })
       .delete();
 
-    await trx('project_templates')
-      .where({ template_id: mapping.template_id, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: mapping.template_id })
       .update({ updated_at: trx.fn.now() });
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2044,10 +1750,11 @@ export const reorderTemplateStatusMappings = withAuth(async (
   templateId: string,
   orderedMappingIds: string[],
   templatePhaseId?: string | null
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const scopedMappings = await getScopedTemplateStatusMappings(
@@ -2066,15 +1773,18 @@ export const reorderTemplateStatusMappings = withAuth(async (
         continue;
       }
 
-      await trx('project_template_status_mappings')
-        .where({ template_status_mapping_id: orderedMappingIds[i], tenant })
+      await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
+        .where({ template_status_mapping_id: orderedMappingIds[i] })
         .update({ display_order: i });
     }
 
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 export const copyTemplateStatusesToPhase = withAuth(async (
@@ -2082,10 +1792,11 @@ export const copyTemplateStatusesToPhase = withAuth(async (
   { tenant },
   templateId: string,
   templatePhaseId: string
-): Promise<any[]> => {
-  const { knex } = await createTenantKnex();
+): Promise<any[] | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const existingPhaseMappings = await getScopedTemplateStatusMappings(
@@ -2110,7 +1821,7 @@ export const copyTemplateStatusesToPhase = withAuth(async (
     const copiedMappings: any[] = [];
 
     for (const mapping of defaultMappings) {
-      const [copiedMapping] = await trx('project_template_status_mappings')
+      const [copiedMapping] = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
         .insert({
           tenant,
           template_id: templateId,
@@ -2125,12 +1836,15 @@ export const copyTemplateStatusesToPhase = withAuth(async (
       copiedMappings.push(copiedMapping);
     }
 
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
-    return copiedMappings;
-  });
+      return copiedMappings;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 export const removeTemplatePhaseStatuses = withAuth(async (
@@ -2138,24 +1852,27 @@ export const removeTemplatePhaseStatuses = withAuth(async (
   { tenant },
   templateId: string,
   templatePhaseId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    await trx('project_template_status_mappings')
+    await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
       .where({
-        tenant,
         template_id: templateId,
         template_phase_id: templatePhaseId,
       })
       .delete();
 
-    await trx('project_templates')
-      .where({ template_id: templateId, tenant })
+    await tenantScopedTable(trx, 'project_templates', tenant)
+      .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 // ============================================================
@@ -2174,9 +1891,9 @@ export const getTaskAdditionalAgents = withAuth(async (
 
   await checkPermission(user, 'project', 'read', knex);
 
-  const resources = await knex('project_template_task_resources')
-    .where({ template_task_id: taskId, tenant })
-    .select('user_id');
+  const resources = await tenantScopedTable(knex, 'project_template_task_resources', tenant)
+    .where({ template_task_id: taskId })
+    .select('user_id') as { user_id: string }[];
 
   return resources.map((r: { user_id: string }) => r.user_id);
 });
@@ -2189,15 +1906,16 @@ export const setTaskAdditionalAgents = withAuth(async (
   { tenant },
   taskId: string,
   userIds: string[]
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -2205,8 +1923,8 @@ export const setTaskAdditionalAgents = withAuth(async (
     }
 
     // Delete existing resources
-    await trx('project_template_task_resources')
-      .where({ template_task_id: taskId, tenant })
+    await tenantScopedTable(trx, 'project_template_task_resources', tenant)
+      .where({ template_task_id: taskId })
       .delete();
 
     // Insert new resources
@@ -2216,20 +1934,23 @@ export const setTaskAdditionalAgents = withAuth(async (
         template_task_id: taskId,
         user_id: userId
       }));
-      await trx('project_template_task_resources').insert(resources);
+      await tenantScopedTable(trx, 'project_template_task_resources', tenant).insert(resources);
     }
 
     // Update template timestamp via phase
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: task.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: task.template_phase_id })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2247,8 +1968,8 @@ export const addTaskAdditionalAgent = withAuth(async (
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -2256,12 +1977,12 @@ export const addTaskAdditionalAgent = withAuth(async (
     }
 
     // Check if already exists
-    const existing = await trx('project_template_task_resources')
-      .where({ template_task_id: taskId, user_id: userId, tenant })
+    const existing = await tenantScopedTable(trx, 'project_template_task_resources', tenant)
+      .where({ template_task_id: taskId, user_id: userId })
       .first();
 
     if (!existing) {
-      await trx('project_template_task_resources').insert({
+      await tenantScopedTable(trx, 'project_template_task_resources', tenant).insert({
         tenant,
         template_task_id: taskId,
         user_id: userId
@@ -2269,13 +1990,13 @@ export const addTaskAdditionalAgent = withAuth(async (
     }
 
     // Update template timestamp via phase
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: task.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: task.template_phase_id })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
   });
@@ -2295,23 +2016,23 @@ export const removeTaskAdditionalAgent = withAuth(async (
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    await trx('project_template_task_resources')
-      .where({ template_task_id: taskId, user_id: userId, tenant })
+    await tenantScopedTable(trx, 'project_template_task_resources', tenant)
+      .where({ template_task_id: taskId, user_id: userId })
       .delete();
 
     // Get task for template update
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (task) {
-      const phase = await trx('project_template_phases')
-        .where({ template_phase_id: task.template_phase_id, tenant })
+      const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+        .where({ template_phase_id: task.template_phase_id })
         .first();
 
       if (phase) {
-        await trx('project_templates')
-          .where({ template_id: phase.template_id, tenant })
+        await tenantScopedTable(trx, 'project_templates', tenant)
+          .where({ template_id: phase.template_id })
           .update({ updated_at: trx.fn.now() });
       }
     }
@@ -2332,8 +2053,8 @@ export const getTemplateTaskChecklistItems = withAuth(async (
 ): Promise<IProjectTemplateChecklistItem[]> => {
   const { knex } = await createTenantKnex();
 
-  const items = await knex('project_template_checklist_items')
-    .where({ template_task_id: taskId, tenant })
+  const items = await tenantScopedTable(knex, 'project_template_checklist_items', tenant)
+    .where({ template_task_id: taskId })
     .orderBy('order_number');
 
   return items;
@@ -2352,15 +2073,16 @@ export const addTemplateChecklistItem = withAuth(async (
     completed?: boolean;
     order_number?: number;
   }
-): Promise<IProjectTemplateChecklistItem> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateChecklistItem | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -2370,15 +2092,15 @@ export const addTemplateChecklistItem = withAuth(async (
     // Use provided order_number or calculate from max
     let orderNumber = data.order_number;
     if (orderNumber === undefined) {
-      const maxOrder = await trx('project_template_checklist_items')
-        .where({ template_task_id: taskId, tenant })
+      const maxOrder = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+        .where({ template_task_id: taskId })
         .max('order_number as max')
         .first();
       orderNumber = (maxOrder?.max ?? -1) + 1;
     }
 
     // Insert checklist item
-    const [item] = await trx('project_template_checklist_items')
+    const [item] = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
       .insert({
         tenant,
         template_task_id: taskId,
@@ -2390,18 +2112,21 @@ export const addTemplateChecklistItem = withAuth(async (
       .returning('*');
 
     // Update template timestamp via phase
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: task.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: task.template_phase_id })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
 
-    return item;
-  });
+      return item;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2417,14 +2142,15 @@ export const updateTemplateChecklistItem = withAuth(async (
     order_number?: number;
     completed?: boolean;
   }
-): Promise<IProjectTemplateChecklistItem> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateChecklistItem | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
-    const [updated] = await trx('project_template_checklist_items')
-      .where({ template_checklist_id: checklistId, tenant })
+    const [updated] = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+      .where({ template_checklist_id: checklistId })
       .update({
         ...(data.item_name !== undefined && { item_name: data.item_name }),
         ...(data.description !== undefined && { description: data.description }),
@@ -2438,24 +2164,27 @@ export const updateTemplateChecklistItem = withAuth(async (
     }
 
     // Update template timestamp via task -> phase
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: updated.template_task_id, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: updated.template_task_id })
       .first();
 
     if (task) {
-      const phase = await trx('project_template_phases')
-        .where({ template_phase_id: task.template_phase_id, tenant })
+      const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+        .where({ template_phase_id: task.template_phase_id })
         .first();
 
       if (phase) {
-        await trx('project_templates')
-          .where({ template_id: phase.template_id, tenant })
+        await tenantScopedTable(trx, 'project_templates', tenant)
+          .where({ template_id: phase.template_id })
           .update({ updated_at: trx.fn.now() });
       }
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2465,15 +2194,16 @@ export const deleteTemplateChecklistItem = withAuth(async (
   user,
   { tenant },
   checklistId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Get item first to find task for timestamp update
-    const item = await trx('project_template_checklist_items')
-      .where({ template_checklist_id: checklistId, tenant })
+    const item = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+      .where({ template_checklist_id: checklistId })
       .first();
 
     if (!item) {
@@ -2481,27 +2211,30 @@ export const deleteTemplateChecklistItem = withAuth(async (
     }
 
     // Delete the item
-    await trx('project_template_checklist_items')
-      .where({ template_checklist_id: checklistId, tenant })
+    await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+      .where({ template_checklist_id: checklistId })
       .delete();
 
     // Update template timestamp via task -> phase
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: item.template_task_id, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: item.template_task_id })
       .first();
 
     if (task) {
-      const phase = await trx('project_template_phases')
-        .where({ template_phase_id: task.template_phase_id, tenant })
+      const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+        .where({ template_phase_id: task.template_phase_id })
         .first();
 
       if (phase) {
-        await trx('project_templates')
-          .where({ template_id: phase.template_id, tenant })
+        await tenantScopedTable(trx, 'project_templates', tenant)
+          .where({ template_id: phase.template_id })
           .update({ updated_at: trx.fn.now() });
       }
     }
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2523,15 +2256,16 @@ export const saveTemplateChecklistItems = withAuth(async (
     completed: boolean;
     order_number: number;
   }>
-): Promise<IProjectTemplateChecklistItem[]> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateChecklistItem[] | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
-    const task = await trx('project_template_tasks')
-      .where({ template_task_id: taskId, tenant })
+    const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
+      .where({ template_task_id: taskId })
       .first();
 
     if (!task) {
@@ -2539,8 +2273,8 @@ export const saveTemplateChecklistItems = withAuth(async (
     }
 
     // Get existing items for this task
-    const existingItems = await trx('project_template_checklist_items')
-      .where({ template_task_id: taskId, tenant });
+    const existingItems = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+      .where({ template_task_id: taskId }) as IProjectTemplateChecklistItem[];
 
     const existingIds = new Set(existingItems.map(i => i.template_checklist_id));
     const newItemIds = new Set(items.map(i => i.id));
@@ -2552,9 +2286,8 @@ export const saveTemplateChecklistItems = withAuth(async (
       .map(e => e.template_checklist_id);
 
     if (idsToDelete.length > 0) {
-      await trx('project_template_checklist_items')
+      await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
         .whereIn('template_checklist_id', idsToDelete)
-        .andWhere({ tenant })
         .delete();
     }
 
@@ -2566,7 +2299,7 @@ export const saveTemplateChecklistItems = withAuth(async (
 
       if (item.id.startsWith('temp_')) {
         // Create new item
-        const [created] = await trx('project_template_checklist_items')
+        const [created] = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
           .insert({
             tenant,
             template_task_id: taskId,
@@ -2579,8 +2312,8 @@ export const saveTemplateChecklistItems = withAuth(async (
         savedItems.push(created);
       } else if (existingIds.has(item.id)) {
         // Update existing item
-        const [updated] = await trx('project_template_checklist_items')
-          .where({ template_checklist_id: item.id, tenant })
+        const [updated] = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
+          .where({ template_checklist_id: item.id })
           .update({
             item_name: item.item_name.trim(),
             description: item.description || null,
@@ -2593,16 +2326,19 @@ export const saveTemplateChecklistItems = withAuth(async (
     }
 
     // Update template timestamp
-    const phase = await trx('project_template_phases')
-      .where({ template_phase_id: task.template_phase_id, tenant })
+    const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
+      .where({ template_phase_id: task.template_phase_id })
       .first();
 
     if (phase) {
-      await trx('project_templates')
-        .where({ template_id: phase.template_id, tenant })
+      await tenantScopedTable(trx, 'project_templates', tenant)
+        .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
 
-    return savedItems;
-  });
+      return savedItems;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });

@@ -39,6 +39,10 @@ describe('client-assets server action contract', () => {
   });
 
   it('still scopes queries by tenant + the resolved client_id', () => {
-    expect(source).toContain('{ tenant, client_id: clientId }');
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
+    expect(source).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    expect(source).toContain("tenantScopedTable(trx, 'assets', tenant)");
+    expect(source).toContain('{ client_id: clientId }');
+    expect(source).not.toContain('{ tenant, client_id: clientId }');
   });
 });

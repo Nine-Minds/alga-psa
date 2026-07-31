@@ -5222,14 +5222,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "description": "Asset type stored in assets.asset_type.",
         "schema": {
           "type": "string",
-          "enum": [
-            "workstation",
-            "network_device",
-            "server",
-            "mobile_device",
-            "printer",
-            "unknown"
-          ],
           "description": "Asset type stored in assets.asset_type."
         }
       },
@@ -5403,14 +5395,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "enum": [
-            "workstation",
-            "network_device",
-            "server",
-            "mobile_device",
-            "printer",
-            "unknown"
-          ],
           "description": "Asset type. Determines the optional extension data table."
         },
         "asset_tag": {
@@ -5690,14 +5674,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ]
+            "description": "Asset type slug from the tenant asset type registry."
           },
           "description": "Filter to these asset types. Repeat the param or pass a comma-separated list."
         }
@@ -5975,14 +5952,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "array",
           "items": {
             "type": "string",
-            "enum": [
-              "workstation",
-              "network_device",
-              "server",
-              "mobile_device",
-              "printer",
-              "unknown"
-            ]
+            "description": "Asset type slug from the tenant asset type registry."
           },
           "description": "Optional asset type filters."
         }
@@ -6185,14 +6155,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "enum": [
-            "workstation",
-            "network_device",
-            "server",
-            "mobile_device",
-            "printer",
-            "unknown"
-          ],
           "description": "Asset type to store in assets.asset_type."
         },
         "asset_tag": {
@@ -10064,6 +10026,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "type": [
                   "string",
                   "null"
+                ],
+                "enum": [
+                  "company",
+                  "individual"
                 ]
               },
               "tax_id_number": {
@@ -10365,7 +10331,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "client_type": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "company",
+            "individual"
+          ]
         },
         "tax_id_number": {
           "type": "string"
@@ -10394,6 +10364,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "credit_limit": {
           "type": "number",
           "minimum": 0
+        },
+        "default_currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
         },
         "preferred_payment_method": {
           "type": "string"
@@ -10507,6 +10482,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ],
+              "enum": [
+                "company",
+                "individual"
               ]
             },
             "tax_id_number": {
@@ -10805,6 +10784,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ],
+              "enum": [
+                "company",
+                "individual"
               ]
             },
             "tax_id_number": {
@@ -11071,7 +11054,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "client_type": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "company",
+            "individual"
+          ]
         },
         "tax_id_number": {
           "type": "string"
@@ -11100,6 +11087,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "credit_limit": {
           "type": "number",
           "minimum": 0
+        },
+        "default_currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
         },
         "preferred_payment_method": {
           "type": "string"
@@ -11213,6 +11205,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": [
                 "string",
                 "null"
+              ],
+              "enum": [
+                "company",
+                "individual"
               ]
             },
             "tax_id_number": {
@@ -17183,9 +17179,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_financial_invoices",
     "method": "get",
     "path": "/api/v1/financial/invoices",
-    "displayName": "List financial invoices (transaction list wiring)",
-    "summary": "List financial invoices (transaction list wiring)",
-    "description": "Route file maps to ApiFinancialController.list(), which is transaction-oriented (resource financial/transactions) rather than invoice-specific list logic. Current response is the generic transaction list envelope with financial report links.",
+    "displayName": "List invoices",
+    "summary": "List invoices",
+    "description": "Returns a paginated list of invoices for the tenant. Maps to ApiFinancialController.listInvoices() → FinancialService.listInvoices(), filtered and sorted by the supplied query parameters. Each item carries the invoice record (including client_name) plus HATEOAS links.",
     "tags": [
       "Financial"
     ],
@@ -17211,8 +17207,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. One of created_at, updated_at, invoice_number, invoice_date, due_date, total_amount, status (defaults to created_at).",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Sort field. One of created_at, updated_at, invoice_number, invoice_date, due_date, total_amount, status (defaults to created_at)."
         }
       },
       {
@@ -17231,8 +17229,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "search",
         "in": "query",
         "required": false,
+        "description": "Matches invoice_number or client name.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Matches invoice_number or client name."
         }
       },
       {
@@ -17268,6 +17268,18 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "is_active",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
         "name": "client_id",
         "in": "query",
         "required": false,
@@ -17277,7 +17289,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "invoice_id",
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "sent",
+            "paid",
+            "overdue",
+            "cancelled",
+            "pending",
+            "prepayment",
+            "partially_applied"
+          ]
+        }
+      },
+      {
+        "name": "billing_cycle_id",
         "in": "query",
         "required": false,
         "schema": {
@@ -17286,7 +17316,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "type",
+        "name": "due_date_from",
         "in": "query",
         "required": false,
         "schema": {
@@ -17294,7 +17324,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "status",
+        "name": "due_date_to",
         "in": "query",
         "required": false,
         "schema": {
@@ -17318,7 +17348,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "include_expired",
+        "name": "is_manual",
         "in": "query",
         "required": false,
         "schema": {
@@ -17330,7 +17360,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "expiring_soon",
+        "name": "has_credit_applied",
         "in": "query",
         "required": false,
         "schema": {
@@ -17339,79 +17369,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "true",
             "false"
           ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
         }
       }
     ],
@@ -17673,9 +17630,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_financial_paymentmethods",
     "method": "get",
     "path": "/api/v1/financial/payment-methods",
-    "displayName": "List payment methods (transaction list wiring)",
-    "summary": "List payment methods (transaction list wiring)",
-    "description": "Current route wiring calls ApiFinancialController.list(), which lists transaction records and not payment methods. This discrepancy is documented as implementation behavior.",
+    "displayName": "List payment methods",
+    "summary": "List payment methods",
+    "description": "Returns a paginated list of payment methods for the tenant. Maps to ApiFinancialController.listPaymentMethods() → FinancialService.listPaymentMethods(). Soft-deleted methods are excluded by default. Each item carries the payment method record (including client_name) plus HATEOAS links.",
     "tags": [
       "Financial"
     ],
@@ -17701,8 +17658,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort field. One of created_at, updated_at, type, is_default (defaults to created_at).",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Sort field. One of created_at, updated_at, type, is_default (defaults to created_at)."
         }
       },
       {
@@ -17721,8 +17680,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "search",
         "in": "query",
         "required": false,
+        "description": "Matches client name or card last4.",
         "schema": {
-          "type": "string"
+          "type": "string",
+          "description": "Matches client name or card last4."
         }
       },
       {
@@ -17758,16 +17719,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "client_id",
+        "name": "is_active",
         "in": "query",
         "required": false,
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "enum": [
+            "true",
+            "false"
+          ]
         }
       },
       {
-        "name": "invoice_id",
+        "name": "client_id",
         "in": "query",
         "required": false,
         "schema": {
@@ -17780,35 +17744,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "credit_card",
+            "bank_account"
+          ]
         }
       },
       {
-        "name": "status",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_min",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_max",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "include_expired",
+        "name": "is_default",
         "in": "query",
         "required": false,
         "schema": {
@@ -17820,88 +17764,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
-        "name": "expiring_soon",
+        "name": "exclude_deleted",
         "in": "query",
         "required": false,
+        "description": "Exclude soft-deleted payment methods. Defaults to true.",
         "schema": {
           "type": "string",
           "enum": [
             "true",
             "false"
-          ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
+          ],
+          "description": "Exclude soft-deleted payment methods. Defaults to true."
         }
       }
     ],
@@ -18209,330 +18082,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_financial_reconciliation_run",
-    "method": "post",
-    "path": "/api/v1/financial/reconciliation/run",
-    "displayName": "Run financial reconciliation",
-    "summary": "Run financial reconciliation",
-    "description": "Triggers FinancialService.runCreditReconciliation(). Optional client_id query narrows reconciliation target.",
-    "tags": [
-      "Financial"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "created_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "created_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "updated_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "updated_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "client_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "invoice_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "type",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "status",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_min",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_max",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "include_expired",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "expiring_soon",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_financial_reconciliation_id_resolve",
-    "method": "post",
-    "path": "/api/v1/financial/reconciliation/{id}/resolve",
-    "displayName": "Resolve reconciliation report",
-    "summary": "Resolve reconciliation report",
-    "description": "Resolves one reconciliation report by id with optional operator notes.",
-    "tags": [
-      "Financial"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath().",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "notes": {
-          "type": "string"
-        }
-      }
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -22833,9 +22382,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_invoices_id_pdf",
     "method": "get",
     "path": "/api/v1/invoices/{id}/pdf",
-    "displayName": "Redirect to invoice PDF download",
-    "summary": "Redirect to invoice PDF download",
-    "description": "Attempts to generate/load PDF metadata and redirects to download_url when present.",
+    "displayName": "Download invoice PDF",
+    "summary": "Download invoice PDF",
+    "description": "Generates (when needed) and returns the invoice PDF as a raw application/pdf attachment.",
     "tags": [
       "Invoices"
     ],
@@ -22858,9 +22407,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_invoices_id_pdf",
     "method": "post",
     "path": "/api/v1/invoices/{id}/pdf",
-    "displayName": "Generate invoice PDF asset",
-    "summary": "Generate invoice PDF asset",
-    "description": "Generates/refreshes invoice PDF metadata and returns file_id plus optional download_url.",
+    "displayName": "Generate and download invoice PDF",
+    "summary": "Generate and download invoice PDF",
+    "description": "Generates the invoice PDF and returns the raw PDF file as an application/pdf attachment.",
     "tags": [
       "Invoices"
     ],
@@ -22877,34 +22426,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
         }
       }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
+    ]
   },
   {
     "id": "get-_api_v1_financial",
@@ -23931,37 +23453,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_priorities",
     "method": "get",
     "path": "/api/v1/priorities",
-    "displayName": "List priorities",
-    "summary": "List priorities",
-    "description": "Lists ticket priorities for the tenant with pagination and sorting.",
+    "displayName": "List Priorities",
+    "summary": "Fetch ticket priorities",
+    "description": "Returns the priority catalog for the tenant. This is the canonical way to resolve a valid priority_id before creating or updating a ticket — do not infer one from a board's default_priority_id, which is frequently null. Priorities are tenant-wide (not board-scoped), but each row has an item_type (ticket, project_task, ...); when creating a ticket, use a priority whose item_type is \"ticket\". Each row includes priority_id, priority_name, order_number (sort ascending to list by urgency), color, and item_type.",
     "tags": [
       "Priorities"
     ],
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "integer",
-          "minimum": 1
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
-        }
-      },
-      {
         "name": "sort",
         "in": "query",
         "required": false,
+        "description": "Sort column, e.g. order_number to order by urgency.",
         "schema": {
           "type": "string"
         }
@@ -23970,12 +23474,34 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "order",
         "in": "query",
         "required": false,
+        "description": "Sort direction.",
         "schema": {
           "type": "string",
           "enum": [
             "asc",
             "desc"
           ]
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of records per page (default 25, max 100).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Pagination page number starting at 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     ],
@@ -24005,7 +23531,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data"
       ]
-    }
+    },
+    "examples": [
+      {
+        "name": "Resolve a priority_id before creating a ticket",
+        "request": {
+          "query": {
+            "sort": "order_number",
+            "order": "asc",
+            "limit": 100
+          }
+        },
+        "notes": "Call this before POST /api/v1/tickets to obtain a valid priority_id. Keep only rows where item_type is \"ticket\", then map the user's intent (e.g. priority_name \"Medium\") to its priority_id. Do not read priority_id from a board record — boards often have a null default_priority_id."
+      }
+    ]
   },
   {
     "id": "get-_api_v1_priorities_id",
@@ -24965,12 +24504,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_workflowdefinitions",
     "method": "post",
     "path": "/api/workflow-definitions",
-    "displayName": "Create workflow definition",
-    "summary": "Create workflow definition",
-    "description": "Creates a new workflow with a draft definition.",
+    "displayName": "Create a workflow (draft)",
+    "summary": "Create a new automation workflow as a draft from a WorkflowDefinition JSON document",
+    "description": "Creates an automation workflow draft from a complete WorkflowDefinition document (trigger + steps). This is the endpoint to use when a user asks to build or automate something ('when X happens, do Y'). The draft is never activated automatically — a human reviews and publishes it in the workflow editor. Always follow the create-a-workflow playbook: discover the format, resolve tenant ids, compose, validate, simulate, then save.",
     "tags": [
       "Workflow Definitions"
     ],
+    "rbacResource": "workflow",
     "approvalRequired": false,
     "parameters": [],
     "requestBodySchema": {
@@ -25025,7 +24565,256 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data"
       ]
-    }
+    },
+    "playbooks": [
+      "Create a workflow from natural language: 1) GET /api/workflow/registry/authoring-guide — the definition/step JSON schemas, expression grammar, worked example, and pitfalls. 2) GET /api/workflow/registry/events — pick the trigger event (event_type) and note its payload_schema_ref; fetch the payload shape via GET /api/workflow/registry/schemas/{schemaRef}. 3) GET /api/workflow/registry/designer-catalog and /api/workflow/registry/actions — find action ids and their input/output schemas. 4) Resolve every tenant-specific reference to a real id BEFORE composing — never invent UUIDs (see the resolve-tenant-references playbook). 5) Compose the WorkflowDefinition JSON. 6) POST /api/workflow-definitions/validate until it returns no errors (each error names the offending step and often a did-you-mean suggestion). 7) POST /api/workflow-definitions/simulate with a realistic payload; check the trace shows the intended branches and that each stubbed action's evaluatedInput is correct. 8) POST /api/workflow-definitions to save the draft. 9) Reply with the editor link /msp/workflow-editor/{workflowId} so the user can review and publish — never publish yourself.",
+      "Update an existing workflow: GET /api/workflow-definitions/{workflowId}/{version} to fetch the current draft, edit the definition document, validate and simulate as when creating, then PUT /api/workflow-definitions/{workflowId}/{version} with expectedDraftVersion set to the draft version you fetched (a 409 means someone else changed the draft — re-fetch and re-apply).",
+      "Resolve tenant references: priorities via GET /api/v1/priorities; boards via GET /api/v1/boards; statuses via GET /api/v1/statuses; users via GET /api/v1/users; clients via GET /api/v1/clients (or clients.find action at run time); contacts via GET /api/v1/contacts; activity groups via GET /api/v1/activities/groups or the activities.find_group workflow action at run time. Prefer run-time resolution actions (tickets.find, contacts.find, activities.find_group) inside the workflow when the value depends on the triggering event."
+    ],
+    "examples": [
+      {
+        "name": "VIP ticket fast lane draft",
+        "request": {
+          "body": {
+            "definition": {
+              "id": "vip-ticket-fast-lane",
+              "version": 1,
+              "name": "VIP ticket fast lane",
+              "payloadSchemaRef": "payload.TicketCreated.v1",
+              "trigger": {
+                "type": "event",
+                "eventName": "TICKET_CREATED"
+              },
+              "steps": [
+                {
+                  "id": "load-ticket",
+                  "type": "action.call",
+                  "config": {
+                    "actionId": "tickets.find",
+                    "version": 1,
+                    "inputMapping": {
+                      "ticket_id": {
+                        "$expr": "payload.ticketId"
+                      }
+                    },
+                    "saveAs": "vars.found"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "notes": "Truncated to one step for brevity — the authoring guide's workedExample carries the full north-star definition (priority bump + activity-group filing gated on the requester's email)."
+      }
+    ]
+  },
+  {
+    "id": "post-_api_workflowdefinitions_validate",
+    "method": "post",
+    "path": "/api/workflow-definitions/validate",
+    "displayName": "Validate a workflow draft",
+    "summary": "Validate a WorkflowDefinition document without saving anything",
+    "description": "Runs the full validation pipeline (schema shape, step configs, action ids and versions, expression syntax and function allowlist, trigger/event mapping requirements, payload schema refs, secret references) against an inline definition. Returns errors and warnings with step paths, codes, and did-you-mean suggestions. Iterate until errors is empty before simulating or saving.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "rbacResource": "workflow",
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+        },
+        "payloadSchemaMode": {
+          "type": "string",
+          "enum": [
+            "inferred",
+            "pinned"
+          ]
+        },
+        "pinnedPayloadSchemaRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "definition"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Fix validation errors: each error carries stepPath/stepId, a code, and often a suggestion (nearest action id, event name, or expression function). Apply the suggestion, re-validate, and only move on to simulation once the errors array is empty — warnings are advisory."
+    ],
+    "examples": [
+      {
+        "name": "Validate an inline draft",
+        "request": {
+          "body": {
+            "definition": {
+              "id": "wf",
+              "version": 1,
+              "name": "Example",
+              "payloadSchemaRef": "payload.TicketCreated.v1",
+              "trigger": {
+                "type": "event",
+                "eventName": "TICKET_CREATED"
+              },
+              "steps": []
+            }
+          }
+        },
+        "notes": "Nothing is persisted; safe to call repeatedly while iterating."
+      }
+    ]
+  },
+  {
+    "id": "post-_api_workflowdefinitions_simulate",
+    "method": "post",
+    "path": "/api/workflow-definitions/simulate",
+    "displayName": "Simulate a workflow draft (dry run)",
+    "summary": "Execute an inline WorkflowDefinition with zero side effects and read the step-by-step trace",
+    "description": "Dry-runs a draft: control flow and transforms execute for real, action.call steps are stubbed (their evaluated inputs are recorded in invocations), and waits pause the run unless a fixture resumes them. Omit payload to have one synthesized from the trigger's event schema. Use the trace to confirm branch decisions and that every action would be called with the right inputs before saving the draft.",
+    "tags": [
+      "Workflow Definitions"
+    ],
+    "rbacResource": "workflow",
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Workflow payload used as-is (wins over eventPayload and synthesis)."
+        },
+        "eventPayload": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Source event payload, run through the trigger payloadMapping."
+        },
+        "eventType": {
+          "type": "string",
+          "description": "Event to synthesize a payload for when payload/eventPayload are omitted."
+        },
+        "fixtures": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Stub outputs keyed by step id or actionId. { \"$error\": { message } } makes a stubbed action fail; wait steps resume from their fixture."
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "maxSteps": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "maxForEachIterations": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "maxDurationMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      },
+      "required": [
+        "definition"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Verify a draft: simulate with a payload representative of the user's request; assert status is completed (or paused-at-wait when the flow intentionally waits), the trace takes the intended branches, and each invocation's input contains the resolved ids you expect. Supply fixtures keyed by step id to control stubbed action outputs your conditions depend on — schema-shaped placeholder outputs may otherwise steer branches unrealistically."
+    ],
+    "examples": [
+      {
+        "name": "Simulate with a fixture-controlled lookup",
+        "request": {
+          "body": {
+            "definition": {
+              "id": "wf",
+              "version": 1,
+              "name": "Example",
+              "payloadSchemaRef": "payload.TicketCreated.v1",
+              "trigger": {
+                "type": "event",
+                "eventName": "TICKET_CREATED"
+              },
+              "steps": []
+            },
+            "payload": {
+              "ticketId": "00000000-0000-0000-0000-000000000001"
+            },
+            "fixtures": {
+              "load-ticket": {
+                "ticket": {
+                  "contact_name_id": "00000000-0000-0000-0000-000000000002"
+                }
+              }
+            }
+          }
+        },
+        "notes": "fixtures['load-ticket'] becomes that step's action output, letting the simulation exercise the branch that depends on it."
+      }
+    ]
   },
   {
     "id": "post-_api_workflowdefinitions_import",
@@ -25176,12 +24965,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_workflowdefinitions_workflowid_version",
     "method": "get",
     "path": "/api/workflow-definitions/{workflowId}/{version}",
-    "displayName": "Get a workflow version",
-    "summary": "Get a workflow version",
-    "description": "Returns the definition document for a specific workflow version.",
+    "displayName": "Get a workflow definition version",
+    "summary": "Fetch a workflow definition document (start of the update loop)",
+    "description": "Returns the stored definition for a workflow version, including the draft document and draft version number needed for a concurrency-safe update via PUT.",
     "tags": [
       "Workflow Definitions"
     ],
+    "rbacResource": "workflow",
     "approvalRequired": false,
     "parameters": [
       {
@@ -25236,12 +25026,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_workflowdefinitions_workflowid_version",
     "method": "put",
     "path": "/api/workflow-definitions/{workflowId}/{version}",
-    "displayName": "Update workflow draft definition",
-    "summary": "Update workflow draft definition",
-    "description": "Replaces the draft definition for a specific version.",
+    "displayName": "Replace a workflow draft",
+    "summary": "Full-document replace of a workflow's draft definition with optimistic concurrency",
+    "description": "Replaces the stored draft with the provided WorkflowDefinition document. Always send expectedDraftVersion (the draft_version you fetched); a 409 response means the draft changed concurrently — re-fetch, re-apply your edit, and retry. Validate and simulate the edited document before saving, exactly as when creating.",
     "tags": [
       "Workflow Definitions"
     ],
+    "rbacResource": "workflow",
     "approvalRequired": false,
     "parameters": [
       {
@@ -25269,6 +25060,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "definition": {
           "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+        },
+        "expectedDraftVersion": {
+          "type": "integer",
+          "exclusiveMinimum": 0
         }
       },
       "required": [
@@ -26824,6 +26619,223 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_workflow_registry_events",
+    "method": "get",
+    "path": "/api/workflow/registry/events",
+    "displayName": "Workflow trigger event catalog",
+    "summary": "List the events a workflow trigger can subscribe to",
+    "description": "Each entry gives event_type (use as trigger.eventName), a description, and payload_schema_ref — resolve the payload shape via GET /api/workflow/registry/schemas/{schemaRef} before writing conditions against payload fields.",
+    "tags": [
+      "Workflow Registry"
+    ],
+    "rbacResource": "workflow",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive match on event type, name, and description.",
+        "schema": {
+          "type": "string",
+          "description": "Case-insensitive match on event type, name, and description."
+        }
+      },
+      {
+        "name": "source",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "all",
+            "system",
+            "tenant"
+          ]
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "all",
+            "active",
+            "beta",
+            "draft",
+            "deprecated"
+          ]
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "event_id": {
+                "type": "string"
+              },
+              "event_type": {
+                "type": "string",
+                "description": "Use this as trigger.eventName."
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "category": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "payload_schema_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Event payload schema reference; resolve via the schemas endpoint."
+              },
+              "payload_schema_ref_status": {
+                "type": "string",
+                "enum": [
+                  "known",
+                  "unknown",
+                  "missing"
+                ]
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "system",
+                  "tenant"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "beta",
+                  "draft",
+                  "deprecated"
+                ]
+              }
+            },
+            "required": [
+              "event_id",
+              "event_type",
+              "name",
+              "payload_schema_ref_status",
+              "source",
+              "status"
+            ]
+          }
+        }
+      },
+      "required": [
+        "events"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_workflow_registry_authoringguide",
+    "method": "get",
+    "path": "/api/workflow/registry/authoring-guide",
+    "displayName": "Workflow authoring guide",
+    "summary": "Machine-readable manual for composing WorkflowDefinition JSON",
+    "description": "The first stop before composing or editing a workflow: definition and step JSON schemas assembled live from the runtime, node-type and control-block semantics, the $expr grammar with per-context expression roots and the custom function catalog, data-flow idioms, a complete worked example, and common pitfalls.",
+    "tags": [
+      "Workflow Registry"
+    ],
+    "rbacResource": "workflow",
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "overview": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "definitionSchema": {
+          "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+        },
+        "stepSchemas": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+          }
+        },
+        "nodeTypes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "controlBlocks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "expressionLanguage": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "dataFlow": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workedExample": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "commonPitfalls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "overview",
+        "definitionSchema",
+        "stepSchemas",
+        "nodeTypes",
+        "controlBlocks",
+        "expressionLanguage",
+        "dataFlow",
+        "workedExample",
+        "commonPitfalls"
+      ]
+    }
+  },
+  {
     "id": "get-_api_workflow_registry_schemas_schemaref",
     "method": "get",
     "path": "/api/workflow/registry/schemas/{schemaRef}",
@@ -27665,86 +27677,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "put-_api_inbound_tenantslug_webhookslug",
-    "method": "put",
-    "path": "/api/inbound/{tenantSlug}/{webhookSlug}",
-    "displayName": "PUT inbound",
-    "summary": "PUT inbound",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "inbound"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "tenantSlug",
-        "in": "path",
-        "required": true,
-        "description": "TenantSlug path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "webhookSlug",
-        "in": "path",
-        "required": true,
-        "description": "WebhookSlug path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "patch-_api_inbound_tenantslug_webhookslug",
-    "method": "patch",
-    "path": "/api/inbound/{tenantSlug}/{webhookSlug}",
-    "displayName": "PATCH inbound",
-    "summary": "PATCH inbound",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "inbound"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "tenantSlug",
-        "in": "path",
-        "required": true,
-        "description": "TenantSlug path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "webhookSlug",
-        "in": "path",
-        "required": true,
-        "description": "WebhookSlug path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
     "id": "get-_api_health",
     "method": "get",
     "path": "/api/health",
@@ -28001,19 +27933,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "valid"
       ]
     }
-  },
-  {
-    "id": "get-_api_integrations_qbo_status",
-    "method": "get",
-    "path": "/api/integrations/qbo/status",
-    "displayName": "QuickBooks Online status route unavailable",
-    "summary": "QuickBooks Online status route unavailable",
-    "description": "This path appears in the generated route inventory, but server/src/app/api/integrations/qbo/status/route.ts is not present in the current worktree. Without an x-api-key, API middleware returns 401 before routing. With the middleware requirement satisfied, Next.js has no handler for this path and returns the framework not-found response. QuickBooks connection status is currently exposed through server actions such as getQboConnectionStatus and through versioned QuickBooks API routes, not this inventory-only path.",
-    "tags": [
-      "Integrations - QuickBooks"
-    ],
-    "approvalRequired": false,
-    "parameters": []
   },
   {
     "id": "get-_api_integrations_qbo_connect",
@@ -33796,10 +33715,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "types",
         "in": "query",
         "required": false,
-        "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
+        "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
         "schema": {
           "type": "string",
-          "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+          "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
         }
       },
       {
@@ -35545,8 +35464,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "currency_code": {
           "type": "string",
           "minLength": 3,
-          "maxLength": 3,
-          "default": "USD"
+          "maxLength": 3
         },
         "unit_of_measure": {
           "type": "string",
@@ -35609,6 +35527,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             }
           ]
         },
+        "barcode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "cost": {
           "anyOf": [
             {
@@ -35636,8 +35568,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "null"
             }
-          ],
-          "default": "USD"
+          ]
         },
         "vendor": {
           "anyOf": [
@@ -35854,8 +35785,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "currency_code": {
           "type": "string",
           "minLength": 3,
-          "maxLength": 3,
-          "default": "USD"
+          "maxLength": 3
         },
         "unit_of_measure": {
           "type": "string",
@@ -35918,6 +35848,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             }
           ]
         },
+        "barcode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "cost": {
           "anyOf": [
             {
@@ -35945,8 +35889,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "null"
             }
-          ],
-          "default": "USD"
+          ]
         },
         "vendor": {
           "anyOf": [
@@ -38096,377 +38039,208 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "get-_api_v1_workflows",
-    "method": "get",
-    "path": "/api/v1/workflows",
-    "displayName": "List workflows (route inventory only)",
-    "summary": "List workflows (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows",
-    "method": "post",
-    "path": "/api/v1/workflows",
-    "displayName": "Create workflow (route inventory only)",
-    "summary": "Create workflow (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_workflows_analytics",
-    "method": "get",
-    "path": "/api/v1/workflows/analytics",
-    "displayName": "Get workflow analytics (route inventory only)",
-    "summary": "Get workflow analytics (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_workflows_events",
-    "method": "get",
-    "path": "/api/v1/workflows/events",
-    "displayName": "List workflow events (route inventory only)",
-    "summary": "List workflow events (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows_events",
-    "method": "post",
-    "path": "/api/v1/workflows/events",
-    "displayName": "Create workflow event (route inventory only)",
-    "summary": "Create workflow event (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_workflows_events_id",
-    "method": "get",
-    "path": "/api/v1/workflows/events/{id}",
-    "displayName": "Get workflow event by id (route inventory only)",
-    "summary": "Get workflow event by id (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "get-_api_v1_workflows_executions",
-    "method": "get",
-    "path": "/api/v1/workflows/executions",
-    "displayName": "List workflow executions (route inventory only)",
-    "summary": "List workflow executions (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows_executions",
-    "method": "post",
-    "path": "/api/v1/workflows/executions",
-    "displayName": "Create workflow execution (route inventory only)",
-    "summary": "Create workflow execution (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows_executions_bulk",
-    "method": "post",
-    "path": "/api/v1/workflows/executions/bulk",
-    "displayName": "Bulk create workflow executions (route inventory only)",
-    "summary": "Bulk create workflow executions (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows_executions_bulkaction",
-    "method": "post",
-    "path": "/api/v1/workflows/executions/bulk-action",
-    "displayName": "Bulk action workflow executions (route inventory only)",
-    "summary": "Bulk action workflow executions (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_workflows_executions_id",
-    "method": "get",
-    "path": "/api/v1/workflows/executions/{id}",
-    "displayName": "Get workflow execution by id (route inventory only)",
-    "summary": "Get workflow execution by id (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "put-_api_v1_workflows_executions_id",
-    "method": "put",
-    "path": "/api/v1/workflows/executions/{id}",
-    "displayName": "Update workflow execution (route inventory only)",
-    "summary": "Update workflow execution (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_workflows_executions_id_cancel",
-    "method": "post",
-    "path": "/api/v1/workflows/executions/{id}/cancel",
-    "displayName": "Cancel workflow execution (route inventory only)",
-    "summary": "Cancel workflow execution (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_workflows_executions_id_pause",
-    "method": "post",
-    "path": "/api/v1/workflows/executions/{id}/pause",
-    "displayName": "Pause workflow execution (route inventory only)",
-    "summary": "Pause workflow execution (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_workflows_executions_id_restart",
-    "method": "post",
-    "path": "/api/v1/workflows/executions/{id}/restart",
-    "displayName": "Restart workflow execution (route inventory only)",
-    "summary": "Restart workflow execution (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "post-_api_v1_workflows_executions_id_resume",
-    "method": "post",
-    "path": "/api/v1/workflows/executions/{id}/resume",
-    "displayName": "Resume workflow execution (route inventory only)",
-    "summary": "Resume workflow execution (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
-  },
-  {
-    "id": "get-_api_v1_workflows_export",
-    "method": "get",
-    "path": "/api/v1/workflows/export",
-    "displayName": "Export workflows (route inventory only)",
-    "summary": "Export workflows (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows_import",
-    "method": "post",
-    "path": "/api/v1/workflows/import",
-    "displayName": "Import workflows (route inventory only)",
-    "summary": "Import workflows (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_workflows_search",
-    "method": "get",
-    "path": "/api/v1/workflows/search",
-    "displayName": "Search workflows (route inventory only)",
-    "summary": "Search workflows (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
     "id": "get-_api_v1_workflows_tasks",
     "method": "get",
     "path": "/api/v1/workflows/tasks",
-    "displayName": "List workflow tasks (route inventory only)",
-    "summary": "List workflow tasks (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "displayName": "List workflow tasks",
+    "summary": "List workflow tasks",
+    "description": "Returns the authenticated caller's workflow task inbox (tasks assigned to them directly or via a role), paginated. Items are summary rows without `formSchema`; fetch a single task to obtain its form schema. EE-only — on the Community build this returns an empty page.",
     "tags": [
-      "Workflows v1"
+      "Workflow Tasks v1"
     ],
     "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows_tasks",
-    "method": "post",
-    "path": "/api/v1/workflows/tasks",
-    "displayName": "Create workflow task (route inventory only)",
-    "summary": "Create workflow task (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated WorkflowTaskStatus values (pending, claimed, completed, canceled, expired). Omit for the open inbox (pending + claimed).",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated WorkflowTaskStatus values (pending, claimed, completed, canceled, expired). Omit for the open inbox (pending + claimed)."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number (default 1).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based page number (default 1)."
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "description": "Items per page, max 100 (default 25).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Items per page, max 100 (default 25)."
+        }
+      }
     ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows_tasks_bulkassign",
-    "method": "post",
-    "path": "/api/v1/workflows/tasks/bulk-assign",
-    "displayName": "Bulk assign workflow tasks (route inventory only)",
-    "summary": "Bulk assign workflow tasks (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "executionId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "claimed",
+                  "completed",
+                  "canceled",
+                  "expired"
+                ]
+              },
+              "priority": {
+                "type": "string"
+              },
+              "dueDate": {
+                "type": "string"
+              },
+              "assignedRoles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "assignedUsers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "contextData": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "formId": {
+                "type": "string"
+              },
+              "formSchema": {
+                "type": "object",
+                "properties": {
+                  "jsonSchema": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "uiSchema": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "defaultValues": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "jsonSchema"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "createdBy": {
+                "type": "string"
+              },
+              "claimedAt": {
+                "type": "string"
+              },
+              "claimedBy": {
+                "type": "string"
+              },
+              "completedAt": {
+                "type": "string"
+              },
+              "completedBy": {
+                "type": "string"
+              },
+              "responseData": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "taskId",
+              "executionId",
+              "title",
+              "status",
+              "priority",
+              "formId",
+              "createdAt"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "number"
+            },
+            "limit": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            },
+            "totalPages": {
+              "type": "number"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
   },
   {
     "id": "get-_api_v1_workflows_tasks_id",
     "method": "get",
     "path": "/api/v1/workflows/tasks/{id}",
-    "displayName": "Get workflow task by id (route inventory only)",
-    "summary": "Get workflow task by id (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "displayName": "Get workflow task",
+    "summary": "Get workflow task",
+    "description": "Returns full detail for a single workflow task, including `formSchema` ({ jsonSchema, uiSchema?, defaultValues? }) so a client can classify the form as simple (native completion) vs complex (web deep-link). EE-only — on the Community build this returns 404.",
     "tags": [
-      "Workflows v1"
+      "Workflow Tasks v1"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -38474,47 +38248,135 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Resource identifier.",
+        "description": "Workflow task identifier (taskId).",
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "description": "Workflow task identifier (taskId)."
         }
       }
-    ]
-  },
-  {
-    "id": "put-_api_v1_workflows_tasks_id",
-    "method": "put",
-    "path": "/api/v1/workflows/tasks/{id}",
-    "displayName": "Update workflow task (route inventory only)",
-    "summary": "Update workflow task (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
     ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ]
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "taskId": {
+              "type": "string"
+            },
+            "executionId": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "claimed",
+                "completed",
+                "canceled",
+                "expired"
+              ]
+            },
+            "priority": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "assignedRoles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assignedUsers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "contextData": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "formId": {
+              "type": "string"
+            },
+            "formSchema": {
+              "type": "object",
+              "properties": {
+                "jsonSchema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "uiSchema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "defaultValues": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              },
+              "required": [
+                "jsonSchema"
+              ]
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "createdBy": {
+              "type": "string"
+            },
+            "claimedAt": {
+              "type": "string"
+            },
+            "claimedBy": {
+              "type": "string"
+            },
+            "completedAt": {
+              "type": "string"
+            },
+            "completedBy": {
+              "type": "string"
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "required": [
+            "taskId",
+            "executionId",
+            "title",
+            "status",
+            "priority",
+            "formId",
+            "createdAt"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "post-_api_v1_workflows_tasks_id_claim",
     "method": "post",
     "path": "/api/v1/workflows/tasks/{id}/claim",
-    "displayName": "Claim workflow task (route inventory only)",
-    "summary": "Claim workflow task (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "displayName": "Claim workflow task",
+    "summary": "Claim workflow task",
+    "description": "Claims a pending task for the caller. No request body. EE-only — on the Community build this returns 404.",
     "tags": [
-      "Workflows v1"
+      "Workflow Tasks v1"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -38522,23 +38384,87 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Resource identifier.",
+        "description": "Workflow task identifier (taskId).",
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "description": "Workflow task identifier (taskId)."
         }
       }
-    ]
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_workflows_tasks_id_unclaim",
+    "method": "post",
+    "path": "/api/v1/workflows/tasks/{id}/unclaim",
+    "displayName": "Unclaim workflow task",
+    "summary": "Unclaim workflow task",
+    "description": "Releases a task the caller has claimed, returning it to the pending pool. No request body. EE-only — on the Community build this returns 404.",
+    "tags": [
+      "Workflow Tasks v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Workflow task identifier (taskId).",
+        "schema": {
+          "type": "string",
+          "description": "Workflow task identifier (taskId)."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "post-_api_v1_workflows_tasks_id_complete",
     "method": "post",
     "path": "/api/v1/workflows/tasks/{id}/complete",
-    "displayName": "Complete workflow task (route inventory only)",
-    "summary": "Complete workflow task (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "displayName": "Complete workflow task",
+    "summary": "Complete workflow task",
+    "description": "Submits the task's form payload and completes it. The form data is validated server-side against the task's JSON Schema; validation failures return 400 with the schema errors in `error.details`. EE-only — on the Community build this returns 404.",
     "tags": [
-      "Workflows v1"
+      "Workflow Tasks v1"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -38546,49 +38472,637 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Resource identifier.",
+        "description": "Workflow task identifier (taskId).",
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "description": "Workflow task identifier (taskId)."
         }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "formData": {
+          "type": "object",
+          "additionalProperties": {},
+          "default": {}
+        },
+        "comments": {
+          "type": "string"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_activities",
+    "method": "get",
+    "path": "/api/v1/activities",
+    "displayName": "List My Activities",
+    "summary": "Fetch the authenticated user's unified activity list (the User Activities screen)",
+    "description": "Returns the caller's own work items exactly as the User Activities screen shows them: a unified, paginated fan-out across tickets, project tasks, schedule entries, ad-hoc to-dos, workflow tasks, time entries and notifications. Each activity carries id, type, title, status and priority. Filter with type (comma-separated: ticket, projectTask, schedule, workflowTask, timeEntry, notification, document; ad-hoc to-dos surface as schedule), status (open/closed/all), search, due-date and created-date windows; sort with sortBy/sortDirection. This endpoint is always scoped to the authenticated caller — use it for questions like \"what is on my plate\" or \"my open tickets on my activities screen\". For tenant-wide ticket queries use GET /api/v1/tickets instead.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "type",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated ActivityType values (e.g. \"ticket,schedule\"). Omit for all types.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated ActivityType values (e.g. \"ticket,schedule\"). Omit for all types."
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Open/closed filter. `open`→active only, `closed`→closed, `all`→no filter (default).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "description": "Open/closed filter. `open`→active only, `closed`→closed, `all`→no filter (default)."
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Free-text search across activity titles/descriptions.",
+        "schema": {
+          "type": "string",
+          "description": "Free-text search across activity titles/descriptions."
+        }
+      },
+      {
+        "name": "dateStart",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 lower bound of the schedule/time-entry/notification window.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 lower bound of the schedule/time-entry/notification window."
+        }
+      },
+      {
+        "name": "dateEnd",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 upper bound of the window.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 upper bound of the window."
+        }
+      },
+      {
+        "name": "priority",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated normalized ActivityPriority buckets (e.g. \"high,medium\"). Lossy for custom schemes; prefer `priorityIds`.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated normalized ActivityPriority buckets (e.g. \"high,medium\"). Lossy for custom schemes; prefer `priorityIds`."
+        }
+      },
+      {
+        "name": "priorityIds",
+        "in": "query",
+        "required": false,
+        "description": "Comma-separated exact priority IDs (the tenant's real per-type priorities). Applies to ticket/project-task activities.",
+        "schema": {
+          "type": "string",
+          "description": "Comma-separated exact priority IDs (the tenant's real per-type priorities). Applies to ticket/project-task activities."
+        }
+      },
+      {
+        "name": "dueDateStart",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 lower bound of the due-date filter (independent of the schedule window).",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 lower bound of the due-date filter (independent of the schedule window)."
+        }
+      },
+      {
+        "name": "dueDateEnd",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 upper bound of the due-date filter.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 upper bound of the due-date filter."
+        }
+      },
+      {
+        "name": "createdAtStart",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 lower bound of the created-date (\"date entered\") filter. Applies to every activity type.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 lower bound of the created-date (\"date entered\") filter. Applies to every activity type."
+        }
+      },
+      {
+        "name": "createdAtEnd",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 upper bound of the created-date (\"date entered\") filter.",
+        "schema": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 upper bound of the created-date (\"date entered\") filter."
+        }
+      },
+      {
+        "name": "sortBy",
+        "in": "query",
+        "required": false,
+        "description": "Sort column. Omit for the default sort (priority high→low, then due date ascending).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "type",
+            "title",
+            "status",
+            "priority",
+            "dueDate"
+          ],
+          "description": "Sort column. Omit for the default sort (priority high→low, then due date ascending)."
+        }
+      },
+      {
+        "name": "sortDirection",
+        "in": "query",
+        "required": false,
+        "description": "Sort direction for `sortBy` (default asc). Ignored when `sortBy` is omitted.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction for `sortBy` (default asc). Ignored when `sortBy` is omitted."
+        }
+      },
+      {
+        "name": "groupBy",
+        "in": "query",
+        "required": false,
+        "description": "When set, the response is grouped by this dimension (ActivityGroupedResponseV1) instead of the paginated list; `page`/`pageSize` are ignored. `priority` groups by the real per-tenant priority name (not the normalized bucket), so it is only meaningful when scoped to a single prioritized type.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "type",
+            "priority",
+            "status",
+            "dueDate"
+          ],
+          "description": "When set, the response is grouped by this dimension (ActivityGroupedResponseV1) instead of the paginated list; `page`/`pageSize` are ignored. `priority` groups by the real per-tenant priority name (not the normalized bucket), so it is only meaningful when scoped to a single prioritized type."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number (default 1). Ignored when `groupBy` is set.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based page number (default 1). Ignored when `groupBy` is set."
+        }
+      },
+      {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "description": "Items per page, max 100 (default 25). Ignored when `groupBy` is set.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Items per page, max 100 (default 25). Ignored when `groupBy` is set."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "schedule",
+                  "projectTask",
+                  "ticket",
+                  "timeEntry",
+                  "workflowTask",
+                  "notification",
+                  "document"
+                ]
+              },
+              "status": {
+                "type": "string"
+              },
+              "statusColor": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "priorityName": {
+                "type": "string"
+              },
+              "priorityColor": {
+                "type": "string"
+              },
+              "dueDate": {
+                "type": "string"
+              },
+              "startDate": {
+                "type": "string"
+              },
+              "endDate": {
+                "type": "string"
+              },
+              "assignedTo": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "assignedToNames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "sourceType": {
+                "type": "string",
+                "enum": [
+                  "schedule",
+                  "projectTask",
+                  "ticket",
+                  "timeEntry",
+                  "workflowTask",
+                  "notification",
+                  "document"
+                ]
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "icon": {
+                      "type": "string"
+                    },
+                    "disabled": {
+                      "type": "boolean"
+                    },
+                    "disabledReason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label"
+                  ]
+                }
+              },
+              "isClosed": {
+                "type": "boolean"
+              },
+              "tenant": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "type",
+              "status",
+              "priority",
+              "sourceId",
+              "sourceType",
+              "actions",
+              "tenant",
+              "createdAt",
+              "updatedAt"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "number"
+            },
+            "limit": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            },
+            "totalPages": {
+              "type": "number"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    },
+    "examples": [
+      {
+        "name": "My open ticket activities",
+        "request": {
+          "query": {
+            "type": "ticket",
+            "status": "open",
+            "pageSize": 50
+          }
+        },
+        "notes": "Returns the ticket activities the caller sees on their User Activities screen. Each activity's id is the ticket UUID, usable with GET /api/v1/tickets/{id}."
       }
     ]
   },
   {
-    "id": "get-_api_v1_workflows_templates",
-    "method": "get",
-    "path": "/api/v1/workflows/templates",
-    "displayName": "List workflow templates (route inventory only)",
-    "summary": "List workflow templates (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_workflows_templates",
+    "id": "post-_api_v1_activities_adhoc",
     "method": "post",
-    "path": "/api/v1/workflows/templates",
-    "displayName": "Create workflow template (route inventory only)",
-    "summary": "Create workflow template (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "path": "/api/v1/activities/ad-hoc",
+    "displayName": "Create ad-hoc activity",
+    "summary": "Create ad-hoc activity",
+    "description": "Creates a personal, self-assigned ad-hoc to-do rendered as a schedule activity. Times are optional; when both are supplied the end must be after the start. Gated by `user_schedule:read`.",
     "tags": [
-      "Workflows v1"
+      "Activities v1"
     ],
     "approvalRequired": false,
-    "parameters": []
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string"
+        },
+        "scheduledStart": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "scheduledEnd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "status": {
+              "type": "string"
+            },
+            "statusColor": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "priorityName": {
+              "type": "string"
+            },
+            "priorityColor": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "startDate": {
+              "type": "string"
+            },
+            "endDate": {
+              "type": "string"
+            },
+            "assignedTo": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assignedToNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sourceId": {
+              "type": "string"
+            },
+            "sourceType": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "disabledReason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ]
+              }
+            },
+            "isClosed": {
+              "type": "boolean"
+            },
+            "tenant": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "type",
+            "status",
+            "priority",
+            "sourceId",
+            "sourceType",
+            "actions",
+            "tenant",
+            "createdAt",
+            "updatedAt"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
-    "id": "get-_api_v1_workflows_templates_id",
-    "method": "get",
-    "path": "/api/v1/workflows/templates/{id}",
-    "displayName": "Get workflow template by id (route inventory only)",
-    "summary": "Get workflow template by id (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "id": "patch-_api_v1_activities_adhoc_id",
+    "method": "patch",
+    "path": "/api/v1/activities/ad-hoc/{id}",
+    "displayName": "Update ad-hoc activity",
+    "summary": "Update ad-hoc activity",
+    "description": "Updates an ad-hoc item's title, notes or optional times. Omitted fields are left unchanged; `notes: null` clears the field. Requires the caller to be an assignee, or hold `user_schedule:update` / `user_schedule:read_all`.",
     "tags": [
-      "Workflows v1"
+      "Activities v1"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -38596,47 +39110,195 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Resource identifier.",
+        "description": "Ad-hoc activity identifier (the backing schedule entry id).",
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "description": "Ad-hoc activity identifier (the backing schedule entry id)."
         }
       }
-    ]
-  },
-  {
-    "id": "put-_api_v1_workflows_templates_id",
-    "method": "put",
-    "path": "/api/v1/workflows/templates/{id}",
-    "displayName": "Update workflow template (route inventory only)",
-    "summary": "Update workflow template (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
-    "tags": [
-      "Workflows v1"
     ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
           "type": "string",
-          "format": "uuid"
+          "minLength": 1
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scheduledStart": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "scheduledEnd": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
         }
       }
-    ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "status": {
+              "type": "string"
+            },
+            "statusColor": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "priorityName": {
+              "type": "string"
+            },
+            "priorityColor": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "startDate": {
+              "type": "string"
+            },
+            "endDate": {
+              "type": "string"
+            },
+            "assignedTo": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assignedToNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sourceId": {
+              "type": "string"
+            },
+            "sourceType": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "disabledReason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ]
+              }
+            },
+            "isClosed": {
+              "type": "boolean"
+            },
+            "tenant": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "type",
+            "status",
+            "priority",
+            "sourceId",
+            "sourceType",
+            "actions",
+            "tenant",
+            "createdAt",
+            "updatedAt"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
-    "id": "delete-_api_v1_workflows_templates_id",
+    "id": "delete-_api_v1_activities_adhoc_id",
     "method": "delete",
-    "path": "/api/v1/workflows/templates/{id}",
-    "displayName": "Delete workflow template (route inventory only)",
-    "summary": "Delete workflow template (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "path": "/api/v1/activities/ad-hoc/{id}",
+    "displayName": "Delete ad-hoc activity",
+    "summary": "Delete ad-hoc activity",
+    "description": "Permanently deletes an ad-hoc item. Requires the caller to be an assignee, or hold `user_schedule:update` / `user_schedule:read_all`.",
     "tags": [
-      "Workflows v1"
+      "Activities v1"
     ],
     "approvalRequired": false,
     "parameters": [
@@ -38644,85 +39306,412 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "id",
         "in": "path",
         "required": true,
-        "description": "Resource identifier.",
+        "description": "Ad-hoc activity identifier (the backing schedule entry id).",
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "description": "Ad-hoc activity identifier (the backing schedule entry id)."
         }
       }
     ]
   },
   {
-    "id": "get-_api_v1_workflows_id",
+    "id": "post-_api_v1_activities_adhoc_id_done",
+    "method": "post",
+    "path": "/api/v1/activities/ad-hoc/{id}/done",
+    "displayName": "Toggle ad-hoc activity done",
+    "summary": "Toggle ad-hoc activity done",
+    "description": "Marks an ad-hoc item done/undone. `done: true` sets status to closed; `done: false` reopens it (status scheduled). Requires the caller to be an assignee, or hold `user_schedule:update` / `user_schedule:read_all`.",
+    "tags": [
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ad-hoc activity identifier (the backing schedule entry id).",
+        "schema": {
+          "type": "string",
+          "description": "Ad-hoc activity identifier (the backing schedule entry id)."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "done"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "status": {
+              "type": "string"
+            },
+            "statusColor": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "priorityName": {
+              "type": "string"
+            },
+            "priorityColor": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "startDate": {
+              "type": "string"
+            },
+            "endDate": {
+              "type": "string"
+            },
+            "assignedTo": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assignedToNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sourceId": {
+              "type": "string"
+            },
+            "sourceType": {
+              "type": "string",
+              "enum": [
+                "schedule",
+                "projectTask",
+                "ticket",
+                "timeEntry",
+                "workflowTask",
+                "notification",
+                "document"
+              ]
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "disabled": {
+                    "type": "boolean"
+                  },
+                  "disabledReason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ]
+              }
+            },
+            "isClosed": {
+              "type": "boolean"
+            },
+            "tenant": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "type",
+            "status",
+            "priority",
+            "sourceId",
+            "sourceType",
+            "actions",
+            "tenant",
+            "createdAt",
+            "updatedAt"
+          ]
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_activities_groups",
     "method": "get",
-    "path": "/api/v1/workflows/{id}",
-    "displayName": "Get workflow by id (route inventory only)",
-    "summary": "Get workflow by id (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "path": "/api/v1/activities/groups",
+    "displayName": "List My Activity Groups",
+    "summary": "Fetch the caller's named custom groups from the User Activities screen",
+    "description": "Returns the personal, user-defined groups the caller created on the User Activities screen (for example a group named \"Basics\"), each with its ordered items. Items are references: { activityId, activityType, sortOrder } — for activityType \"ticket\" the activityId is the ticket UUID. To answer \"what tickets are in my <name> group\": call this endpoint, find the group by groupName (case-insensitive match on what the user said), then resolve each item, e.g. ticket items via GET /api/v1/tickets/{id} or by matching ids against GET /api/v1/activities. Groups are per-user; pass targetUserId only to read another internal user's groups (requires user_schedule:update or user_schedule:read_all).",
     "tags": [
-      "Workflows v1"
+      "Activities v1"
     ],
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
+        "name": "targetUserId",
+        "in": "query",
+        "required": false,
+        "description": "Another internal user whose groups to read (requires elevated schedule permission). Omit for self.",
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "description": "Another internal user whose groups to read (requires elevated schedule permission). Omit for self."
         }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "groupId": {
+                "type": "string"
+              },
+              "groupName": {
+                "type": "string"
+              },
+              "sortOrder": {
+                "type": "number"
+              },
+              "isCollapsed": {
+                "type": "boolean"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "itemId": {
+                      "type": "string"
+                    },
+                    "activityId": {
+                      "type": "string"
+                    },
+                    "activityType": {
+                      "type": "string"
+                    },
+                    "sortOrder": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "itemId",
+                    "activityId",
+                    "activityType",
+                    "sortOrder"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "groupId",
+              "groupName",
+              "sortOrder",
+              "isCollapsed",
+              "items"
+            ]
+          }
+        },
+        "meta": {}
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "What is in my \"Basics\" group?",
+        "request": {},
+        "notes": "Find the entry whose groupName is \"Basics\" in the response, then look up each item: for activityType \"ticket\" call GET /api/v1/tickets/{activityId} (or filter a GET /api/v1/activities?type=ticket result by the collected ids) to get titles and statuses."
       }
     ]
   },
   {
-    "id": "put-_api_v1_workflows_id",
-    "method": "put",
-    "path": "/api/v1/workflows/{id}",
-    "displayName": "Update workflow (route inventory only)",
-    "summary": "Update workflow (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "id": "post-_api_v1_activities_groups_items",
+    "method": "post",
+    "path": "/api/v1/activities/groups/items",
+    "displayName": "Move Activity Into My Group",
+    "summary": "Put one of the caller's activities into one of their custom groups",
+    "description": "Moves an activity into one of the caller's own User Activities groups at the given sortOrder position, removing it from any other of their groups first (an activity lives in at most one group). Get groupId values from GET /api/v1/activities/groups. Only organizes the caller's own view — it never changes the underlying ticket/task.",
     "tags": [
-      "Workflows v1"
+      "Activities v1"
     ],
     "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "activityId": {
           "type": "string",
-          "format": "uuid"
+          "minLength": 1
+        },
+        "activityType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "groupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": 0
         }
-      }
-    ]
+      },
+      "required": [
+        "activityId",
+        "activityType",
+        "groupId",
+        "sortOrder"
+      ]
+    }
   },
   {
-    "id": "delete-_api_v1_workflows_id",
+    "id": "delete-_api_v1_activities_groups_items",
     "method": "delete",
-    "path": "/api/v1/workflows/{id}",
-    "displayName": "Delete workflow by id (route inventory only)",
-    "summary": "Delete workflow by id (route inventory only)",
-    "description": "This operation is currently present only in generated route inventory. No corresponding Next.js handler exists under server/src/app/api/v1/workflows in this worktree. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; with middleware requirements satisfied, Next.js returns not-found for the absent handler. Existing workflow APIs in this codebase are implemented under /api/workflow-definitions, /api/workflow-runs, and /api/workflow/events rather than /api/v1/workflows paths.",
+    "path": "/api/v1/activities/groups/items",
+    "displayName": "Remove Activity From My Groups",
+    "summary": "Make one of the caller's activities ungrouped",
+    "description": "Removes an activity from all of the caller's User Activities groups so it shows as ungrouped. No-op when the activity is not in any group. Only affects the caller's own view.",
     "tags": [
-      "Workflows v1"
+      "Activities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "activityId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "activityType": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "activityId",
+        "activityType"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_activities_groups_groupid_items",
+    "method": "patch",
+    "path": "/api/v1/activities/groups/{groupId}/items",
+    "displayName": "Reorder My Group's Activities",
+    "summary": "Persist a new ordering of the activities inside one of the caller's groups",
+    "description": "Replaces the ordering of a group's members: pass every item with its new sortOrder (position). Scoped to the caller's own groups from GET /api/v1/activities/groups.",
+    "tags": [
+      "Activities v1"
     ],
     "approvalRequired": false,
     "parameters": [
       {
-        "name": "id",
+        "name": "groupId",
         "in": "path",
         "required": true,
-        "description": "Resource identifier.",
+        "description": "Custom activity group identifier.",
         "schema": {
           "type": "string",
-          "format": "uuid"
+          "description": "Custom activity group identifier."
         }
       }
-    ]
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "activityId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "activityType": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sortOrder": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "activityId",
+              "activityType",
+              "sortOrder"
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "items"
+      ]
+    }
   },
   {
     "id": "get-_api_v1_projects_id_taskstatusmappings",
@@ -48161,6 +49150,309 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_id_agents",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/agents",
+    "displayName": "List ticket agents",
+    "summary": "List ticket agents",
+    "description": "Returns the ticket primary agent (tickets.assigned_to) and its additional agents (ticket_resources), each with user_id, name and email.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_agents",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/agents",
+    "displayName": "Add a ticket additional agent",
+    "summary": "Add a ticket additional agent",
+    "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "User to add as an additional agent."
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Resource role recorded on the assignment; defaults to support."
+        }
+      },
+      "required": [
+        "user_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_agents_userid",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/agents/{userId}",
+    "displayName": "Remove a ticket additional agent",
+    "summary": "Remove a ticket additional agent",
+    "description": "Removes the additional-agent assignment for the given user. The primary agent is changed through PUT /api/v1/tickets/{id}/assignment instead.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "description": "User UUID of the additional agent.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "User UUID of the additional agent."
+        }
+      }
+    ]
+  },
+  {
+    "id": "put-_api_v1_tickets_id_team",
+    "method": "put",
+    "path": "/api/v1/tickets/{id}/team",
+    "displayName": "Assign a team to a ticket",
+    "summary": "Assign a team to a ticket",
+    "description": "Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team's active members as team_member additional agents. Returns the updated ticket. A team without a lead is rejected with 400.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "team_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Team to assign to the ticket."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean"
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "team_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_team",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/team",
+    "displayName": "Remove a ticket team assignment",
+    "summary": "Remove a ticket team assignment",
+    "description": "Clears assigned_team_id. mode=remove_all (default) drops the team_member additional agents, keep_all leaves them, and selective keeps only keep_user_ids. Returns the updated ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "remove_all",
+            "keep_all",
+            "selective"
+          ],
+          "description": "What to do with the team_member additional agents; defaults to remove_all."
+        },
+        "keep_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Required with mode=selective: the team members to keep as additional agents."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_materials",
     "method": "get",
     "path": "/api/v1/tickets/{id}/materials",
@@ -50058,6 +51350,5211 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_opportunities",
+    "method": "get",
+    "path": "/api/v1/opportunities",
+    "displayName": "List opportunities",
+    "summary": "List opportunities",
+    "description": "Lists tenant opportunities using the OpportunityListFilters contract.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "open",
+            "won",
+            "lost",
+            "all"
+          ]
+        }
+      },
+      {
+        "name": "stage",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won",
+            "lost"
+          ]
+        }
+      },
+      {
+        "name": "owner_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "opportunity_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "new_logo",
+            "expansion",
+            "renewal",
+            "project"
+          ]
+        }
+      },
+      {
+        "name": "stalled_only",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "default": "1"
+        }
+      },
+      {
+        "name": "page_size",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "default": "25"
+        }
+      },
+      {
+        "name": "sort_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "next_action_due",
+            "expected_close_date",
+            "mrr_cents",
+            "last_activity_at",
+            "created_at"
+          ],
+          "default": "next_action_due"
+        }
+      },
+      {
+        "name": "sort_direction",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "asc"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "_links": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities",
+    "method": "post",
+    "path": "/api/v1/opportunities",
+    "displayName": "Create opportunity",
+    "summary": "Create opportunity",
+    "description": "Creates an open opportunity with a required next action.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opportunity_type": {
+          "type": "string",
+          "enum": [
+            "new_logo",
+            "expansion",
+            "renewal",
+            "project"
+          ]
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "committed"
+          ],
+          "default": "medium"
+        },
+        "mrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "nrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "hardware_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "expected_close_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generator_key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "renewal",
+            "tm_conversion",
+            "whitespace",
+            "asset_aging",
+            "inbound-lead"
+          ]
+        },
+        "generator_context": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        },
+        "suggestion_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "client_id",
+        "title",
+        "opportunity_type",
+        "currency_code",
+        "next_action",
+        "next_action_due"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_workqueue",
+    "method": "get",
+    "path": "/api/v1/opportunities/work-queue",
+    "displayName": "Get the current user work queue",
+    "summary": "Get the current user work queue",
+    "description": "Returns the shared server-composed opportunity work queue for the authenticated API-key user.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}",
+    "displayName": "Get opportunity",
+    "summary": "Get opportunity",
+    "description": "Gets one opportunity by UUID.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_opportunities_id",
+    "method": "put",
+    "path": "/api/v1/opportunities/{id}",
+    "displayName": "Update opportunity",
+    "summary": "Update opportunity",
+    "description": "Updates editable opportunity fields; status and stage use dedicated flows.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opportunity_type": {
+          "type": "string",
+          "enum": [
+            "new_logo",
+            "expansion",
+            "renewal",
+            "project"
+          ]
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "committed"
+          ],
+          "default": "medium"
+        },
+        "mrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "nrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "hardware_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "expected_close_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generator_key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "renewal",
+            "tm_conversion",
+            "whitespace",
+            "asset_aging",
+            "inbound-lead"
+          ]
+        },
+        "generator_context": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        },
+        "suggestion_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_opportunities_id",
+    "method": "delete",
+    "path": "/api/v1/opportunities/{id}",
+    "displayName": "Delete opportunity",
+    "summary": "Delete opportunity",
+    "description": "Deletes an open opportunity after linked quotes are removed.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_timeline",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/timeline",
+    "displayName": "List opportunity timeline",
+    "summary": "List opportunity timeline",
+    "description": "Lists interactions linked to the opportunity, newest first.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "interaction_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "interaction_date": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "user_name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "interaction_id",
+              "title",
+              "interaction_date",
+              "user_name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_win",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/win",
+    "displayName": "Win opportunity",
+    "summary": "Win opportunity",
+    "description": "Marks an open opportunity won, optionally converting an accepted linked quote to a draft agreement.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "convert_quote_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "project_template_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "project_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_status_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "project_start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_lose",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/lose",
+    "displayName": "Lose opportunity",
+    "summary": "Lose opportunity",
+    "description": "Marks an open opportunity lost with a required loss reason.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "loss_reason": {
+          "type": "string",
+          "enum": [
+            "no_response",
+            "chose_competitor",
+            "price",
+            "timing",
+            "no_budget",
+            "not_a_fit",
+            "other"
+          ]
+        },
+        "loss_notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lost_to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "loss_reason"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_completeaction",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/complete-action",
+    "displayName": "Complete next action",
+    "summary": "Complete next action",
+    "description": "Records the completed action as an interaction and installs the replacement action.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "next_action",
+        "next_action_due"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_evidence",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/evidence",
+    "displayName": "List opportunity evidence",
+    "summary": "List opportunity evidence",
+    "description": "Lists append-only evidence and corrected records in recorded order.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_evidence",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/evidence",
+    "displayName": "Record declared evidence",
+    "summary": "Record declared evidence",
+    "description": "Records the declared qualified checkpoint only.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "checkpoint": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal"
+          ]
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "checkpoint"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_evidence_evidenceid_correct",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/evidence/{evidenceId}/correct",
+    "displayName": "Correct evidence",
+    "summary": "Correct evidence",
+    "description": "Corrects active evidence with an append-only audit note.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "evidenceId",
+        "in": "path",
+        "required": true,
+        "description": "Evidence UUID from opportunity_evidence.evidence_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Evidence UUID from opportunity_evidence.evidence_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "correction_note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "correction_note"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_quotes_quoteid_link",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/quotes/{quoteId}/link",
+    "displayName": "Link quote",
+    "summary": "Link quote",
+    "description": "Links a same-client quote and applies quote lifecycle evidence.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "quoteId",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_quotes_quoteid_unlink",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/quotes/{quoteId}/unlink",
+    "displayName": "Unlink quote",
+    "summary": "Unlink quote",
+    "description": "Unlinks a quote, corrects its evidence, and recomputes opportunity values.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "quoteId",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_opportunities_suggestions",
+    "method": "get",
+    "path": "/api/v1/opportunities/suggestions",
+    "displayName": "List opportunity suggestions",
+    "summary": "List opportunity suggestions",
+    "description": "Lists generator suggestions, optionally filtered by lifecycle status.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "dismissed",
+            "snoozed"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_suggestions_id_accept",
+    "method": "post",
+    "path": "/api/v1/opportunities/suggestions/{id}/accept",
+    "displayName": "Accept opportunity suggestion",
+    "summary": "Accept opportunity suggestion",
+    "description": "Creates a prefilled opportunity and atomically marks the suggestion accepted.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Suggestion UUID from opportunity_suggestions.suggestion_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Suggestion UUID from opportunity_suggestions.suggestion_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "mrr_cents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nrr_cents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hardware_cents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "expected_close_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_suggestions_id_dismiss",
+    "method": "post",
+    "path": "/api/v1/opportunities/suggestions/{id}/dismiss",
+    "displayName": "Dismiss opportunity suggestion",
+    "summary": "Dismiss opportunity suggestion",
+    "description": "Dismisses the suggestion and permanently preserves its dedupe key.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Suggestion UUID from opportunity_suggestions.suggestion_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Suggestion UUID from opportunity_suggestions.suggestion_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_suggestions_id_snooze",
+    "method": "post",
+    "path": "/api/v1/opportunities/suggestions/{id}/snooze",
+    "displayName": "Snooze opportunity suggestion",
+    "summary": "Snooze opportunity suggestion",
+    "description": "Hides the suggestion until the requested future timestamp.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Suggestion UUID from opportunity_suggestions.suggestion_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Suggestion UUID from opportunity_suggestions.suggestion_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "snoozed_until": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "snoozed_until"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_forecast",
+    "method": "get",
+    "path": "/api/v1/opportunities/forecast",
+    "displayName": "Get forecast band",
+    "summary": "Get forecast band",
+    "description": "Returns floor and ceiling MRR/NRR with per-deal composition for a period.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "start",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      {
+        "name": "end",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_calibration",
+    "method": "get",
+    "path": "/api/v1/opportunities/calibration",
+    "displayName": "Get seller calibration",
+    "summary": "Get seller calibration",
+    "description": "Returns declared-confidence outcomes and new-logo agreement attach rate per seller.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_meetingsessions",
+    "method": "post",
+    "path": "/api/v1/opportunities/meeting-sessions",
+    "displayName": "Start meeting session",
+    "summary": "Start meeting session",
+    "description": "Starts or resumes the caller’s same-day pipeline meeting session.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_meetingsessions_active",
+    "method": "get",
+    "path": "/api/v1/opportunities/meeting-sessions/active",
+    "displayName": "Get active meeting session",
+    "summary": "Get active meeting session",
+    "description": "Returns the caller’s resumable same-day meeting session and reviews.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_meetingsessions_sessionid_reviews",
+    "method": "post",
+    "path": "/api/v1/opportunities/meeting-sessions/{sessionId}/reviews",
+    "displayName": "Mark deal reviewed",
+    "summary": "Mark deal reviewed",
+    "description": "Creates or updates the review marker for a deal in a meeting session.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "opportunity_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "opportunity_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_commitments",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/commitments",
+    "displayName": "List commitments",
+    "summary": "List commitments",
+    "description": "Lists the promises recorded for an opportunity.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_commitments",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/commitments",
+    "displayName": "Create commitment",
+    "summary": "Create commitment",
+    "description": "Records an unresolved promise on an opportunity.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "description"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_opportunities_id_commitments_commitmentid",
+    "method": "put",
+    "path": "/api/v1/opportunities/{id}/commitments/{commitmentId}",
+    "displayName": "Update commitment",
+    "summary": "Update commitment",
+    "description": "Edits or resolves a commitment to a downstream artifact or explicit decline.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "commitmentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "resolution_status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "quote_line",
+            "agreement_line",
+            "project_task",
+            "declined"
+          ]
+        },
+        "resolution_ref_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_opportunities_id_commitments_commitmentid",
+    "method": "delete",
+    "path": "/api/v1/opportunities/{id}/commitments/{commitmentId}",
+    "displayName": "Delete commitment",
+    "summary": "Delete commitment",
+    "description": "Deletes a commitment.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "commitmentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_opportunities_qbr_clientid",
+    "method": "get",
+    "path": "/api/v1/opportunities/qbr/{clientId}",
+    "displayName": "Get QBR trigger pack",
+    "summary": "Get QBR trigger pack",
+    "description": "Assembles renewal, aging/EOL asset, ticket-trend, and whitespace triggers for an account.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_qbr_clientid_opportunities",
+    "method": "post",
+    "path": "/api/v1/opportunities/qbr/{clientId}/opportunities",
+    "displayName": "Create QBR opportunities",
+    "summary": "Create QBR opportunities",
+    "description": "Batch-creates typed opportunities from current QBR trigger keys.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "trigger_keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "trigger_keys"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_qbr_yield",
+    "method": "get",
+    "path": "/api/v1/opportunities/qbr/yield",
+    "displayName": "Get QBR yield",
+    "summary": "Get QBR yield",
+    "description": "Returns fired, created, and won trigger counts by account and account manager.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_rollups",
+    "method": "get",
+    "path": "/api/v1/opportunities/rollups",
+    "displayName": "Get seller rollups",
+    "summary": "Get seller rollups",
+    "description": "Returns period pipeline, outcomes, and attach rate by seller.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "start",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      {
+        "name": "end",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_campaigns",
+    "method": "get",
+    "path": "/api/v1/marketing/campaigns",
+    "displayName": "List marketing campaigns",
+    "summary": "List marketing campaigns",
+    "description": "Lists all marketing campaigns for the tenant, newest first. Marketing campaigns group content, social posts, capture forms, and nurture sequences for attribution and funnel reporting.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_campaigns",
+    "method": "post",
+    "path": "/api/v1/marketing/campaigns",
+    "displayName": "Create marketing campaign",
+    "summary": "Create marketing campaign",
+    "description": "Creates a marketing campaign. Campaigns anchor attribution: social posts, capture form submissions, and nurture sequence engagements roll up into the campaign funnel.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "goal": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "source_channel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "completed",
+            "archived"
+          ]
+        },
+        "start_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_campaigns_id",
+    "method": "get",
+    "path": "/api/v1/marketing/campaigns/{id}",
+    "displayName": "Get marketing campaign",
+    "summary": "Get marketing campaign",
+    "description": "Gets one marketing campaign by UUID.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Campaign UUID from marketing_campaigns.campaign_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Campaign UUID from marketing_campaigns.campaign_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_campaigns_id",
+    "method": "put",
+    "path": "/api/v1/marketing/campaigns/{id}",
+    "displayName": "Update marketing campaign",
+    "summary": "Update marketing campaign",
+    "description": "Updates editable marketing campaign fields (name, goal, source channel, status, start/end dates).",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Campaign UUID from marketing_campaigns.campaign_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Campaign UUID from marketing_campaigns.campaign_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "goal": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "source_channel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "completed",
+            "archived"
+          ]
+        },
+        "start_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_campaigns_id_funnel",
+    "method": "get",
+    "path": "/api/v1/marketing/campaigns/{id}/funnel",
+    "displayName": "Get campaign funnel",
+    "summary": "Get campaign funnel",
+    "description": "Returns the marketing campaign funnel: posts published, emails sent/opened/clicked, capture forms submitted, and inbound-lead opportunity suggestions created/accepted for the campaign.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Campaign UUID from marketing_campaigns.campaign_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Campaign UUID from marketing_campaigns.campaign_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_content",
+    "method": "get",
+    "path": "/api/v1/marketing/content",
+    "displayName": "List marketing content",
+    "summary": "List marketing content",
+    "description": "Lists marketing content pieces (title, markdown body, per-channel variant text). Optionally filter by campaign_id. Content is the source material scheduled to channels as social posts.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "campaign_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_content",
+    "method": "post",
+    "path": "/api/v1/marketing/content",
+    "displayName": "Create marketing content",
+    "summary": "Create marketing content",
+    "description": "Creates a marketing content piece with a markdown body and optional per-platform channel_variants overrides used when rendering social posts per channel.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "body_markdown": {
+          "type": "string",
+          "maxLength": 50000,
+          "default": ""
+        },
+        "channel_variants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "default": {}
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_content_id",
+    "method": "get",
+    "path": "/api/v1/marketing/content/{id}",
+    "displayName": "Get marketing content",
+    "summary": "Get marketing content",
+    "description": "Gets one marketing content piece by UUID, including its channel_variants.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Content UUID from marketing_content.content_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Content UUID from marketing_content.content_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_content_id",
+    "method": "put",
+    "path": "/api/v1/marketing/content/{id}",
+    "displayName": "Update marketing content",
+    "summary": "Update marketing content",
+    "description": "Updates a marketing content piece (title, body_markdown, channel_variants, campaign assignment).",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Content UUID from marketing_content.content_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Content UUID from marketing_content.content_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "body_markdown": {
+          "type": "string",
+          "maxLength": 50000,
+          "default": ""
+        },
+        "channel_variants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "default": {}
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_marketing_content_id",
+    "method": "delete",
+    "path": "/api/v1/marketing/content/{id}",
+    "displayName": "Delete marketing content",
+    "summary": "Delete marketing content",
+    "description": "Deletes a marketing content piece. Content referenced by social posts cannot be deleted (returns 409).",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Content UUID from marketing_content.content_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Content UUID from marketing_content.content_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_marketing_channels",
+    "method": "get",
+    "path": "/api/v1/marketing/channels",
+    "displayName": "List marketing channels",
+    "summary": "List marketing channels",
+    "description": "Lists marketing channels — named publishing destinations (e.g. LinkedIn, X) that social posts target. Channels never hold credentials; publishing is manual or agent-delegated via the publish loop.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "active_only",
+        "in": "query",
+        "required": false,
+        "description": "When \"true\", only active channels are returned. Omit for all channels.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "When \"true\", only active channels are returned. Omit for all channels."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_channels",
+    "method": "post",
+    "path": "/api/v1/marketing/channels",
+    "displayName": "Create marketing channel",
+    "summary": "Create marketing channel",
+    "description": "Creates a marketing channel (name, platform, optional handle_or_url) that social posts can be scheduled to.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "handle_or_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "platform"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_channels_id",
+    "method": "put",
+    "path": "/api/v1/marketing/channels/{id}",
+    "displayName": "Update marketing channel",
+    "summary": "Update marketing channel",
+    "description": "Updates a marketing channel, including activating/deactivating it. Inactive channels reject new social posts.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Channel UUID from marketing_channels.channel_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Channel UUID from marketing_channels.channel_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "handle_or_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_forms",
+    "method": "get",
+    "path": "/api/v1/marketing/forms",
+    "displayName": "List capture forms",
+    "summary": "List capture forms",
+    "description": "Lists marketing capture forms (lead-capture definitions with public slugs). Each active form accepts public submissions at its capture URL and can create inbound-lead opportunity suggestions.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_forms",
+    "method": "post",
+    "path": "/api/v1/marketing/forms",
+    "displayName": "Create capture form",
+    "summary": "Create capture form",
+    "description": "Creates a marketing capture form with a URL-safe slug. The public submission endpoint is /api/marketing/capture/{tenant}/{slug}.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{1,60}[a-z0-9]$"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "creates_suggestion": {
+          "type": "boolean"
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "slug"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_forms_id",
+    "method": "put",
+    "path": "/api/v1/marketing/forms/{id}",
+    "displayName": "Update capture form",
+    "summary": "Update capture form",
+    "description": "Updates a marketing capture form (name, description, campaign, creates_suggestion, is_active). The slug is immutable.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Capture form UUID from marketing_capture_forms.form_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Capture form UUID from marketing_capture_forms.form_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "creates_suggestion": {
+          "type": "boolean"
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_posts_queue",
+    "method": "get",
+    "path": "/api/v1/marketing/posts/queue",
+    "displayName": "List social post queue",
+    "summary": "List social post queue",
+    "description": "Lists social post targets joined with rendered per-channel text, content, channel, and campaign — the marketing publish queue. Filter by target status, channel_id, campaign_id, or scheduled date range. Use status=awaiting-manual-publish for the publish loop reading list.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "scheduled",
+            "awaiting-manual-publish",
+            "published",
+            "skipped",
+            "expired"
+          ]
+        }
+      },
+      {
+        "name": "channel_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "campaign_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "date_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "date_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_posts_awaitingpublish",
+    "method": "get",
+    "path": "/api/v1/marketing/posts/awaiting-publish",
+    "displayName": "List posts awaiting manual publish",
+    "summary": "List posts awaiting manual publish",
+    "description": "The agent publish loop reading list: every social post target in awaiting-manual-publish state, with rendered_text ready to post on the target channel platform. An agent reads this list, publishes each item on the platform, then calls the publish endpoint with the resulting permalink.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_posts",
+    "method": "post",
+    "path": "/api/v1/marketing/posts",
+    "displayName": "Create social post",
+    "summary": "Create social post",
+    "description": "Creates a social post from a marketing content piece, fanning out one target per channel_id. When scheduled_at is set the post enters the publish loop: at due time its targets flip to awaiting-manual-publish.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "content_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "channel_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1
+        },
+        "scheduled_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "content_id",
+        "channel_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_posts_id_reschedule",
+    "method": "post",
+    "path": "/api/v1/marketing/posts/{id}/reschedule",
+    "displayName": "Reschedule social post",
+    "summary": "Reschedule social post",
+    "description": "Reschedules a draft or scheduled social post to a new scheduled_at. Posts already in the publish loop (awaiting-manual-publish/published/expired) cannot be rescheduled.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Social post UUID from social_posts.post_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Social post UUID from social_posts.post_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "scheduled_at"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_posts_targets_targetid_publish",
+    "method": "post",
+    "path": "/api/v1/marketing/posts/targets/{targetId}/publish",
+    "displayName": "Mark post target published",
+    "summary": "Mark post target published",
+    "description": "Completes one publish loop step: marks a social post target published, recording the permalink and published_via=api provenance. Idempotent — republishing an already-published target returns it unchanged. Read GET /api/v1/marketing/posts/awaiting-publish first to find targets awaiting manual publish.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "targetId",
+        "in": "path",
+        "required": true,
+        "description": "Post target UUID from social_post_targets.target_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Post target UUID from social_post_targets.target_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "permalink": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000,
+          "format": "uri"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_posts_targets_targetid_skip",
+    "method": "post",
+    "path": "/api/v1/marketing/posts/targets/{targetId}/skip",
+    "displayName": "Skip post target",
+    "summary": "Skip post target",
+    "description": "Skips a scheduled or awaiting-manual-publish social post target, removing it from the publish loop without publishing.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "targetId",
+        "in": "path",
+        "required": true,
+        "description": "Post target UUID from social_post_targets.target_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Post target UUID from social_post_targets.target_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_sequences",
+    "method": "get",
+    "path": "/api/v1/marketing/sequences",
+    "displayName": "List nurture sequences",
+    "summary": "List nurture sequences",
+    "description": "Lists marketing nurture sequences — ordered, timed email steps sent to enrolled contacts.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_sequences",
+    "method": "post",
+    "path": "/api/v1/marketing/sequences",
+    "displayName": "Create nurture sequence",
+    "summary": "Create nurture sequence",
+    "description": "Creates a marketing nurture sequence with steps. Step order must be contiguous starting at 1; delay_minutes is the wait after the previous send (or enrollment for step 1). Subjects and body templates support {{merge.fields}}.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "paused",
+            "archived"
+          ]
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step_order": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "delay_minutes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 525600
+              },
+              "subject": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "body_template": {
+                "type": "string",
+                "maxLength": 50000,
+                "default": ""
+              }
+            },
+            "required": [
+              "step_order",
+              "delay_minutes",
+              "subject"
+            ]
+          },
+          "maxItems": 50,
+          "default": []
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_sequences_id",
+    "method": "get",
+    "path": "/api/v1/marketing/sequences/{id}",
+    "displayName": "Get nurture sequence detail",
+    "summary": "Get nurture sequence detail",
+    "description": "Gets one marketing nurture sequence with its steps, per-step send/open/click stats, and current enrollments.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Sequence UUID from marketing_sequences.sequence_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Sequence UUID from marketing_sequences.sequence_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_sequences_id",
+    "method": "put",
+    "path": "/api/v1/marketing/sequences/{id}",
+    "displayName": "Update nurture sequence",
+    "summary": "Update nurture sequence",
+    "description": "Updates a marketing nurture sequence. Supplying steps replaces the full step list (order must be contiguous from 1). Set status to active to accept enrollments.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Sequence UUID from marketing_sequences.sequence_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Sequence UUID from marketing_sequences.sequence_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "paused",
+            "archived"
+          ]
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step_order": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "delay_minutes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 525600
+              },
+              "subject": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "body_template": {
+                "type": "string",
+                "maxLength": 50000,
+                "default": ""
+              }
+            },
+            "required": [
+              "step_order",
+              "delay_minutes",
+              "subject"
+            ]
+          },
+          "maxItems": 50,
+          "default": []
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_sequences_id_enroll",
+    "method": "post",
+    "path": "/api/v1/marketing/sequences/{id}/enroll",
+    "displayName": "Enroll contact in sequence",
+    "summary": "Enroll contact in sequence",
+    "description": "Enrolls a contact in an active marketing nurture sequence. The contact must have an email address and not be suppressed; duplicate active enrollments are rejected.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Sequence UUID from marketing_sequences.sequence_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Sequence UUID from marketing_sequences.sequence_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "contact_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_sequences_enrollments_enrollmentid_unenroll",
+    "method": "post",
+    "path": "/api/v1/marketing/sequences/enrollments/{enrollmentId}/unenroll",
+    "displayName": "Unenroll contact",
+    "summary": "Unenroll contact",
+    "description": "Stops an active nurture sequence enrollment; no further sequence emails are sent to the contact for that enrollment.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "enrollmentId",
+        "in": "path",
+        "required": true,
+        "description": "Enrollment UUID from marketing_sequence_enrollments.enrollment_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Enrollment UUID from marketing_sequence_enrollments.enrollment_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_interactions",
+    "method": "get",
+    "path": "/api/v1/interactions",
+    "displayName": "List interactions",
+    "summary": "List interactions",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "contact_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "opportunity_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "ticket_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "project_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "type_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "date_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "date_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      {
+        "name": "page_size",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "interaction_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "icon": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "contact_name_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "contact_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "client_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "user_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ticket_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "project_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "opportunity_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "interaction_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "start_time": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "end_time": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "duration": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "status_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "status_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_status_closed": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "internal",
+                  "client_visible"
+                ]
+              }
+            },
+            "required": [
+              "tenant",
+              "interaction_id",
+              "type_id",
+              "type_name",
+              "icon",
+              "contact_name_id",
+              "contact_name",
+              "client_id",
+              "client_name",
+              "user_id",
+              "user_name",
+              "ticket_id",
+              "project_id",
+              "opportunity_id",
+              "title",
+              "notes",
+              "interaction_date",
+              "start_time",
+              "end_time",
+              "duration",
+              "status_id",
+              "status_name",
+              "is_status_closed",
+              "visibility"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "number"
+            },
+            "limit": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            },
+            "totalPages": {
+              "type": "number"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_interactions",
+    "method": "post",
+    "path": "/api/v1/interactions",
+    "displayName": "Create an interaction",
+    "summary": "Create an interaction",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "type_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_name_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "ticket_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "project_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "opportunity_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "start_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "interaction_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "type_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "interaction_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "icon": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contact_name_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "contact_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ticket_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "project_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "opportunity_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "interaction_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "start_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "end_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "status_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_status_closed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "internal",
+                "client_visible"
+              ]
+            }
+          },
+          "required": [
+            "tenant",
+            "interaction_id",
+            "type_id",
+            "type_name",
+            "icon",
+            "contact_name_id",
+            "contact_name",
+            "client_id",
+            "client_name",
+            "user_id",
+            "user_name",
+            "ticket_id",
+            "project_id",
+            "opportunity_id",
+            "title",
+            "notes",
+            "interaction_date",
+            "start_time",
+            "end_time",
+            "duration",
+            "status_id",
+            "status_name",
+            "is_status_closed",
+            "visibility"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_interactions_id",
+    "method": "get",
+    "path": "/api/v1/interactions/{id}",
+    "displayName": "Get an interaction",
+    "summary": "Get an interaction",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "interaction_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "icon": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contact_name_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "contact_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ticket_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "project_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "opportunity_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "interaction_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "start_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "end_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "status_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_status_closed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "internal",
+                "client_visible"
+              ]
+            }
+          },
+          "required": [
+            "tenant",
+            "interaction_id",
+            "type_id",
+            "type_name",
+            "icon",
+            "contact_name_id",
+            "contact_name",
+            "client_id",
+            "client_name",
+            "user_id",
+            "user_name",
+            "ticket_id",
+            "project_id",
+            "opportunity_id",
+            "title",
+            "notes",
+            "interaction_date",
+            "start_time",
+            "end_time",
+            "duration",
+            "status_id",
+            "status_name",
+            "is_status_closed",
+            "visibility"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_interactiontypes",
+    "method": "get",
+    "path": "/api/v1/interaction-types",
+    "displayName": "List interaction types",
+    "summary": "List interaction types",
+    "description": "Returns the union of system and tenant-defined interaction types.",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type_name": {
+                "type": "string"
+              },
+              "icon": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_system": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type_id",
+              "type_name",
+              "icon",
+              "is_system"
+            ]
+          }
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_lookup",
+    "method": "get",
+    "path": "/api/v1/inventory/lookup",
+    "displayName": "Look up an inventory barcode or identifier",
+    "summary": "Look up an inventory barcode or identifier",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "code",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_stock",
+    "method": "get",
+    "path": "/api/v1/inventory/stock",
+    "displayName": "List stock levels",
+    "summary": "List stock levels",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_stocklocations",
+    "method": "get",
+    "path": "/api/v1/inventory/stock-locations",
+    "displayName": "List stock locations",
+    "summary": "List stock locations",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_units",
+    "method": "get",
+    "path": "/api/v1/inventory/units",
+    "displayName": "List serialized stock units",
+    "summary": "List serialized stock units",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_units_unitid",
+    "method": "get",
+    "path": "/api/v1/inventory/units/{unitId}",
+    "displayName": "Get a serialized stock unit",
+    "summary": "Get a serialized stock unit",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "unitId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_receipts",
+    "method": "post",
+    "path": "/api/v1/inventory/receipts",
+    "displayName": "Receive stock manually",
+    "summary": "Receive stock manually",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_adjustments",
+    "method": "post",
+    "path": "/api/v1/inventory/adjustments",
+    "displayName": "Adjust stock",
+    "summary": "Adjust stock",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_counts",
+    "method": "get",
+    "path": "/api/v1/inventory/counts",
+    "displayName": "List cycle count sessions",
+    "summary": "List cycle count sessions",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_counts",
+    "method": "post",
+    "path": "/api/v1/inventory/counts",
+    "displayName": "Start a cycle count session",
+    "summary": "Start a cycle count session",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_counts_sessionid",
+    "method": "get",
+    "path": "/api/v1/inventory/counts/{sessionId}",
+    "displayName": "Get a cycle count session",
+    "summary": "Get a cycle count session",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_counts_sessionid_records",
+    "method": "post",
+    "path": "/api/v1/inventory/counts/{sessionId}/records",
+    "displayName": "Record a cycle count quantity",
+    "summary": "Record a cycle count quantity",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_counts_sessionid_submit",
+    "method": "post",
+    "path": "/api/v1/inventory/counts/{sessionId}/submit",
+    "displayName": "Submit a cycle count session",
+    "summary": "Submit a cycle count session",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_purchaseorders",
+    "method": "get",
+    "path": "/api/v1/inventory/purchase-orders",
+    "displayName": "List purchase orders",
+    "summary": "List purchase orders",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_purchaseorders_poid",
+    "method": "get",
+    "path": "/api/v1/inventory/purchase-orders/{poId}",
+    "displayName": "Get a purchase order",
+    "summary": "Get a purchase order",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "poId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_purchaseorders_poid_lines_lineid_receive",
+    "method": "post",
+    "path": "/api/v1/inventory/purchase-orders/{poId}/lines/{lineId}/receive",
+    "displayName": "Receive a purchase-order line",
+    "summary": "Receive a purchase-order line",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "poId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "lineId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_transfers",
+    "method": "get",
+    "path": "/api/v1/inventory/transfers",
+    "displayName": "List stock transfers",
+    "summary": "List stock transfers",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_transfers_transferid_receive",
+    "method": "post",
+    "path": "/api/v1/inventory/transfers/{transferId}/receive",
+    "displayName": "Receive a stock transfer",
+    "summary": "Receive a stock transfer",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "transferId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_mobile_me_capabilities",
+    "method": "get",
+    "path": "/api/v1/mobile/me/capabilities",
+    "displayName": "Get current mobile feature capabilities",
+    "summary": "Get current mobile feature capabilities",
+    "description": "Returns tenant-product and RBAC-derived mobile feature availability for the authenticated API-key user.",
+    "tags": [
+      "Mobile v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "features": {
+              "type": "object",
+              "properties": {
+                "inventory": {
+                  "type": "boolean"
+                },
+                "opportunities": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "inventory",
+                "opportunities"
+              ]
+            }
+          },
+          "required": [
+            "features"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "post-_api_v1_featureaccess",
     "method": "post",
     "path": "/api/v1/feature-access",
@@ -51632,110 +58129,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "post-_api_extbundles_abort",
-    "method": "post",
-    "path": "/api/ext-bundles/abort",
-    "displayName": "Abort extension bundle upload (route inventory only)",
-    "summary": "Abort extension bundle upload (route inventory only)",
-    "description": "This operation is currently present only in generated EE route inventory. No corresponding handler file exists in this worktree for the listed path. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; otherwise Next.js returns not-found for the absent handler.",
-    "tags": [
-      "EE Inventory-Only Routes"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_extbundles_finalize",
-    "method": "post",
-    "path": "/api/ext-bundles/finalize",
-    "displayName": "Finalize extension bundle upload (route inventory only)",
-    "summary": "Finalize extension bundle upload (route inventory only)",
-    "description": "This operation is currently present only in generated EE route inventory. No corresponding handler file exists in this worktree for the listed path. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; otherwise Next.js returns not-found for the absent handler.",
-    "tags": [
-      "EE Inventory-Only Routes"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_extbundles_uploadproxy",
-    "method": "post",
-    "path": "/api/ext-bundles/upload-proxy",
-    "displayName": "Upload extension bundle chunk (route inventory only)",
-    "summary": "Upload extension bundle chunk (route inventory only)",
-    "description": "This operation is currently present only in generated EE route inventory. No corresponding handler file exists in this worktree for the listed path. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; otherwise Next.js returns not-found for the absent handler.",
-    "tags": [
-      "EE Inventory-Only Routes"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_extensions_installinfo",
-    "method": "get",
-    "path": "/api/extensions/install-info",
-    "displayName": "Get extension install info (route inventory only)",
-    "summary": "Get extension install info (route inventory only)",
-    "description": "This operation is currently present only in generated EE route inventory. No corresponding handler file exists in this worktree for the listed path. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; otherwise Next.js returns not-found for the absent handler.",
-    "tags": [
-      "EE Inventory-Only Routes"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_extensions_registrydbcheck",
-    "method": "get",
-    "path": "/api/extensions/registry-db-check",
-    "displayName": "Check extension registry DB state (route inventory only)",
-    "summary": "Check extension registry DB state (route inventory only)",
-    "description": "This operation is currently present only in generated EE route inventory. No corresponding handler file exists in this worktree for the listed path. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; otherwise Next.js returns not-found for the absent handler.",
-    "tags": [
-      "EE Inventory-Only Routes"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_extensions_reprovision",
-    "method": "post",
-    "path": "/api/extensions/reprovision",
-    "displayName": "Reprovision extensions (route inventory only)",
-    "summary": "Reprovision extensions (route inventory only)",
-    "description": "This operation is currently present only in generated EE route inventory. No corresponding handler file exists in this worktree for the listed path. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; otherwise Next.js returns not-found for the absent handler.",
-    "tags": [
-      "EE Inventory-Only Routes"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_provisioning_tenants",
-    "method": "post",
-    "path": "/api/provisioning/tenants",
-    "displayName": "Provision tenant (route inventory only)",
-    "summary": "Provision tenant (route inventory only)",
-    "description": "This operation is currently present only in generated EE route inventory. No corresponding handler file exists in this worktree for the listed path. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; otherwise Next.js returns not-found for the absent handler.",
-    "tags": [
-      "EE Inventory-Only Routes"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "post-_api_v1_auth_verify",
-    "method": "post",
-    "path": "/api/v1/auth/verify",
-    "displayName": "Verify auth token (route inventory only)",
-    "summary": "Verify auth token (route inventory only)",
-    "description": "This operation is currently present only in generated EE route inventory. No corresponding handler file exists in this worktree for the listed path. Runtime behavior is middleware-dependent: missing/invalid x-api-key can return 401 before routing; otherwise Next.js returns not-found for the absent handler.",
-    "tags": [
-      "EE Inventory-Only Routes"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
     "id": "get-_api_extensions_softwareone_agreements",
     "method": "get",
     "path": "/api/extensions/softwareone/agreements",
@@ -52587,3487 +58980,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
-    "id": "post-_api_accounting_csv_export",
-    "method": "post",
-    "path": "/api/accounting/csv/export",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_csv_import_tax",
-    "method": "post",
-    "path": "/api/accounting/csv/import/tax",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_accounting_csv_import_tax_history",
-    "method": "get",
-    "path": "/api/accounting/csv/import/tax/history",
-    "displayName": "GET accounting",
-    "summary": "GET accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_csv_import_tax_rollback_importid",
-    "method": "post",
-    "path": "/api/accounting/csv/import/tax/rollback/{importId}",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "importId",
-        "in": "path",
-        "required": true,
-        "description": "ImportId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_accounting_csv_import_tax_template",
-    "method": "get",
-    "path": "/api/accounting/csv/import/tax/template",
-    "displayName": "GET accounting",
-    "summary": "GET accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_accounting_exports",
-    "method": "get",
-    "path": "/api/accounting/exports",
-    "displayName": "GET accounting",
-    "summary": "GET accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_exports",
-    "method": "post",
-    "path": "/api/accounting/exports",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_exports_locks_invoice_reset",
-    "method": "post",
-    "path": "/api/accounting/exports/locks/invoice/reset",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_exports_preview",
-    "method": "post",
-    "path": "/api/accounting/exports/preview",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_accounting_exports_batchid",
-    "method": "get",
-    "path": "/api/accounting/exports/{batchId}",
-    "displayName": "GET accounting",
-    "summary": "GET accounting",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "batchId",
-        "in": "path",
-        "required": true,
-        "description": "BatchId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "patch-_api_accounting_exports_batchid",
-    "method": "patch",
-    "path": "/api/accounting/exports/{batchId}",
-    "displayName": "PATCH accounting",
-    "summary": "PATCH accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "batchId",
-        "in": "path",
-        "required": true,
-        "description": "BatchId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_exports_batchid_download",
-    "method": "post",
-    "path": "/api/accounting/exports/{batchId}/download",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "batchId",
-        "in": "path",
-        "required": true,
-        "description": "BatchId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_exports_batchid_errors",
-    "method": "post",
-    "path": "/api/accounting/exports/{batchId}/errors",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "batchId",
-        "in": "path",
-        "required": true,
-        "description": "BatchId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_exports_batchid_execute",
-    "method": "post",
-    "path": "/api/accounting/exports/{batchId}/execute",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "batchId",
-        "in": "path",
-        "required": true,
-        "description": "BatchId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_accounting_exports_batchid_lines",
-    "method": "post",
-    "path": "/api/accounting/exports/{batchId}/lines",
-    "displayName": "POST accounting",
-    "summary": "POST accounting",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "accounting"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "batchId",
-        "in": "path",
-        "required": true,
-        "description": "BatchId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_auth_e2e_google_authorize",
-    "method": "get",
-    "path": "/api/auth/e2e/google/authorize",
-    "displayName": "GET auth",
-    "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_auth_e2e_google_complete",
-    "method": "get",
-    "path": "/api/auth/e2e/google/complete",
-    "displayName": "GET auth",
-    "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_auth_e2e_google_token",
-    "method": "post",
-    "path": "/api/auth/e2e/google/token",
-    "displayName": "POST auth",
-    "summary": "POST auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_auth_e2e_google_userinfo",
-    "method": "get",
-    "path": "/api/auth/e2e/google/userinfo",
-    "displayName": "GET auth",
-    "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_auth_google_calendar_callback",
-    "method": "get",
-    "path": "/api/auth/google/calendar/callback",
-    "displayName": "GET auth",
-    "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_auth_microsoft_calendar_callback",
-    "method": "get",
-    "path": "/api/auth/microsoft/calendar/callback",
-    "displayName": "GET auth",
-    "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_auth_microsoft_entra_callback",
-    "method": "get",
-    "path": "/api/auth/microsoft/entra/callback",
-    "displayName": "GET auth",
-    "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_auth_msp_rememberemail",
-    "method": "post",
-    "path": "/api/auth/msp/remember-email",
-    "displayName": "POST auth",
-    "summary": "POST auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_auth_msp_sso_discover",
-    "method": "post",
-    "path": "/api/auth/msp/sso/discover",
-    "displayName": "POST auth",
-    "summary": "POST auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_auth_msp_sso_resolve",
-    "method": "post",
-    "path": "/api/auth/msp/sso/resolve",
-    "displayName": "POST auth",
-    "summary": "POST auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_auth_sessions",
-    "method": "get",
-    "path": "/api/auth/sessions",
-    "displayName": "GET auth",
-    "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_auth_sessions",
-    "method": "delete",
-    "path": "/api/auth/sessions",
-    "displayName": "DELETE auth",
-    "summary": "DELETE auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_auth_sessions_all",
-    "method": "get",
-    "path": "/api/auth/sessions/all",
-    "displayName": "GET auth",
-    "summary": "GET auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_auth_sessions_sessionid",
-    "method": "delete",
-    "path": "/api/auth/sessions/{sessionId}",
-    "displayName": "DELETE auth",
-    "summary": "DELETE auth",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "auth"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "sessionId",
-        "in": "path",
-        "required": true,
-        "description": "SessionId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_billing_checktenant",
-    "method": "get",
-    "path": "/api/billing/check-tenant",
-    "displayName": "GET billing",
-    "summary": "GET billing",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "billing"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_calendar_appointment_id",
-    "method": "get",
-    "path": "/api/calendar/appointment/{id}",
-    "displayName": "GET calendar",
-    "summary": "GET calendar",
-    "tags": [
-      "calendar"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_calendar_webhooks_google",
-    "method": "get",
-    "path": "/api/calendar/webhooks/google",
-    "displayName": "GET calendar",
-    "summary": "GET calendar",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "calendar"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_calendar_webhooks_google",
-    "method": "post",
-    "path": "/api/calendar/webhooks/google",
-    "displayName": "POST calendar",
-    "summary": "POST calendar",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "calendar"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_calendar_webhooks_microsoft",
-    "method": "get",
-    "path": "/api/calendar/webhooks/microsoft",
-    "displayName": "GET calendar",
-    "summary": "GET calendar",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "calendar"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_calendar_webhooks_microsoft",
-    "method": "post",
-    "path": "/api/calendar/webhooks/microsoft",
-    "displayName": "POST calendar",
-    "summary": "POST calendar",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "calendar"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_chat_v1_completions",
-    "method": "post",
-    "path": "/api/chat/v1/completions",
-    "displayName": "POST chat",
-    "summary": "POST chat",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "chat"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_chat_v1_completions_stream",
-    "method": "post",
-    "path": "/api/chat/v1/completions/stream",
-    "displayName": "POST chat",
-    "summary": "POST chat",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "chat"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_chat_v1_execute",
-    "method": "post",
-    "path": "/api/chat/v1/execute",
-    "displayName": "POST chat",
-    "summary": "POST chat",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "chat"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_clientportal_domainsession",
-    "method": "post",
-    "path": "/api/client-portal/domain-session",
-    "displayName": "POST client-portal",
-    "summary": "POST client-portal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "client-portal"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_clients",
-    "method": "get",
-    "path": "/api/clients",
-    "displayName": "GET clients",
-    "summary": "GET clients",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "clients"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_documents_documentid_content",
-    "method": "get",
-    "path": "/api/documents/{documentId}/content",
-    "displayName": "GET documents",
-    "summary": "GET documents",
-    "tags": [
-      "documents"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "documentId",
-        "in": "path",
-        "required": true,
-        "description": "DocumentId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_documents_documentid_preview",
-    "method": "get",
-    "path": "/api/documents/{documentId}/preview",
-    "displayName": "GET documents",
-    "summary": "GET documents",
-    "tags": [
-      "documents"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "documentId",
-        "in": "path",
-        "required": true,
-        "description": "DocumentId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_documents_documentid_thumbnail",
-    "method": "get",
-    "path": "/api/documents/{documentId}/thumbnail",
-    "displayName": "GET documents",
-    "summary": "GET documents",
-    "tags": [
-      "documents"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "documentId",
-        "in": "path",
-        "required": true,
-        "description": "DocumentId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_email_imap_reconnect",
-    "method": "post",
-    "path": "/api/email/imap/reconnect",
-    "displayName": "POST email",
-    "summary": "POST email",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "email"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_email_imap_resync",
-    "method": "post",
-    "path": "/api/email/imap/resync",
-    "displayName": "POST email",
-    "summary": "POST email",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "email"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_email_oauth_imap_callback",
-    "method": "get",
-    "path": "/api/email/oauth/imap/callback",
-    "displayName": "GET email",
-    "summary": "GET email",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "email"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_email_oauth_imap_initiate",
-    "method": "post",
-    "path": "/api/email/oauth/imap/initiate",
-    "displayName": "POST email",
-    "summary": "POST email",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "email"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_email_webhooks_imap",
-    "method": "post",
-    "path": "/api/email/webhooks/imap",
-    "displayName": "POST email",
-    "summary": "POST email",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "email"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_email_webhooks_resend",
-    "method": "post",
-    "path": "/api/email/webhooks/resend",
-    "displayName": "POST email",
-    "summary": "POST email",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "email"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_extdebug_stream",
-    "method": "get",
-    "path": "/api/ext-debug/stream",
-    "displayName": "GET ext-debug",
-    "summary": "GET ext-debug",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-debug"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_extdebug_stream",
-    "method": "post",
-    "path": "/api/ext-debug/stream",
-    "displayName": "POST ext-debug",
-    "summary": "POST ext-debug",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-debug"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_extproxy_extensionid_path",
-    "method": "get",
-    "path": "/api/ext-proxy/{extensionId}/{path}",
-    "displayName": "GET ext-proxy",
-    "summary": "GET ext-proxy",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-proxy"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "extensionId",
-        "in": "path",
-        "required": true,
-        "description": "ExtensionId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "path",
-        "in": "path",
-        "required": true,
-        "description": "Path path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_extproxy_extensionid_path",
-    "method": "post",
-    "path": "/api/ext-proxy/{extensionId}/{path}",
-    "displayName": "POST ext-proxy",
-    "summary": "POST ext-proxy",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-proxy"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "extensionId",
-        "in": "path",
-        "required": true,
-        "description": "ExtensionId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "path",
-        "in": "path",
-        "required": true,
-        "description": "Path path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_extproxy_extensionid_path",
-    "method": "put",
-    "path": "/api/ext-proxy/{extensionId}/{path}",
-    "displayName": "PUT ext-proxy",
-    "summary": "PUT ext-proxy",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-proxy"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "extensionId",
-        "in": "path",
-        "required": true,
-        "description": "ExtensionId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "path",
-        "in": "path",
-        "required": true,
-        "description": "Path path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "patch-_api_extproxy_extensionid_path",
-    "method": "patch",
-    "path": "/api/ext-proxy/{extensionId}/{path}",
-    "displayName": "PATCH ext-proxy",
-    "summary": "PATCH ext-proxy",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-proxy"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "extensionId",
-        "in": "path",
-        "required": true,
-        "description": "ExtensionId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "path",
-        "in": "path",
-        "required": true,
-        "description": "Path path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_extproxy_extensionid_path",
-    "method": "delete",
-    "path": "/api/ext-proxy/{extensionId}/{path}",
-    "displayName": "DELETE ext-proxy",
-    "summary": "DELETE ext-proxy",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-proxy"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "extensionId",
-        "in": "path",
-        "required": true,
-        "description": "ExtensionId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "path",
-        "in": "path",
-        "required": true,
-        "description": "Path path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_import_approve",
-    "method": "post",
-    "path": "/api/import/approve",
-    "displayName": "POST import",
-    "summary": "POST import",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "import"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_import_details",
-    "method": "get",
-    "path": "/api/import/details",
-    "displayName": "GET import",
-    "summary": "GET import",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "import"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_import_history",
-    "method": "get",
-    "path": "/api/import/history",
-    "displayName": "GET import",
-    "summary": "GET import",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "import"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_import_mapping",
-    "method": "get",
-    "path": "/api/import/mapping",
-    "displayName": "GET import",
-    "summary": "GET import",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "import"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_import_preview",
-    "method": "post",
-    "path": "/api/import/preview",
-    "displayName": "POST import",
-    "summary": "POST import",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "import"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_import_sources",
-    "method": "get",
-    "path": "/api/import/sources",
-    "displayName": "GET import",
-    "summary": "GET import",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "import"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_integrations_entra",
-    "method": "get",
-    "path": "/api/integrations/entra",
-    "displayName": "GET integrations",
-    "summary": "GET integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_connect",
-    "method": "post",
-    "path": "/api/integrations/entra/connect",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_disconnect",
-    "method": "post",
-    "path": "/api/integrations/entra/disconnect",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_discovery",
-    "method": "post",
-    "path": "/api/integrations/entra/discovery",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_mappings_confirm",
-    "method": "post",
-    "path": "/api/integrations/entra/mappings/confirm",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_integrations_entra_mappings_preview",
-    "method": "get",
-    "path": "/api/integrations/entra/mappings/preview",
-    "displayName": "GET integrations",
-    "summary": "GET integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_mappings_remap",
-    "method": "post",
-    "path": "/api/integrations/entra/mappings/remap",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_mappings_unmap",
-    "method": "post",
-    "path": "/api/integrations/entra/mappings/unmap",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_sync",
-    "method": "post",
-    "path": "/api/integrations/entra/sync",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_integrations_entra_sync_runs",
-    "method": "get",
-    "path": "/api/integrations/entra/sync/runs",
-    "displayName": "GET integrations",
-    "summary": "GET integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_integrations_entra_sync_runs_runid",
-    "method": "get",
-    "path": "/api/integrations/entra/sync/runs/{runId}",
-    "displayName": "GET integrations",
-    "summary": "GET integrations",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "runId",
-        "in": "path",
-        "required": true,
-        "description": "RunId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_validatecipp",
-    "method": "post",
-    "path": "/api/integrations/entra/validate-cipp",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_validatedirect",
-    "method": "post",
-    "path": "/api/integrations/entra/validate-direct",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_integrations_ninjaone_callback",
-    "method": "get",
-    "path": "/api/integrations/ninjaone/callback",
-    "displayName": "GET integrations",
-    "summary": "GET integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_integrations_xero_callback",
-    "method": "get",
-    "path": "/api/integrations/xero/callback",
-    "displayName": "GET integrations",
-    "summary": "GET integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_integrations_xero_connect",
-    "method": "get",
-    "path": "/api/integrations/xero/connect",
-    "displayName": "GET integrations",
-    "summary": "GET integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_internal_checktenantemail",
-    "method": "post",
-    "path": "/api/internal/check-tenant-email",
-    "displayName": "POST internal",
-    "summary": "POST internal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "internal"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_internal_collab_persist",
-    "method": "post",
-    "path": "/api/internal/collab/persist",
-    "displayName": "POST internal",
-    "summary": "POST internal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "internal"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_internal_extclients_install_installid",
-    "method": "post",
-    "path": "/api/internal/ext-clients/install/{installId}",
-    "displayName": "POST internal",
-    "summary": "POST internal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "internal"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_internal_extinvoicing_install_installid",
-    "method": "post",
-    "path": "/api/internal/ext-invoicing/install/{installId}",
-    "displayName": "POST internal",
-    "summary": "POST internal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "internal"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_internal_extrunner_installconfig",
-    "method": "post",
-    "path": "/api/internal/ext-runner/install-config",
-    "displayName": "POST internal",
-    "summary": "POST internal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "internal"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_internal_extscheduler_install_installid",
-    "method": "post",
-    "path": "/api/internal/ext-scheduler/install/{installId}",
-    "displayName": "POST internal",
-    "summary": "POST internal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "internal"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_internal_extservices_install_installid",
-    "method": "post",
-    "path": "/api/internal/ext-services/install/{installId}",
-    "displayName": "POST internal",
-    "summary": "POST internal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "internal"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_internal_extstorage_install_installid",
-    "method": "post",
-    "path": "/api/internal/ext-storage/install/{installId}",
-    "displayName": "POST internal",
-    "summary": "POST internal",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "internal"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_onlinemeetings_recordings_artifactid",
-    "method": "get",
-    "path": "/api/online-meetings/recordings/{artifactId}",
-    "displayName": "GET online-meetings",
-    "summary": "GET online-meetings",
-    "tags": [
-      "online-meetings"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "artifactId",
-        "in": "path",
-        "required": true,
-        "description": "ArtifactId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_public_appointmentrequest",
-    "method": "post",
-    "path": "/api/public/appointment-request",
-    "displayName": "POST public",
-    "summary": "POST public",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "public"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_public_appointmentrequest_availabledates",
-    "method": "get",
-    "path": "/api/public/appointment-request/available-dates",
-    "displayName": "GET public",
-    "summary": "GET public",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "public"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_public_appointmentrequest_availableservices",
-    "method": "get",
-    "path": "/api/public/appointment-request/available-services",
-    "displayName": "GET public",
-    "summary": "GET public",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "public"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_public_appointmentrequest_availableslots",
-    "method": "get",
-    "path": "/api/public/appointment-request/available-slots",
-    "displayName": "GET public",
-    "summary": "GET public",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "public"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_secrets",
-    "method": "get",
-    "path": "/api/secrets",
-    "displayName": "GET secrets",
-    "summary": "GET secrets",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "secrets"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_secrets",
-    "method": "post",
-    "path": "/api/secrets",
-    "displayName": "POST secrets",
-    "summary": "POST secrets",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "secrets"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_secrets_name",
-    "method": "get",
-    "path": "/api/secrets/{name}",
-    "displayName": "GET secrets",
-    "summary": "GET secrets",
-    "tags": [
-      "secrets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "Name path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "patch-_api_secrets_name",
-    "method": "patch",
-    "path": "/api/secrets/{name}",
-    "displayName": "PATCH secrets",
-    "summary": "PATCH secrets",
-    "tags": [
-      "secrets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "Name path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_secrets_name",
-    "method": "delete",
-    "path": "/api/secrets/{name}",
-    "displayName": "DELETE secrets",
-    "summary": "DELETE secrets",
-    "tags": [
-      "secrets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "Name path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_share_token",
-    "method": "get",
-    "path": "/api/share/{token}",
-    "displayName": "GET share",
-    "summary": "GET share",
-    "tags": [
-      "share"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "token",
-        "in": "path",
-        "required": true,
-        "description": "Token path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_share_token_info",
-    "method": "get",
-    "path": "/api/share/{token}/info",
-    "displayName": "GET share",
-    "summary": "GET share",
-    "tags": [
-      "share"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "token",
-        "in": "path",
-        "required": true,
-        "description": "Token path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_teams_auth_callback_bot",
-    "method": "get",
-    "path": "/api/teams/auth/callback/bot",
-    "displayName": "GET teams",
-    "summary": "GET teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_teams_auth_callback_messageextension",
-    "method": "get",
-    "path": "/api/teams/auth/callback/message-extension",
-    "displayName": "GET teams",
-    "summary": "GET teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_teams_auth_callback_tab",
-    "method": "get",
-    "path": "/api/teams/auth/callback/tab",
-    "displayName": "GET teams",
-    "summary": "GET teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_teams_bot_messages",
-    "method": "post",
-    "path": "/api/teams/bot/messages",
-    "displayName": "POST teams",
-    "summary": "POST teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_teams_messageextension_query",
-    "method": "post",
-    "path": "/api/teams/message-extension/query",
-    "displayName": "POST teams",
-    "summary": "POST teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_teams_package",
-    "method": "get",
-    "path": "/api/teams/package",
-    "displayName": "GET teams",
-    "summary": "GET teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_teams_package",
-    "method": "post",
-    "path": "/api/teams/package",
-    "displayName": "POST teams",
-    "summary": "POST teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_teams_package_download",
-    "method": "get",
-    "path": "/api/teams/package/download",
-    "displayName": "GET teams",
-    "summary": "GET teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_teams_quickactions",
-    "method": "post",
-    "path": "/api/teams/quick-actions",
-    "displayName": "POST teams",
-    "summary": "POST teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_teams_webhooks_recordings",
-    "method": "get",
-    "path": "/api/teams/webhooks/recordings",
-    "displayName": "GET teams",
-    "summary": "GET teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_teams_webhooks_recordings",
-    "method": "post",
-    "path": "/api/teams/webhooks/recordings",
-    "displayName": "POST teams",
-    "summary": "POST teams",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "teams"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_tickets_id_livetoken",
-    "method": "get",
-    "path": "/api/tickets/{id}/live-token",
-    "displayName": "GET tickets",
-    "summary": "GET tickets",
-    "tags": [
-      "tickets"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Resource identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_account_delete",
-    "method": "post",
-    "path": "/api/v1/mobile/account/delete",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_auth_apple",
-    "method": "post",
-    "path": "/api/v1/mobile/auth/apple",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_mobile_auth_apple_link",
-    "method": "get",
-    "path": "/api/v1/mobile/auth/apple/link",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_auth_apple_link",
-    "method": "post",
-    "path": "/api/v1/mobile/auth/apple/link",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_mobile_auth_apple_link",
-    "method": "delete",
-    "path": "/api/v1/mobile/auth/apple/link",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_auth_apple_notifications",
-    "method": "post",
-    "path": "/api/v1/mobile/auth/apple/notifications",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_mobile_auth_capabilities",
-    "method": "get",
-    "path": "/api/v1/mobile/auth/capabilities",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_auth_exchange",
-    "method": "post",
-    "path": "/api/v1/mobile/auth/exchange",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_auth_refresh",
-    "method": "post",
-    "path": "/api/v1/mobile/auth/refresh",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_auth_revoke",
-    "method": "post",
-    "path": "/api/v1/mobile/auth/revoke",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_iap_checkemail",
-    "method": "post",
-    "path": "/api/v1/mobile/iap/check-email",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_iap_notifications",
-    "method": "post",
-    "path": "/api/v1/mobile/iap/notifications",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_iap_provision",
-    "method": "post",
-    "path": "/api/v1/mobile/iap/provision",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_iap_restore",
-    "method": "post",
-    "path": "/api/v1/mobile/iap/restore",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_mobile_moderation_mutes",
-    "method": "get",
-    "path": "/api/v1/mobile/moderation/mutes",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_moderation_mutes",
-    "method": "post",
-    "path": "/api/v1/mobile/moderation/mutes",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_mobile_moderation_mutes_userid",
-    "method": "delete",
-    "path": "/api/v1/mobile/moderation/mutes/{userId}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "userId",
-        "in": "path",
-        "required": true,
-        "description": "UserId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_mobile_moderation_report",
-    "method": "post",
-    "path": "/api/v1/mobile/moderation/report",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_v1_mobile_pushtoken",
-    "method": "put",
-    "path": "/api/v1/mobile/push-token",
-    "displayName": "PUT v1",
-    "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_mobile_pushtoken",
-    "method": "delete",
-    "path": "/api/v1/mobile/push-token",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "mobile"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformfeatureflags",
-    "method": "get",
-    "path": "/api/v1/platform-feature-flags",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-feature-flags"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformfeatureflags",
-    "method": "post",
-    "path": "/api/v1/platform-feature-flags",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-feature-flags"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformfeatureflags_flagid",
-    "method": "get",
-    "path": "/api/v1/platform-feature-flags/{flagId}",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "platform-feature-flags"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "flagId",
-        "in": "path",
-        "required": true,
-        "description": "FlagId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformfeatureflags_flagid",
-    "method": "post",
-    "path": "/api/v1/platform-feature-flags/{flagId}",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-feature-flags"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "flagId",
-        "in": "path",
-        "required": true,
-        "description": "FlagId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "patch-_api_v1_platformfeatureflags_flagid",
-    "method": "patch",
-    "path": "/api/v1/platform-feature-flags/{flagId}",
-    "displayName": "PATCH v1",
-    "summary": "PATCH v1",
-    "tags": [
-      "platform-feature-flags"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "flagId",
-        "in": "path",
-        "required": true,
-        "description": "FlagId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_platformfeatureflags_flagid",
-    "method": "delete",
-    "path": "/api/v1/platform-feature-flags/{flagId}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "tags": [
-      "platform-feature-flags"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "flagId",
-        "in": "path",
-        "required": true,
-        "description": "FlagId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformfeatureflags_flagid_tenants",
-    "method": "post",
-    "path": "/api/v1/platform-feature-flags/{flagId}/tenants",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-feature-flags"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "flagId",
-        "in": "path",
-        "required": true,
-        "description": "FlagId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformnotifications",
-    "method": "get",
-    "path": "/api/v1/platform-notifications",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformnotifications",
-    "method": "post",
-    "path": "/api/v1/platform-notifications",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformnotifications_resolverecipients",
-    "method": "post",
-    "path": "/api/v1/platform-notifications/resolve-recipients",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformnotifications_notificationid",
-    "method": "get",
-    "path": "/api/v1/platform-notifications/{notificationId}",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "notificationId",
-        "in": "path",
-        "required": true,
-        "description": "NotificationId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformnotifications_notificationid",
-    "method": "post",
-    "path": "/api/v1/platform-notifications/{notificationId}",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "notificationId",
-        "in": "path",
-        "required": true,
-        "description": "NotificationId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_v1_platformnotifications_notificationid",
-    "method": "put",
-    "path": "/api/v1/platform-notifications/{notificationId}",
-    "displayName": "PUT v1",
-    "summary": "PUT v1",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "notificationId",
-        "in": "path",
-        "required": true,
-        "description": "NotificationId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_platformnotifications_notificationid",
-    "method": "delete",
-    "path": "/api/v1/platform-notifications/{notificationId}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "notificationId",
-        "in": "path",
-        "required": true,
-        "description": "NotificationId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformnotifications_notificationid_reads",
-    "method": "get",
-    "path": "/api/v1/platform-notifications/{notificationId}/reads",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "notificationId",
-        "in": "path",
-        "required": true,
-        "description": "NotificationId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformnotifications_notificationid_stats",
-    "method": "get",
-    "path": "/api/v1/platform-notifications/{notificationId}/stats",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "platform-notifications"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "notificationId",
-        "in": "path",
-        "required": true,
-        "description": "NotificationId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformreports",
-    "method": "get",
-    "path": "/api/v1/platform-reports",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformreports",
-    "method": "post",
-    "path": "/api/v1/platform-reports",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformreports_access",
-    "method": "post",
-    "path": "/api/v1/platform-reports/access",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformreports_audit",
-    "method": "get",
-    "path": "/api/v1/platform-reports/audit",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformreports_schema",
-    "method": "get",
-    "path": "/api/v1/platform-reports/schema",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_platformreports_reportid",
-    "method": "get",
-    "path": "/api/v1/platform-reports/{reportId}",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "reportId",
-        "in": "path",
-        "required": true,
-        "description": "ReportId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformreports_reportid",
-    "method": "post",
-    "path": "/api/v1/platform-reports/{reportId}",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "reportId",
-        "in": "path",
-        "required": true,
-        "description": "ReportId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_v1_platformreports_reportid",
-    "method": "put",
-    "path": "/api/v1/platform-reports/{reportId}",
-    "displayName": "PUT v1",
-    "summary": "PUT v1",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "reportId",
-        "in": "path",
-        "required": true,
-        "description": "ReportId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_platformreports_reportid",
-    "method": "delete",
-    "path": "/api/v1/platform-reports/{reportId}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "reportId",
-        "in": "path",
-        "required": true,
-        "description": "ReportId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_platformreports_reportid_execute",
-    "method": "post",
-    "path": "/api/v1/platform-reports/{reportId}/execute",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "platform-reports"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "reportId",
-        "in": "path",
-        "required": true,
-        "description": "ReportId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
     "id": "get-_api_v1_storage_namespaces_namespace_records",
     "method": "get",
     "path": "/api/v1/storage/namespaces/{namespace}/records",
@@ -56268,981 +59180,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ]
-  },
-  {
-    "id": "delete-_api_v1_storage_namespaces_namespace_records_key",
-    "method": "delete",
-    "path": "/api/v1/storage/namespaces/{namespace}/records/{key}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "description": "Namespace path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "description": "Key path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tenantmanagement_addons",
-    "method": "get",
-    "path": "/api/v1/tenant-management/addons",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tenantmanagement_audit",
-    "method": "get",
-    "path": "/api/v1/tenant-management/audit",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_confirmdeletion",
-    "method": "post",
-    "path": "/api/v1/tenant-management/confirm-deletion",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_createtenant",
-    "method": "post",
-    "path": "/api/v1/tenant-management/create-tenant",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_exporttenant",
-    "method": "post",
-    "path": "/api/v1/tenant-management/export-tenant",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tenantmanagement_exports",
-    "method": "get",
-    "path": "/api/v1/tenant-management/exports",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_exports_exportid_downloadurl",
-    "method": "post",
-    "path": "/api/v1/tenant-management/exports/{exportId}/download-url",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "exportId",
-        "in": "path",
-        "required": true,
-        "description": "ExportId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tenantmanagement_pendingdeletions",
-    "method": "get",
-    "path": "/api/v1/tenant-management/pending-deletions",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_resendwelcomeemail",
-    "method": "post",
-    "path": "/api/v1/tenant-management/resend-welcome-email",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_rollbackdeletion",
-    "method": "post",
-    "path": "/api/v1/tenant-management/rollback-deletion",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_startdeletion",
-    "method": "post",
-    "path": "/api/v1/tenant-management/start-deletion",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_startpremiumtrial",
-    "method": "post",
-    "path": "/api/v1/tenant-management/start-premium-trial",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tenantmanagement_tenants",
-    "method": "get",
-    "path": "/api/v1/tenant-management/tenants",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_tenantmanagement_tenants_tenantid_addons",
-    "method": "post",
-    "path": "/api/v1/tenant-management/tenants/{tenantId}/addons",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "tenantId",
-        "in": "path",
-        "required": true,
-        "description": "TenantId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_webhooks_ninjaone",
-    "method": "get",
-    "path": "/api/webhooks/ninjaone",
-    "displayName": "GET webhooks",
-    "summary": "GET webhooks",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "webhooks"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_webhooks_ninjaone",
-    "method": "post",
-    "path": "/api/webhooks/ninjaone",
-    "displayName": "POST webhooks",
-    "summary": "POST webhooks",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "webhooks"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_webhooks_stripe",
-    "method": "post",
-    "path": "/api/webhooks/stripe",
-    "displayName": "POST webhooks",
-    "summary": "POST webhooks",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "webhooks"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_webhooks_stripe_payments",
-    "method": "post",
-    "path": "/api/webhooks/stripe/payments",
-    "displayName": "POST webhooks",
-    "summary": "POST webhooks",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "webhooks"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_webhooks_tacticalrmm",
-    "method": "post",
-    "path": "/api/webhooks/tacticalrmm",
-    "displayName": "POST webhooks",
-    "summary": "POST webhooks",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "webhooks"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_extstorage_install_installid_namespace_records",
-    "method": "get",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records",
-    "displayName": "GET ext-storage",
-    "summary": "GET ext-storage",
-    "tags": [
-      "ext-storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "description": "Namespace path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_extstorage_install_installid_namespace_records",
-    "method": "post",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records",
-    "displayName": "POST ext-storage",
-    "summary": "POST ext-storage",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "description": "Namespace path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_extstorage_install_installid_namespace_records_key",
-    "method": "get",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records/{key}",
-    "displayName": "GET ext-storage",
-    "summary": "GET ext-storage",
-    "tags": [
-      "ext-storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "description": "Namespace path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "description": "Key path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_extstorage_install_installid_namespace_records_key",
-    "method": "put",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records/{key}",
-    "displayName": "PUT ext-storage",
-    "summary": "PUT ext-storage",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "description": "Namespace path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "description": "Key path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_extstorage_install_installid_namespace_records_key",
-    "method": "delete",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records/{key}",
-    "displayName": "DELETE ext-storage",
-    "summary": "DELETE ext-storage",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "ext-storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "description": "InstallId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "description": "Namespace path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "description": "Key path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_extensions_registryid_endpoints",
-    "method": "get",
-    "path": "/api/extensions/{registryId}/endpoints",
-    "displayName": "GET extensions",
-    "summary": "GET extensions",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "registryId",
-        "in": "path",
-        "required": true,
-        "description": "RegistryId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_extensions_registryid_schedules",
-    "method": "get",
-    "path": "/api/extensions/{registryId}/schedules",
-    "displayName": "GET extensions",
-    "summary": "GET extensions",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "registryId",
-        "in": "path",
-        "required": true,
-        "description": "RegistryId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_extensions_registryid_schedules",
-    "method": "post",
-    "path": "/api/extensions/{registryId}/schedules",
-    "displayName": "POST extensions",
-    "summary": "POST extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "registryId",
-        "in": "path",
-        "required": true,
-        "description": "RegistryId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_extensions_registryid_schedules_scheduleid",
-    "method": "get",
-    "path": "/api/extensions/{registryId}/schedules/{scheduleId}",
-    "displayName": "GET extensions",
-    "summary": "GET extensions",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "registryId",
-        "in": "path",
-        "required": true,
-        "description": "RegistryId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "scheduleId",
-        "in": "path",
-        "required": true,
-        "description": "ScheduleId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "patch-_api_extensions_registryid_schedules_scheduleid",
-    "method": "patch",
-    "path": "/api/extensions/{registryId}/schedules/{scheduleId}",
-    "displayName": "PATCH extensions",
-    "summary": "PATCH extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "registryId",
-        "in": "path",
-        "required": true,
-        "description": "RegistryId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "scheduleId",
-        "in": "path",
-        "required": true,
-        "description": "ScheduleId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_extensions_registryid_schedules_scheduleid",
-    "method": "delete",
-    "path": "/api/extensions/{registryId}/schedules/{scheduleId}",
-    "displayName": "DELETE extensions",
-    "summary": "DELETE extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "registryId",
-        "in": "path",
-        "required": true,
-        "description": "RegistryId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "scheduleId",
-        "in": "path",
-        "required": true,
-        "description": "ScheduleId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_extensions_registryid_schedules_scheduleid_runnow",
-    "method": "post",
-    "path": "/api/extensions/{registryId}/schedules/{scheduleId}/run-now",
-    "displayName": "POST extensions",
-    "summary": "POST extensions",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "registryId",
-        "in": "path",
-        "required": true,
-        "description": "RegistryId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "scheduleId",
-        "in": "path",
-        "required": true,
-        "description": "ScheduleId path parameter.",
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_integrations_entra_reconciliationqueue",
-    "method": "get",
-    "path": "/api/integrations/entra/reconciliation-queue",
-    "displayName": "GET integrations",
-    "summary": "GET integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_reconciliationqueue_resolveexisting",
-    "method": "post",
-    "path": "/api/integrations/entra/reconciliation-queue/resolve-existing",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_integrations_entra_reconciliationqueue_resolvenew",
-    "method": "post",
-    "path": "/api/integrations/entra/reconciliation-queue/resolve-new",
-    "displayName": "POST integrations",
-    "summary": "POST integrations",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "integrations"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "post-_api_v1_extensions_update",
-    "method": "post",
-    "path": "/api/v1/extensions/update",
-    "displayName": "POST v1",
-    "summary": "POST v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "extensions"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tenantmanagement_exportstatus",
-    "method": "get",
-    "path": "/api/v1/tenant-management/export-status",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "tenant-management"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
   }
 ];
 

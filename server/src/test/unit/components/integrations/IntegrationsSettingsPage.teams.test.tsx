@@ -11,6 +11,7 @@ const useFeatureFlagMock = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
 
 // Resolve integration category labels/descriptions against the real msp/settings
@@ -130,7 +131,7 @@ vi.mock('@alga-psa/integrations/components', () => ({
 
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   __esModule: true,
-  EntraIntegrationSettings: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
+  EntraIntegrationSummaryCard: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
 }));
 
 vi.mock('@alga-psa/ee-microsoft-teams/components', () => ({
@@ -205,10 +206,12 @@ describe('IntegrationsSettingsPage Teams placement', () => {
 
     render(<IntegrationsSettingsPage />);
 
-    expect(screen.getByText('Providers Integrations')).toBeInTheDocument();
+    // The simplified Providers tab renders no category heading banner.
+    expect(screen.queryByText('Providers Integrations')).not.toBeInTheDocument();
     expect(screen.getByText('Google Integration Settings')).toBeInTheDocument();
     expect(screen.getByText('Microsoft Integration Settings')).toBeInTheDocument();
-    expect(screen.getByText('MSP SSO Login Domains')).toBeInTheDocument();
+    // MSP SSO login-domain management moved to Settings -> Security (MspSsoAdvancedSection).
+    expect(screen.queryByText('MSP SSO Login Domains')).not.toBeInTheDocument();
     expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
   });
 

@@ -22,7 +22,7 @@ import type { TemplateChecklistItem, TemplateTask, TemplateWizardData } from '..
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import { IUserWithRoles } from '@alga-psa/types';
 import type { ITeam } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
@@ -120,6 +120,10 @@ export function TemplateTasksStep({
     const fetchTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
+        if (isTeamActionError(fetchedTeams)) {
+          console.warn('Cannot load teams for template task assignment:', fetchedTeams);
+          return;
+        }
         setTeams(fetchedTeams);
       } catch (err) {
         console.error('Failed to fetch teams:', err);

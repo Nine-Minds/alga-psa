@@ -19,4 +19,10 @@ describe('addOns', () => {
     expect(tenantHasAddOn([ADD_ONS.TEAMS], ADD_ONS.TEAMS)).toBe(true);
     expect(tenantHasAddOn([ADD_ONS.TEAMS], ADD_ONS.ENTERPRISE)).toBe(false);
   });
+
+  it('T108: the Teams add-on description covers meetings and recording/transcript capture', () => {
+    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TEAMS]).toContain('meetings');
+    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TEAMS]).toContain('recording');
+    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TEAMS]).toContain('transcript');
+  });
 });

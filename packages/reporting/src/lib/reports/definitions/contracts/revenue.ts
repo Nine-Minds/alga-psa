@@ -92,18 +92,14 @@ export const contractRevenueReport: ReportDefinition = {
                 ELSE MAX(ic.net_amount)
               END AS amount_cents,
               COALESCE(MAX(iid.service_period_end)::timestamp, MAX(inv.invoice_date)::timestamp) AS reporting_period_end
-            FROM invoice_charges AS ic
-            JOIN invoices AS inv
+            FROM {{tenant_table:invoice_charges AS ic}}
+            JOIN {{tenant_table:invoices AS inv}}
               ON inv.invoice_id = ic.invoice_id
-             AND inv.tenant = ic.tenant
-            LEFT JOIN invoice_charge_details AS iid
+            LEFT JOIN {{tenant_table:invoice_charge_details AS iid}}
               ON iid.item_id = ic.item_id
-             AND iid.tenant = ic.tenant
-            LEFT JOIN invoice_charge_fixed_details AS iifd
+            LEFT JOIN {{tenant_table:invoice_charge_fixed_details AS iifd}}
               ON iifd.item_detail_id = iid.item_detail_id
-             AND iifd.tenant = iid.tenant
-            WHERE ic.tenant = {{tenant}}
-              AND inv.status IN ('paid', 'completed', 'sent', 'open', 'overdue')
+            WHERE inv.status IN ('paid', 'completed', 'sent', 'open', 'overdue')
               AND ic.client_contract_id IS NOT NULL
             GROUP BY ic.item_id
           ) AS contract_revenue_facts

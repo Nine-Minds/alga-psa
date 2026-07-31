@@ -1,12 +1,16 @@
 'use server';
 
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 type ThemePreference = 'light' | 'dark' | 'system';
 
 function isThemePreference(value: unknown): value is ThemePreference {
   return value === 'light' || value === 'dark' || value === 'system';
+}
+
+function userPreferences(knex: any, tenant: string) {
+  return tenantDb(knex, tenant).table('user_preferences');
 }
 
 export const getThemePreferenceAction = withOptionalAuth(async (
@@ -19,11 +23,10 @@ export const getThemePreferenceAction = withOptionalAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const userPref = await knex('user_preferences')
+  const userPref = await userPreferences(knex, ctx.tenant)
     .where({
       user_id: user.user_id,
       setting_name: 'theme',
-      tenant: ctx.tenant
     })
     .first();
 
@@ -48,27 +51,25 @@ export const updateThemePreferenceAction = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const existing = await knex('user_preferences')
+  const existing = await userPreferences(knex, tenant)
     .where({
       user_id: user.user_id,
       setting_name: 'theme',
-      tenant: tenant
     })
     .first();
 
   if (existing) {
-    await knex('user_preferences')
+    await userPreferences(knex, tenant)
       .where({
         user_id: user.user_id,
         setting_name: 'theme',
-        tenant: tenant
       })
       .update({
         setting_value: JSON.stringify(theme),
         updated_at: knex.fn.now()
       });
   } else {
-    await knex('user_preferences').insert({
+    await userPreferences(knex, tenant).insert({
       user_id: user.user_id,
       tenant: tenant,
       setting_name: 'theme',

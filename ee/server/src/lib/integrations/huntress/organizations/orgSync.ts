@@ -5,6 +5,7 @@
 
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
 import type { HuntressOrganization } from '../../../../interfaces/huntress.interfaces';
 import { findExactNameMatch } from './nameMatch';
 
@@ -26,22 +27,22 @@ export async function syncHuntressOrganizations(
   client: OrgSyncClient
 ): Promise<OrgSyncResult> {
   const organizations = await client.listOrganizations();
+  const db = tenantDb(knex, tenantId);
   let created = 0;
   let updated = 0;
 
   for (const org of organizations) {
     const externalId = String(org.id);
-    const existing = await knex('rmm_organization_mappings')
+    const existing = await db.table('rmm_organization_mappings')
       .where({
-        tenant: tenantId,
         integration_id: integrationId,
         external_organization_id: externalId,
       })
       .first();
 
     if (existing) {
-      await knex('rmm_organization_mappings')
-        .where({ tenant: tenantId, mapping_id: existing.mapping_id })
+      await db.table('rmm_organization_mappings')
+        .where({ mapping_id: existing.mapping_id })
         .update({
           external_organization_name: org.name,
           last_synced_at: knex.fn.now(),
@@ -49,7 +50,7 @@ export async function syncHuntressOrganizations(
         });
       updated += 1;
     } else {
-      await knex('rmm_organization_mappings').insert({
+      await db.table('rmm_organization_mappings').insert({
         tenant: tenantId,
         mapping_id: knex.raw('gen_random_uuid()'),
         integration_id: integrationId,
@@ -82,12 +83,13 @@ async function autoMatchUnmapped(
   tenantId: string,
   integrationId: string
 ): Promise<number> {
-  const clients = await knex('clients')
-    .where({ tenant: tenantId, is_inactive: false })
+  const db = tenantDb(knex, tenantId);
+  const clients = await db.table('clients')
+    .where({ is_inactive: false })
     .select('client_id', 'client_name');
 
-  const unmapped = await knex('rmm_organization_mappings')
-    .where({ tenant: tenantId, integration_id: integrationId })
+  const unmapped = await db.table('rmm_organization_mappings')
+    .where({ integration_id: integrationId })
     .whereNull('client_id')
     .select('mapping_id', 'external_organization_name', 'metadata');
 
@@ -101,8 +103,8 @@ async function autoMatchUnmapped(
       typeof mapping.metadata === 'string'
         ? JSON.parse(mapping.metadata || '{}')
         : mapping.metadata ?? {};
-    await knex('rmm_organization_mappings')
-      .where({ tenant: tenantId, mapping_id: mapping.mapping_id })
+    await db.table('rmm_organization_mappings')
+      .where({ mapping_id: mapping.mapping_id })
       .update({
         client_id: clientId,
         metadata: JSON.stringify({ ...existingMetadata, auto_matched: true }),

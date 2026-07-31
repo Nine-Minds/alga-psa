@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { Knex } from 'knex';
 import { requireExtensionApiAccess } from '../_auth';
 // Classic extension lookups removed; this endpoint expects registryId
+
+const EXTENSION_REGISTRY_GLOBAL_TENANT = '__extension_registry_global__';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,11 +25,13 @@ export async function GET(request: Request) {
     if (!tenant) return NextResponse.json({ error: 'tenant not found' }, { status: 400 });
     trxKnex = knex;
     const adminDb: Knex = await getAdminConnection();
-    const reg = await adminDb('extension_registry').where({ id: registryId }).first(['id']);
+    const reg = await tenantDb(adminDb, EXTENSION_REGISTRY_GLOBAL_TENANT).table('extension_registry')
+      .where({ id: registryId })
+      .first(['id']);
     if (!reg) return NextResponse.json({ error: 'registry not found' }, { status: 404 });
 
-    const install = await adminDb('tenant_extension_install')
-      .where({ tenant_id: tenant, registry_id: registryId })
+    const install = await tenantDb(knex, tenant).table('tenant_extension_install')
+      .where({ registry_id: registryId })
       .first(['id', 'runner_domain', 'runner_status']);
     if (!install) return NextResponse.json({ error: 'install not found' }, { status: 404 });
 

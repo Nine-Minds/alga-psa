@@ -6,12 +6,17 @@ import { marked } from 'marked';
 import { convertBlockContentToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 
 import logger from '@alga-psa/core/logger';
-import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
+import {
+  downloadDocument,
+  getAuthorizedDocumentByFileId,
+  getAuthorizedDocumentById,
+} from '@alga-psa/documents/actions/documentActions';
 import { createPDFGenerationService } from '@alga-psa/billing/services';
-import { StorageService } from 'server/src/lib/storage/StorageService';
-import { withTransaction, runWithTenant } from '@alga-psa/db';
+import { StorageService } from '@alga-psa/storage/StorageService';
+import { tenantDb, withTransaction, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getSession } from '@alga-psa/auth';
+import { getCurrentUser, getSession } from '@alga-psa/auth';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
   const resolvedParams = await params;
@@ -31,8 +36,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
     return NextResponse.json({ error: 'Invalid document ID.' }, { status: 400 });
   }
 
+  const tenant = session.user.tenant;
+
+  // Resolve the full user (roles, contact/client linkage) so the export
+  // branches can apply the same authorization as downloadDocument().
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    logger.warn(`Unable to resolve session user for document download/export. ID: ${resolvedParams.fileId}`);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   // Wrap in runWithTenant to ensure tenant context persists across async boundaries
-  return await runWithTenant(session.user.tenant, async () => {
+  return await runWithTenant(tenant, async () => {
+    // Mirror downloadDocument()'s permission gate for every export format.
+    if (!(await hasPermission(currentUser, 'document', 'read'))) {
+      logger.warn(`User ${currentUser.user_id} lacks document:read permission. ID: ${lookupId}, Tenant: ${tenant}`);
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     // --- Markdown Export Logic ---
     if (format === 'markdown' || format === 'md') {
       logger.info(`Markdown export requested for document ID: ${lookupId}`);
@@ -40,23 +61,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
       try {
         const { knex } = await createTenantKnex();
         const { document, blockRow, textRow } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          const db = tenantDb(trx, tenant);
+          // Authorize through the same path as downloadDocument() (tenant
+          // scoping + relationship/client-visibility rules) before exporting.
           const doc =
-            (await Document.get(trx, lookupId)) ||
-            (await trx('documents')
-              .where({ file_id: lookupId, tenant: session.user.tenant })
-              .first());
+            (await getAuthorizedDocumentById(trx, tenant, currentUser, lookupId)) ||
+            (await getAuthorizedDocumentByFileId(trx, tenant, currentUser, lookupId));
 
-          if (!doc || doc.tenant !== session.user.tenant) {
+          if (!doc) {
             return { document: null, blockRow: null, textRow: null };
           }
 
           const [block, text] = await Promise.all([
-            trx('document_block_content')
-              .where({ document_id: doc.document_id, tenant: session.user.tenant })
+            db.table('document_block_content')
+              .where({ document_id: doc.document_id })
               .select('block_data')
               .first<{ block_data: unknown }>(),
-            trx('document_content')
-              .where({ document_id: doc.document_id, tenant: session.user.tenant })
+            db.table('document_content')
+              .where({ document_id: doc.document_id })
               .select('content')
               .first<{ content: string | null }>(),
           ]);
@@ -65,7 +87,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         });
 
         if (!document) {
-          logger.warn(`Document not found or tenant mismatch for markdown export. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
+          logger.warn(`Document not found or access denied for markdown export. ID: ${lookupId}, Tenant: ${tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
@@ -134,19 +156,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
       logger.info(`PDF generation requested for document ID: ${lookupId}`);
 
       try {
-        // Get document to verify it exists and belongs to the user's tenant
+        // Get the document through the same authorization path used by
+        // downloadDocument() (tenant scoping + relationship/client-visibility
+        // rules) before generating the PDF.
         const { knex } = await createTenantKnex();
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          // Try by document_id first, then by file_id
-          const doc = await Document.get(trx, lookupId);
-          if (doc) return doc;
-          return await trx('documents')
-            .where({ file_id: lookupId, tenant: session.user.tenant })
-            .first();
+          const byDocumentId = await getAuthorizedDocumentById(trx, tenant, currentUser, lookupId);
+          if (byDocumentId) return byDocumentId;
+          return getAuthorizedDocumentByFileId(trx, tenant, currentUser, lookupId);
         });
 
-        if (!document || document.tenant !== session.user.tenant) {
-          logger.warn(`Document not found or tenant mismatch for PDF generation. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
+        if (!document) {
+          logger.warn(`Document not found or access denied for PDF generation. ID: ${lookupId}, Tenant: ${tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
@@ -190,15 +211,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         // First, get the document to find its file_id (lookup by document_id or file_id)
         const { knex } = await createTenantKnex();
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          const db = tenantDb(trx, tenant);
           const doc = await Document.get(trx, lookupId);
           if (doc) return doc;
-          return await trx('documents')
-            .where({ file_id: lookupId, tenant: session.user.tenant })
+          return await db.table('documents')
+            .where({ file_id: lookupId })
             .first();
         });
 
-        if (!document || document.tenant !== session.user.tenant) {
-          logger.warn(`Document not found or tenant mismatch. ID: ${lookupId}, Tenant: ${session.user.tenant}`);
+        if (!document || document.tenant !== tenant) {
+          logger.warn(`Document not found or tenant mismatch. ID: ${lookupId}, Tenant: ${tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
@@ -212,9 +234,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         return await downloadDocument(document.file_id);
       } catch (error) {
         logger.error(`Error in standard download route for document ${lookupId}:`, error);
-        // Ensure a standard Response object is returned on error
-        const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
-        return new Response(JSON.stringify({ error: errorMessage }), {
+        return new Response(JSON.stringify({ error: 'Failed to download document.' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });

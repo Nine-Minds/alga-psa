@@ -14,6 +14,10 @@ import { loadMcpRegistry } from '@/lib/mcp/loadRegistry';
 import { authenticateAgentToken, looksLikeJwt } from './idpToken';
 import { mintAgentSessionKey } from './agents';
 import { writeAgentAudit } from './agentAudit';
+import { resolvePublicBaseUrl, resolveInternalBaseUrl } from './baseUrl';
+import { looksLikeAlgaToken, verifyAccessToken } from './oauth/tokens';
+import { isGrantActive } from './oauth/grants';
+import { mintUserSessionKey } from './oauth/userSession';
 
 // Minimal Streamable-HTTP MCP server. Handles JSON-RPC over POST with single
 // application/json responses (sufficient for initialize / tools/list /
@@ -168,23 +172,37 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
     case 'tools/call': {
       const name = (m.params?.name as string) ?? '';
       const args = (m.params?.arguments as Record<string, unknown>) ?? {};
-      const out = await dispatchTool(name, args, ctx);
+      // A transient dispatch failure (e.g. a self-fetch network error, or an
+      // unresolved path param from buildRequest) must surface as a JSON-RPC
+      // tool error — NOT bubble up and become a bare HTTP 500 that aborts the
+      // whole MCP request. The MCP client can then see the error and retry.
+      let out: ToolOutcome;
+      try {
+        out = await dispatchTool(name, args, ctx);
+      } catch (err) {
+        out = toolErr(`Tool dispatch failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
       if (ctx.agentId && ctx.tenant) {
         const decision = !out.isError
           ? 'allow'
           : out.statusCode === 403 || out.statusCode === 401
             ? 'deny'
             : 'error';
-        await writeAgentAudit({
-          tenant: ctx.tenant,
-          agentId: ctx.agentId,
-          tool: name,
-          arguments: args,
-          ok: !out.isError,
-          statusCode: out.statusCode ?? null,
-          decision,
-          resultSummary: out.content?.[0]?.text,
-        });
+        // Audit is best-effort: a failed audit write must not 500 the tool call.
+        try {
+          await writeAgentAudit({
+            tenant: ctx.tenant,
+            agentId: ctx.agentId,
+            tool: name,
+            arguments: args,
+            ok: !out.isError,
+            statusCode: out.statusCode ?? null,
+            decision,
+            resultSummary: out.content?.[0]?.text,
+          });
+        } catch {
+          // swallow — auditing is non-critical to returning the tool result
+        }
       }
       return rpcResult(id, out);
     }
@@ -200,9 +218,13 @@ interface ResolvedAuth {
 }
 
 /**
- * Resolve the caller. A Bearer JWT is an IdP-delegated **agent** (validated via
- * the tenant's trusted IdP, then dispatched under a short-lived agent-scoped key
- * so the kernel enforces the agent's RBAC). Otherwise it's an Alga **API key**.
+ * Resolve the caller. Three credential shapes, in priority order:
+ *  1. An AlgaPSA-issued MCP access token (`typ: at+jwt`) — the interactive OAuth
+ *     path. Represents an Alga **user**; dispatched under a short-lived user key
+ *     so the kernel enforces the user's own RBAC.
+ *  2. An IdP-delegated **agent** JWT (legacy/unattended) — validated via the
+ *     tenant's trusted IdP, dispatched under an agent-scoped key.
+ *  3. An Alga **API key** (x-api-key or bearer).
  */
 async function resolveAuth(
   req: NextRequest,
@@ -210,6 +232,19 @@ async function resolveAuth(
   const xApiKey = req.headers.get('x-api-key');
   const bearer = bearerToken(req.headers.get('authorization'));
 
+  // (1) AlgaPSA-issued user token from our own OAuth AS.
+  if (bearer && looksLikeAlgaToken(bearer)) {
+    const base = await resolvePublicBaseUrl(req);
+    const claims = await verifyAccessToken({ token: bearer, base });
+    if (!claims) return { ok: false, status: 401, error: 'Invalid or expired access token', wwwAuthenticate: true };
+    if (!(await isGrantActive(claims.grantId))) {
+      return { ok: false, status: 401, error: 'Authorization was revoked', wwwAuthenticate: true };
+    }
+    const sessionKey = await mintUserSessionKey({ tenant: claims.tenant, userId: claims.userId });
+    return { ok: true, auth: { apiKey: sessionKey, tenant: claims.tenant } };
+  }
+
+  // (2) IdP-delegated agent JWT (legacy/unattended path — unchanged).
   if (bearer && looksLikeJwt(bearer)) {
     const res = await authenticateAgentToken(bearer);
     // Explicit `=== false` (not `!res.ok`): ee/server sets tsconfig strict:false, and
@@ -236,7 +271,10 @@ export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> 
   if (authResult.ok === false) {
     const headers: Record<string, string> = { 'content-type': 'application/json' };
     if (authResult.wwwAuthenticate) {
-      headers['WWW-Authenticate'] = `Bearer resource_metadata="${req.nextUrl.origin}/.well-known/oauth-protected-resource"`;
+      // Public discovery pointer — external clients (e.g. claude.ai) chase this,
+      // so it must be the public origin, not the internal upstream one.
+      const publicBase = await resolvePublicBaseUrl(req);
+      headers['WWW-Authenticate'] = `Bearer resource_metadata="${publicBase}/.well-known/oauth-protected-resource"`;
     }
     return new NextResponse(JSON.stringify({ error: authResult.error }), { status: authResult.status, headers });
   }
@@ -254,7 +292,9 @@ export async function handleMcpJsonRpc(req: NextRequest): Promise<NextResponse> 
   const ctx: DispatchCtx = {
     registry: entries,
     apiKey: auth.apiKey,
-    baseUrl: req.nextUrl.origin,
+    // In-pod loopback (plaintext HTTP), NOT the public origin — see
+    // resolveInternalBaseUrl(). The public origin is only for OAuth discovery.
+    baseUrl: resolveInternalBaseUrl(),
     agentId: auth.agentId,
     tenant: auth.tenant,
   };

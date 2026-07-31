@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { startResendWelcomeEmailWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -105,7 +107,8 @@ export async function POST(req: NextRequest) {
 
     // Log to unified extension audit table (pending status)
     const knex = await getAdminConnection();
-    const [auditRecord] = await knex('extension_audit_logs')
+    const auditLogs = tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs');
+    const [auditRecord] = await auditLogs
       .insert({
         tenant: MASTER_BILLING_TENANT_ID,
         event_type: 'tenant.resend_email',
@@ -140,8 +143,8 @@ export async function POST(req: NextRequest) {
     const workflowResult = await clientResult.result;
 
     // Update audit record with result
-    await knex('extension_audit_logs')
-      .where({ tenant: MASTER_BILLING_TENANT_ID, log_id: auditRecord.log_id })
+    await auditLogs
+      .where({ log_id: auditRecord.log_id })
       .update({
         workflow_id: workflowId,
         status: workflowResult.success ? 'completed' : 'failed',
@@ -180,7 +183,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const routeError = tenantManagementRouteError(error, 'Failed to resend welcome email.');
 
     observabilityLogger.error('Resend welcome email failed', error, {
       event_type: 'tenant_management_action_failed',
@@ -189,7 +192,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: false,
-      error: errorMessage,
-    }, { status: 500 });
+      error: routeError.error,
+    }, { status: routeError.status });
   }
 }

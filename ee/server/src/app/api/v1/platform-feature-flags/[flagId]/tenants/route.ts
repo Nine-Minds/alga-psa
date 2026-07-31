@@ -99,7 +99,17 @@ export async function POST(request: NextRequest, context: RouteContext): Promise
 
     if (error instanceof Error) {
       if (error.message.includes('Access denied') || error.message.includes('Authentication')) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 403 });
+        return NextResponse.json(
+          { success: false, error: 'Permission denied: platform feature flags require master tenant access.' },
+          { status: 403 }
+        );
+      }
+
+      if (error.message.includes('not configured')) {
+        return NextResponse.json(
+          { success: false, error: 'Platform feature flag service is not configured.' },
+          { status: 500 }
+        );
       }
     }
 

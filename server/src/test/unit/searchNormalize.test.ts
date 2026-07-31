@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { flattenBlockNote, flattenJsonbPayload, flattenMarkdown, truncateForIndex } from '../../lib/search/normalize';
+import { flattenBlockNote, flattenJsonbPayload, flattenMarkdown, truncateForIndex } from '@alga-psa/search/normalize';
 
 describe('search normalization utilities', () => {
   it('T013 extracts visible text from a realistic BlockNote document payload', () => {

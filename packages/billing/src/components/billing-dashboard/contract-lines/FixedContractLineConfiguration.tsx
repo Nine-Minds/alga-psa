@@ -12,7 +12,7 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import {
   getContractLineById,
   updateContractLine,
@@ -25,6 +25,8 @@ import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEn
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface FixedPlanConfigurationProps {
   contractLineId: string;
@@ -65,11 +67,15 @@ const CADENCE_OWNER_OPTIONS = [
   },
 ];
 
+const isReturnedActionError = (value: unknown): boolean =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 export function FixedPlanConfiguration({
   contractLineId,
   className = '',
 }: FixedPlanConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [plan, setPlan] = useState<IContractLine | null>(null);
   const [services, setServices] = useState<IService[]>([]);
@@ -101,6 +107,10 @@ export function FixedPlanConfiguration({
     try {
       // Fetch the basic contract line data
       const fetchedPlan = await getContractLineById(contractLineId);
+      if (isReturnedActionError(fetchedPlan)) {
+        setError(getErrorMessage(fetchedPlan));
+        return;
+      }
       if (fetchedPlan && fetchedPlan.contract_line_type === 'Fixed') {
         setPlan(fetchedPlan);
 
@@ -115,6 +125,10 @@ export function FixedPlanConfiguration({
         // Fetch fixed config
         if (fetchedPlan.contract_line_id) {
           const cfg = await getContractLineFixedConfig(fetchedPlan.contract_line_id);
+          if (isReturnedActionError(cfg)) {
+            setError(getErrorMessage(cfg));
+            return;
+          }
           if (cfg) {
             setBaseRate(cfg.base_rate ?? undefined);
             if (cfg.base_rate !== undefined && cfg.base_rate !== null) {
@@ -197,10 +211,14 @@ export function FixedPlanConfiguration({
       };
 
       if (plan?.contract_line_id) {
-        await updateContractLine(plan.contract_line_id, planData);
+        const updateResult = await updateContractLine(plan.contract_line_id, planData);
+        if (isReturnedActionError(updateResult)) {
+          setValidationErrors([getErrorMessage(updateResult)]);
+          return;
+        }
 
         if (planType === 'Fixed') {
-          await updateContractLineFixedConfig(plan.contract_line_id, {
+          const fixedConfigResult = await updateContractLineFixedConfig(plan.contract_line_id, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
             billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
@@ -208,6 +226,10 @@ export function FixedPlanConfiguration({
               enableProration: enableProration,
             }),
           });
+          if (isReturnedActionError(fixedConfigResult)) {
+            setValidationErrors([getErrorMessage(fixedConfigResult)]);
+            return;
+          }
         }
       }
 
@@ -402,7 +424,7 @@ export function FixedPlanConfiguration({
                   {t('configuration.fixed.settings.baseRateLabel', { defaultValue: 'Recurring Base Rate *' })}
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                   <Input
                     id="base-rate"
                     type="text"

@@ -20,7 +20,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -64,11 +64,13 @@ export interface LocalChecklistItem {
   isNew?: boolean;
 }
 
-/** Local dependency for tracking changes before save */
+/** Local dependency for tracking changes before save.
+ * Modeled from the edited task's perspective: `relatedTaskId` is the other
+ * task, and `dependencyType` reads as "this task <type> related task". */
 interface LocalDependency {
   id: string;
-  predecessorTaskId: string;
-  predecessorTaskName: string;
+  relatedTaskId: string;
+  relatedTaskName: string;
   dependencyType: DependencyType;
   isNew: boolean;
 }
@@ -81,7 +83,7 @@ interface TemplateTaskFormProps {
     additionalAgents?: string[],
     checklistItems?: LocalChecklistItem[],
     dependencyChanges?: {
-      added: Array<{ predecessorTaskId: string; dependencyType: DependencyType }>;
+      added: Array<{ relatedTaskId: string; dependencyType: DependencyType }>;
       removed: string[];
     }
   ) => void;
@@ -97,7 +99,7 @@ interface TemplateTaskFormProps {
   checklistItems?: IProjectTemplateChecklistItem[];
   /** All tasks in the template (for dependency selection) */
   allTasks?: IProjectTemplateTask[];
-  /** Current dependencies where this task is the successor */
+  /** Current dependencies involving this task (either direction) */
   dependencies?: IProjectTemplateDependency[];
   /** Tenant for fetching avatar URLs */
   tenant?: string;
@@ -202,6 +204,10 @@ export function TemplateTaskForm({
     const fetchTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
+        if (isTeamActionError(fetchedTeams)) {
+          console.warn('Cannot load teams for template task assignment:', fetchedTeams);
+          return;
+        }
         setTeams(fetchedTeams);
       } catch (err) {
         console.error('Failed to fetch teams:', err);
@@ -259,13 +265,21 @@ export function TemplateTaskForm({
           order_number: item.order_number,
           isNew: false,
         }));
+        // Present each dependency from the edited task's perspective. Stored
+        // rows are normalized to 'blocks'/'related_to' with predecessor →
+        // successor direction, so when this task is the successor a 'blocks'
+        // row reads back as "Blocked by <predecessor>".
         const dependenciesVal = dependencies.map(dep => {
-          const predTask = allTasks.find(t => t.template_task_id === dep.predecessor_task_id);
+          const isSuccessor = dep.successor_task_id === task.template_task_id;
+          const relatedTaskId = isSuccessor ? dep.predecessor_task_id : dep.successor_task_id;
+          const relatedTask = allTasks.find(t => t.template_task_id === relatedTaskId);
+          const dependencyType: DependencyType =
+            isSuccessor && dep.dependency_type === 'blocks' ? 'blocked_by' : dep.dependency_type;
           return {
             id: dep.template_dependency_id,
-            predecessorTaskId: dep.predecessor_task_id,
-            predecessorTaskName: predTask?.task_name || t('templates.editor.unknownTask', 'Unknown task'),
-            dependencyType: dep.dependency_type,
+            relatedTaskId,
+            relatedTaskName: relatedTask?.task_name || t('templates.editor.unknownTask', 'Unknown task'),
+            dependencyType,
             isNew: false,
           };
         });
@@ -397,7 +411,7 @@ export function TemplateTaskForm({
       const addedDependencies = localDependencies
         .filter(d => d.isNew)
         .map(d => ({
-          predecessorTaskId: d.predecessorTaskId,
+          relatedTaskId: d.relatedTaskId,
           dependencyType: d.dependencyType,
         }));
 
@@ -431,7 +445,8 @@ export function TemplateTaskForm({
         }
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('templates.taskForm.saveFailed', 'Failed to save task'));
+      console.error('Failed to save template task:', err);
+      setError(t('templates.taskForm.saveFailed', 'Failed to save task'));
     } finally {
       setIsSubmitting(false);
     }
@@ -550,17 +565,17 @@ export function TemplateTaskForm({
     if (!newDependencyTask) return;
 
     // Check for duplicates
-    if (localDependencies.some(d => d.predecessorTaskId === newDependencyTask)) {
+    if (localDependencies.some(d => d.relatedTaskId === newDependencyTask)) {
       return;
     }
 
-    const predTask = allTasks.find(t => t.template_task_id === newDependencyTask);
-    if (!predTask) return;
+    const relatedTask = allTasks.find(t => t.template_task_id === newDependencyTask);
+    if (!relatedTask) return;
 
     const newDep: LocalDependency = {
       id: `temp_${Date.now()}`,
-      predecessorTaskId: newDependencyTask,
-      predecessorTaskName: predTask.task_name,
+      relatedTaskId: newDependencyTask,
+      relatedTaskName: relatedTask.task_name,
       dependencyType: newDependencyType,
       isNew: true,
     };
@@ -594,7 +609,7 @@ export function TemplateTaskForm({
   // Filter available tasks (exclude current task and already selected)
   const availableTasksForDependency = allTasks.filter(
     t => t.template_task_id !== task?.template_task_id &&
-         !localDependencies.some(d => d.predecessorTaskId === t.template_task_id)
+         !localDependencies.some(d => d.relatedTaskId === t.template_task_id)
   );
 
   // Check if any changes have been made
@@ -1050,7 +1065,6 @@ export function TemplateTaskForm({
                           checked={item.completed}
                           onChange={(e) => updateChecklistItem(item.id, 'completed', e.target.checked)}
                           className="flex-none"
-                          containerClassName=""
                         />
                         {isItemEditing ? (
                           <div className="flex-1">
@@ -1156,7 +1170,7 @@ export function TemplateTaskForm({
                           <div className="flex items-center gap-2">
                             {typeInfo.icon}
                             <span className="text-sm text-gray-600">{typeInfo.label}</span>
-                            <span className="text-sm font-medium">{dep.predecessorTaskName}</span>
+                            <span className="text-sm font-medium">{dep.relatedTaskName}</span>
                             {dep.isNew && (
                               <Badge variant="success" size="sm">
                                 New

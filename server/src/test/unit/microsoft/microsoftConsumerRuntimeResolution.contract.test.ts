@@ -16,12 +16,20 @@ describe('microsoft consumer runtime resolution contracts', () => {
       repoPath('packages/integrations/src/actions/email-actions/oauthActions.ts'),
       'utf8'
     );
+    const emailProviderActionSource = fs.readFileSync(
+      repoPath('packages/integrations/src/actions/email-actions/emailProviderActions.ts'),
+      'utf8'
+    );
     const emailCallbackSource = fs.readFileSync(
       repoPath('server/src/app/api/auth/microsoft/callback/route.ts'),
       'utf8'
     );
     const emailAdapterSource = fs.readFileSync(
-      repoPath('server/src/services/email/providers/MicrosoftGraphAdapter.ts'),
+      repoPath('shared/services/email/providers/MicrosoftGraphAdapter.ts'),
+      'utf8'
+    );
+    const emailConfigBuilderSource = fs.readFileSync(
+      repoPath('shared/services/email/microsoftEmailProviderConfig.ts'),
       'utf8'
     );
     // The concrete EE calendar action + adapter sources were relocated from
@@ -50,21 +58,33 @@ describe('microsoft consumer runtime resolution contracts', () => {
 
     expect(sharedResolverSource).toContain("from '../actions/integrations/microsoftShared'");
     expect(sharedResolverSource).toContain('ensureMicrosoftConsumerBindingMigration');
-    expect(sharedResolverSource).toContain("db('microsoft_profile_consumer_bindings')");
-    expect(sharedResolverSource).toContain("db('email_providers')");
-    expect(sharedResolverSource).toContain("db('calendar_providers')");
+    // Reads flow through the tenantDb facade (tenantScopedTable wraps tenantDb(...).table(...)).
+    expect(sharedResolverSource).toContain('return tenantDb(db, tenant).table(table);');
+    expect(sharedResolverSource).toContain("tenantScopedTable(db, 'microsoft_profile_consumer_bindings', tenant)");
+    expect(sharedResolverSource).toContain("tenantScopedTable(db, 'email_providers', tenant)");
+    expect(sharedResolverSource).toContain("tenantScopedTable(db, 'calendar_providers', tenant)");
+    expect(sharedResolverSource).toContain('profileHasCapability(profile, consumerType)');
+    expect(sharedResolverSource).toContain('resolveMicrosoftBindingCandidateProfile(db, tenant, secretProvider, consumerType)');
     expect(sharedResolverSource).not.toContain("from '../actions/integrations/microsoftActions'");
 
     expect(emailOauthActionSource).toContain('resolveMicrosoftConsumerProfileConfig(tenant, \'email\')');
     expect(emailOauthActionSource).not.toContain("getTenantSecret(tenant, 'microsoft_client_id')");
     expect(emailOauthActionSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
+    expect(emailProviderActionSource).toContain('preserveIssuingApp');
+    expect(emailProviderActionSource).toContain('existingConfig?.refresh_token && !config.refresh_token');
 
     expect(emailCallbackSource).toContain("resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'email')");
+    expect(emailCallbackSource).toContain('persistProviderError');
+    expect(emailCallbackSource).toContain("status: 'error'");
+    expect(emailCallbackSource).toContain('error_message: message');
+    expect(emailCallbackSource).toContain("error: 'token_persistence_failed'");
     expect(emailCallbackSource).not.toContain("getTenantSecret(stateData.tenant, 'microsoft_client_id')");
     expect(emailCallbackSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
 
-    expect(emailAdapterSource).toContain("resolveMicrosoftConsumerProfileConfig(this.config.tenant, 'email')");
-    expect(emailAdapterSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
+    expect(emailConfigBuilderSource).toContain(".where('binding.consumer_type', 'email')");
+    expect(emailConfigBuilderSource).toContain('profileCredentials.clientId === issuingClientId');
+    expect(emailAdapterSource).toContain('vendorConfig.resolved_client_id');
+    expect(fs.existsSync(repoPath('server/src/services/email/providers/MicrosoftGraphAdapter.ts'))).toBe(false);
 
     expect(eeCalendarActionSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'calendar')");
     expect(eeCalendarActionSource).not.toContain("getTenantSecret(tenant, 'microsoft_client_id')");

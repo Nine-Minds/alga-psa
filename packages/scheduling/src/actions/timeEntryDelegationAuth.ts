@@ -3,7 +3,7 @@
 import type { IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth';
-import { User } from '@alga-psa/db';
+import { tenantDb, User } from '@alga-psa/db';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -35,16 +35,15 @@ export async function isManagerOfSubject(
   actorUserId: string,
   subjectUserId: string
 ): Promise<boolean> {
-  const row = await db('teams')
-    .join('team_members', function joinTeamMembers() {
-      this.on('teams.team_id', '=', 'team_members.team_id').andOn('teams.tenant', '=', 'team_members.tenant');
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const query = scopedDb.table('teams')
     .where({
-      'teams.tenant': tenant,
       'teams.manager_id': actorUserId,
       'team_members.user_id': subjectUserId
     })
     .first('teams.team_id');
+  scopedDb.tenantJoin(query, 'team_members', 'teams.team_id', 'team_members.team_id');
+  const row = await query;
 
   return !!row;
 }
@@ -54,13 +53,13 @@ export async function resolveManagedSubjectUserIds(
   tenant: string,
   actor: IUser
 ): Promise<string[]> {
-  const teamRows = await db('teams')
-    .join('team_members', function joinTeamMembers() {
-      this.on('teams.team_id', '=', 'team_members.team_id').andOn('teams.tenant', '=', 'team_members.tenant');
-    })
+  const scopedDb = tenantDb(db, tenant);
+  const teamRows = await scopedDb.table('teams')
     .where({
-      'teams.tenant': tenant,
       'teams.manager_id': actor.user_id,
+    })
+    .modify((query) => {
+      scopedDb.tenantJoin(query, 'team_members', 'teams.team_id', 'team_members.team_id');
     })
     .select<{ user_id: string }[]>('team_members.user_id');
 

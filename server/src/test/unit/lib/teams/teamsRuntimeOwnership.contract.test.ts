@@ -74,13 +74,14 @@ describe('teams runtime EE ownership', () => {
       'utf8'
     );
 
-    expect(eeTeamsActionsSource).toContain("knex('teams_integrations')");
+    // tenant scoping of the integration/profile reads now lives in the tenantDb facade
+    expect(eeTeamsActionsSource).toContain("tenantDb(knex, tenant).table<TeamsIntegrationRow>('teams_integrations')");
     expect(eeTeamsPackageActionsSource).toContain('selected_profile_id');
-    expect(eeTeamsNotificationSource).toContain("knex('microsoft_profiles')");
+    expect(eeTeamsNotificationSource).toContain("tenantDb(knex, tenant).table<MicrosoftProfileRow>('microsoft_profiles')");
     expect(eeTeamsTenantContextSource).toContain("teams.selected_profile_id");
     expect(eeTeamsTenantContextSource).toContain("profiles.profile_id");
     expect(eeTeamsActionsWrapperSource).toContain("@alga-psa/ee-microsoft-teams/actions");
-    expect(eeTeamsActionsWrapperSource).not.toContain("knex('teams_integrations')");
+    expect(eeTeamsActionsWrapperSource).not.toContain("'teams_integrations'");
     expect(fs.existsSync(repoPath('ee/server/src/lib/actions/integrations/teamsMicrosoftActions.ts'))).toBe(false);
   });
 
@@ -214,10 +215,13 @@ describe('teams runtime EE ownership', () => {
 
     expect(fs.existsSync(sharedTeamsNotificationPath)).toBe(true);
     expect(fs.existsSync(repoPath('ee/server/src/lib/notifications/teamsNotificationDelivery.ts'))).toBe(true);
-    // Teams notification delivery was consolidated into the shared notifications
-    // package (availability-gated) instead of delegating to an EE wrapper.
+    // Teams notification delivery is owned by the EE implementation that
+    // records teams_notification_deliveries rows; the shared notifications
+    // module is a CE-safe delegator across the @alga-psa/ee-stubs seam with no
+    // duplicated delivery logic (F007/F008).
     expect(sharedTeamsNotificationSource).toContain('deliverTeamsNotification');
-    expect(sharedTeamsNotificationSource).toContain('teamwork/sendActivityNotification');
+    expect(sharedTeamsNotificationSource).toContain("import('@alga-psa/ee-stubs/lib/notifications/teamsNotificationDelivery')");
+    expect(sharedTeamsNotificationSource).not.toContain('teamwork/sendActivityNotification');
     expect(sharedNotificationBroadcasterSource).toContain("import { deliverTeamsNotification } from './teamsNotificationDelivery';");
     expect(sharedNotificationBroadcasterSource).not.toContain('ee/server/src/lib/notifications/teamsNotificationDelivery');
   });

@@ -7,7 +7,11 @@ import { NextResponse } from 'next/server';
 
 import { listInboundDeliveries } from '@/lib/actions/inboundWebhookActions';
 import type { InboundWebhookDispatchStatus } from '@/lib/inboundWebhooks/types';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import {
+  createServerActionErrorResponse,
+  handleApiError,
+  isServerActionErrorResult,
+} from 'server/src/lib/api/middleware/apiMiddleware';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -45,6 +49,9 @@ export async function GET(request: Request, context: RouteContext) {
       page,
       limit,
     );
+    if (isServerActionErrorResult(deliveries)) {
+      return createServerActionErrorResponse(deliveries);
+    }
 
     return NextResponse.json({
       data: deliveries.data,

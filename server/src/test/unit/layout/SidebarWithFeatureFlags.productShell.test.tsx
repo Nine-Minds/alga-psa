@@ -12,6 +12,7 @@ const getCurrentUserPermissions = vi.fn();
 const useTier = vi.fn();
 const useProduct = vi.fn();
 const sidebarPropsSpy = vi.fn();
+const getLicenseStatus = vi.fn();
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: (...args: unknown[]) => useFeatureFlag(...args),
@@ -36,6 +37,10 @@ vi.mock('../../../components/layout/Sidebar', () => ({
   },
 }));
 
+vi.mock('../../../lib/actions/licenseManagementActions', () => ({
+  getLicenseStatus: (...args: unknown[]) => getLicenseStatus(...args),
+}));
+
 describe('SidebarWithFeatureFlags product shell composition', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -43,6 +48,51 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     getCurrentUserPermissions.mockResolvedValue([]);
     useTier.mockReturnValue({ hasFeature: () => true });
     useProduct.mockReturnValue({ productCode: 'psa' });
+    getLicenseStatus.mockResolvedValue({ selfHostMode: false });
+  });
+
+  it('shows License settings only for self-hosted installs', async () => {
+    getLicenseStatus.mockResolvedValue({ selfHostMode: true });
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+      };
+      const names = latestProps.settingsSectionsOverride.flatMap((section) => section.items.map((item) => item.name));
+      expect(names).toContain('License');
+    });
+  });
+
+  it('does not flash License settings before self-host status resolves', async () => {
+    getLicenseStatus.mockReturnValue(new Promise(() => {}));
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => expect(sidebarPropsSpy).toHaveBeenCalled());
+    const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+      settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+    };
+    const names = latestProps.settingsSectionsOverride.flatMap((section) => section.items.map((item) => item.name));
+    expect(names).not.toContain('License');
+  });
+
+  it('hides Opportunities from settings navigation when its feature flag is disabled', async () => {
+    useFeatureFlag.mockImplementation((flagKey: string) => flagKey !== 'opportunities-module');
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => expect(sidebarPropsSpy).toHaveBeenCalled());
+
+    const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+      settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+    };
+    const settingsNames = latestProps.settingsSectionsOverride.flatMap((section) =>
+      section.items.map((item) => item.name),
+    );
+
+    expect(settingsNames).not.toContain('Opportunities');
   });
 
   it('T005: AlgaDesk shell keeps only allowed nav and uses AlgaDesk branding labels', async () => {

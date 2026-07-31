@@ -39,6 +39,7 @@ export default defineConfig({
       // Match tsconfig-style subpath overrides before the generic `@/` mapping.
       { find: /^@\/lib\/db\/db$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/db.tsx')}` },
       { find: /^@\/lib\/db\/index$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/index.ts')}` },
+      { find: /^@\/lib\/tenant$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/tenant.ts')}` },
       { find: /^@\/lib\/iap\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/iap')}/$1` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
@@ -63,6 +64,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ui$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src/index.ts')}` },
       { find: /^@alga-psa\/billing$/, replacement: `${path.resolve(__dirname, '../../packages/billing/src/index.ts')}` },
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/billing/src')}/$1` },
+      { find: /^@alga-psa\/opportunities$/, replacement: `${path.resolve(__dirname, '../../packages/opportunities/src/index.ts')}` },
+      { find: /^@alga-psa\/opportunities\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/opportunities/src')}/$1` },
       { find: /^@alga-psa\/tenancy\/actions$/, replacement: `${path.resolve(__dirname, '../../packages/tenancy/src/actions/index.ts')}` },
       { find: /^@alga-psa\/tags$/, replacement: `${path.resolve(__dirname, '../../packages/tags/src/index.ts')}` },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/tags/src')}/$1` },

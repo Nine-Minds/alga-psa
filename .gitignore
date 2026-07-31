@@ -8,6 +8,8 @@ node_modules/
 # testing
 /coverage
 test-results/
+test-results-*.json
+server/test-results.json
 playwright-test-results/
 playwright-report/
 screenshots/
@@ -229,3 +231,6 @@ server/secrets-playwright/
 
 # build memory harness artifacts
 .build-mem/
+
+# pi subagent artifacts (never commit)
+.pi-subagents/

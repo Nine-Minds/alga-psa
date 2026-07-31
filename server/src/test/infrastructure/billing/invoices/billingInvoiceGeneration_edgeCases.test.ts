@@ -1,23 +1,17 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
@@ -28,7 +22,8 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));
@@ -42,24 +37,26 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
     setSecret: async () => {},
     getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
+    close: async () => {}
+  })
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
     setSecret: async () => {},
     getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
+    close: async () => {}
+  })
 }));
 
 vi.mock('@alga-psa/workflows/persistence', () => ({
@@ -68,7 +65,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),
@@ -128,26 +126,22 @@ describe('Billing Invoice Edge Cases', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureTaxForClient(context.clientId, 10);
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureTaxForClient(context.clientId, 10);
   }, 30000);

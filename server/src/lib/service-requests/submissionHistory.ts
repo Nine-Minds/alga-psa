@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export interface ServiceRequestSubmissionHistoryDetail {
   tenant: string;
@@ -83,9 +84,8 @@ export async function listServiceRequestSubmissionsForDefinition(
   tenant: string,
   definitionId: string
 ): Promise<ServiceRequestAdminDefinitionSubmissionRow[]> {
-  const rows = await knex('service_request_submissions')
+  const rows = await tenantDb(knex, tenant).table('service_request_submissions')
     .where({
-      tenant,
       definition_id: definitionId,
     })
     .orderBy('created_at', 'desc')
@@ -101,7 +101,7 @@ export async function listServiceRequestSubmissionsForDefinition(
       'created_at as submitted_at'
     );
 
-  return rows as ServiceRequestAdminDefinitionSubmissionRow[];
+  return rows as unknown as ServiceRequestAdminDefinitionSubmissionRow[];
 }
 
 export async function getServiceRequestSubmissionDetailForDefinition(
@@ -110,37 +110,26 @@ export async function getServiceRequestSubmissionDetailForDefinition(
   definitionId: string,
   submissionId: string
 ): Promise<ServiceRequestAdminDefinitionSubmissionDetail | null> {
-  const row = await knex('service_request_submissions as submission')
-    .leftJoin('users as requester', function joinRequester() {
-      this.on('requester.tenant', '=', 'submission.tenant').andOn(
-        'requester.user_id',
-        '=',
-        'submission.requester_user_id'
-      );
-    })
-    .leftJoin('clients as client', function joinClient() {
-      this.on('client.tenant', '=', 'submission.tenant').andOn(
-        'client.client_id',
-        '=',
-        'submission.client_id'
-      );
-    })
-    .leftJoin('contacts as contact', function joinContact() {
-      this.on('contact.tenant', '=', 'submission.tenant').andOn(
-        'contact.contact_name_id',
-        '=',
-        'submission.contact_id'
-      );
-    })
-    .leftJoin('tickets as ticket', function joinTicket() {
-      this.on('ticket.tenant', '=', 'submission.tenant').andOn(
-        'ticket.ticket_id',
-        '=',
-        'submission.created_ticket_id'
-      );
-    })
+  const db = tenantDb(knex, tenant);
+  const query = db.table('service_request_submissions as submission');
+  db.tenantJoin(query, 'users as requester', 'requester.user_id', 'submission.requester_user_id', {
+    type: 'left',
+    rootTenantColumn: 'submission.tenant',
+  });
+  db.tenantJoin(query, 'clients as client', 'client.client_id', 'submission.client_id', {
+    type: 'left',
+    rootTenantColumn: 'submission.tenant',
+  });
+  db.tenantJoin(query, 'contacts as contact', 'contact.contact_name_id', 'submission.contact_id', {
+    type: 'left',
+    rootTenantColumn: 'submission.tenant',
+  });
+  db.tenantJoin(query, 'tickets as ticket', 'ticket.ticket_id', 'submission.created_ticket_id', {
+    type: 'left',
+    rootTenantColumn: 'submission.tenant',
+  });
+  const row = await query
     .where({
-      'submission.tenant': tenant,
       'submission.definition_id': definitionId,
       'submission.submission_id': submissionId,
     })
@@ -181,7 +170,7 @@ export async function getServiceRequestSubmissionDetailForDefinition(
       `)
     );
 
-  return (row as ServiceRequestAdminDefinitionSubmissionDetail | undefined) ?? null;
+  return (row as unknown as ServiceRequestAdminDefinitionSubmissionDetail | undefined) ?? null;
 }
 
 export async function getServiceRequestSubmissionHistoryDetail(
@@ -189,16 +178,13 @@ export async function getServiceRequestSubmissionHistoryDetail(
   tenant: string,
   submissionId: string
 ): Promise<ServiceRequestSubmissionHistoryDetail | null> {
-  const row = await knex('service_request_submissions as submission')
-    .innerJoin('service_request_definition_versions as version', function joinVersion() {
-      this.on('version.tenant', '=', 'submission.tenant').andOn(
-        'version.version_id',
-        '=',
-        'submission.definition_version_id'
-      );
-    })
+  const db = tenantDb(knex, tenant);
+  const query = db.table('service_request_submissions as submission');
+  db.tenantJoin(query, 'service_request_definition_versions as version', 'version.version_id', 'submission.definition_version_id', {
+    rootTenantColumn: 'submission.tenant',
+  });
+  const row = await query
     .where({
-      'submission.tenant': tenant,
       'submission.submission_id': submissionId,
     })
     .first(
@@ -219,7 +205,7 @@ export async function getServiceRequestSubmissionHistoryDetail(
       'version.linked_service_name_snapshot'
     );
 
-  return (row as ServiceRequestSubmissionHistoryDetail | undefined) ?? null;
+  return (row as unknown as ServiceRequestSubmissionHistoryDetail | undefined) ?? null;
 }
 
 export async function listClientServiceRequestSubmissions(
@@ -227,16 +213,14 @@ export async function listClientServiceRequestSubmissions(
   tenant: string,
   clientId: string
 ): Promise<ServiceRequestClientSubmissionListRow[]> {
-  const rows = await knex('service_request_submissions as submission')
-    .leftJoin('tickets as ticket', function joinTicket() {
-      this.on('ticket.tenant', '=', 'submission.tenant').andOn(
-        'ticket.ticket_id',
-        '=',
-        'submission.created_ticket_id'
-      );
-    })
+  const db = tenantDb(knex, tenant);
+  const query = db.table('service_request_submissions as submission');
+  db.tenantJoin(query, 'tickets as ticket', 'ticket.ticket_id', 'submission.created_ticket_id', {
+    type: 'left',
+    rootTenantColumn: 'submission.tenant',
+  });
+  const rows = await query
     .where({
-      'submission.tenant': tenant,
       'submission.client_id': clientId,
     })
     .orderBy('submission.created_at', 'desc')
@@ -249,7 +233,7 @@ export async function listClientServiceRequestSubmissions(
       'ticket.ticket_number'
     );
 
-  return rows as ServiceRequestClientSubmissionListRow[];
+  return rows as unknown as ServiceRequestClientSubmissionListRow[];
 }
 
 export async function getClientServiceRequestSubmissionDetail(
@@ -258,16 +242,13 @@ export async function getClientServiceRequestSubmissionDetail(
   clientId: string,
   submissionId: string
 ): Promise<ServiceRequestClientSubmissionDetail | null> {
-  const row = await knex('service_request_submissions as submission')
-    .innerJoin('service_request_definition_versions as version', function joinVersion() {
-      this.on('version.tenant', '=', 'submission.tenant').andOn(
-        'version.version_id',
-        '=',
-        'submission.definition_version_id'
-      );
-    })
+  const db = tenantDb(knex, tenant);
+  const query = db.table('service_request_submissions as submission');
+  db.tenantJoin(query, 'service_request_definition_versions as version', 'version.version_id', 'submission.definition_version_id', {
+    rootTenantColumn: 'submission.tenant',
+  });
+  const row = await query
     .where({
-      'submission.tenant': tenant,
       'submission.client_id': clientId,
       'submission.submission_id': submissionId,
     })
@@ -289,11 +270,8 @@ export async function getClientServiceRequestSubmissionDetail(
     return null;
   }
 
-  const attachments = await knex('service_request_submission_attachments')
-    .where({
-      tenant,
-      submission_id: submissionId,
-    })
+  const attachments = await db.table('service_request_submission_attachments')
+    .where({ submission_id: submissionId })
     .orderBy('created_at', 'asc')
     .select(
       'submission_attachment_id',
@@ -306,7 +284,7 @@ export async function getClientServiceRequestSubmissionDetail(
     );
 
   return {
-    ...(row as Omit<ServiceRequestClientSubmissionDetail, 'attachments'>),
+    ...(row as unknown as Omit<ServiceRequestClientSubmissionDetail, 'attachments'>),
     attachments: attachments as ServiceRequestSubmissionAttachmentDetail[],
   };
 }

@@ -542,6 +542,96 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     extensions: ticketExt('update'), edition: 'both',
   });
 
+  const TicketAgentParams = registry.registerSchema(
+    'WorkV1TicketAgentParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid().describe('Ticket UUID.'),
+      userId: zOpenApi.string().uuid().describe('User UUID of the additional agent.'),
+    }),
+  );
+  const TicketAgentBody = registry.registerSchema(
+    'WorkV1TicketAgentBody',
+    zOpenApi.object({
+      user_id: zOpenApi.string().uuid().describe('User to add as an additional agent.'),
+      role: zOpenApi.string().max(50).optional().describe('Resource role recorded on the assignment; defaults to support.'),
+    }),
+  );
+  const TicketTeamAssignBody = registry.registerSchema(
+    'WorkV1TicketTeamAssignBody',
+    zOpenApi.object({
+      team_id: zOpenApi.string().uuid().describe('Team to assign to the ticket.'),
+      suppressContactNotifications: zOpenApi.boolean().optional(),
+      suppressInternalNotifications: zOpenApi.boolean().optional(),
+    }),
+  );
+  const TicketTeamRemoveBody = registry.registerSchema(
+    'WorkV1TicketTeamRemoveBody',
+    zOpenApi.object({
+      mode: zOpenApi.enum(['remove_all', 'keep_all', 'selective']).optional().describe('What to do with the team_member additional agents; defaults to remove_all.'),
+      keep_user_ids: zOpenApi.array(zOpenApi.string().uuid()).optional().describe('Required with mode=selective: the team members to keep as additional agents.'),
+    }),
+  );
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/{id}/agents',
+    summary: 'List ticket agents',
+    description: 'Returns the ticket primary agent (tickets.assigned_to) and its additional agents (ticket_resources), each with user_id, name and email.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: ticketStdResponses({ code: 200, description: 'Ticket primary and additional agents.' }),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/{id}/agents',
+    summary: 'Add a ticket additional agent',
+    description: 'Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketAgentBody } },
+    responses: {
+      ...ticketStdResponses({ code: 201, description: 'Agent added; updated agent list returned.' }),
+      409: { description: 'User is already an additional agent on this ticket.', schema: ApiError },
+    },
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/{id}/agents/{userId}',
+    summary: 'Remove a ticket additional agent',
+    description: 'Removes the additional-agent assignment for the given user. The primary agent is changed through PUT /api/v1/tickets/{id}/assignment instead.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketAgentParams },
+    responses: {
+      204: { description: 'Additional agent removed.', emptyBody: true },
+      400: { description: 'Validation or request parsing failure.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket resource action.', schema: ApiError },
+      404: { description: 'Ticket or additional agent not found.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/tickets/{id}/team',
+    summary: 'Assign a team to a ticket',
+    description: 'Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team\'s active members as team_member additional agents. Returns the updated ticket. A team without a lead is rejected with 400.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketTeamAssignBody } },
+    responses: ticketStdResponses({ code: 200, description: 'Team assigned; updated ticket returned.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/{id}/team',
+    summary: 'Remove a ticket team assignment',
+    description: 'Clears assigned_team_id. mode=remove_all (default) drops the team_member additional agents, keep_all leaves them, and selective keeps only keep_user_ids. Returns the updated ticket.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketTeamRemoveBody } },
+    responses: ticketStdResponses({ code: 200, description: 'Team assignment removed; updated ticket returned.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
   registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/{id}/materials',
     summary: 'List ticket materials',

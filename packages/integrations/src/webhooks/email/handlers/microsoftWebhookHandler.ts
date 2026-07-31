@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
+
+const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
 interface MicrosoftNotification {
   changeType: string;
@@ -23,7 +25,7 @@ interface MicrosoftWebhookPayload {
 }
 
 async function assertTenantEmailProductAccess(trx: any, tenantId: string): Promise<void> {
-  const tenant = await trx('tenants').where({ tenant: tenantId }).first('product_code');
+  const tenant = await tenantDb(trx, tenantId).table('tenants').first('product_code');
   const productCode = typeof tenant?.product_code === 'string' ? tenant.product_code : 'psa';
   if (productCode !== 'psa' && productCode !== 'algadesk') {
     throw new Error(`Product access denied for tenant ${tenantId}`);
@@ -107,6 +109,7 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
     const knex = await getAdminConnection();
     const processedNotifications: string[] = [];
     let unifiedQueuedCount = 0;
+    let gatedNotificationCount = 0;
     const enqueueFailures: Array<{
       subscriptionId: string;
       messageId: string;
@@ -123,33 +126,67 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
         console.log(`🔍 Processing notification for subscription: ${providerId}`);
 
         await withTransaction(knex, async (trx) => {
-        // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
-        const row = await trx('microsoft_email_provider_config as mc')
-          .join('email_providers as ep', function() {
-            this.on('mc.email_provider_id', '=', 'ep.id')
-                .andOn('mc.tenant', '=', 'ep.tenant');
-          })
-          .where('mc.webhook_subscription_id', providerId)
-          .andWhere('ep.provider_type', 'microsoft')
-          .first(
-            'ep.*',
-            trx.raw('mc.client_id as mc_client_id'),
-            trx.raw('mc.client_secret as mc_client_secret'),
-            trx.raw('mc.tenant_id as mc_tenant_id'),
-            trx.raw('mc.access_token as mc_access_token'),
-            trx.raw('mc.refresh_token as mc_refresh_token'),
-            trx.raw('mc.token_expires_at as mc_token_expires_at'),
-            trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
-            trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
-            trx.raw('mc.webhook_verification_token as mc_webhook_verification_token'),
-            trx.raw('mc.folder_filters as mc_folder_filters')
+          // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
+          const discoveryDb = tenantDb(trx, PROVIDER_TENANT_DISCOVERY);
+          const providerQuery = discoveryDb.unscoped(
+            'microsoft_email_provider_config as mc',
+            'tenant discovery from Microsoft email webhook subscription'
           );
+          discoveryDb.tenantJoin(providerQuery, 'email_providers as ep', 'mc.email_provider_id', 'ep.id', {
+            rootTenantColumn: 'mc.tenant',
+          });
+
+          const row: any = await providerQuery
+            .where('mc.webhook_subscription_id', providerId)
+            .andWhere('ep.provider_type', 'microsoft')
+            .andWhere('ep.is_active', true)
+            .whereNull('ep.inbound_paused_at')
+            // Serialize accepted-delivery stamping with the silence detector's
+            // conditional counter/mode updates. Without this lock, a handler
+            // could validate the old subscription, pause, and reset the counter
+            // only after reconciliation had already culled it.
+            .forUpdate('mc')
+            .first(
+              'ep.*',
+              trx.raw('mc.client_id as mc_client_id'),
+              trx.raw('mc.client_secret as mc_client_secret'),
+              trx.raw('mc.tenant_id as mc_tenant_id'),
+              trx.raw('mc.access_token as mc_access_token'),
+              trx.raw('mc.refresh_token as mc_refresh_token'),
+              trx.raw('mc.token_expires_at as mc_token_expires_at'),
+              trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
+              trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
+              trx.raw('mc.webhook_verification_token as mc_webhook_verification_token'),
+              trx.raw('mc.folder_filters as mc_folder_filters')
+            );
 
         if (!row) {
-          console.error(`❌ Provider not found for subscription: ${providerId}`);
-          console.error('This subscription may not exist in the database. Check:');
-          console.error(`  1. Is webhook_subscription_id="${providerId}" in microsoft_email_provider_config?`);
-          console.error(`  2. Has the email_provider been created?`);
+          gatedNotificationCount += 1;
+          // Distinguish a deliberately gated provider (paused/inactive) from a
+          // subscription we have no record of — the latter stays a warning so
+          // leaked or rogue subscriptions remain visible in production logs.
+          const ungatedProbe = discoveryDb.unscoped(
+            'microsoft_email_provider_config as mc',
+            'tenant discovery from Microsoft email webhook subscription'
+          );
+          discoveryDb.tenantJoin(ungatedProbe, 'email_providers as ep', 'mc.email_provider_id', 'ep.id', {
+            rootTenantColumn: 'mc.tenant',
+          });
+          const gatedProvider = await ungatedProbe
+            .where('mc.webhook_subscription_id', providerId)
+            .andWhere('ep.provider_type', 'microsoft')
+            .first('ep.id');
+          if (gatedProvider) {
+            console.debug('[MicrosoftWebhook] Acknowledging notification for a gated provider', {
+              subscriptionId: providerId,
+              event: 'microsoft_email_provider_gated',
+            });
+          } else {
+            console.warn('[MicrosoftWebhook] Ignoring notification for unknown subscription', {
+              subscriptionId: providerId,
+              event: 'microsoft_email_unknown_subscription',
+            });
+          }
           return;
         }
 
@@ -178,6 +215,22 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
           } else {
             console.warn(`⚠️ No stored verification token for provider ${row.id} - skipping client state validation`);
           }
+
+          const acceptedAt = new Date().toISOString();
+          const providerDb = tenantDb(trx, row.tenant);
+          await providerDb.table('microsoft_email_provider_config')
+            .where({ email_provider_id: row.id })
+            .update({
+              last_webhook_delivery_at: acceptedAt,
+              webhook_silent_runs: 0,
+              updated_at: acceptedAt,
+            });
+          await providerDb.table('email_provider_health')
+            .where({ provider_id: row.id })
+            .update({
+              last_notification_received_at: acceptedAt,
+              updated_at: acceptedAt,
+            });
 
           // Extract message ID from resource
           const messageId = notification.resourceData?.id || extractMessageId(notification.resource);
@@ -254,14 +307,17 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      queued: unifiedQueuedCount > 0,
-      handoff: 'unified_pointer_queue',
-      unifiedQueuedCount,
-      processedCount: processedNotifications.length,
-      messageIds: processedNotifications,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        queued: unifiedQueuedCount > 0,
+        handoff: 'unified_pointer_queue',
+        unifiedQueuedCount,
+        processedCount: processedNotifications.length,
+        messageIds: processedNotifications,
+      },
+      { status: gatedNotificationCount > 0 && unifiedQueuedCount === 0 ? 202 : 200 }
+    );
 
   } catch (error: any) {
     console.error('Microsoft webhook handler error:', error);

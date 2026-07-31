@@ -37,7 +37,7 @@ describe('AlgaDesk client/contact composition contracts', () => {
     const source = read('src/app/msp/contacts/[id]/page.tsx');
 
     expect(source).toContain("const isAlgaDesk = (await getCurrentTenantProduct()) === 'algadesk';");
-    expect(source).toContain('if (!isAlgaDesk && tab === \'documents\')');
-    expect(source).toContain('isAlgaDeskMode={isAlgaDesk}');
+    expect(source).toContain('isAlgaDesk ? Promise.resolve([]) : settledValue(getDocumentsByEntity(');
+    expect(source).toContain('showDocuments={!isAlgaDesk}');
   });
 });

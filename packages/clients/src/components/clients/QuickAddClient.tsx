@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ContactPhoneNumberInput, CreateContactInput, IClient, IClientLocation } from '@alga-psa/types';
+import type { ClientLifecycleStatus, ContactPhoneNumberInput, CreateContactInput, IClient, IClientLocation } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -17,18 +17,20 @@ import {
   DialogTrigger
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
-import { createClient, createClientLocation, getAllCountries, ICountry, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
-import { createClientContact } from '@alga-psa/clients/actions';
+import { createClient } from '@alga-psa/clients/actions/clientActions';
+import { createClientLocation } from '@alga-psa/clients/actions/clientLocationActions';
+import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
+import { listContactPhoneTypeSuggestions, createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ChevronRight } from 'lucide-react';
-import { QuickAddTagPicker } from '@alga-psa/tags/components';
+import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
-import { createTagsForEntity } from '@alga-psa/tags/actions';
+import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { 
   validateClientForm, 
   validateClientName, 
@@ -70,6 +72,7 @@ interface QuickAddClientProps {
   onClientAdded: (client: IClient) => void;
   trigger?: React.ReactNode;
   skipSuccessDialog?: boolean;
+  initialLifecycleStatus?: ClientLifecycleStatus;
 }
 
 const QuickAddClient: React.FC<QuickAddClientProps> = ({
@@ -77,11 +80,13 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   onOpenChange,
   onClientAdded,
   trigger,
+  initialLifecycleStatus = 'active',
 }) => {
   const { t } = useTranslation('msp/clients');
   const initialFormData: CreateClientData = {
     client_name: '',
     client_type: 'company',
+    lifecycle_status: initialLifecycleStatus,
     url: '',
     notes: '',
     is_inactive: false,
@@ -93,8 +98,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       annual_revenue: '',
       website: '',
     },
-    account_manager_id: null,
-    credit_balance: 0
+    account_manager_id: null
   };
 
   const initialLocationData: CreateLocationData = {
@@ -552,8 +556,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       }
       } catch (error: any) {
       console.error("Error creating client:", error);
-      const errorMessage = error.message || "Failed to create client. Please try again.";
-      setError(errorMessage);
+      setError(t('quickAddClient.createFailed', { defaultValue: 'Failed to create client. Please try again.' }));
       setIsSubmitting(false);
     }
   };
@@ -771,7 +774,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                   <Label htmlFor="client-type-select" className="block text-sm font-medium text-gray-700 mb-1">
                     {t('quickAddClient.clientType', { defaultValue: 'Client Type' })}
@@ -785,6 +788,24 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     ]}
                     value={formData.client_type}
                     onValueChange={(value) => handleClientChange('client_type', value)}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="client-lifecycle-select" className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('quickAddClient.lifecycleStatus', { defaultValue: 'Lifecycle' })}
+                  </Label>
+                  <CustomSelect
+                    id="client-lifecycle-select"
+                    data-automation-id="client-lifecycle-select"
+                    options={[
+                      { value: 'prospect', label: t('clientLifecycle.prospect', { defaultValue: 'Prospect' }) },
+                      { value: 'active', label: t('clientLifecycle.active', { defaultValue: 'Active client' }) },
+                      { value: 'former', label: t('clientLifecycle.former', { defaultValue: 'Former client' }) }
+                    ]}
+                    value={formData.lifecycle_status ?? 'active'}
+                    onValueChange={(value) => handleClientChange('lifecycle_status', value)}
                     disabled={isSubmitting}
                   />
                 </div>

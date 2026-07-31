@@ -5,12 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateTimeFromString, dateTimeToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import {
   listRmmAlertRules,
@@ -518,7 +521,6 @@ function RuleEditorDialog({
       title={title}
       className="max-w-2xl"
       footer={footer}
-      allowOverflow
     >
       <div className="space-y-5">
         {/* Basic fields */}
@@ -567,16 +569,14 @@ function RuleEditorDialog({
             <Label>Severities</Label>
             <div className="flex flex-wrap gap-2">
               {SEVERITIES.map((s) => (
-                <label key={s} className="flex items-center gap-1.5 cursor-pointer text-sm">
-                  <input
-                    type="checkbox"
-                    checked={f.severities.includes(s)}
-                    onChange={() => toggleSeverity(s)}
-                    disabled={saving}
-                    className="rounded"
-                  />
-                  {s}
-                </label>
+                <Checkbox
+                  key={s}
+                  id={`rule-severity-${s}`}
+                  label={s}
+                  checked={f.severities.includes(s)}
+                  onChange={() => toggleSeverity(s)}
+                  disabled={saving}
+                />
               ))}
             </div>
           </div>
@@ -646,16 +646,14 @@ function RuleEditorDialog({
               <Label>Organizations (filter)</Label>
               <div className="max-h-36 overflow-y-auto space-y-1 rounded border p-2">
                 {formOptions.organizations.map((org) => (
-                  <label key={org.external_organization_id} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={f.organizationIds.includes(org.external_organization_id)}
-                      onChange={() => toggleOrgId(org.external_organization_id)}
-                      disabled={saving}
-                      className="rounded"
-                    />
-                    {org.external_organization_name || org.external_organization_id}
-                  </label>
+                  <Checkbox
+                    key={org.external_organization_id}
+                    id={`rule-org-${org.external_organization_id}`}
+                    label={org.external_organization_name || org.external_organization_id}
+                    checked={f.organizationIds.includes(org.external_organization_id)}
+                    onChange={() => toggleOrgId(org.external_organization_id)}
+                    disabled={saving}
+                  />
                 ))}
               </div>
             </div>
@@ -683,7 +681,7 @@ function RuleEditorDialog({
                 <CustomSelect
                   id="rule-board"
                   value={f.boardId}
-                  onValueChange={(v) => setF((p) => ({ ...p, boardId: v }))}
+                  onValueChange={(v) => setF((p) => ({ ...p, boardId: v, autoResolveStatusId: '' }))}
                   options={[
                     { value: '', label: 'Default board' },
                     ...(formOptions?.boards ?? []).map((b) => ({ value: b.board_id, label: b.board_name })),
@@ -753,16 +751,14 @@ function RuleEditorDialog({
                   <Label>Notify users</Label>
                   <div className="max-h-28 overflow-y-auto space-y-1 rounded border p-2">
                     {formOptions.users.map((u) => (
-                      <label key={u.user_id} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={f.notifyUserIds.includes(u.user_id)}
-                          onChange={() => toggleNotifyUser(u.user_id)}
-                          disabled={saving}
-                          className="rounded"
-                        />
-                        {`${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email}
-                      </label>
+                      <Checkbox
+                        key={u.user_id}
+                        id={`rule-notify-user-${u.user_id}`}
+                        label={`${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email}
+                        checked={f.notifyUserIds.includes(u.user_id)}
+                        onChange={() => toggleNotifyUser(u.user_id)}
+                        disabled={saving}
+                      />
                     ))}
                   </div>
                 </div>
@@ -789,7 +785,9 @@ function RuleEditorDialog({
                 onValueChange={(v) => setF((p) => ({ ...p, autoResolveStatusId: v }))}
                 options={[
                   { value: '', label: 'Default closed status' },
-                  ...(formOptions?.closedStatuses ?? []).map((s) => ({ value: s.status_id, label: s.name })),
+                  ...(formOptions?.closedStatuses ?? [])
+                    .filter((s) => (f.boardId ? s.board_id === f.boardId : s.board_id == null))
+                    .map((s) => ({ value: s.status_id, label: s.name })),
                 ]}
               />
             </div>
@@ -973,21 +971,27 @@ function WindowEditorDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="win-starts-at">Starts at</Label>
-              <Input
+              <DateTimePicker
                 id="win-starts-at"
-                type="datetime-local"
-                value={f.startsAt}
-                onChange={(e) => setF((p) => ({ ...p, startsAt: e.target.value }))}
+                label="Starts at"
+                placeholder="Starts at"
+                clearable
+                className="w-full"
+                value={dateTimeFromString(f.startsAt)}
+                onChange={(date) => setF((p) => ({ ...p, startsAt: dateTimeToString(date) }))}
                 disabled={saving}
               />
             </div>
             <div className="space-y-1">
               <Label htmlFor="win-ends-at">Ends at</Label>
-              <Input
+              <DateTimePicker
                 id="win-ends-at"
-                type="datetime-local"
-                value={f.endsAt}
-                onChange={(e) => setF((p) => ({ ...p, endsAt: e.target.value }))}
+                label="Ends at"
+                placeholder="Ends at"
+                clearable
+                className="w-full"
+                value={dateTimeFromString(f.endsAt)}
+                onChange={(date) => setF((p) => ({ ...p, endsAt: dateTimeToString(date) }))}
                 disabled={saving}
               />
             </div>
@@ -1000,16 +1004,14 @@ function WindowEditorDialog({
               <Label>Days</Label>
               <div className="flex flex-wrap gap-2">
                 {DAY_LABELS.map((label, idx) => (
-                  <label key={idx} className="flex items-center gap-1 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={f.days.includes(idx)}
-                      onChange={() => toggleDay(idx)}
-                      disabled={saving}
-                      className="rounded"
-                    />
-                    {label}
-                  </label>
+                  <Checkbox
+                    key={idx}
+                    id={`rule-day-${idx}`}
+                    label={label}
+                    checked={f.days.includes(idx)}
+                    onChange={() => toggleDay(idx)}
+                    disabled={saving}
+                  />
                 ))}
               </div>
             </div>
@@ -1140,7 +1142,8 @@ export function RmmAlertAutomationSettings({ integrationId, provider }: RmmAlert
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load alert automation settings');
+      console.error('Failed to load alert automation settings:', e);
+      setError('Failed to load alert automation settings');
     } finally {
       setLoading(false);
     }

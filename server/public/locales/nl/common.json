@@ -1,5 +1,9 @@
 {
+  "clientNameCell": {
+    "noClient": "Geen klant"
+  },
   "reactions": {
+    "add": "Reageren",
     "ariaSummary_one": "{{emoji}} {{count}} reactie",
     "ariaSummary_other": "{{emoji}} {{count}} reacties",
     "ariaYouReacted": ", jij hebt gereageerd"
@@ -10,11 +14,16 @@
     "expiringForClient_one": "{{count}} tegoed van {{clientName}} verloopt binnenkort",
     "expiringForClient_other": "{{count}} tegoeden van {{clientName}} verlopen binnenkort"
   },
+  "staleAction": {
+    "message": "Deze pagina is verouderd. Vernieuw de pagina om live-updates en acties te herstellen."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "De Enterprise-proefperiode verloopt over {{count}} dag. Voer een licentiesleutel in om Enterprise-functies te behouden.",
-    "trialExpiresIn_other": "De Enterprise-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Enterprise-functies te behouden.",
-    "trialDaysRemaining_one": "Enterprise-proefperiode actief — nog {{count}} dag.",
-    "trialDaysRemaining_other": "Enterprise-proefperiode actief — nog {{count}} dagen.",
+    "trialExpiresIn_one": "De Pro-proefperiode verloopt over {{count}} dag. Voer een licentiesleutel in om Pro-functies te behouden.",
+    "trialExpiresIn_other": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden.",
+    "trialDaysRemaining_one": "Pro-proefperiode actief — nog {{count}} dag.",
+    "trialDaysRemaining_other": "Pro-proefperiode actief — nog {{count}} dagen.",
+    "trialAvailable": "Essentials-functies zijn actief. Start een gratis Pro-proefperiode van 15 dagen om alle functies te ontgrendelen.",
+    "trialExpired": "De Pro-proefperiode is verlopen. De installatie gebruikt nu Essentials-functies.",
     "licenseExpiresIn_one": "De licentie verloopt over {{count}} dag. Verleng om serviceonderbreking te voorkomen.",
     "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen."
   },
@@ -321,7 +330,9 @@
     "ariaLabel": "Paginering",
     "totalItems": "{{count}} {{itemLabel}} in totaal",
     "totalRecordsInline": "({{count}} records in totaal)",
-    "pageOf": "Pagina {{current}} van {{total}}"
+    "pageOf": "Pagina {{current}} van {{total}}",
+    "itemsLabel_one": "element",
+    "itemsLabel_other": "elementen"
   },
   "documents": {
     "title": "Documenten",
@@ -1069,7 +1080,8 @@
     "fromDate": "Van",
     "toDate": "Tot",
     "noResults": "Geen resultaten gevonden",
-    "searchPlaceholder": "Zoeken..."
+    "searchPlaceholder": "Zoeken...",
+    "showingOfTotal": "{{shown}} van {{total}} weergegeven — typ om te verfijnen"
   },
   "pickers": {
     "addNewClient": "Nieuwe klant toevoegen",
@@ -1237,5 +1249,8 @@
     "showingAllColumns": "Alle kolommen worden getoond; scroll horizontaal om ze te zien.",
     "showLess": "Minder tonen",
     "columnsHidden": "{{count}} kolommen verborgen vanwege beperkte ruimte."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Editor laden…"
   }
 }

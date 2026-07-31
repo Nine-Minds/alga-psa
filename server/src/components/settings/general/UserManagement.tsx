@@ -4,14 +4,18 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
-import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { addUser } from '@alga-psa/users/actions';
+import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { addUser } from '@alga-psa/users/actions/user-actions/userActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getAllClients } from '@alga-psa/clients/actions';
-import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from '@alga-psa/clients/actions';
-import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions';
+import { getAllClients, getContactsByClient, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { addContact, getContactsEligibleForInvitation } from '@alga-psa/clients/actions/contact-actions/contactActions';
+import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions/portal-actions/portalInvitationActions';
 import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
-import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions';
+import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions/portal-actions/clientPortalLinkActions';
+import { sendUserInvitation, getUserInvitations, revokeUserInvitation, type UserInvitationErrorCode } from '@alga-psa/users/actions/user-actions/userInvitationActions';
+
+type PendingUserInvitation = Awaited<ReturnType<typeof getUserInvitations>>[number];
 
 const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
   PERMISSION_DENIED_INVITE: 'users.messages.error.permissionDeniedInvite',
@@ -38,6 +42,28 @@ const GENERIC_PORTAL_INVITE_ERROR_CODES: ReadonlySet<PortalInvitationErrorCode> 
   'INVITATION_FAILED',
   'CREATE_USER_FAILED'
 ]);
+
+// Same idea as PORTAL_INVITE_ERROR_KEYS, but for the internal-team-member
+// email invite flow (sendUserInvitation) — mirrors the client-portal mapping
+// so the same "create user" form can show either flavor of invitation error.
+const USER_INVITE_ERROR_KEYS: Partial<Record<UserInvitationErrorCode, string>> = {
+  PERMISSION_DENIED_INVITE: 'users.messages.error.permissionDeniedInvite',
+  EMAIL_NOT_CONFIGURED: 'users.messages.error.emailNotConfigured',
+  EMAIL_ALREADY_EXISTS: 'users.messages.error.emailAlreadyInUse',
+  INVALID_EMAIL: 'users.messages.error.invalidEmail',
+  ROLE_REQUIRED: 'users.messages.error.roleRequired',
+  INVALID_ROLE: 'users.messages.error.invalidRole',
+  BASE_URL_NOT_CONFIGURED: 'users.messages.error.noBaseUrl',
+  INVITATION_FAILED: 'users.messages.error.sendInvitation',
+  LICENSE_LIMIT_REACHED: 'users.messages.error.licenseLimitReached',
+  SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit',
+  INVITATION_NOT_FOUND: 'users.messages.error.invitationNotFound',
+  REVOKE_FAILED: 'users.messages.error.revokeInvitation'
+};
+
+const GENERIC_USER_INVITE_ERROR_CODES: ReadonlySet<UserInvitationErrorCode> = new Set([
+  'INVITATION_FAILED'
+]);
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import toast from 'react-hot-toast';
@@ -51,14 +77,14 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Search, Eye, EyeOff } from 'lucide-react';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
-import { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
+import type { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
 import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements, isValidEmail } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import OrgChart from './org-chart/OrgChart';
-import { QuickAddContact } from '@alga-psa/clients/components';
+import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
 import { useTier } from '@/context/TierContext';
 
 const UserManagement = (): React.JSX.Element => {
@@ -73,6 +99,22 @@ const UserManagement = (): React.JSX.Element => {
         return result.error;
       }
       const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
+      if (key) {
+        return t(key, { defaultValue: result.error ?? undefined });
+      }
+    }
+    return result.error || t(defaultKey);
+  };
+
+  const translateUserInvitationError = (
+    result: { error?: string; errorCode?: UserInvitationErrorCode },
+    defaultKey: string
+  ): string => {
+    if (result.errorCode) {
+      if (GENERIC_USER_INVITE_ERROR_CODES.has(result.errorCode) && result.error) {
+        return result.error;
+      }
+      const key = USER_INVITE_ERROR_KEYS[result.errorCode];
       if (key) {
         return t(key, { defaultValue: result.error ?? undefined });
       }
@@ -119,6 +161,8 @@ const UserManagement = (): React.JSX.Element => {
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
   const [userView, setUserView] = useState<'list' | 'org'>('list');
+  const [pendingInvitations, setPendingInvitations] = useState<PendingUserInvitation[]>([]);
+  const [revokingInvitationId, setRevokingInvitationId] = useState<string | null>(null);
   const { isSolo } = useTier();
   const soloMspUserLimitReached = portalType === 'msp' && isSolo && (licenseUsage?.used ?? 0) >= 1;
   const soloMspLimitMessage = 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.';
@@ -179,6 +223,9 @@ const UserManagement = (): React.JSX.Element => {
     fetchUsers();
     fetchRoles();
     fetchLicenseUsage();
+    if (portalType === 'msp') {
+      fetchPendingInvitations();
+    }
     if (portalType === 'client') {
       fetchClients();
       fetchContacts();
@@ -289,10 +336,16 @@ const UserManagement = (): React.JSX.Element => {
     try {
       setIsCopyingPortalLink(true);
       const linkResult = await getTenantPortalLoginLink();
+      if (!linkResult.success) {
+        toast.error(linkResult.error);
+        return;
+      }
+
+      const portalLink = linkResult.data;
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(linkResult.url);
+        await navigator.clipboard.writeText(portalLink.url);
         toast.success(
-          linkResult.source === 'vanity'
+          portalLink.source === 'vanity'
             ? t('users.messages.success.copiedVanityLink')
             : t('users.messages.success.copiedCanonicalLink')
         );
@@ -305,6 +358,42 @@ const UserManagement = (): React.JSX.Element => {
       setIsCopyingPortalLink(false);
     }
   };
+
+  const fetchPendingInvitations = async (): Promise<void> => {
+    try {
+      const invitations = await getUserInvitations();
+      setPendingInvitations(invitations.filter(inv => inv.status === 'pending'));
+    } catch (err) {
+      console.error('Error fetching pending team invitations:', err);
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: string): Promise<void> => {
+    setRevokingInvitationId(invitationId);
+    try {
+      const result = await revokeUserInvitation(invitationId);
+      if (result.success) {
+        toast.success(t('users.messages.success.invitationRevoked', { defaultValue: 'Invitation revoked' }));
+        await fetchPendingInvitations();
+      } else {
+        toast.error(translateUserInvitationError(result, 'users.messages.error.revokeInvitation'));
+      }
+    } catch (err) {
+      console.error('Error revoking team invitation:', err);
+      toast.error(t('users.messages.error.revokeInvitation', { defaultValue: 'Failed to revoke invitation' }));
+    } finally {
+      setRevokingInvitationId(null);
+    }
+  };
+
+  const formatInvitationExpiry = (dateValue: string): string =>
+    new Date(dateValue).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
 
   const fetchUsers = async (): Promise<void> => {
     try {
@@ -408,18 +497,12 @@ const fetchContacts = async (): Promise<void> => {
         return;
       }
       
-      // Validate required fields based on portal type
-      if (portalType === 'msp') {
-        if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
-          setError(t('users.messages.error.fillRequiredFields'));
-          return;
-        }
-      } else {
-        // For client portal, password is optional (they'll set it via invitation)
-        if (!newUser.firstName || !newUser.lastName || !newUser.email) {
-          setError(t('users.messages.error.fillRequiredFields'));
-          return;
-        }
+      // Password is optional for both portal types — leaving it blank sends
+      // an email invitation (client-portal or internal-team) instead of
+      // requiring the admin to invent and hand over a temporary password.
+      if (!newUser.firstName || !newUser.lastName || !newUser.email) {
+        setError(t('users.messages.error.fillRequiredFields'));
+        return;
       }
 
       if (portalType === 'client') {
@@ -505,8 +588,35 @@ const fetchContacts = async (): Promise<void> => {
           }
           await fetchUsers();
         }
+      } else if (!newUser.password) {
+        // No password entered — send an email invite instead of forcing the
+        // admin to invent and hand over a temporary password. Mirrors the
+        // client-portal invitation flow and the onboarding wizard's Team
+        // Members step, which use the same sendUserInvitation action.
+        const invitationResult = await sendUserInvitation({
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : '')
+        });
+
+        if (!invitationResult.success) {
+          const message = translateUserInvitationError(invitationResult, 'users.messages.error.sendInvitation');
+          toast.error(message);
+          setError(message);
+          return;
+        }
+
+        toast.success(t('users.messages.success.teamInvitationSent', { defaultValue: 'Invitation sent successfully!' }));
+        await fetchPendingInvitations();
       } else {
-        // Create MSP user
+        // Create MSP user immediately with the admin-provided password
+        const passwordError = validatePassword(newUser.password);
+        if (passwordError) {
+          toast.error(passwordError);
+          return;
+        }
+
         const result = await addUser({
           firstName: newUser.firstName,
           lastName: newUser.lastName,
@@ -525,6 +635,8 @@ const fetchContacts = async (): Promise<void> => {
             EMAIL_ALREADY_EXISTS: 'users.messages.error.emailAlreadyInUse',
             LICENSE_LIMIT_REACHED: 'users.messages.error.licenseLimitReached',
             SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit',
+            PERMISSION_DENIED: 'users.messages.error.permissionDenied',
+            USER_CREATE_FAILED: 'users.messages.error.createUser',
           };
           const message = t(keysByCode[result.code], { defaultValue: result.error });
           toast.error(message);
@@ -809,7 +921,7 @@ const fetchContacts = async (): Promise<void> => {
             )}
             <div>
               <Label htmlFor="password">
-                {t('users.form.fields.password')} {portalType === 'msp' && <span className="text-destructive">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">{t('users.form.fields.passwordOptional')}</span>}
+                {t('users.form.fields.password')} <span className="text-sm text-gray-500">{t('users.form.fields.passwordOptional')}</span>
               </Label>
               <div className="relative">
                 <Input
@@ -824,7 +936,7 @@ const fetchContacts = async (): Promise<void> => {
                     }
                   }}
                   className="pr-10"
-                  placeholder={portalType === 'client' ? t('users.form.fields.passwordPlaceholder.client') : t('users.form.fields.passwordPlaceholder.msp')}
+                  placeholder={t('users.form.fields.passwordPlaceholder.client')}
                   autoComplete="new-password"
                 />
                 <button
@@ -840,15 +952,17 @@ const fetchContacts = async (): Promise<void> => {
                   )}
                 </button>
               </div>
-              {portalType === 'client' && (
-                <Alert variant={newUser.password ? 'info' : 'warning'} className="mt-2">
-                  <AlertDescription>
-                    {newUser.password
-                      ? t('users.form.passwordAlert.withPassword')
-                      : t('users.form.passwordAlert.withoutPassword')}
-                  </AlertDescription>
-                </Alert>
-              )}
+              <Alert variant={newUser.password ? 'info' : 'warning'} className="mt-2">
+                <AlertDescription>
+                  {newUser.password
+                    ? t('users.form.passwordAlert.withPassword')
+                    : portalType === 'client'
+                      ? t('users.form.passwordAlert.withoutPassword')
+                      : t('users.form.passwordAlert.withoutPasswordMsp', {
+                          defaultValue: 'No password required — we will send them an email invitation to set it themselves.'
+                        })}
+                </AlertDescription>
+              </Alert>
             </div>
           </div>
         </div>
@@ -869,11 +983,11 @@ const fetchContacts = async (): Promise<void> => {
           >
             {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
               ? t('users.license.addLicense')
-              : portalType === 'msp'
+              : newUser.password
                 ? t('users.actions.createUser')
-                : newUser.password
-                  ? t('users.actions.createUser')
-                  : t('users.actions.sendInvitation')}
+                : portalType === 'client'
+                  ? t('users.actions.sendInvitation')
+                  : t('users.actions.sendTeamInvitation', { defaultValue: 'Send Invitation' })}
           </Button>
           <Button
             id={`cancel-new-${portalType}-user-btn`}
@@ -1003,6 +1117,44 @@ const fetchContacts = async (): Promise<void> => {
               {renderCreateUserActions()}
             </div>
             {showNewUserForm && renderNewUserForm()}
+            {pendingInvitations.length > 0 && (
+              <div className="mb-4 border rounded-lg p-4 space-y-3">
+                <div>
+                  <h4 className="text-sm font-medium">
+                    {t('users.invitations.title', { defaultValue: 'Pending Invitations' })}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {t('users.invitations.description', { defaultValue: "Invited team members who haven't set up their account yet." })}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {pendingInvitations.map((invitation) => (
+                    <div key={invitation.invitation_id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium">
+                          {invitation.first_name} {invitation.last_name}
+                          <span className="ml-2 font-normal text-muted-foreground">{invitation.email}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {t('users.invitations.expiresPrefix', { defaultValue: 'Expires:' })} {formatInvitationExpiry(invitation.expires_at)}
+                        </div>
+                      </div>
+                      <Button
+                        id={`revoke-invitation-${invitation.invitation_id}`}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevokeInvitation(invitation.invitation_id)}
+                        disabled={revokingInvitationId === invitation.invitation_id}
+                      >
+                        {revokingInvitationId === invitation.invitation_id
+                          ? t('users.invitations.revoking', { defaultValue: 'Revoking...' })
+                          : t('users.invitations.revoke', { defaultValue: 'Revoke' })}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <Tabs value={userView} onValueChange={(v) => setUserView(v as 'list' | 'org')}>
               <TabsList>
                 <TabsTrigger value="list">{t('users.tabs.list')}</TabsTrigger>

@@ -5,6 +5,7 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
@@ -78,6 +79,7 @@ export const ticketSchema = z.object({
   attributes: z.record(z.unknown()).nullable(),
   email_metadata: z.unknown().nullable().optional(),
   priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
+  response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
   // ITIL-specific fields
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
@@ -441,11 +443,10 @@ export class TicketModel {
     trx: Knex.Transaction
   ): Promise<BusinessRuleResult> {
     try {
-      const location = await trx('client_locations')
+      const location = await tenantDb(trx, tenant).table('client_locations')
         .where({
           location_id: locationId,
-          client_id: clientId,
-          tenant: tenant
+          client_id: clientId
         })
         .first();
       
@@ -475,8 +476,8 @@ export class TicketModel {
     trx: Knex.Transaction
   ): Promise<BusinessRuleResult> {
     try {
-      const subcategory = await trx('categories')
-        .where({ category_id: subcategoryId, tenant: tenant })
+      const subcategory = await tenantDb(trx, tenant).table('categories')
+        .where({ category_id: subcategoryId })
         .first();
 
       if (subcategory && subcategory.parent_category !== categoryId) {
@@ -505,11 +506,10 @@ export class TicketModel {
     trx: Knex.Transaction
   ): Promise<BusinessRuleResult> {
     try {
-      const status = await trx('statuses')
+      const status = await tenantDb(trx, tenant).table('statuses')
         .where({
           status_id: statusId,
           board_id: boardId,
-          tenant,
           status_type: 'ticket'
         })
         .first();
@@ -739,7 +739,7 @@ export class TicketModel {
     };
 
     // Insert the ticket
-    await trx('tickets').insert(dbData);
+    await tenantDb(trx, tenant).table('tickets').insert(dbData);
 
     // Auto-apply matching checklist templates (idempotent; null matcher =
     // match any). Failure here must not break ticket creation.
@@ -899,8 +899,10 @@ export class TicketModel {
     const validatedData = validation.data;
 
     // Get current ticket state
-    const currentTicket = await trx('tickets')
-      .where({ ticket_id: ticketId, tenant: tenant })
+    const db = tenantDb(trx, tenant);
+
+    const currentTicket = await db.table('tickets')
+      .where({ ticket_id: ticketId })
       .first();
 
     if (!currentTicket) {
@@ -970,8 +972,8 @@ export class TicketModel {
     }
 
     // Update the ticket
-    const [updatedTicket] = await trx('tickets')
-      .where({ ticket_id: ticketId, tenant: tenant })
+    const [updatedTicket] = await db.table('tickets')
+      .where({ ticket_id: ticketId })
       .update({
         ...updateData,
         updated_at: new Date()
@@ -1030,9 +1032,11 @@ export class TicketModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<any> {
+    const db = tenantDb(trx, tenant);
+
     // Get current ticket state
-    const currentTicket = await trx('tickets')
-      .where({ ticket_id: ticketId, tenant: tenant })
+    const currentTicket = await db.table('tickets')
+      .where({ ticket_id: ticketId })
       .first();
 
     if (!currentTicket) {
@@ -1051,18 +1055,16 @@ export class TicketModel {
     // Handle the complex assignment change logic from server actions
     // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
     // to avoid constraint violations after the update
-    await trx('ticket_resources')
+    await db.table('ticket_resources')
       .where({
-        tenant: tenant,
         ticket_id: ticketId,
         additional_user_id: updateData.assigned_to
       })
       .delete();
     
     // Step 2: Get existing resources with the old assigned_to value
-    const existingResources = await trx('ticket_resources')
+    const existingResources = await db.table('ticket_resources')
       .where({
-        tenant: tenant,
         ticket_id: ticketId,
         assigned_to: currentTicket.assigned_to
       })
@@ -1082,9 +1084,8 @@ export class TicketModel {
     
     // Step 4: Delete the existing resources with the old assigned_to
     if (existingResources.length > 0) {
-      await trx('ticket_resources')
+      await db.table('ticket_resources')
         .where({
-          tenant: tenant,
           ticket_id: ticketId,
           assigned_to: currentTicket.assigned_to
         })
@@ -1092,8 +1093,8 @@ export class TicketModel {
     }
     
     // Step 5: Update the ticket with the new assigned_to
-    const [updatedTicket] = await trx('tickets')
-      .where({ ticket_id: ticketId, tenant: tenant })
+    const [updatedTicket] = await db.table('tickets')
+      .where({ ticket_id: ticketId })
       .update({
         ...updateData,
         updated_at: new Date()
@@ -1102,7 +1103,7 @@ export class TicketModel {
       
     // Step 6: Re-create the resources with the new assigned_to
     for (const resourceData of resourcesToRecreate) {
-      await trx('ticket_resources').insert({
+      await db.table('ticket_resources').insert({
         ...resourceData,
         assigned_to: updateData.assigned_to
       });
@@ -1149,12 +1150,12 @@ export class TicketModel {
     }
 
     const validatedData = validation.data;
+    const db = tenantDb(trx, tenant);
 
     // Verify ticket exists and belongs to tenant
-    const ticket = await trx('tickets')
+    const ticket = await db.table('tickets')
       .where({
-        ticket_id: validatedData.ticket_id,
-        tenant: tenant
+        ticket_id: validatedData.ticket_id
       })
       .first();
 
@@ -1163,9 +1164,8 @@ export class TicketModel {
     }
 
     if (validatedData.contact_id) {
-      const contact = await trx('contacts')
+      const contact = await db.table('contacts')
         .where({
-          tenant,
           contact_name_id: validatedData.contact_id,
         })
         .first();
@@ -1196,21 +1196,25 @@ export class TicketModel {
     })();
 
     if (parentCommentId) {
-      const parent = await trx('comments as parent')
-        .join('comment_threads as thread', function() {
-          this.on('parent.tenant', 'thread.tenant')
-            .andOn('parent.thread_id', 'thread.thread_id');
+      const parentQuery = db.table('comments as parent')
+        .where('parent.comment_id', parentCommentId);
+      db.tenantJoin(parentQuery, 'comment_threads as thread', 'parent.thread_id', 'thread.thread_id');
+      const parent = (await parentQuery
+        .select({
+          comment_id: 'parent.comment_id',
+          ticket_id: 'parent.ticket_id',
+          thread_id: 'parent.thread_id',
+          deleted_at: 'parent.deleted_at',
+          thread_is_internal: 'thread.is_internal',
         })
-        .select(
-          'parent.comment_id',
-          'parent.ticket_id',
-          'parent.thread_id',
-          'parent.deleted_at',
-          'thread.is_internal as thread_is_internal'
-        )
-        .where('parent.tenant', tenant)
-        .where('parent.comment_id', parentCommentId)
-        .first();
+        .first()) as unknown as
+        | {
+            ticket_id: string;
+            deleted_at?: Date | string | null;
+            thread_id: string;
+            thread_is_internal?: boolean | null;
+          }
+        | undefined;
 
       if (!parent) {
         throw new Error('Parent comment not found');
@@ -1246,7 +1250,7 @@ export class TicketModel {
     };
 
     if (!parentCommentId) {
-      await trx('comment_threads').insert({
+      await db.table('comment_threads').insert({
         tenant,
         thread_id: threadId,
         ticket_id: validatedData.ticket_id,
@@ -1260,11 +1264,11 @@ export class TicketModel {
       });
     }
 
-    await trx('comments').insert(baseCommentData);
+    await db.table('comments').insert(baseCommentData);
 
     if (parentCommentId) {
-      await trx('comment_threads')
-        .where({ tenant, thread_id: threadId })
+      await db.table('comment_threads')
+        .where({ thread_id: threadId })
         .update({
           reply_count: trx.raw('reply_count + 1'),
           last_activity_at: now,
@@ -1273,17 +1277,15 @@ export class TicketModel {
 
     if (!validatedData.is_internal && validatedData.author_type === 'contact') {
       // Only update response state if tracking is enabled for this tenant
-      const tenantSettingsRow = await trx('tenant_settings')
+      const tenantSettingsRow = await db.table('tenant_settings')
         .select('ticket_display_settings')
-        .where({ tenant })
         .first();
       const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 
       if (responseStateEnabled) {
-        await trx('tickets')
+        await db.table('tickets')
           .where({
             ticket_id: validatedData.ticket_id,
-            tenant,
           })
           .update({
             response_state: 'awaiting_internal',
@@ -1297,15 +1299,15 @@ export class TicketModel {
         // Resolve a display name so notification templates render the author/body.
         let authorName: string | undefined;
         if (validatedData.contact_id) {
-          const c = await trx('contacts')
+          const c = await db.table('contacts')
             .select('full_name')
-            .where({ tenant, contact_name_id: validatedData.contact_id })
+            .where({ contact_name_id: validatedData.contact_id })
             .first();
           authorName = c?.full_name || undefined;
         } else if (validatedData.author_id) {
-          const u = await trx('users')
+          const u = await db.table('users')
             .select('first_name', 'last_name')
-            .where({ tenant, user_id: validatedData.author_id })
+            .where({ user_id: validatedData.author_id })
             .first();
           authorName = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || undefined : undefined;
         }
@@ -1367,9 +1369,10 @@ export class TicketModel {
     }
 
     // First try to find an explicitly marked default status
-    const defaultStatus = await trx('statuses')
+    const db = tenantDb(trx, tenant);
+
+    const defaultStatus = await db.table('statuses')
       .where({
-        tenant,
         is_default: true,
         status_type: 'ticket',
         board_id: boardId
@@ -1381,9 +1384,8 @@ export class TicketModel {
     }
 
     // Fall back to the first ticket status ordered by order_number
-    const firstStatus = await trx('statuses')
+    const firstStatus = await db.table('statuses')
       .where({
-        tenant,
         status_type: 'ticket',
         board_id: boardId
       })
@@ -1403,10 +1405,11 @@ export class TicketModel {
     description?: string
   ): Promise<string> {
     // Try to find existing board
-    const existingBoard = await trx('boards')
+    const db = tenantDb(trx, tenant);
+
+    const existingBoard = await db.table('boards')
       .where({
-        board_name: boardName,
-        tenant: tenant
+        board_name: boardName
       })
       .first();
 
@@ -1418,7 +1421,7 @@ export class TicketModel {
     const boardId = uuidv4();
     const now = new Date();
 
-    await trx('boards').insert({
+    await db.table('boards').insert({
       board_id: boardId,
       tenant,
       board_name: boardName,
@@ -1441,11 +1444,10 @@ export class TicketModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<string | null> {
-    const status = await trx('statuses')
+    const status = await tenantDb(trx, tenant).table('statuses')
       .where({
         name: statusName,
-        item_type: itemType,
-        tenant: tenant
+        item_type: itemType
       })
       .first();
 
@@ -1460,10 +1462,9 @@ export class TicketModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<string | null> {
-    const priority = await trx('priorities')
+    const priority = await tenantDb(trx, tenant).table('priorities')
       .where({
-        priority_name: priorityName,
-        tenant: tenant
+        priority_name: priorityName
       })
       .first();
 

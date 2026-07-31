@@ -16,6 +16,11 @@ import {
 } from './assetActions';
 import { getAssetDocuments } from './assetDocumentActions';
 import {
+  assetActionErrorFrom,
+  assetActionErrorMessage,
+  unwrapAssetActionResult,
+} from './assetActionErrors';
+import {
   ASSET_DRAWER_TABS,
   panelParamToTab,
   AssetDetailDrawerProps,
@@ -33,6 +38,15 @@ export async function loadAssetDetailDrawerData({ assetId, panel }: AssetDetailD
   if (assetId) {
     try {
       const asset = await getAsset(assetId);
+      const expected = assetActionErrorFrom(asset);
+      if (expected) {
+        error = assetActionErrorMessage(expected);
+        return {
+          activeTab,
+          data: serverData,
+          error,
+        };
+      }
       serverData.asset = asset;
 
       if (asset) {
@@ -85,7 +99,7 @@ async function loadTabData(tab: AssetDrawerTab, asset: Asset, target: AssetDrawe
 
 async function safeGetAssetMaintenanceReport(assetId: string): Promise<AssetMaintenanceReport | null> {
   try {
-    return await getAssetMaintenanceReport(assetId);
+    return unwrapAssetActionResult(await getAssetMaintenanceReport(assetId));
   } catch (error) {
     console.error('Failed to load asset maintenance report', error);
     return null;
@@ -94,7 +108,7 @@ async function safeGetAssetMaintenanceReport(assetId: string): Promise<AssetMain
 
 async function safeGetAssetHistory(assetId: string): Promise<AssetHistory[] | null> {
   try {
-    return await getAssetHistory(assetId);
+    return unwrapAssetActionResult(await getAssetHistory(assetId));
   } catch (error) {
     console.error('Failed to load asset history', error);
     return null;
@@ -103,7 +117,7 @@ async function safeGetAssetHistory(assetId: string): Promise<AssetHistory[] | nu
 
 async function safeGetAssetLinkedTickets(assetId: string): Promise<AssetTicketSummary[] | null> {
   try {
-    return await getAssetLinkedTickets(assetId);
+    return unwrapAssetActionResult(await getAssetLinkedTickets(assetId));
   } catch (error) {
     console.error('Failed to load linked tickets', error);
     return null;
@@ -112,7 +126,17 @@ async function safeGetAssetLinkedTickets(assetId: string): Promise<AssetTicketSu
 
 async function safeGetAssetDocuments(assetId: string): Promise<IDocument[] | null> {
   try {
-    return await getAssetDocuments(assetId);
+    const result = await getAssetDocuments(assetId);
+    const expectedError = assetActionErrorFrom(result);
+    if (expectedError) {
+      console.error('Failed to load asset documents', assetActionErrorMessage(expectedError));
+      return null;
+    }
+    if (!Array.isArray(result)) {
+      console.error('Failed to load asset documents', 'Unexpected response shape');
+      return null;
+    }
+    return result;
   } catch (error) {
     console.error('Failed to load asset documents', error);
     return null;

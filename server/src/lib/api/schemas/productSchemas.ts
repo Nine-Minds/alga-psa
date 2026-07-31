@@ -42,6 +42,7 @@ const productShape = {
   description: descriptionSchema.optional(),
 
   sku: z.union([z.string().max(128), z.null()]).optional(),
+  barcode: z.union([z.string().max(255), z.null()]).optional(),
   cost: z.union([z.number().min(0), z.null()]).optional(),
   // DD-2/F-2: no static 'USD' default. ProductCatalogService.create resolves
   // cost_currency from the tenant default (default_billing_settings) and sets it

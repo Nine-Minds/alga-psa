@@ -16,6 +16,11 @@ import type {
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
   withTransaction: vi.fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => {
@@ -43,6 +48,15 @@ vi.mock('@alga-psa/projects/actions/projectActions', () => ({
 
 vi.mock('@alga-psa/projects/models/project', () => ({
   default: {
+    getStatusesByType: vi.fn().mockResolvedValue([
+      {
+        status_id: 'project-status-1',
+        name: 'Open',
+        status_type: 'project',
+        is_closed: false,
+        tenant: 'tenant-123',
+      },
+    ]),
     generateNextWbsCode: vi.fn().mockResolvedValue('1'),
     create: vi.fn().mockResolvedValue({
       project_id: 'new-project-123',
@@ -358,7 +372,7 @@ describe('Project Template Actions', () => {
         projectTemplateActions.createTemplateFromProject('invalid-id', {
           template_name: 'Test'
         })
-      ).rejects.toThrow('Project not found');
+      ).resolves.toEqual({ actionError: 'Project not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -368,7 +382,7 @@ describe('Project Template Actions', () => {
         projectTemplateActions.createTemplateFromProject('project-123', {
           template_name: 'Test'
         })
-      ).rejects.toThrow('Permission denied: Cannot create project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot create project' });
     });
 
     it('should throw error if no authenticated user', async () => {
@@ -856,7 +870,7 @@ describe('Project Template Actions', () => {
           project_name: 'Test',
           client_id: 'client-123'
         })
-      ).rejects.toThrow('Template not found');
+      ).resolves.toEqual({ actionError: 'Template not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -867,7 +881,7 @@ describe('Project Template Actions', () => {
           project_name: 'Test',
           client_id: 'client-123'
         })
-      ).rejects.toThrow('Permission denied: Cannot create project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot create project' });
     });
 
     it('should throw error if no authenticated user', async () => {
@@ -951,7 +965,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.updateTemplate('invalid-id', { template_name: 'Test' })
-      ).rejects.toThrow('Template not found');
+      ).resolves.toEqual({ actionError: 'Template not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -959,7 +973,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.updateTemplate('template-123', { template_name: 'Test' })
-      ).rejects.toThrow('Permission denied: Cannot update project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot update project' });
     });
 
     it('should throw error if no authenticated user', async () => {
@@ -988,7 +1002,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.deleteTemplate('invalid-id')
-      ).rejects.toThrow('Template not found');
+      ).resolves.toEqual({ actionError: 'Template not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -996,7 +1010,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.deleteTemplate('template-123')
-      ).rejects.toThrow('Permission denied: Cannot delete project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot delete project' });
     });
 
     it('should throw error if no authenticated user', async () => {
@@ -1285,7 +1299,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.duplicateTemplate('invalid-id')
-      ).rejects.toThrow('Template not found');
+      ).resolves.toEqual({ actionError: 'Template not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -1293,7 +1307,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.duplicateTemplate('template-123')
-      ).rejects.toThrow('Permission denied: Cannot create project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot create project' });
     });
 
     it('should throw error if no authenticated user', async () => {

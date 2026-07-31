@@ -2,6 +2,27 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import { Knex } from 'knex';
 import { vi } from 'vitest';
 
+// getNextNumber now self-initializes the next_number row for every entity
+// type (so a tenant's first invoice/project number carries the right prefix
+// instead of the table's TIC default). That runs through tenantDb before the
+// raw generate_next_number call; stub it to a no-op so these tests exercise
+// the generation logic, not the scoped-insert plumbing.
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    tenantDb: vi.fn(() => ({
+      table: vi.fn(() => ({
+        insert: vi.fn(() => ({
+          onConflict: vi.fn(() => ({
+            ignore: vi.fn(() => Promise.resolve()),
+          })),
+        })),
+      })),
+    })),
+  };
+});
+
 describe('SharedNumberingService', () => {
   let mockKnex: any;
   const mockTenant = '00000000-0000-0000-0000-000000000001';

@@ -14,8 +14,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const agentId = req.nextUrl.searchParams.get('agentId') ?? undefined;
-  const limitParam = req.nextUrl.searchParams.get('limit');
-  const limit = limitParam ? Number(limitParam) : undefined;
-  const rows = await exportAgentAudit(admin.tenant, { agentId, limit });
-  return NextResponse.json({ data: rows, count: rows.length });
+  const pageParam = Number(req.nextUrl.searchParams.get('page') ?? '1');
+  const pageSizeParam = Number(req.nextUrl.searchParams.get('pageSize') ?? '25');
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
+  const pageSize = Number.isFinite(pageSizeParam) ? Math.min(Math.max(Math.floor(pageSizeParam), 1), 200) : 25;
+  const { rows, total } = await exportAgentAudit(admin.tenant, {
+    agentId,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  });
+  return NextResponse.json({ data: rows, total, page, pageSize });
 }

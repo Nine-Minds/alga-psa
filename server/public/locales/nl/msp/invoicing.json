@@ -28,8 +28,12 @@
         "group": "Groep",
         "servicePeriod": "Serviceperiode",
         "invoiceWindow": "Factuurvenster",
-        "included": "Inbegrepen"
-      }
+        "included": "Inbegrepen",
+        "charge": "Type",
+        "status": "Status",
+        "amount": "Bedrag"
+      },
+      "pageScopeNote": "{{count}} groep(en) op deze pagina"
     },
     "groups": {
       "item": "{{count}}-item",
@@ -41,9 +45,6 @@
       "line": "{{count}}-lijn",
       "line_one": "{{count}}-lijn",
       "line_other": "{{count}}-lijnen",
-      "obligationCount": "{{count}}-verplichting",
-      "obligationCount_one": "{{count}}-verplichting",
-      "obligationCount_other": "{{count}}-verplichtingen",
       "includedCount": "{{count}}-item inbegrepen",
       "includedCount_one": "{{count}}-item inbegrepen",
       "includedCount_other": "{{count}}-items inbegrepen",
@@ -208,7 +209,13 @@
         "scheduleKey": "Schema sleutel"
       },
       "reviewLink": "Bekijk serviceperioden",
-      "helpText": "Herstel de canonieke serviceperioderecords in plaats van een compatibiliteitsfactuurrij te genereren."
+      "helpText": "Herstel de canonieke serviceperioderecords in plaats van een compatibiliteitsfactuurrij te genereren.",
+      "fixAll": "Alles herstellen",
+      "fixAllBusy": "Opnieuw opbouwen…",
+      "fixAllResult": "{{schedules}} planning(en) opnieuw opgebouwd voor {{clients}} klant(en).",
+      "fixAllNoop": "Alle factureringsplanningen zijn al bijgewerkt. Alles wat hieronder nog staat, moet afzonderlijk worden gecontroleerd.",
+      "fixAllError": "Kan serviceperioden niet opnieuw opbouwen. Probeer het opnieuw.",
+      "fixAllDenied": "Je hebt geen toestemming om serviceperioden opnieuw op te bouwen."
     },
     "errors": {
       "title": "Er zijn fouten opgetreden bij het finaliseren van facturen:",
@@ -217,6 +224,61 @@
     },
     "loading": {
       "billingData": "Factureringsgegevens laden"
+    },
+    "views": {
+      "all": "Alle",
+      "ready": "Klaar",
+      "combinable": "Combineerbaar",
+      "attention": "Aandacht nodig",
+      "notYetDue": "Nog niet verschuldigd"
+    },
+    "status": {
+      "ready": "Klaar",
+      "combine": "Combineren",
+      "separate": "Apart",
+      "notYetDue": "Nog niet verschuldigd",
+      "approval": "Goedkeuring",
+      "blocked": "Geblokkeerd"
+    },
+    "chargeTags": {
+      "fixed": "FIX",
+      "hourly": "T&M",
+      "usage": "USE",
+      "bucket": "BKT"
+    },
+    "summary": {
+      "selected": "{{count}} geselecteerd",
+      "breakdown": "{{invoices}} factuur/facturen · {{combine}} gecombineerd · {{separate}} apart",
+      "knownNow": "nu bekend",
+      "knownPlusAtGeneration": "nu bekend · {{count}} berekend bij genereren",
+      "atGenerationLines": "{{count}} post(en)",
+      "empty": "Selecteer groepen of posten om facturen te bekijken of te genereren.",
+      "pageScope": "{{groups}} groep(en) · {{obligations}} post(en)"
+    },
+    "amount": {
+      "atGeneration": "Berekend bij genereren",
+      "plusAtGeneration": "+ {{count}} bij genereren"
+    },
+    "window": {
+      "open": "Open",
+      "opensOn": "Opent {{date}}",
+      "notOpen": "Nog niet open"
+    },
+    "legend": {
+      "confirmed": "Bedrag nu bekend",
+      "atGeneration": "Berekend bij genereren",
+      "combine": "Combineren tot één factuur",
+      "separate": "Moet apart gefactureerd worden",
+      "notYetDue": "Nog niet verschuldigd"
+    },
+    "filters": {
+      "title": "Filters",
+      "windowOpen": "Venster open",
+      "charge": "Type",
+      "currency": "Valuta",
+      "any": "alle",
+      "clear": "Wissen",
+      "countSummary": "{{groups}} groep(en) · {{obligations}} post(en)"
     }
   },
   "manualInvoices": {
@@ -227,11 +289,15 @@
     "fields": {
       "client": "Klant",
       "invoiceNumber": "Factuurnummer",
-      "invoiceNumberOptional": "Factuurnummer (optioneel)"
+      "invoiceNumberOptional": "Factuurnummer (optioneel)",
+      "sourceSalesOrder": "Source sales order (optional)"
     },
     "placeholders": {
       "selectClient": "Selecteer een klant",
-      "invoiceNumberOptional": "Laat dit leeg om automatisch te genereren"
+      "invoiceNumberOptional": "Laat dit leeg om automatisch te genereren",
+      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
+      "searchSalesOrders": "Search sales orders...",
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
     },
     "automatedItems": {
       "title": "Geautomatiseerde regelitems",
@@ -248,7 +314,9 @@
       "addDiscount": "Korting toevoegen",
       "generate": "Factuur genereren",
       "saveChanges": "Wijzigingen opslaan",
-      "processing": "Verwerken..."
+      "processing": "Verwerken...",
+      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
       "total": "Totaal"
@@ -270,11 +338,29 @@
       "loadItems": "Fout bij het laden van factuuritems",
       "refresh": "Er is een fout opgetreden bij het vernieuwen van de factuurgegevens.",
       "updateFailed": "Fout bij bijwerken factuur",
-      "generateFailed": "Fout bij genereren factuur"
+      "generateFailed": "Fout bij genereren factuur",
+      "NO_BILLING_EMAIL": "{{clientName}} heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie van de klant en probeer het opnieuw.",
+      "CLIENT_NOT_FOUND": "De geselecteerde klant is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
+      "SERVICE_NOT_FOUND": "Service {{serviceId}} is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
+      "INVALID_QUANTITY": "De hoeveelheid moet groter zijn dan nul.",
+      "NO_TAX_RATE": "Er is geen actief belastingtarief gevonden voor {{region}} op {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Service {{serviceId}} voor deze korting is niet gevonden.",
+      "INVOICE_NUMBER_CONFLICT": "Dit factuurnummer is al in gebruik.",
+      "PERMISSION_DENIED": "U bent niet gemachtigd om deze factuur te maken of bij te werken.",
+      "UNEXPECTED": "Er is iets misgegaan bij het genereren van de factuur. Vermeld referentie {{ref}} wanneer u contact opneemt met ondersteuning.",
+      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
+      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie voordat u de factuur genereert."
     },
     "errorFallback": {
       "title": "Er is iets misgegaan",
       "retry": "Opnieuw proberen"
+    },
+    "salesOrderContext": {
+      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
     }
   },
   "draftsTab": {
@@ -370,7 +456,8 @@
       "pdfFailed": "Kan geen PDF genereren. Probeer het opnieuw.",
       "bulkPdfFailed": "Kan geen PDF's genereren. Probeer het opnieuw.",
       "unfinalizeFailed": "Kan de finalisatie van de factuur niet ongedaan maken. Probeer het opnieuw.",
-      "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw."
+      "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw.",
+      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}"
     }
   },
   "recurringServicePeriods": {
@@ -597,6 +684,8 @@
     "error": "Kan voorbeeld niet weergeven",
     "errorDescription": "Kan voorbeeld niet weergeven. Er ontbreken mogelijk gegevens.",
     "errors": {
+      "notFound": "Factuur niet gevonden.",
+      "noTemplates": "Er zijn geen factuursjablonen beschikbaar.",
       "loadFailed": "Kan voorbeeld niet laden: {{message}}",
       "actionFailed": "Kan {{action}} niet uitvoeren. Probeer het opnieuw.",
       "actionLabels": {
@@ -920,7 +1009,9 @@
       "description": "Beschrijving",
       "quantity": "Hoeveelheid",
       "rate": "Tarief",
-      "amount": "Hoeveelheid"
+      "amount": "Hoeveelheid",
+      "salesOrder": "Verkooporder",
+      "cogsMargin": "Kostprijs / Marge"
     },
     "labels": {
       "contractSubtotal": "Contractsubtotaal:",
@@ -934,7 +1025,8 @@
     "tabs": {
       "generate": "Genereer",
       "drafts": "Concepten",
-      "finalized": "Afgerond"
+      "finalized": "Afgerond",
+      "projectBilling": "Project Billing"
     }
   },
   "invoiceSyncBadge": {
@@ -1569,6 +1661,66 @@
     },
     "dragOverlay": {
       "component": "Component"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
+    "bulkActions": "Actions ({{count}})",
+    "loading": "Loading project billing queue...",
+    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "columns": {
+      "project": "Project",
+      "client": "Client",
+      "description": "Description",
+      "amount": "Amount",
+      "trigger": "Trigger",
+      "daysWaiting": "Days waiting",
+      "actions": "Actions"
+    },
+    "trigger": {
+      "phase": "Phase {{phase}} completed {{date}}",
+      "date": "Date reached",
+      "manual": "Manual"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approveInvoiceNow": "Approve & invoice now",
+      "hold": "Hold",
+      "cancel": "Cancel",
+      "approveSelected": "Approve selected",
+      "holdSelected": "Hold selected"
+    },
+    "toasts": {
+      "approved": "Entry approved.",
+      "approvedWithWarning": "Entry approved. {{warning}}",
+      "invoiced": "Entry approved and invoiced.",
+      "bulkApproved": "{{count}} entries approved.",
+      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
+      "held": "Entry placed on hold.",
+      "bulkHeld": "{{count}} entries placed on hold.",
+      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
+      "canceled": "Entry canceled."
+    },
+    "errors": {
+      "loadFailed": "Failed to load the project billing review queue. Please try again.",
+      "approveFailed": "Failed to approve the entry.",
+      "invoiceFailed": "Failed to approve and invoice the entry.",
+      "holdFailed": "Failed to place the entry on hold.",
+      "cancelFailed": "Failed to cancel the entry."
+    },
+    "holdDialog": {
+      "title": "Hold entry",
+      "titlePlural": "Hold {{count}} entries",
+      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
+      "reasonPlaceholder": "Reason for holding...",
+      "cancel": "Cancel",
+      "confirm": "Hold"
+    },
+    "cancelDialog": {
+      "title": "Cancel entry",
+      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
+      "confirm": "Cancel entry",
+      "dismiss": "Keep entry"
     }
   }
 }

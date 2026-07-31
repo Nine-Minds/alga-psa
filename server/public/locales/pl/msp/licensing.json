@@ -172,5 +172,58 @@
   },
   "runStudio": {
     "unavailable": "Workflow Run Studio nie jest dostępne w tej edycji. (runId: {{runId}})"
+  },
+  "aiConsent": {
+    "title": "Udostępnianie danych AI",
+    "subtitle": "Wymagane dla funkcji AI na tym urządzeniu. Sprawdź, co opuszcza Twoją sieć, zanim włączysz AI.",
+    "status": {
+      "granted": "Zgoda udzielona",
+      "revoked": "Zgoda cofnięta",
+      "missing": "Nie udzielono"
+    },
+    "unreachable": "Nie udało się połączyć z usługą AI, aby załadować bieżący status zgody. Spróbuj ponownie za chwilę.",
+    "explainer": "Gdy AI jest włączone, treści, na których pracuje — w tym teksty zgłoszeń, treści e-maili i wiadomości czatu — są wysyłane z tego urządzenia do chmurowej usługi AI Nine Minds, a stamtąd do zewnętrznych dostawców modeli w celu generowania odpowiedzi. Nic nie jest wysyłane, dopóki nie udzielisz zgody poniżej.",
+    "termsVersion": "Wersja warunków",
+    "grantedAt": "Udzielono",
+    "revoke": "Cofnij zgodę",
+    "accept": "Zaakceptuj i włącz AI",
+    "acceptDialog": {
+      "title": "Włączyć udostępnianie danych AI?",
+      "confirming": "Włączanie…",
+      "confirm": "Zgadzam się, włącz AI",
+      "body": "Kontynuując, zgadzasz się, że funkcje AI mogą przesyłać treści zgłoszeń, e-maili i czatów z tego urządzenia do chmurowej usługi AI Nine Minds, a następnie do zewnętrznych dostawców modeli w celu przetwarzania.",
+      "termsVersion": "Wersja warunków udostępniania danych: {{version}}"
+    },
+    "revokeDialog": {
+      "title": "Cofnąć udostępnianie danych AI?",
+      "confirming": "Cofanie…",
+      "confirm": "Cofnij zgodę",
+      "body": "Funkcje AI natychmiast przestają działać na tym urządzeniu. Żadne treści nie będą wysyłane do chmurowej usługi AI, dopóki zgoda nie zostanie udzielona ponownie."
+    }
+  },
+  "aiBalance": {
+    "title": "Kredyty AI",
+    "subtitle": "Przedpłacone kredyty finansują funkcje AI na tym urządzeniu. Zakupy odbywają się w sklepie Nine Minds.",
+    "refresh": "Odśwież",
+    "unreachable": "Nie udało się połączyć z usługą AI, aby załadować saldo kredytów. Spróbuj ponownie za chwilę.",
+    "blockedPendingConsent": "AI jest zablokowane, dopóki powyżej nie zostanie udzielona zgoda na udostępnianie danych. Gdy AI jest wyłączone, kredyty nie są zużywane.",
+    "upsell": {
+      "heading": "Subskrybuj dodatek AI",
+      "body": "Brak aktywnej subskrypcji AI dla tego urządzenia. Subskrybuj w sklepie Nine Minds, aby otrzymywać miesięczny przydział kredytów; sklep obsługuje płatności i doładowania.",
+      "subscribe": "Subskrybuj w sklepie"
+    },
+    "grace": "Kredyty zostały wyczerpane. AI nadal działa w ramach niewielkiego buforu bezpieczeństwa wynoszącego {{grace}} kredytów, zanim całkowicie się zatrzyma — doładuj, aby uniknąć przerwy.",
+    "low": "Saldo kredytów jest niskie. Doładuj w sklepie, aby uniknąć przerw.",
+    "total": "Łączne saldo",
+    "creditsUnit": "kredyty",
+    "included": "W pakiecie (miesięcznie)",
+    "resetsMonthly": "resetuje się co cykl",
+    "topup": "Doładowanie (nie wygasa)",
+    "carriesOver": "przechodzi dalej",
+    "manage": {
+      "heading": "Kup kredyty lub zarządzaj subskrypcją",
+      "body": "Doładowania, automatyczne doładowanie i zmiany subskrypcji obsługiwane są w sklepie Nine Minds.",
+      "openStore": "Otwórz sklep"
+    }
   }
 }

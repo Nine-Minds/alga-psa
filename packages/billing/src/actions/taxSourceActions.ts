@@ -1,10 +1,20 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
 import { getTaxImportState } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import type { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Client-specific tax source resolution result.
@@ -16,6 +26,8 @@ export interface ClientTaxSourceInfo {
   isOverride: boolean;
 }
 
+type TaxSourceActionError = ActionMessageError | ActionPermissionError;
+
 /**
  * Get the effective tax source for a client.
  * Checks client override first, then falls back to tenant settings.
@@ -26,9 +38,9 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
   _user,
   { tenant },
   clientId: string
-): Promise<ClientTaxSourceInfo> => {
+): Promise<ClientTaxSourceInfo | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
@@ -39,9 +51,11 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
     };
   }
 
+  const db = tenantDb(knex, tenant);
+
   // First check if the client has an override
-  const clientSettings = await knex('client_tax_settings')
-    .where({ client_id: clientId, tenant })
+  const clientSettings = await db.table('client_tax_settings')
+    .where({ client_id: clientId })
     .select('tax_source_override')
     .first();
 
@@ -53,8 +67,7 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
   }
 
   // Fall back to tenant settings
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await db.table('tenant_settings')
     .select('default_tax_source', 'allow_external_tax_override')
     .first();
 
@@ -69,19 +82,25 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
  * This should be called during invoice creation to set the initial tax_source.
  */
 export const shouldUseTaxDelegation = withAuth(async (_user, ctx, clientId: string): Promise<boolean> => {
-  const { taxSource } = await getEffectiveTaxSourceForClient(clientId);
-  return taxSource === 'external';
+  const result = await getEffectiveTaxSourceForClient(clientId);
+  if (isActionMessageError(result) || isActionPermissionError(result)) {
+    return false;
+  }
+  return result.taxSource === 'external';
 });
 
 /**
  * Get the initial tax_source value for a new invoice based on client settings.
  * Returns 'pending_external' for external delegation, 'internal' otherwise.
  */
-export const getInitialInvoiceTaxSource = withAuth(async (_user, ctx, clientId: string): Promise<TaxSource> => {
-  const { taxSource } = await getEffectiveTaxSourceForClient(clientId);
+export const getInitialInvoiceTaxSource = withAuth(async (_user, ctx, clientId: string): Promise<TaxSource | TaxSourceActionError> => {
+  const result = await getEffectiveTaxSourceForClient(clientId);
+  if (isActionMessageError(result) || isActionPermissionError(result)) {
+    return result as TaxSourceActionError;
+  }
 
   // If client uses external tax, new invoices start as 'pending_external'
-  if (taxSource === 'external') {
+  if (result.taxSource === 'external') {
     return 'pending_external';
   }
 
@@ -115,9 +134,9 @@ export const validateInvoiceFinalization = withAuth(async (
   _user,
   { tenant },
   invoiceId: string
-): Promise<InvoiceFinalizationValidation> => {
+): Promise<InvoiceFinalizationValidation | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
@@ -125,8 +144,10 @@ export const validateInvoiceFinalization = withAuth(async (
     return { canFinalize: false, code: 'no_tenant', error: 'No tenant context' };
   }
 
-  const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
+  const db = tenantDb(knex, tenant);
+
+  const invoice = await db.table('invoices')
+    .where({ invoice_id: invoiceId })
     .select('tax_source', 'status')
     .first();
 
@@ -161,9 +182,9 @@ export const updateInvoiceTaxSource = withAuth(async (
   { tenant },
   invoiceId: string,
   newTaxSource: TaxSource
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<{ success: boolean; error?: string } | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex } = await createTenantKnex();
 
@@ -171,42 +192,100 @@ export const updateInvoiceTaxSource = withAuth(async (
     return { success: false, error: 'No tenant context' };
   }
 
-  const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
-    .select('status', 'tax_source')
-    .first();
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const db = tenantDb(trx, tenant);
+    const invoice = await db.table('invoices')
+      .where({ invoice_id: invoiceId })
+      .select(
+        'status',
+        'tax_source',
+        'client_id',
+        'invoice_number',
+        'total_amount',
+      )
+      .forUpdate()
+      .first();
 
-  if (!invoice) {
-    return { success: false, error: 'Invoice not found' };
-  }
+    if (!invoice) {
+      return { success: false, error: 'Invoice not found' };
+    }
+    if (invoice.status !== 'draft') {
+      return { success: false, error: 'Can only change tax source on draft invoices' };
+    }
+    if (invoice.tax_source === newTaxSource) {
+      return { success: true };
+    }
 
-  if (invoice.status !== 'draft') {
-    return { success: false, error: 'Can only change tax source on draft invoices' };
-  }
+    const totalBefore = Math.round(Number(invoice.total_amount ?? 0));
+    if (
+      (invoice.tax_source === 'external' || invoice.tax_source === 'pending_external') &&
+      newTaxSource === 'internal'
+    ) {
+      await db.table('invoice_charges')
+        .where({ invoice_id: invoiceId })
+        .update({
+          external_tax_amount: null,
+          external_tax_code: null,
+          external_tax_rate: null,
+          updated_at: trx.fn.now(),
+        });
+    }
 
-  // If changing from external/pending_external to internal, clear external tax data
-  if (
-    (invoice.tax_source === 'external' || invoice.tax_source === 'pending_external') &&
-    newTaxSource === 'internal'
-  ) {
-    await knex('invoice_charges')
-      .where({ invoice_id: invoiceId, tenant })
+    await db.table('invoices')
+      .where({ invoice_id: invoiceId })
       .update({
-        external_tax_amount: null,
-        external_tax_code: null,
-        external_tax_rate: null,
-        updated_at: knex.fn.now()
+        tax_source: newTaxSource,
+        updated_at: trx.fn.now(),
       });
-  }
 
-  await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
-    .update({
-      tax_source: newTaxSource,
-      updated_at: knex.fn.now()
-    });
+    // Import lazily to avoid the invoiceService -> invoiceGeneration ->
+    // taxSourceActions module cycle during server-action initialization.
+    const [{ calculateAndDistributeTax, getClientDetails }, { TaxService }] = await Promise.all([
+      import('../services/invoiceService'),
+      import('../services/taxService'),
+    ]);
+    const client = await getClientDetails(trx, tenant, invoice.client_id);
+    await calculateAndDistributeTax(trx, invoiceId, client, new TaxService(), tenant);
 
-  return { success: true };
+    const charges = await db.table('invoice_charges')
+      .where({ invoice_id: invoiceId })
+      .select('net_amount', 'tax_amount');
+    const subtotal = Math.round(charges.reduce(
+      (sum, charge) => sum + Number(charge.net_amount ?? 0),
+      0,
+    ));
+    const tax = Math.round(charges.reduce(
+      (sum, charge) => sum + Number(charge.tax_amount ?? 0),
+      0,
+    ));
+    const total = subtotal + tax;
+    await db.table('invoices')
+      .where({ invoice_id: invoiceId })
+      .update({ subtotal, tax, total_amount: total, updated_at: trx.fn.now() });
+
+    const delta = total - totalBefore;
+    if (delta !== 0) {
+      const lastTransaction = await db.table('transactions')
+        .where({ client_id: invoice.client_id })
+        .orderBy('created_at', 'desc')
+        .first();
+      const currentBalance = Number(lastTransaction?.balance_after ?? 0);
+      await db.table('transactions').insert({
+        transaction_id: uuidv4(),
+        client_id: invoice.client_id,
+        invoice_id: invoiceId,
+        amount: delta,
+        type: 'invoice_adjustment',
+        status: 'completed',
+        description: `Changed tax source on invoice ${invoice.invoice_number}`,
+        created_at: new Date().toISOString(),
+        tenant,
+        balance_after: currentBalance + delta,
+      });
+    }
+
+    return { success: true };
+  });
 });
 
 /**
@@ -220,8 +299,9 @@ export const canClientOverrideTaxSource = withAuth(async (_user, { tenant }): Pr
     return false;
   }
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const db = tenantDb(knex, tenant);
+
+  const tenantSettings = await db.table('tenant_settings')
     .select('allow_external_tax_override')
     .first();
 

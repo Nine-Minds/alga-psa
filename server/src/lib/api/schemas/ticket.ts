@@ -15,6 +15,10 @@ import {
 } from './common';
 
 const MAX_TICKET_COMMENT_LENGTH = 5000;
+const ticketNotificationSuppressionSchema = {
+  suppressContactNotifications: z.boolean().optional(),
+  suppressInternalNotifications: z.boolean().optional(),
+};
 
 function getVisibleCommentLength(value: string): number {
   return formatBlockNoteContent(value).text.trim().length;
@@ -43,6 +47,7 @@ export const createTicketSchema = z.object({
 // Update ticket schema (all fields optional; contact_name_id is nullable so it can be cleared)
 export const updateTicketSchema = createUpdateSchema(createTicketSchema).extend({
   contact_name_id: uuidSchema.nullable().optional(),
+  ...ticketNotificationSuppressionSchema,
   // Close despite unmet close rules; honored only when the caller's user holds
   // ticket:close_override. Stripped before the row update.
   override_close_rules: z.boolean().optional(),
@@ -54,13 +59,15 @@ export const updateTicketStatusSchema = z.object({
   status_id: uuidSchema,
   closed_at: z.string().datetime().optional(),
   closed_by: uuidSchema.optional(),
+  ...ticketNotificationSuppressionSchema,
   override_close_rules: z.boolean().optional(),
   override_close_rules_reason: z.string().nullable().optional()
 });
 
 // Ticket assignment schema
 export const updateTicketAssignmentSchema = z.object({
-  assigned_to: uuidSchema.nullable().optional()
+  assigned_to: uuidSchema.nullable().optional(),
+  ...ticketNotificationSuppressionSchema,
 });
 
 export const createTicketMaterialSchema = z.object({
@@ -69,6 +76,8 @@ export const createTicketMaterialSchema = z.object({
   rate: z.number().min(0, 'Rate must be 0 or greater'),
   currency_code: z.string().trim().min(3).max(3).transform((value) => value.toUpperCase()),
   description: z.string().trim().max(1000).nullable().optional(),
+  // Serialized tracked products require the specific stock unit to deliver.
+  unit_id: uuidSchema.nullable().optional(),
 });
 
 // Ticket filter schema
@@ -345,6 +354,46 @@ export const linkTicketAssetSchema = z.object({
   notes: z.string().optional()
 });
 
+// Add an additional agent to a ticket (POST /api/v1/tickets/{id}/agents).
+export const addTicketAgentSchema = z.object({
+  user_id: uuidSchema,
+  role: z.string().trim().min(1).max(50).optional()
+});
+
+const ticketAgentSchema = z.object({
+  user_id: uuidSchema,
+  first_name: z.string().nullable(),
+  last_name: z.string().nullable(),
+  email: z.string().nullable()
+});
+
+// GET /api/v1/tickets/{id}/agents response.
+export const ticketAgentsResponseSchema = z.object({
+  ticket_id: uuidSchema,
+  primary_agent: ticketAgentSchema.nullable(),
+  additional_agents: z.array(ticketAgentSchema.extend({
+    assignment_id: uuidSchema,
+    role: z.string().nullable(),
+    assigned_at: z.union([z.string(), z.date()]).nullable()
+  }))
+});
+
+// Assign a team to a ticket (PUT /api/v1/tickets/{id}/team).
+export const assignTicketTeamSchema = z.object({
+  team_id: uuidSchema,
+  ...ticketNotificationSuppressionSchema
+});
+
+// Remove a ticket's team (DELETE /api/v1/tickets/{id}/team). `mode` decides what
+// happens to the additional agents the team assignment created.
+export const removeTicketTeamSchema = z.object({
+  mode: z.enum(['remove_all', 'keep_all', 'selective']).default('remove_all'),
+  keep_user_ids: z.array(uuidSchema).optional()
+}).refine(
+  (data) => data.mode !== 'selective' || (data.keep_user_ids?.length ?? 0) > 0,
+  { path: ['keep_user_ids'], message: 'keep_user_ids is required when mode is selective' }
+);
+
 // Export types for TypeScript
 export type CreateTicketData = z.infer<typeof createTicketSchema>;
 export type UpdateTicketData = z.infer<typeof updateTicketSchema>;
@@ -358,3 +407,7 @@ export type TicketExportQuery = z.infer<typeof ticketExportQuerySchema>;
 export type TicketMetricsQuery = z.infer<typeof ticketMetricsQuerySchema>;
 export type CreateTicketFromAssetData = z.infer<typeof createTicketFromAssetSchema>;
 export type LinkTicketAssetData = z.infer<typeof linkTicketAssetSchema>;
+export type AddTicketAgentData = z.infer<typeof addTicketAgentSchema>;
+export type TicketAgentsResponse = z.infer<typeof ticketAgentsResponseSchema>;
+export type AssignTicketTeamData = z.infer<typeof assignTicketTeamSchema>;
+export type RemoveTicketTeamData = z.infer<typeof removeTicketTeamSchema>;

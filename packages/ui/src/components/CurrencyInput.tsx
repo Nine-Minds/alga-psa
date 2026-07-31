@@ -4,14 +4,19 @@ import React, { useState, useEffect } from 'react';
 import { Input } from './Input';
 import { useOptionalI18n } from '../lib/i18n/client';
 import { LOCALE_CONFIG } from '../lib/i18n/config';
+import { currencyFractionDigits } from '@alga-psa/core';
 
 interface CurrencyInputProps {
   id?: string;
+  label?: string;
   value?: number;
   onChange?: (value: number | undefined) => void;
+  currencyCode?: string;
   disabled?: boolean;
+  required?: boolean;
   placeholder?: string;
   className?: string;
+  containerClassName?: string;
 }
 
 export function getNumberSeparators(locale: string): { group: string; decimal: string } {
@@ -22,10 +27,11 @@ export function getNumberSeparators(locale: string): { group: string; decimal: s
   };
 }
 
-export function formatCurrencyValue(value: number, locale: string): string {
+export function formatCurrencyValue(value: number, locale: string, currencyCode: string = 'USD'): string {
+  const fractionDigits = currencyFractionDigits(currencyCode, locale);
   return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(value);
 }
 
@@ -50,11 +56,15 @@ export function parseCurrencyValue(raw: string, locale: string): number {
 
 export function CurrencyInput({
   id,
+  label,
   value,
   onChange,
+  currencyCode = 'USD',
   disabled = false,
+  required,
   placeholder,
   className = '',
+  containerClassName,
 }: CurrencyInputProps) {
   const i18n = useOptionalI18n();
   const locale = i18n?.locale ?? LOCALE_CONFIG.defaultLocale;
@@ -64,9 +74,9 @@ export function CurrencyInput({
     if (value === undefined || value === null || isNaN(value)) {
       setDisplayValue('');
     } else {
-      setDisplayValue(formatCurrencyValue(value, locale));
+      setDisplayValue(formatCurrencyValue(value, locale, currencyCode));
     }
-  }, [value, locale]);
+  }, [currencyCode, value, locale]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -83,7 +93,7 @@ export function CurrencyInput({
   const handleBlur = () => {
     const numeric = parseCurrencyValue(displayValue, locale);
     if (!isNaN(numeric)) {
-      setDisplayValue(formatCurrencyValue(numeric, locale));
+      setDisplayValue(formatCurrencyValue(numeric, locale, currencyCode));
     } else {
       setDisplayValue('');
     }
@@ -92,13 +102,16 @@ export function CurrencyInput({
   return (
     <Input
       id={id}
+      label={label}
       type="text"
       value={displayValue}
       onChange={handleChange}
       onBlur={handleBlur}
-      placeholder={placeholder ?? formatCurrencyValue(0, locale)}
+      placeholder={placeholder ?? formatCurrencyValue(0, locale, currencyCode)}
       disabled={disabled}
+      required={required}
       className={className}
+      containerClassName={containerClassName}
     />
   );
 }

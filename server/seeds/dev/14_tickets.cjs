@@ -1,15 +1,18 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function (knex) {
     // Fetch the tenant first
-    const tenantRow = await knex('tenants').select('tenant').first();
-    if (!tenantRow) {
-        console.warn('No tenant found, skipping ticket seeding.');
+    const context = await getFirstTenantSeedContext(knex, {
+        skipMessage: 'No tenant found, skipping ticket seeding.'
+    });
+    if (!context) {
         return;
     }
-    const tenant = tenantRow.tenant;
+    const { tenantId: tenant, db } = context;
 
     // Helper function to fetch IDs to reduce repetition
     const getId = async (table, filters, idColumn) => {
-        const result = await knex(table).where({ tenant, ...filters }).select(idColumn).first();
+        const result = await db.table(table).where(filters).select(idColumn).first();
         if (!result) {
             console.warn(`Warning: Could not find ID in table '${table}' for filters:`, filters);
             return null; // Or throw an error if required
@@ -23,8 +26,7 @@ exports.seed = async function (knex) {
     };
 
     const getContactId = async (namePattern) => {
-        const result = await knex('contacts')
-            .where({ tenant })
+        const result = await db.table('contacts')
             .whereRaw(`full_name ILIKE ?`, [`%${namePattern}%`])
             .select('contact_name_id')
             .first();
@@ -156,7 +158,7 @@ exports.seed = async function (knex) {
         console.log(`Attempting to insert ${validTickets.length} tickets individually...`);
         for (const ticket of validTickets) {
             try {
-                await knex('tickets').insert(ticket);
+                await db.table('tickets').insert(ticket);
             } catch (error) {
                 console.error(`Error inserting ticket ${ticket.ticket_number}:`, error);
                 console.error('Ticket data:', ticket);
@@ -169,4 +171,3 @@ exports.seed = async function (knex) {
         console.warn('No valid tickets to insert.');
     }
 };
-

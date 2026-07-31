@@ -1,6 +1,5 @@
 import { cache } from 'react';
 import { getDocumentByClientId } from '@alga-psa/documents/actions/documentActions';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getContactsByClient } from '@alga-psa/clients/actions';
 import { getClientById } from '@alga-psa/clients/actions';
 import { notFound } from 'next/navigation';
@@ -9,7 +8,6 @@ import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
-
 
 const getCachedClient = cache((id: string) => getClientById(id));
 
@@ -47,7 +45,7 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
         return null;
       })
     ]);
-    const documents = isActionPermissionError(documentsResult) ? [] : documentsResult;
+    const documents = Array.isArray(documentsResult) ? documentsResult : [];
 
     return (
       <AIChatContextBoundary

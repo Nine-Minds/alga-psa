@@ -1,4 +1,5 @@
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
+import LocalDrawerOutlet from '../_components/LocalDrawerOutlet';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,5 +11,10 @@ export default async function Layout({ children }: Readonly<LayoutProps>) {
     return boundary;
   }
 
-  return children;
+  return (
+    <>
+      {children}
+      <LocalDrawerOutlet />
+    </>
+  );
 }

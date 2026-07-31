@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { IService, IServicePrice, IServiceCategory, ISO8601String } from '@alga-psa/types';
 
@@ -24,7 +25,7 @@ export async function getServiceCategories(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
 ): Promise<IServiceCategory[]> {
-  return knexOrTrx<IServiceCategory>('service_categories').where({ tenant }).select('*');
+  return tenantDb(knexOrTrx, tenant).table<IServiceCategory>('service_categories').select('*');
 }
 
 export async function getServices(
@@ -108,18 +109,17 @@ export async function getServices(
       ? 'service_name'
       : sanitizedOptions.sort;
 
-  const baseQuery = knexOrTrx('service_catalog as sc').where({ 'sc.tenant': tenant });
+  const db = tenantDb(knexOrTrx, tenant);
+  const baseQuery = db.table('service_catalog as sc');
 
   const countResult = await applyFilters(baseQuery.clone()).count('sc.service_id as count').first();
   const totalCount = parseInt((countResult?.count as string) || '0', 10);
 
   const servicesData = await applyFilters(
-    baseQuery
-      .clone()
-      .leftJoin('service_types as st', function () {
-        this.on('sc.custom_service_type_id', '=', 'st.id').andOn('sc.tenant', '=', 'st.tenant');
-      })
-      .select(
+    (() => {
+      const query = baseQuery.clone();
+      db.tenantJoin(query, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+      return query.select(
         'sc.service_id',
         'sc.service_name',
         'sc.custom_service_type_id',
@@ -142,7 +142,8 @@ export async function getServices(
         'sc.license_billing_cadence',
         'sc.tax_rate_id',
         'st.name as service_type_name'
-      )
+      );
+    })()
   )
     .orderBy(sortColumnMap[effectiveSortField], sanitizedOptions.order)
     .modify((queryBuilder) => {
@@ -156,7 +157,7 @@ export async function getServices(
 
   const serviceIds = servicesData.map((s: { service_id: string }) => s.service_id);
   const allPrices = serviceIds.length
-    ? await knexOrTrx<IServicePrice>('service_prices').where({ tenant }).whereIn('service_id', serviceIds).select('*')
+    ? await db.table<IServicePrice>('service_prices').whereIn('service_id', serviceIds).select('*')
     : [];
 
   const pricesByService = allPrices.reduce<Record<string, IServicePrice[]>>((acc, price) => {
@@ -183,7 +184,7 @@ export async function createService(
   const service_id = uuidv4();
   const now = (knexOrTrx as any).fn?.now ? (knexOrTrx as any).fn.now() : new Date().toISOString();
 
-  const [created] = await knexOrTrx('service_catalog')
+  const [created] = await tenantDb(knexOrTrx, tenant).table('service_catalog')
     .insert({
       ...serviceData,
       service_id,
@@ -204,8 +205,8 @@ export async function updateService(
   serviceData: Partial<IService>
 ): Promise<IService> {
   const now = (knexOrTrx as any).fn?.now ? (knexOrTrx as any).fn.now() : new Date().toISOString();
-  const [updated] = await knexOrTrx('service_catalog')
-    .where({ tenant, service_id: serviceId })
+  const [updated] = await tenantDb(knexOrTrx, tenant).table('service_catalog')
+    .where({ service_id: serviceId })
     .update({ ...serviceData, updated_at: now })
     .returning('*');
 
@@ -217,15 +218,15 @@ export async function deleteService(
   tenant: string,
   serviceId: string
 ): Promise<void> {
-  await knexOrTrx('service_catalog').where({ tenant, service_id: serviceId }).del();
+  await tenantDb(knexOrTrx, tenant).table('service_catalog').where({ service_id: serviceId }).del();
 }
 
 export async function getServiceTypesForSelection(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
 ): Promise<Array<{ id: string; name: string; is_standard: boolean }>> {
-  const rows = await knexOrTrx('service_types')
-    .where({ tenant, is_active: true })
+  const rows = await tenantDb(knexOrTrx, tenant).table('service_types')
+    .where({ is_active: true })
     .select('id', 'name')
     .orderBy('name', 'asc');
   return rows.map((r: any) => ({

@@ -6,6 +6,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
+  esbuild: {
+    jsx: "automatic",
+  },
   resolve: {
     alias: {
       "react-native": path.resolve(__dirname, "test/mocks/react-native.ts"),
@@ -16,6 +19,7 @@ export default defineConfig({
       "@expo/vector-icons": path.resolve(__dirname, "test/mocks/expo-vector-icons.ts"),
       "@sentry/react-native": path.resolve(__dirname, "test/mocks/sentry-react-native.ts"),
       "expo-constants": path.resolve(__dirname, "test/mocks/expo-constants.ts"),
+      "expo-notifications": path.resolve(__dirname, "test/mocks/expo-notifications.ts"),
     },
   },
   test: {

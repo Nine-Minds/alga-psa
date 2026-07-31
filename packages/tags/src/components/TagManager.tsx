@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ITag, TaggedEntityType } from '@alga-psa/types';
-import { createTag, deleteTag, getAllTags, getTagMappingUsageCount } from '../actions';
+import { createTag, deleteTag, getAllTags, getTagMappingUsageCount, isTagActionError } from '../actions';
 import { TagList, TagInput, TagInputInline, type TagSize } from '@alga-psa/ui/components/tags';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
@@ -68,6 +68,10 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const refetchTags = tagContext?.refetchTags || (async () => {
     try {
       const fetchedTags = await getAllTags();
+      if (isTagActionError(fetchedTags)) {
+        handleError(fetchedTags);
+        return;
+      }
       setLocalAllTags(fetchedTags);
     } catch (error) {
       console.error('Error fetching tags:', error);
@@ -199,6 +203,10 @@ export const TagManager: React.FC<TagManagerProps> = ({
         tagged_id: entityId,
         tagged_type: entityType,
       });
+      if (isTagActionError(newTag)) {
+        handleError(newTag);
+        return;
+      }
       console.log('Tag created successfully:', newTag);
 
       const updatedTags = [...tags, newTag];
@@ -218,6 +226,10 @@ export const TagManager: React.FC<TagManagerProps> = ({
     try {
       // Check if this is the last usage of the tag definition
       const usage = await getTagMappingUsageCount(tagId);
+      if (isTagActionError(usage)) {
+        handleError(usage);
+        return;
+      }
       if (usage.usageCount === 1) {
         // Show confirmation dialog for last usage
         setPendingRemoveTagId(tagId);
@@ -226,7 +238,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
         return;
       }
 
-      await deleteTag(tagId);
+      const result = await deleteTag(tagId);
+      if (isTagActionError(result)) {
+        handleError(result);
+        return;
+      }
       const updatedTags = tags.filter(tag => tag.tag_id !== tagId);
       setTags(updatedTags);
       onTagsChange?.(updatedTags);
@@ -238,7 +254,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const handleConfirmRemoveAndDeleteDefinition = async () => {
     if (!pendingRemoveTagId) return;
     try {
-      await deleteTag(pendingRemoveTagId, true);
+      const result = await deleteTag(pendingRemoveTagId, true);
+      if (isTagActionError(result)) {
+        handleError(result);
+        return;
+      }
       const updatedTags = tags.filter(tag => tag.tag_id !== pendingRemoveTagId);
       setTags(updatedTags);
       onTagsChange?.(updatedTags);
@@ -254,7 +274,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const handleRemoveAndKeepDefinition = async () => {
     if (!pendingRemoveTagId) return;
     try {
-      await deleteTag(pendingRemoveTagId, false);
+      const result = await deleteTag(pendingRemoveTagId, false);
+      if (isTagActionError(result)) {
+        handleError(result);
+        return;
+      }
       const updatedTags = tags.filter(tag => tag.tag_id !== pendingRemoveTagId);
       setTags(updatedTags);
       onTagsChange?.(updatedTags);

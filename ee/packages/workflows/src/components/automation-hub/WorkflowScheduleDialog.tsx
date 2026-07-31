@@ -488,7 +488,7 @@ export default function WorkflowScheduleDialog({
         } catch (error) {
           if (cancelled) return;
           console.error('Failed to load workflow schedule', error);
-          setSubmitError(error instanceof Error ? error.message : t('schedules.dialog.errors.loadScheduleFailed', {
+          setSubmitError(t('schedules.dialog.errors.loadScheduleFailed', {
             defaultValue: 'Failed to load schedule.',
           }));
         } finally {
@@ -1030,7 +1030,7 @@ export default function WorkflowScheduleDialog({
       onClose();
     } catch (error) {
       console.error('Failed to save schedule', error);
-      setSubmitError(error instanceof Error ? error.message : t('schedules.dialog.errors.saveFailed', {
+      setSubmitError(t('schedules.dialog.errors.saveFailed', {
         defaultValue: 'Failed to save schedule.',
       }));
     } finally {

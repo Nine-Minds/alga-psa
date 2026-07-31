@@ -36,3 +36,11 @@ test('SerialCommandQueue returns timeout result without rejecting', async () => 
   assert.equal(result.status, 124);
   assert.match(result.stderr, /Command timed out/);
 });
+
+test('SerialCommandQueue passes provided stdin to the command', async () => {
+  const queue = createKubectlQueue({ name: 'test-stdin' });
+  const result = await queue.enqueue('read value; printf "%s" "$value"', { stdin: 'secret-value\n' });
+  assert.equal(result.ok, true);
+  assert.equal(result.stdout, 'secret-value');
+  assert.equal(result.command.includes('secret-value'), false);
+});

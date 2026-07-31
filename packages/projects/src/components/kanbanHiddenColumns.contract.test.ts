@@ -67,7 +67,7 @@ describe('per-user hidden kanban columns contracts', () => {
       "import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';"
     );
     expect(projectActionsSource).toContain(
-      '.where({ tenant: tenantId, setting_name: projectKanbanHiddenStatusesKey(projectId) })'
+      '.where({ setting_name: projectKanbanHiddenStatusesKey(projectId) })'
     );
   });
 

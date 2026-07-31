@@ -1,335 +1,734 @@
 {
   "nav": {
     "home": "Início",
-    "userActivities": "User Activities",
+    "userActivities": "Atividades do usuário",
     "tickets": "Tickets",
     "serviceRequests": "Solicitações de serviço",
-    "surveys": "Surveys",
-    "projects": "Projects",
-    "projectsAll": "All Projects",
-    "projectsTemplates": "Templates",
-    "clients": "Clients",
-    "contacts": "Contacts",
-    "documents": "Documents",
-    "documentsAll": "All Documents",
-    "knowledgeBase": "Knowledge Base",
-    "assets": "Assets",
-    "timeManagement": "Time Management",
-    "timeEntry": "Time Entry",
-    "approvals": "Approvals",
-    "billing": {
-      "label": "Billing",
+    "surveys": "Pesquisas",
+    "projects": "Projetos",
+    "projectsAll": "Todos os projetos",
+    "projectsTemplates": "Modelos",
+    "clients": "Clientes",
+    "opportunities": "Oportunidades",
+    "contacts": "Contatos",
+    "documents": "Documentos",
+    "documentsAll": "Todos os documentos",
+    "knowledgeBase": "Base de conhecimento",
+    "assets": "Ativos",
+    "inventory": {
+      "label": "Inventário",
       "sections": {
-        "contracts": "Contracts",
-        "invoicing": "Invoicing",
-        "quotes": "Quotes",
-        "pricing": "Pricing",
-        "trackingReports": "Tracking & Reports"
-      },
-      "contractTemplates": "Contract Templates",
-      "clientContracts": "Client Contracts",
-      "quotes": "Quotes",
-      "quoteBusinessTemplates": "Quote Templates",
-      "quoteLayouts": "Quote Layouts",
-      "contractLinePresets": "Contract Line Presets",
-      "invoicing": "Invoicing",
-      "invoiceLayouts": "Invoice Layouts",
-      "billingCycles": "Billing Cycles",
-      "servicePeriods": "Service Periods",
-      "serviceTypes": "Service Types",
-      "serviceCatalog": "Services",
-      "products": "Products",
-      "taxRates": "Tax Rates",
-      "usageTracking": "Usage Tracking",
-      "reports": "Reports",
-      "accountingExports": "Accounting Exports"
+        "overview": "Visão geral",
+        "stock": "Estoque",
+        "purchasing": "Compras",
+        "salesFulfillment": "Vendas e atendimento",
+        "analytics": "Análises"
+      }
     },
-    "schedule": "Schedule",
-    "technicianDispatch": "Technician Dispatch",
-    "automationHub": "Workflows",
-    "workflows": "Workflows",
-    "controlPanel": "Control Panel",
-    "workflowEditor": "Workflow Editor",
-    "runs": "Runs",
-    "events": "Events",
-    "deadLetter": "Dead Letter",
-    "systemMonitor": "System Monitor",
-    "systemMonitoring": "System Monitoring",
-    "jobMonitoring": "Job Monitoring",
-    "jobs": "Jobs",
-    "emailLogs": "Email Logs",
-    "extensions": "Extensions"
+    "inventoryDashboard": "Painel",
+    "inventoryStock": "Estoque",
+    "inventoryLocations": "Localizações de Estoque",
+    "inventoryUnits": "Unidades de Estoque",
+    "inventoryVendors": "Fornecedores",
+    "inventoryPurchaseOrders": "Pedidos de Compra",
+    "inventoryVendorBills": "Faturas de Fornecedores",
+    "inventorySalesOrders": "Pedidos de Venda",
+    "inventoryDocumentLayouts": "Layouts de documentos",
+    "inventoryTransfers": "Transferências",
+    "inventoryCounts": "Contagens Cíclicas",
+    "inventoryWriteOffs": "Baixas",
+    "inventoryMargin": "Margem",
+    "inventoryGhostUsage": "Uso Fantasma",
+    "inventoryRma": "RMA",
+    "inventoryLoaners": "Unidades de Empréstimo",
+    "inventoryKits": "Kits",
+    "timeManagement": "Gerenciamento de tempo",
+    "timeEntry": "Lançamento de horas",
+    "approvals": "Aprovações",
+    "billing": {
+      "label": "Cobrança",
+      "sections": {
+        "contracts": "Contratos",
+        "invoicing": "Faturamento",
+        "quotes": "Cotações",
+        "pricing": "Preços",
+        "trackingReports": "Rastreamento e Relatórios"
+      },
+      "contractTemplates": "Modelos de contrato",
+      "clientContracts": "Contratos de clientes",
+      "quotes": "Cotações",
+      "quoteBusinessTemplates": "Modelos de cotação",
+      "quoteLayouts": "Layouts de cotação",
+      "contractLinePresets": "Predefinições de linha de contrato",
+      "invoicing": "Faturamento",
+      "invoiceLayouts": "Layouts de fatura",
+      "billingCycles": "Ciclos de cobrança",
+      "servicePeriods": "Períodos de serviço",
+      "credits": "Créditos",
+      "serviceTypes": "Tipos de serviço",
+      "serviceCatalog": "Serviços",
+      "products": "Produtos",
+      "taxRates": "Taxas de imposto",
+      "usageTracking": "Rastreamento de uso",
+      "reports": "Relatórios",
+      "accountingExports": "Exportações Contábeis"
+    },
+    "schedule": "Agendar",
+    "technicianDispatch": "Alocação de Técnicos",
+    "automationHub": "Fluxos de trabalho",
+    "workflows": "Fluxos de trabalho",
+    "controlPanel": "Painel de controle",
+    "workflowEditor": "Editor de fluxo de trabalho",
+    "runs": "Corre",
+    "events": "Eventos",
+    "deadLetter": "Carta Morta",
+    "systemMonitor": "Monitor do sistema",
+    "systemMonitoring": "Monitoramento do sistema",
+    "jobMonitoring": "Monitoramento de Trabalho",
+    "jobs": "Empregos",
+    "emailLogs": "Registros de e-mail",
+    "extensions": "Extensões",
+    "marketing": {
+      "label": "Marketing",
+      "calendar": "Calendário",
+      "posts": "Publicações",
+      "content": "Conteúdo",
+      "campaigns": "Campanhas",
+      "sequences": "Sequências",
+      "forms": "Formulários",
+      "channels": "Canais"
+    }
   },
   "sidebar": {
-    "backToMain": "Back to Main",
-    "searchPlaceholder": "Search",
-    "settings": "Settings",
-    "support": "Support",
-    "goToDashboard": "Go to dashboard",
-    "logoAlt": "AlgaPSA Logo",
-    "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "backToMain": "Voltar ao principal",
+    "searchPlaceholder": "Procurar",
+    "settings": "Configurações",
+    "support": "Apoiar",
+    "goToDashboard": "Vá para o painel",
+    "logoAlt": "Alga Logo",
+    "expandSidebar": "Expandir barra lateral",
+    "collapseSidebar": "Recolher barra lateral"
   },
   "settings": {
     "sections": {
-      "organizationAccess": "Organization & Access",
-      "workManagement": "Work Management",
-      "timeBilling": "Time & Billing",
-      "communication": "Communication",
-      "dataIntegration": "Data & Integration",
+      "organizationAccess": "Organização e Acesso",
+      "workManagement": "Gestão de Trabalho",
+      "timeBilling": "Tempo e faturamento",
+      "communication": "Comunicação",
+      "dataIntegration": "Dados e Integração",
       "experimental": "Experimental"
     },
     "tabs": {
-      "general": "General",
-      "users": "Users",
+      "general": "Em geral",
+      "users": "Usuários",
       "teams": "Teams",
-      "language": "Language",
-      "clientPortal": "Client Portal",
-      "ticketing": "Ticketing",
+      "language": "Linguagem",
+      "clientPortal": "Portal do cliente",
+      "license": "License",
+      "ticketing": "Tickets",
       "sla": "SLA",
-      "projects": "Projects",
-      "interactions": "Interactions",
-      "notifications": "Notifications",
-      "timeEntry": "Time Entry",
-      "billing": "Billing",
-      "secrets": "Secrets",
-      "importExport": "Import/Export",
-      "email": "Email",
-      "integrations": "Integrations",
-      "extensions": "Extensions",
-      "experimentalFeatures": "Experimental Features",
-      "profile": "Profile",
-      "security": "Security"
+      "projects": "Projetos",
+      "interactions": "Interações",
+      "opportunities": "Oportunidades",
+      "notifications": "Notificações",
+      "timeEntry": "Entrada de tempo",
+      "billing": "Cobrança",
+      "secrets": "Segredos",
+      "importExport": "Importar/Exportar",
+      "email": "E-mail",
+      "integrations": "Integrações",
+      "extensions": "Extensões",
+      "experimentalFeatures": "Recursos experimentais",
+      "profile": "Perfil",
+      "security": "Segurança"
     }
   },
   "dashboard": {
-    "onboardingWizard": "Onboarding Wizard"
+    "onboardingWizard": "Assistente de onboarding"
   },
   "header": {
-    "userFallback": "User",
-    "quickAccess": "Quick access to profile & account.",
-    "profile": "Profile",
-    "account": "Account",
-    "signOut": "Sign out",
+    "userFallback": "Usuário",
+    "quickAccess": "Acesso rápido ao perfil e conta.",
+    "profile": "Perfil",
+    "account": "Conta",
+    "signOut": "sair",
+    "quickAsk": {
+      "ariaLabel": "Pergunte à IA sobre este fluxo de trabalho",
+      "title": "Pergunte à IA",
+      "shortcutHint": "Abra o Quick Ask para obter orientação sobre o fluxo de trabalho"
+    },
     "quickCreate": {
-      "ariaLabel": "Open quick create",
-      "title": "Quick Create",
-      "heading": "Create",
+      "ariaLabel": "Abra a criação rápida",
+      "title": "Criação rápida",
+      "heading": "Criar",
       "options": {
         "ticket": {
           "label": "Ticket",
-          "description": "Create a new support ticket"
+          "description": "Crie um novo ticket de suporte"
         },
         "client": {
-          "label": "Client",
-          "description": "Add a new client to your system"
+          "label": "Cliente",
+          "description": "Adicione um novo cliente ao seu sistema"
         },
         "contact": {
-          "label": "Contact",
-          "description": "Add a new contact person"
+          "label": "Contato",
+          "description": "Adicione uma nova pessoa de contato"
         },
         "project": {
-          "label": "Project",
-          "description": "Start a new project"
+          "label": "Projeto",
+          "description": "Iniciar um novo projeto"
         },
         "asset": {
-          "label": "Asset",
-          "description": "Add a new device to your workspace"
+          "label": "Ativo",
+          "description": "Adicione um novo dispositivo ao seu espaço de trabalho"
         },
         "service": {
-          "label": "Service",
-          "description": "Add a new billable service"
+          "label": "Serviço",
+          "description": "Adicione um novo serviço faturável"
         },
         "product": {
-          "label": "Product",
-          "description": "Add a new product to your catalog"
+          "label": "Produto",
+          "description": "Adicione um novo produto ao seu catálogo"
         }
       }
     },
     "jobs": {
-      "ariaLabel": "View background job activity",
-      "title": "Background Jobs",
-      "description": "Track imports, automation runs, and scheduled work.",
-      "active": "Active jobs",
-      "queued": "Queued jobs",
-      "failedLast24h": "Failed last 24h",
-      "openJobCenter": "Open Job Center"
+      "ariaLabel": "Ver atividade de trabalho em segundo plano",
+      "title": "Trabalhos em segundo plano",
+      "description": "Acompanhe importações, execuções de automação e trabalhos agendados.",
+      "active": "Trabalhos ativos",
+      "queued": "Trabalhos em fila",
+      "failedLast24h": "Falha nas últimas 24h",
+      "openJobCenter": "Abrir central de trabalhos"
     },
     "breadcrumb": {
-      "label": "Caminho de navegação",
-      "dashboard": "Dashboard",
+      "label": "Trilha de navegação",
+      "dashboard": "Painel",
       "home": "Início"
     },
     "tenantBadge": {
-      "ariaLabel": "Active tenant {{tenant}}"
+      "ariaLabel": "Inquilino ativo {{tenant}}"
     },
     "themeToggle": {
-      "ariaLabel": "Theme toggle",
-      "light": "Light",
-      "dark": "Dark",
-      "system": "System",
-      "selected": "Selected"
+      "ariaLabel": "Alternar tema",
+      "light": "Luz",
+      "dark": "Escuro",
+      "system": "Sistema",
+      "selected": "Selecionado"
     },
-    "openUserMenu": "Abrir menu do usuário",
-    "quickAsk": {
-      "ariaLabel": "Perguntar à IA sobre este workflow",
-      "title": "Perguntar à IA",
-      "shortcutHint": "Abrir Quick Ask para obter ajuda sobre o workflow"
-    }
+    "openUserMenu": "Abrir menu do usuário"
   },
   "dialogs": {
     "aiInterrupt": {
       "navigate": {
-        "title": "Leave page and cancel AI response?",
-        "message": "An AI response or tool action is still in progress. Leaving this page now will cancel it.",
-        "confirm": "Leave page",
-        "cancel": "Stay on page"
+        "title": "Sair da página e cancelar a resposta da IA?",
+        "message": "Uma resposta de IA ou ação de ferramenta ainda está em andamento. Sair desta página agora irá cancelá-la.",
+        "confirm": "Sair da página",
+        "cancel": "Fique na página"
       },
       "closeChat": {
-        "title": "Close chat and cancel AI response?",
-        "message": "An AI response or tool action is still in progress. Closing the chat now will cancel it.",
-        "confirm": "Close chat",
-        "cancel": "Keep chat open"
+        "title": "Fechar o chat e cancelar a resposta da IA?",
+        "message": "Uma resposta de IA ou ação de ferramenta ainda está em andamento. Fechar o chat agora irá cancelá-lo.",
+        "confirm": "Fechar bate-papo",
+        "cancel": "Mantenha o bate-papo aberto"
       }
     }
   },
   "banners": {
     "trial": {
-      "premiumConfirmed": "Premium confirmed — starts next billing cycle",
-      "dayLeft": "1 day left",
-      "daysLeft": "{{count}} days left",
-      "premiumTrial": "Premium Trial: {{daysLabel}} — confirm to keep",
-      "stripeTrial": "{{tier}} Trial: {{daysLabel}}"
+      "premiumConfirmed": "Premium confirmado – inicia o próximo ciclo de faturamento",
+      "dayLeft": "Falta 1 dia",
+      "daysLeft": "{{count}} dias restantes",
+      "premiumTrial": "Avaliação Premium: {{daysLabel}} – confirme para manter",
+      "stripeTrial": "Teste {{tier}}: {{daysLabel}}"
     },
     "paymentFailed": {
-      "message": "Payment failed — Update payment method",
-      "portalError": "Failed to open billing portal"
+      "message": "Falha no pagamento — Atualizar forma de pagamento",
+      "portalError": "Falha ao abrir o portal de faturamento"
     },
     "platformNotification": {
-      "learnMore": "Learn More",
-      "dismiss": "Dismiss notification"
+      "learnMore": "Saber mais",
+      "dismiss": "Ignorar notificação"
     }
   },
   "quickCreate": {
     "success": {
-      "asset": "Asset created successfully",
-      "ticket": "Ticket #{{number}} created successfully",
-      "client": "Client \"{{name}}\" created successfully",
-      "contact": "{{name}} added successfully",
-      "project": "Project \"{{name}}\" created successfully",
-      "service": "Service created successfully",
-      "product": "Product created successfully"
+      "asset": "Recurso criado com sucesso",
+      "ticket": "Ticket #{{number}} criado com sucesso",
+      "client": "Cliente \"{{name}}\" criado com sucesso",
+      "contact": "{{name}} adicionado com sucesso",
+      "project": "Projeto \"{{name}}\" criado com sucesso",
+      "service": "Serviço criado com sucesso",
+      "product": "Produto criado com sucesso"
     },
     "errors": {
-      "loadClients": "Failed to load clients",
-      "loadServiceTypes": "Failed to load service types"
+      "loadClients": "Falha ao carregar clientes",
+      "loadServiceTypes": "Falha ao carregar tipos de serviço"
     },
     "dialogTitles": {
-      "contact": "Add New Contact",
-      "project": "Add New Project",
-      "service": "Add New Service"
+      "contact": "Adicionar novo contato",
+      "project": "Adicionar novo projeto",
+      "service": "Adicionar novo serviço"
     }
   },
   "rightSidebar": {
-    "title": "Chat",
-    "enterpriseOnly": "The chat feature is only available in the Enterprise Edition."
+    "title": "Bater papo",
+    "enterpriseOnly": "O recurso de bate-papo está disponível apenas na Enterprise Edition."
   },
   "notifications": {
     "messages": {
       "error": {
-        "loadFailed": "Falha ao carregar as notificações"
+        "loadFailed": "Falha ao carregar notificações"
       }
     }
   },
   "search": {
-    "placeholder": "Pesquisar clientes, tickets e documentos...",
+    "placeholder": "Pesquise clientes, tickets, documentos...",
     "shortcutHint": "Cmd/Ctrl+K",
-    "loading": "Searching...",
-    "pageTitle": "Search",
-    "helperText": "Search across the workspace.",
-    "resultSummary": "{{count}} results for \"{{query}}\"",
-    "resultsRegionLabel": "Search results",
-    "filtersLabel": "Search filters",
-    "sortLabel": "Sort results",
-    "paginationLabel": "Search pagination",
-    "seeAllResults": "See all {{count}} results",
-    "noResults": "No results for \"{{query}}\"",
-    "emptyBroadenQuery": "Try a broader query.",
-    "emptyRemoveFilter": "Try removing the type filter.",
-    "error": "Search failed. Try again.",
+    "loading": "Procurando...",
+    "pageTitle": "Procurar",
+    "helperText": "Pesquise no espaço de trabalho.",
+    "resultSummary": "{{count}} resultados para \"{{query}}\"",
+    "resultsRegionLabel": "Resultados da pesquisa",
+    "filtersLabel": "Filtros de pesquisa",
+    "sortLabel": "Classificar resultados",
+    "paginationLabel": "Paginação de pesquisa",
+    "seeAllResults": "Veja todos os resultados de {{count}}",
+    "noResults": "Nenhum resultado para \"{{query}}\"",
+    "emptyBroadenQuery": "Tente uma consulta mais ampla.",
+    "emptyRemoveFilter": "Tente remover o filtro de tipo.",
+    "error": "A pesquisa falhou. Tente novamente.",
     "filters": {
-      "all": "All",
-      "client": "Clients",
-      "contact": "Contacts",
-      "user": "Team members",
+      "all": "Todos",
+      "client": "Clientes",
+      "contact": "Contatos",
+      "user": "Membros da equipe",
       "ticket": "Tickets",
-      "ticket_comment": "Ticket comments",
-      "project": "Projects",
-      "project_phase": "Project phases",
-      "project_task": "Project tasks",
-      "project_task_comment": "Project task comments",
-      "asset": "Assets",
-      "invoice": "Invoices",
-      "invoice_item": "Invoice line items",
-      "invoice_annotation": "Invoice annotations",
-      "contract": "Contracts",
-      "client_contract": "Client contracts",
-      "document": "Documents",
-      "kb_article": "KB articles",
-      "service_catalog": "Service catalog",
-      "service_request_submission": "Service requests",
-      "service_request_definition": "Service request definitions",
-      "workflow_task": "Workflow tasks",
-      "interaction": "Interactions",
-      "schedule_entry": "Schedule entries",
-      "time_entry": "Time entries",
-      "board": "Boards",
-      "category": "Categories",
-      "tag": "Tags",
+      "ticket_comment": "Comentários sobre tickets",
+      "project": "Projetos",
+      "project_phase": "Fases do projeto",
+      "project_task": "Tarefas do projeto",
+      "project_task_comment": "Comentários da tarefa do projeto",
+      "asset": "Ativos",
+      "sales_order": "Pedidos de venda",
+      "purchase_order": "Pedidos de compra",
+      "stock_unit": "Unidades de estoque",
+      "invoice": "Faturas",
+      "invoice_item": "Itens de linha da fatura",
+      "invoice_annotation": "Anotações de fatura",
+      "contract": "Contratos",
+      "client_contract": "Contratos de clientes",
+      "document": "Documentos",
+      "kb_article": "Artigos da base de conhecimento",
+      "service_catalog": "Catálogo de serviços",
+      "service_request_submission": "Solicitações de serviço",
+      "service_request_definition": "Definições de solicitação de serviço",
+      "workflow_task": "Tarefas de fluxo de trabalho",
+      "interaction": "Interações",
+      "schedule_entry": "Agendar entradas",
+      "time_entry": "Entradas de tempo",
+      "board": "Quadros",
+      "category": "Categorias",
+      "tag": "Etiquetas",
       "status": "Status"
     },
     "groups": {
-      "client": "Clients",
-      "contact": "Contacts",
-      "user": "Team members",
+      "client": "Clientes",
+      "contact": "Contatos",
+      "user": "Membros da equipe",
       "ticket": "Tickets",
-      "ticket_comment": "Ticket comments",
-      "project": "Projects",
-      "project_phase": "Project phases",
-      "project_task": "Project tasks",
-      "project_task_comment": "Project task comments",
-      "asset": "Assets",
-      "invoice": "Invoices",
-      "invoice_item": "Invoice line items",
-      "invoice_annotation": "Invoice annotations",
-      "contract": "Contracts",
-      "client_contract": "Client contracts",
-      "document": "Documents",
-      "kb_article": "KB articles",
-      "service_catalog": "Service catalog",
-      "service_request_submission": "Service requests",
-      "service_request_definition": "Service request definitions",
-      "workflow_task": "Workflow tasks",
-      "interaction": "Interactions",
-      "schedule_entry": "Schedule entries",
-      "time_entry": "Time entries",
-      "board": "Boards",
-      "category": "Categories",
-      "tag": "Tags",
+      "ticket_comment": "Comentários sobre tickets",
+      "project": "Projetos",
+      "project_phase": "Fases do projeto",
+      "project_task": "Tarefas do projeto",
+      "project_task_comment": "Comentários da tarefa do projeto",
+      "asset": "Ativos",
+      "sales_order": "Pedidos de venda",
+      "purchase_order": "Pedidos de compra",
+      "stock_unit": "Unidades de estoque",
+      "invoice": "Faturas",
+      "invoice_item": "Itens de linha da fatura",
+      "invoice_annotation": "Anotações de fatura",
+      "contract": "Contratos",
+      "client_contract": "Contratos de clientes",
+      "document": "Documentos",
+      "kb_article": "Artigos da base de conhecimento",
+      "service_catalog": "Catálogo de serviços",
+      "service_request_submission": "Solicitações de serviço",
+      "service_request_definition": "Definições de solicitação de serviço",
+      "workflow_task": "Tarefas de fluxo de trabalho",
+      "interaction": "Interações",
+      "schedule_entry": "Agendar entradas",
+      "time_entry": "Entradas de tempo",
+      "board": "Quadros",
+      "category": "Categorias",
+      "tag": "Etiquetas",
       "status": "Status"
     },
     "sort": {
-      "relevance": "Relevance",
-      "recent": "Recent"
+      "relevance": "Relevância",
+      "recent": "Recente"
     },
     "pagination": {
-      "previous": "Previous",
-      "next": "Next"
+      "previous": "Anterior",
+      "next": "Próximo"
     }
   },
   "onboardingRedirect": {
     "title": "Levando você para a configuração",
-    "description": "Seu espaço de trabalho precisa de uma configuração rápida antes que você possa usar o painel.",
-    "action": "Continuar para a configuração"
+    "description": "Seu espaço de trabalho precisa de uma configuração rápida antes de você poder usar o painel.",
+    "action": "Continuar a configuração"
+  },
+  "marketing": {
+    "dialogs": {
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "create": "Criar"
+    },
+    "actions": {
+      "edit": "Editar",
+      "delete": "Excluir"
+    },
+    "calendar": {
+      "title": "Calendário de marketing",
+      "newPost": "Nova publicação",
+      "today": "Hoje",
+      "tomorrow": "Amanhã",
+      "dueAt": "até {{time}}",
+      "needsPublishing": "Pendentes de publicação",
+      "needsPublishingCount": "{{total}} aguardando · {{overdue}} atrasadas",
+      "needsPublishingCountSimple": "{{total}} aguardando",
+      "needsPublishingHint": "Copie o texto, publique na plataforma e depois marque como publicada.",
+      "thisWeek": "Esta semana",
+      "stats": {
+        "published": "Publicadas",
+        "scheduled": "Agendadas",
+        "awaiting": "Aguardando publicação"
+      },
+      "channels": "Canais",
+      "manageChannels": "Gerenciar",
+      "noChannels": "Nenhum canal ainda.",
+      "publishedRecently": "Publicadas recentemente",
+      "noUpcoming": "Nada agendado neste período.",
+      "emptyTitle": "Nada no calendário ainda",
+      "emptyBody": "Crie uma publicação na página Publicações e ela aparecerá aqui no dia agendado.",
+      "toast": {
+        "skipped": "Ignorada"
+      },
+      "weekOf": "Semana de {{date}}",
+      "viewMonth": "Mês",
+      "viewAgenda": "Agenda",
+      "moreItems": "+{{count}} mais"
+    },
+    "posts": {
+      "title": "Publicações",
+      "new": "Nova publicação",
+      "copyText": "Copiar texto",
+      "skip": "Ignorar",
+      "reschedule": "Reagendar",
+      "emptyTitle": "Nenhuma publicação ainda",
+      "emptyBody": "Crie uma publicação a partir da sua biblioteca de conteúdo e ela aparecerá nesta fila.",
+      "status": {
+        "scheduled": "agendada",
+        "awaiting-manual-publish": "aguardando publicação",
+        "published": "publicada",
+        "skipped": "ignorada",
+        "expired": "expirada"
+      },
+      "columns": {
+        "content": "Conteúdo",
+        "channel": "Canal",
+        "campaign": "Campanha",
+        "scheduled": "Agendada",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "filters": {
+        "status": "Status",
+        "channel": "Canal",
+        "campaign": "Campanha",
+        "all": "Todos",
+        "dateFrom": "Agendada de",
+        "dateTo": "Agendada até"
+      },
+      "createDialog": {
+        "title": "Nova publicação",
+        "content": "Conteúdo",
+        "contentPlaceholder": "Selecione o conteúdo…",
+        "channels": "Canais",
+        "noChannels": "Nenhum canal ativo — adicione um na página Canais primeiro.",
+        "campaign": "Campanha (opcional)",
+        "noCampaign": "Sem campanha",
+        "scheduledAt": "Agendar para (opcional)",
+        "submit": "Criar publicação"
+      },
+      "rescheduleDialog": {
+        "title": "Reagendar publicação",
+        "scheduledAt": "Novo horário",
+        "submit": "Reagendar"
+      },
+      "markPublished": {
+        "title": "Marcar como publicada",
+        "permalink": "Link permanente (opcional)",
+        "confirm": "Marcar como publicada"
+      },
+      "toast": {
+        "created": "Publicação criada",
+        "rescheduled": "Publicação reagendada",
+        "markedPublished": "Marcada como publicada",
+        "copied": "Copiado para a área de transferência",
+        "copyFailed": "Não foi possível copiar para a área de transferência"
+      }
+    },
+    "content": {
+      "title": "Conteúdo",
+      "new": "Novo conteúdo",
+      "emptyTitle": "Nenhum conteúdo ainda",
+      "emptyBody": "Escreva as publicações que deseja publicar e depois agende-as na página Publicações.",
+      "columns": {
+        "title": "Título",
+        "campaign": "Campanha",
+        "variants": "Variantes",
+        "updated": "Atualizado",
+        "actions": "Ações"
+      },
+      "dialog": {
+        "createTitle": "Novo conteúdo",
+        "editTitle": "Editar conteúdo",
+        "title": "Título",
+        "body": "Corpo (markdown)",
+        "campaign": "Campanha (opcional)",
+        "noCampaign": "Sem campanha",
+        "variants": "Variantes por canal",
+        "variantsHint": "Substitua o texto base para plataformas específicas. Variantes vazias são ignoradas.",
+        "addVariant": "Adicionar variante de plataforma…",
+        "addVariantButton": "Adicionar"
+      },
+      "deleteDialog": {
+        "title": "Excluir conteúdo",
+        "message": "Excluir \"{{title}}\"? Esta ação não pode ser desfeita."
+      },
+      "toast": {
+        "created": "Conteúdo criado",
+        "updated": "Conteúdo atualizado",
+        "deleted": "Conteúdo excluído"
+      }
+    },
+    "campaigns": {
+      "title": "Campanhas",
+      "new": "Nova campanha",
+      "view": "Ver",
+      "emptyTitle": "Nenhuma campanha ainda",
+      "emptyBody": "Campanhas agrupam publicações, conteúdo, formulários e sequências para você ver o funil em um só lugar.",
+      "status": {
+        "draft": "rascunho",
+        "active": "ativa",
+        "completed": "concluída",
+        "archived": "arquivada"
+      },
+      "columns": {
+        "name": "Nome",
+        "status": "Status",
+        "startDate": "Início",
+        "endDate": "Fim",
+        "actions": "Ações"
+      },
+      "dialog": {
+        "createTitle": "Nova campanha",
+        "editTitle": "Editar campanha",
+        "name": "Nome",
+        "goal": "Objetivo (opcional)",
+        "sourceChannel": "Canal de origem (opcional)",
+        "status": "Status",
+        "startDate": "Data de início",
+        "endDate": "Data de término"
+      },
+      "funnel": {
+        "loading": "Carregando funil…",
+        "postsPublished": "Publicações realizadas",
+        "emailsSent": "E-mails enviados",
+        "emailsOpened": "Abertos",
+        "emailsClicked": "Clicados",
+        "formsSubmitted": "Formulários enviados",
+        "suggestionsCreated": "Sugestões",
+        "suggestionsAccepted": "Aceitas"
+      },
+      "toast": {
+        "created": "Campanha criada",
+        "updated": "Campanha atualizada"
+      },
+      "detail": {
+        "posts": "Publicações",
+        "noPosts": "Nenhuma publicação nesta campanha.",
+        "sequences": "Sequências",
+        "noSequences": "Nenhuma sequência vinculada a esta campanha.",
+        "forms": "Formulários de captura",
+        "noForms": "Nenhum formulário atribuído a esta campanha."
+      }
+    },
+    "sequences": {
+      "title": "Sequências",
+      "new": "Nova sequência",
+      "pickerLabel": "Sequência",
+      "emptyTitle": "Nenhuma sequência ainda",
+      "emptyBody": "Sequências enviam uma série programada de e-mails aos contatos inscritos.",
+      "headerSummary": "{{steps}} etapas · {{active}} inscrições ativas",
+      "headerOpenRate": "{{rate}}% de abertura",
+      "journey": "Jornada",
+      "noSteps": "Nenhuma etapa ainda — edite a sequência para adicionar etapas.",
+      "enroll": "Inscrever contatos",
+      "performance": {
+        "title": "Desempenho",
+        "openRate": "Taxa de abertura",
+        "clickRate": "Taxa de cliques",
+        "stopped": "Descadastrados / interrompidos"
+      },
+      "stepStats": {
+        "sent": "{{count}} enviados",
+        "opened": "{{rate}}% abertos"
+      },
+      "status": {
+        "draft": "rascunho",
+        "active": "ativa",
+        "paused": "pausada",
+        "archived": "arquivada"
+      },
+      "enrollments": {
+        "title": "Inscrições",
+        "empty": "Nenhuma inscrição ainda.",
+        "contact": "Contato",
+        "progress": "Progresso",
+        "nextSend": "Próximo envio",
+        "state": "Estado",
+        "actions": "Ações",
+        "unenroll": "Remover inscrição"
+      },
+      "dialog": {
+        "createTitle": "Nova sequência",
+        "editTitle": "Editar sequência",
+        "name": "Nome",
+        "description": "Descrição (opcional)",
+        "status": "Status",
+        "steps": "Etapas",
+        "subjectPlaceholder": "Assunto",
+        "delay": "Aguardar",
+        "delayAfterEnroll": "após a inscrição",
+        "delayAfterPrevious": "após a etapa anterior",
+        "bodyPlaceholder": "Corpo (markdown, {{merge.fields}} suportados)",
+        "addStep": "Adicionar etapa",
+        "unit": {
+          "minutes": "minutos",
+          "hours": "horas",
+          "days": "dias"
+        },
+        "campaign": "Campanha (opcional)",
+        "noCampaign": "Nenhuma"
+      },
+      "enrollDialog": {
+        "title": "Inscrever contato",
+        "contact": "Contato",
+        "contactPlaceholder": "Selecione um contato…",
+        "submit": "Inscrever"
+      },
+      "toast": {
+        "created": "Sequência criada",
+        "updated": "Sequência atualizada",
+        "enrolled": "Contato inscrito",
+        "unenrolled": "Inscrição removida"
+      },
+      "sending": {
+        "title": "Envio",
+        "from": "De",
+        "provider": "Provedor",
+        "notConfigured": "Não configurado",
+        "unsubscribe": "Link de descadastro",
+        "on": "Ativado",
+        "tracking": "Rastreamento"
+      }
+    },
+    "forms": {
+      "title": "Formulários de captura",
+      "new": "Novo formulário",
+      "active": "ativo",
+      "inactive": "inativo",
+      "createsSuggestion": "sugestão",
+      "copyUrl": "Copiar",
+      "emptyTitle": "Nenhum formulário de captura ainda",
+      "emptyBody": "Formulários públicos transformam leads em contatos — e, opcionalmente, em sugestões de oportunidade.",
+      "columns": {
+        "name": "Nome",
+        "slug": "Slug",
+        "campaign": "Campanha",
+        "status": "Status",
+        "captureUrl": "URL de captura",
+        "actions": "Ações"
+      },
+      "dialog": {
+        "createTitle": "Novo formulário de captura",
+        "editTitle": "Editar formulário",
+        "name": "Nome",
+        "slug": "Slug",
+        "slugHint": "Letras minúsculas, dígitos e hífens (ex.: demo-request). Usado na URL pública de captura.",
+        "slugInvalid": "Slug inválido",
+        "description": "Descrição (opcional)",
+        "campaign": "Campanha (opcional)",
+        "noCampaign": "Sem campanha",
+        "createsSuggestion": "Criar uma sugestão de oportunidade por envio",
+        "isActive": "Ativo (aceita envios)"
+      },
+      "toast": {
+        "created": "Formulário criado",
+        "updated": "Formulário atualizado",
+        "urlCopied": "URL de captura copiada"
+      }
+    },
+    "channels": {
+      "title": "Canais",
+      "new": "Novo canal",
+      "emptyTitle": "Nenhum canal ainda",
+      "emptyBody": "Canais são os lugares onde você publica — um perfil no LinkedIn, um canal no YouTube, um blog.",
+      "columns": {
+        "name": "Nome",
+        "platform": "Plataforma",
+        "handle": "Identificador / URL",
+        "active": "Ativo",
+        "actions": "Ações"
+      },
+      "dialog": {
+        "createTitle": "Novo canal",
+        "editTitle": "Editar canal",
+        "name": "Nome",
+        "namePlaceholder": "ex.: LinkedIn do Robert",
+        "platform": "Plataforma",
+        "platformPlaceholder": "Selecione uma plataforma…",
+        "handle": "Identificador ou URL (opcional)",
+        "isActive": "Ativo"
+      },
+      "toast": {
+        "created": "Canal criado",
+        "updated": "Canal atualizado",
+        "activated": "Canal ativado",
+        "deactivated": "Canal desativado"
+      }
+    },
+    "contact": {
+      "title": "Marketing",
+      "loading": "Carregando atividade de marketing…",
+      "consentGiven": "consentimento",
+      "noConsent": "sem consentimento",
+      "suppressed": "suprimido",
+      "activeEnrollments": "Inscrições ativas",
+      "noEnrollments": "Não inscrito em nenhuma sequência.",
+      "enrollmentMeta": "etapa {{step}} · próximo {{date}}",
+      "recentEngagements": "Engajamentos recentes",
+      "noEngagements": "Nenhuma interação de marketing ainda."
+    },
+    "boundary": {
+      "disabledTitle": "Marketing não está habilitado",
+      "disabledDescription": "O módulo de marketing não está habilitado para esta conta.",
+      "permissionTitle": "Sem acesso ao Marketing",
+      "permissionDescription": "Você não tem permissão para ver marketing. Peça a um administrador a permissão de leitura de marketing.",
+      "backToDashboard": "Ir para o painel"
+    }
   }
 }

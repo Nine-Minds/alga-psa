@@ -143,7 +143,21 @@
       "title": "Ad-hoc-Element",
       "toggleDoneError": "Element konnte nicht aktualisiert werden."
     },
-    "enterpriseOnly": "Workflow-Aufgaben sind eine Enterprise-Funktion."
+    "enterpriseOnly": "Workflow-Aufgaben sind eine Enterprise-Funktion.",
+    "nextAction": "Nächste Aktion",
+    "overdueSince": "Überfällig seit {{date}}",
+    "dueOn": "Fällig am {{date}}",
+    "stage": "Phase",
+    "confidence": "Konfidenz",
+    "owner": "Inhaber",
+    "expectedClose": "Voraussichtlicher Abschluss",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "contact": "Kontakt",
+    "linkedQuotes": "Verknüpfte Angebote",
+    "openOpportunity": "Opportunity öffnen",
+    "opportunityNotFound": "Opportunity nicht gefunden."
   },
   "groupedView": {
     "addGroup": "Gruppe hinzufügen",
@@ -209,12 +223,14 @@
           "priorityPlaceholder": "Priorität auswählen...",
           "allPriorities": "Alle Prioritäten",
           "dueDateRange": "Fälligkeitszeitraum",
+          "createdDateRange": "Erstellungszeitraum",
           "showClosedTasks": "Geschlossene Aufgaben anzeigen"
         },
         "actions": {
           "reset": "Zurücksetzen",
           "cancel": "Abbrechen",
-          "apply": "Filter anwenden"
+          "apply": "Filter anwenden",
+          "clearDates": "Löschen"
         }
       }
     },
@@ -252,12 +268,14 @@
           "priorityPlaceholder": "Priorität auswählen...",
           "allPriorities": "Alle Prioritäten",
           "dueDateRange": "Fälligkeitszeitraum",
+          "createdDateRange": "Erstellungszeitraum",
           "showClosedTickets": "Geschlossene Tickets anzeigen"
         },
         "actions": {
           "reset": "Zurücksetzen",
           "cancel": "Abbrechen",
-          "apply": "Filter anwenden"
+          "apply": "Filter anwenden",
+          "clearDates": "Löschen"
         }
       }
     },
@@ -297,13 +315,15 @@
           "priorityMedium": "Mittel",
           "priorityLow": "Niedrig",
           "dueDateRange": "Fälligkeitszeitraum",
+          "createdDateRange": "Erstellungszeitraum",
           "showClosedTasks": "Geschlossene Aufgaben anzeigen",
           "includeHiddenTasks": "Ausgeblendete Aufgaben einschließen"
         },
         "actions": {
           "reset": "Zurücksetzen",
           "cancel": "Abbrechen",
-          "apply": "Filter anwenden"
+          "apply": "Filter anwenden",
+          "clearDates": "Löschen"
         }
       },
       "listDrawer": {
@@ -441,6 +461,7 @@
       "search": "Suche",
       "client": "Kunde",
       "dueDateShort": "Fällig",
+      "createdShort": "Erstellt",
       "tags": "Tags",
       "tagsSelected": "{{count}} Tags",
       "tasksCompact": "Aufgaben",
@@ -470,7 +491,9 @@
     },
     "actions": {
       "reset": "Zurücksetzen",
-      "clearClient": "Kundenfilter zurücksetzen"
+      "clearClient": "Kundenfilter zurücksetzen",
+      "clearDueDate": "Fälligkeitsfilter löschen",
+      "clearCreatedDate": "Erstellungsdatumfilter löschen"
     },
     "statusClosedSuffix": " (geschlossen)",
     "summary": {

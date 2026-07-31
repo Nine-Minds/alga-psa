@@ -51,10 +51,12 @@ function makeFakeExceptions() {
 
 /** Build a fake knex that can answer invoices+mappings queries. */
 function makeKnex(invoiceRow: { client_id: string } | null = { client_id: 'client-1' }) {
-  const first = vi.fn(async () => invoiceRow);
-  const select = vi.fn(() => ({ first }));
-  const where = vi.fn(() => ({ select }));
-  const table = vi.fn(() => ({ where }));
+  const query: any = {
+    where: vi.fn(() => query),
+    select: vi.fn(() => query),
+    first: vi.fn(async () => invoiceRow)
+  };
+  const table = vi.fn(() => query);
   return Object.assign(table, { fn: { now: vi.fn() } }) as any;
 }
 

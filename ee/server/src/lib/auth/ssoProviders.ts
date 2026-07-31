@@ -31,10 +31,12 @@ async function resolveTenantIdFromSlug(slug: string): Promise<string | undefined
   }
 
   const { getAdminConnection } = await import('@alga-psa/db/admin');
+  const { tenantDb } = await import('@alga-psa/db');
   const knex = await getAdminConnection();
   const { prefix, suffix } = getSlugParts(normalizedSlug);
 
-  const record = await knex('tenants')
+  const record = await tenantDb(knex, '__sso_slug_tenant_discovery__')
+    .unscoped('tenants', 'SSO slug lookup discovers tenant before tenant context exists')
     .select('tenant')
     .whereRaw(
       "substring(replace(tenant::text, '-', '') from 1 for 6) = ?",
@@ -60,8 +62,10 @@ async function resolveTenantIdFromVanityHost(host?: string | null): Promise<stri
   }
 
   const { getAdminConnection } = await import('@alga-psa/db/admin');
+  const { tenantDb } = await import('@alga-psa/db');
   const knex = await getAdminConnection();
-  const record = await knex('portal_domains')
+  const record = await tenantDb(knex, '__sso_vanity_host_tenant_discovery__')
+    .unscoped('portal_domains', 'SSO vanity host lookup discovers tenant before tenant context exists')
     .select('tenant')
     .where({ domain: normalizedHost })
     .first();

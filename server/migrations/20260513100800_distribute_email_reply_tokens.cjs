@@ -6,8 +6,18 @@
 // table has an FK to comments. Several do (email_reply_tokens, vectors,
 // ticket_bundle_mirrors, ...). This migration distributes every such local
 // referrer co-located with comments, then runs the official cleanup.
-// Rule: distributing a possibly-non-empty table MUST be followed by
-// truncate_local_data_after_distributing_table().
+//
+// ⚠️ UNSAFE PATTERN — do not copy into new migrations, and do NOT treat the
+// following as a general rule: "distributing a possibly-non-empty table must be
+// followed by truncate_local_data_after_distributing_table()". That function
+// issues a TRUNCATE that CASCADEs across the whole FK graph. Distributed tables
+// in the cascade only lose stranded coordinator-local rows, but any
+// NON-distributed table in the recursive FK closure loses ALL of its data (a
+// local table's coordinator heap is its only copy). This migration only got
+// away with it because it first distributed every local referrer. Before ever
+// calling the function again, walk the FK closure (pg_constraint) and abort
+// unless every member is distributed (pg_dist_partition). Retained as history,
+// not as an example.
 
 exports.up = async function up(knex) {
   const citus = await knex.raw(
@@ -243,6 +253,8 @@ async function isDistributed(knex, table) {
   return Boolean(res.rows?.[0]?.is_distributed);
 }
 
+// ⚠️ See the header warning: the TRUNCATE below cascades over the FK graph and
+// destroys ALL data of any non-distributed table in the closure. Do not reuse.
 async function truncateLocalDataIfNeeded(knex, table) {
   if (!(await isDistributed(knex, table))) {
     return;

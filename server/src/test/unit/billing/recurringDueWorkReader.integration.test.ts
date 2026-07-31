@@ -156,6 +156,11 @@ function createQueryBuilder(rows: Row[]) {
       resultRows = resultRows.filter((row) => values.includes(row[normalized]));
       return builder;
     }),
+    whereNotIn: vi.fn((column: string, values: any[]) => {
+      const normalized = normalizeColumn(column);
+      resultRows = resultRows.filter((row) => !values.includes(row[normalized]));
+      return builder;
+    }),
     whereNull: vi.fn((column: string) => {
       const normalized = normalizeColumn(column);
       resultRows = resultRows.filter((row) => row[normalized] == null);
@@ -261,6 +266,18 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
@@ -641,7 +658,7 @@ describe('recurring due-work reader', () => {
         servicePeriodEnd: '2025-03-01',
         reason: 'missing_service_period_materialization',
         detail:
-          'Recurring service periods were not materialized for this canonical client-cadence execution window.',
+          "This client's billing schedule changed, so these charges are out of date and need to be rebuilt before they can be invoiced.",
       },
     ]);
     expect(result.invoiceCandidates.map((candidate) => candidate.clientId)).not.toContain('client-2');

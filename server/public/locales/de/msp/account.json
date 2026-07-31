@@ -63,7 +63,6 @@
   "features": {
     "integrations": "Integrationen – verbinden Sie Kalender, Teams, Entra und andere externe Dienste",
     "extensions": "Erweiterungen – installieren und verwalten Sie Marketplace-Erweiterungen für Ihren Arbeitsbereich",
-    "managedEmail": "Verwaltete E-Mail – konfigurieren Sie die gehostete E-Mail-Zustellung von Alga PSA",
     "sso": "Single Sign-On – konfigurieren Sie SSO- und OAuth-Identitätsanbieter für Ihr Team",
     "advancedAssets": "Erweiterte Assets – schalten Sie RMM-verknüpfte Asset-Erkennung und umfangreichere Asset-Steuerungen frei",
     "clientPortalAdmin": "Client-Portal-Administration – verwalten Sie erweitertes Branding und Administration des Client-Portals",
@@ -72,7 +71,8 @@
     "entraSync": "Microsoft Entra Sync – automatische Erkennung von Tenants und Synchronisierung von Kontakten aus Entra ID",
     "cipp": "CIPP-Integration – verbinden Sie Ihre CIPP-Instanz für die Multi-Tenant-Entra-Verwaltung",
     "teamsIntegration": "Microsoft Teams – Meeting-Integration und Teams-Bot für Ticket-Benachrichtigungen",
-    "advancedAuthorizationBundles": "Erweiterte Autorisierungs-Bundles – erstellen und verwalten Sie Premium-ABAC-Einschränkungs-Bundles"
+    "advancedAuthorizationBundles": "Erweiterte Autorisierungs-Bundles – erstellen und verwalten Sie Premium-ABAC-Einschränkungs-Bundles",
+    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
   },
   "summary": {
     "licensesUsed": "Verwendete Lizenzen",
@@ -316,6 +316,45 @@
     "newSubNote": "Ein neues Abonnement wird erstellt. Diese Änderung tritt sofort in Kraft.",
     "perMonthSuffix": "/Monat"
   },
+  "productUpgrade": {
+    "cardTitle": "Auf AlgaPSA upgraden",
+    "cardDescription": "Stellen Sie diesen Arbeitsbereich von AlgaDesk auf die vollständige AlgaPSA-Plattform um.",
+    "currentPlanLabel": "Aktueller Plan",
+    "algadeskPlanName": "AlgaDesk",
+    "currentPerSeatLabel": "Aktueller Preis pro Arbeitsplatz",
+    "perSeatValue": "${{amount}} pro Arbeitsplatz",
+    "cardCta": "Schalten Sie Abrechnung, Projekte, Assets und den vollständigen PSA-Funktionsumfang frei.",
+    "openButton": "Auf AlgaPSA upgraden",
+    "dialogTitle": "Auf AlgaPSA upgraden",
+    "intro": "Sie upgraden diesen Arbeitsbereich von <strong>AlgaDesk</strong> auf <strong>AlgaPSA</strong>.",
+    "targetPerSeatLabel": "AlgaPSA-Preis pro Arbeitsplatz",
+    "seatCountLabel": "Arbeitsplätze",
+    "billingIntervalLabel": "Abrechnungsintervall",
+    "intervalMonth": "Monatlich",
+    "intervalYear": "Jährlich",
+    "dueTodayLabel": "Heute fälliger anteiliger Betrag",
+    "dueTodayUnknown": "Wird bei der Bestätigung angezeigt",
+    "prorationFallback": "Der genaue anteilige Betrag wird bei der Bestätigung in Stripe angezeigt.",
+    "confirm": "Upgrade bestätigen",
+    "confirming": "Upgrade wird gestartet...",
+    "cancel": "Abbrechen",
+    "inProgressTitle": "Upgrade auf AlgaPSA läuft...",
+    "inProgressBody": "Dies kann eine Minute dauern. Bitte lassen Sie dieses Fenster geöffnet, bis der Vorgang abgeschlossen ist.",
+    "currentStepLabel": "Aktueller Schritt",
+    "preparingStep": "Wird vorbereitet...",
+    "completedStepsLabel": "Abgeschlossene Schritte",
+    "successTitle": "Willkommen bei AlgaPSA!",
+    "successBody": "Ihr Arbeitsbereich wurde upgegradet und der vollständige PSA-Funktionsumfang ist jetzt verfügbar.",
+    "successReloginNotice": "Andere angemeldete Benutzer müssen sich ab- und wieder anmelden, bevor sie AlgaPSA sehen.",
+    "successDone": "Fertig",
+    "failedTitle": "Upgrade wurde nicht abgeschlossen",
+    "failedBody": "Beim Upgrade ist ein Fehler aufgetreten. Es sind keine Änderungen verloren gegangen – Sie können den Vorgang bedenkenlos wiederholen.",
+    "retry": "Erneut versuchen",
+    "retrying": "Erneuter Versuch...",
+    "close": "Schließen",
+    "previewFailed": "Upgrade-Details konnten nicht geladen werden",
+    "startFailed": "Upgrade konnte nicht gestartet werden"
+  },
   "downgradeDialog": {
     "title": "Auf Solo herabstufen",
     "downgrading": "Wird herabgestuft...",
@@ -386,6 +425,76 @@
       "switchingCompetitor": "Wechsel zu Mitbewerber",
       "noLongerNeed": "Dienst wird nicht mehr benötigt",
       "other": "Sonstiges"
+    }
+  },
+  "aiUsage": {
+    "title": "KI-Nutzung",
+    "subtitle": "Guthabenbasierte Abrechnung für Alga-KI-Funktionen",
+    "refresh": "Aktualisieren",
+    "errors": {
+      "loadSummary": "KI-Nutzungsdetails konnten nicht geladen werden",
+      "loadHistory": "Nutzungsverlauf konnte nicht geladen werden",
+      "subscribe": "Checkout konnte nicht gestartet werden",
+      "topup": "Aufladungs-Checkout konnte nicht gestartet werden",
+      "autoTopup": "Einstellungen für automatisches Aufladen konnten nicht gespeichert werden",
+      "unavailable": "KI-Nutzungsdetails sind derzeit nicht verfügbar. Bitte versuchen Sie es in Kürze erneut."
+    },
+    "upsell": {
+      "heading": "KI zu Ihrem Arbeitsbereich hinzufügen",
+      "body": "Abonnieren Sie das KI-Add-on, um Alga-KI für Chat, E-Mail-Triage und mehr freizuschalten. Ihr Monatsplan enthält ein Guthabenkontingent; kaufen Sie jederzeit einmalige Aufladungen oder aktivieren Sie automatisches Aufladen.",
+      "subscribe": "KI-Add-on abonnieren",
+      "subscribing": "Weiterleitung…"
+    },
+    "grace": {
+      "title": "Guthaben aufgebraucht — Kulanzpuffer in Nutzung",
+      "body": "Die KI funktioniert weiterhin innerhalb eines kleinen Kulanzpuffers von {{grace}} Credits. Laden Sie auf, um einen harten Stopp zu vermeiden."
+    },
+    "lowBalance": {
+      "title": "Niedriger Guthabenstand",
+      "body": "Erwägen Sie eine Aufladung oder aktivieren Sie automatisches Aufladen, um Unterbrechungen zu vermeiden."
+    },
+    "balance": {
+      "total": "Gesamtguthaben",
+      "creditsUnit": "Credits",
+      "included": "Inklusive (monatlich)",
+      "resetsMonthly": "wird jeden Zyklus zurückgesetzt",
+      "topup": "Aufladung (bleibt bestehen)",
+      "carriesOver": "wird übertragen"
+    },
+    "cycle": {
+      "label": "Abrechnungszyklus",
+      "resetsIn": "Zurücksetzung in {{days}} Tagen"
+    },
+    "topup": {
+      "title": "Aufladungs-Credits kaufen",
+      "description": "Einmalige Guthabenpakete, die nie verfallen.",
+      "noPacks": "Es sind noch keine Aufladungspakete konfiguriert.",
+      "packWithCredits": "{{label}} ({{credits}} Credits)"
+    },
+    "autoTopup": {
+      "title": "Automatisches Aufladen",
+      "description": "Kauft automatisch ein Paket, wenn Ihr Guthaben unter einen Schwellenwert fällt.",
+      "enable": "Automatisches Aufladen aktivieren",
+      "enableHelp": "Verwendet Ihre gespeicherte Zahlungsmethode für Abbuchungen außerhalb der Sitzung.",
+      "threshold": "Schwellenwert (Credits)",
+      "pack": "Zu kaufendes Paket",
+      "selectPack": "Paket auswählen",
+      "save": "Automatisches Aufladen speichern",
+      "saved": "Einstellungen für automatisches Aufladen gespeichert",
+      "saving": "Wird gespeichert…"
+    },
+    "history": {
+      "title": "Nutzungsverlauf",
+      "description": "Guthabenverbrauch pro Anfrage.",
+      "allFeatures": "Alle Funktionen",
+      "date": "Datum",
+      "feature": "Funktion",
+      "model": "Modell",
+      "tokens": "Tokens",
+      "credits": "Credits",
+      "empty": "Noch keine Nutzung erfasst.",
+      "loading": "Wird geladen…",
+      "loadMore": "Mehr laden"
     }
   }
 }

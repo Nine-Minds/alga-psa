@@ -10,6 +10,7 @@
  */
 
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import {
   RmmCachedData,
@@ -25,6 +26,29 @@ async function assertAdvancedAssetsAccess(): Promise<void> {
   await assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS);
 }
 
+function isExpectedRmmActionError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return [
+    'Asset not found',
+    'Asset is not managed by NinjaOne',
+    'No active NinjaOne integration found',
+    'requires reconnection',
+    'No refresh token available',
+    'NinjaOne client credentials not configured',
+    'Sync is already in progress',
+    'No tenant found',
+  ].some((message) => error.message.includes(message));
+}
+
+function rmmCommandFailureMessage(operation: 'reboot' | 'script'): string {
+  return operation === 'reboot'
+    ? 'Unable to send reboot command. Confirm the device is online and remote actions are enabled.'
+    : 'Unable to run script. Confirm the device is online and the script is available.';
+}
+
 /**
  * Get cached RMM data for an asset
  * Returns data from the database (populated during sync) for instant page load
@@ -36,11 +60,12 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
   if (!tenant) {
     throw new Error('No tenant found');
   }
+  const db = tenantDb(knex, tenant);
 
   try {
     // Get base asset info
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .select(
         'asset_type',
         'rmm_provider',
@@ -63,8 +88,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
       if (asset.asset_type === 'workstation') {
         // Try to select new RMM cached fields, fallback to basic fields if migration hasn't run
         try {
-          extensionData = await knex('workstation_assets')
-            .where({ tenant, asset_id: assetId })
+          extensionData = await db.table('workstation_assets')
+            .where({ asset_id: assetId })
             .select(
               'current_user',
               'uptime_seconds',
@@ -80,8 +105,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
         } catch (columnError: any) {
           // If columns don't exist (migration not run), select only basic fields
           if (columnError?.code === '42703') {
-            extensionData = await knex('workstation_assets')
-              .where({ tenant, asset_id: assetId })
+            extensionData = await db.table('workstation_assets')
+              .where({ asset_id: assetId })
               .select('ram_gb')
               .first();
           } else {
@@ -92,8 +117,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
       } else if (asset.asset_type === 'server') {
         // Try to select new RMM cached fields, fallback to basic fields if migration hasn't run
         try {
-          extensionData = await knex('server_assets')
-            .where({ tenant, asset_id: assetId })
+          extensionData = await db.table('server_assets')
+            .where({ asset_id: assetId })
             .select(
               'current_user',
               'uptime_seconds',
@@ -109,8 +134,8 @@ export async function getAssetRmmData(assetId: string): Promise<RmmCachedData | 
         } catch (columnError: any) {
           // If columns don't exist (migration not run), select only basic fields
           if (columnError?.code === '42703') {
-            extensionData = await knex('server_assets')
-              .where({ tenant, asset_id: assetId })
+            extensionData = await db.table('server_assets')
+              .where({ asset_id: assetId })
               .select('ram_gb')
               .first();
           } else {
@@ -179,7 +204,10 @@ export async function refreshAssetRmmData(assetId: string): Promise<RmmCachedDat
     return getAssetRmmData(assetId);
   } catch (error) {
     console.error('Error refreshing asset RMM data:', error);
-    throw new Error('Failed to refresh asset RMM data');
+    if (isExpectedRmmActionError(error)) {
+      throw error;
+    }
+    throw error;
   }
 }
 
@@ -197,11 +225,12 @@ export async function getAssetRemoteControlUrl(
   if (!tenant) {
     throw new Error('No tenant found');
   }
+  const db = tenantDb(knex, tenant);
 
   try {
     // Get asset info
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .select('rmm_provider', 'rmm_device_id')
       .first();
 
@@ -227,7 +256,10 @@ export async function getAssetRemoteControlUrl(
     }
   } catch (error) {
     console.error('Error getting remote control URL:', error);
-    throw new Error('Failed to get remote control URL');
+    if (isExpectedRmmActionError(error)) {
+      throw error;
+    }
+    throw error;
   }
 }
 
@@ -241,11 +273,12 @@ export async function triggerRmmReboot(assetId: string): Promise<{ success: bool
   if (!tenant) {
     throw new Error('No tenant found');
   }
+  const db = tenantDb(knex, tenant);
 
   try {
     // Get asset info
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .select('rmm_provider', 'rmm_device_id', 'name')
       .first();
 
@@ -265,9 +298,10 @@ export async function triggerRmmReboot(assetId: string): Promise<{ success: bool
         message: `Reboot command sent to ${asset.name}`,
       };
     } catch (rebootError) {
+      console.warn('RMM reboot command failed:', rebootError);
       return {
         success: false,
-        message: rebootError instanceof Error ? rebootError.message : 'Failed to send reboot command',
+        message: rmmCommandFailureMessage('reboot'),
       };
     }
   } catch (error) {
@@ -289,11 +323,12 @@ export async function triggerRmmScript(
   if (!tenant) {
     throw new Error('No tenant found');
   }
+  const db = tenantDb(knex, tenant);
 
   try {
     // Get asset info
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where({ asset_id: assetId })
       .select('rmm_provider', 'rmm_device_id', 'name')
       .first();
 
@@ -314,9 +349,10 @@ export async function triggerRmmScript(
         message: `Script queued for execution on ${asset.name}`,
       };
     } catch (scriptError) {
+      console.warn('RMM script execution failed:', scriptError);
       return {
         success: false,
-        message: scriptError instanceof Error ? scriptError.message : 'Failed to run script',
+        message: rmmCommandFailureMessage('script'),
       };
     }
   } catch (error) {

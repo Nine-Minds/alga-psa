@@ -1,19 +1,17 @@
 const { randomUUID } = require('node:crypto');
 
-async function pickOne(ctx, { label, sql, params }) {
-  const rows = await ctx.db.query(sql, params);
-  if (!rows.length) throw new Error(`Fixture requires ${label} in DB (tenant=${ctx.config.tenantId}).`);
-  return rows[0];
-}
+const { pickTenantOne, selectTenantRows } = require('../_lib/tenant-sql.cjs');
 
 module.exports = async function run(ctx) {
   const tenantId = ctx.config.tenantId;
   const marker = '[fixture integration-webhook-received-notify]';
 
-  const user = await pickOne(ctx, {
+  const user = await pickTenantOne(ctx, {
     label: 'a user',
-    sql: `select user_id from users where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'users',
+    columns: 'user_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
 
   const webhookId = `fixture-webhook-${randomUUID()}`;
@@ -39,16 +37,15 @@ module.exports = async function run(ctx) {
     throw new Error(`Expected run SUCCEEDED, got ${runRow.status}. Steps: ${JSON.stringify(ctx.summarizeSteps(steps))}`);
   }
 
-  const notifications = await ctx.db.query(
-    `
-      select internal_notification_id, title, message
-      from internal_notifications
-      where tenant = $1 and user_id = $2
-      order by created_at desc
-      limit 25
-    `,
-    [tenantId, user.user_id]
-  );
+  const notifications = await selectTenantRows(ctx, {
+    table: 'internal_notifications',
+    columns: 'internal_notification_id, title, message',
+    tenantId,
+    where: 'user_id = $2',
+    params: [user.user_id],
+    orderBy: 'created_at desc',
+    limit: 25
+  });
 
   const found = notifications.find(
     (n) => typeof n.title === 'string' && n.title.includes(marker) && typeof n.message === 'string' && n.message.includes(webhookId)
@@ -57,4 +54,3 @@ module.exports = async function run(ctx) {
     throw new Error(`Expected an internal notification containing "${marker}" and webhookId for user ${user.user_id}. Found ${notifications.length} notification(s).`);
   }
 };
-

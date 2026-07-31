@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
 
@@ -23,7 +24,13 @@ export default function LicenseBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    getLicenseStatus().then(setStatus).catch(() => {});
+    getLicenseStatus()
+      .then((result) => {
+        if (!isActionPermissionError(result)) {
+          setStatus(result);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   if (!status?.selfHostMode || dismissed) return null;
@@ -37,20 +44,20 @@ export default function LicenseBanner() {
   switch (state) {
     case 'trial':
       if (daysRemaining !== null && daysRemaining <= 7) {
-        message = t('licenseBanner.trialExpiresIn', { defaultValue: 'Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.', count: daysRemaining });
+        message = t('licenseBanner.trialExpiresIn', { defaultValue: 'Pro trial expires in {{count}} days. Enter a license key to keep Pro features.', count: daysRemaining });
         urgency = 'warning';
       } else if (daysRemaining !== null) {
-        message = t('licenseBanner.trialDaysRemaining', { defaultValue: 'Enterprise trial active — {{count}} days remaining.', count: daysRemaining });
+        message = t('licenseBanner.trialDaysRemaining', { defaultValue: 'Pro trial active — {{count}} days remaining.', count: daysRemaining });
         urgency = 'info';
       }
       break;
     case 'trial_available':
       // Fresh install, trial not yet used — invite, don't warn.
-      message = 'Running Essentials features. Start a free 15-day Enterprise trial to unlock all features.';
+      message = t('licenseBanner.trialAvailable', { defaultValue: 'Running Essentials features. Start a free 15-day Pro trial to unlock all features.' });
       urgency = 'info';
       break;
     case 'trial_expired':
-      message = 'Enterprise trial has expired. The install is now running Essentials features.';
+      message = t('licenseBanner.trialExpired', { defaultValue: 'Pro trial has expired. The install is now running Essentials features.' });
       urgency = 'warning';
       break;
     case 'licensed':
@@ -70,7 +77,7 @@ export default function LicenseBanner() {
     case 'ce':
       // CE installs: only show if they haven't used their trial yet.
       if (!status.trialUsed) {
-        message = 'Running Essentials features. Start a free 15-day Enterprise trial to unlock all features.';
+        message = t('licenseBanner.trialAvailable', { defaultValue: 'Running Essentials features. Start a free 15-day Pro trial to unlock all features.' });
         urgency = 'info';
       }
       break;

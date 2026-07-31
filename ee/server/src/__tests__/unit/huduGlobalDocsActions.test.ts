@@ -1,7 +1,7 @@
 /**
  * T240–T242 — listHuduArticlesAcrossCompanies (global-docs group), unit-mocked
  * like the sibling action tests (huduDataActions.test.ts idioms): auth gate,
- * feature flag, tiers, knex, the integration repository, the mapping rows and
+ * tiers, knex, the integration repository, the mapping rows and
  * the Hudu client factory are fakes; parseCompaniesCache and buildHuduRecordUrl
  * stay REAL so the company-name + deep-link resolution is exercised for real.
  */
@@ -17,7 +17,6 @@ const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' 
 const currentUserRef: { value: Record<string, unknown> | null } = { value: internalUser };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const knexCallableMock = vi.fn();
@@ -41,10 +40,6 @@ vi.mock('@alga-psa/auth', () => ({
       return handler(currentUserRef.value, { tenant: TENANT }, ...args);
     },
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -125,7 +120,6 @@ beforeEach(() => {
   currentUserRef.value = internalUser;
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
 
@@ -264,22 +258,10 @@ describe('T242: guard chain + disconnected state', () => {
     expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 
-  it('rejects when the hudu-integration flag is off (404 semantics)', async () => {
-    isEnabledMock.mockResolvedValue(false);
-
-    await expect(listHuduArticlesAcrossCompanies()).rejects.toThrow(/disabled for this tenant/);
-    expect(isEnabledMock).toHaveBeenCalledWith('hudu-integration', {
-      userId: 'user-1',
-      tenantId: TENANT,
-    });
-    expect(createTenantKnexMock).not.toHaveBeenCalled();
-  });
-
   it('rejects when the integrations tier is missing', async () => {
     assertTierAccessMock.mockRejectedValue(new Error('Integrations tier required'));
 
     await expect(listHuduArticlesAcrossCompanies()).rejects.toThrow(/Integrations tier required/);
-    expect(isEnabledMock).not.toHaveBeenCalled();
   });
 
   it('returns the typed disconnected state without any Hudu call when no active connection', async () => {

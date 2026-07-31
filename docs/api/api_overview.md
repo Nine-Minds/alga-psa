@@ -24,6 +24,7 @@ Our APIs are segmented into two editions:
 - Current EE-only APIs:
   - Tenant Provisioning API (see [tenant_provisioning_api.md](tenant_provisioning_api.md))
   - Hudu Integration Status API (see Section 6)
+  - Appliance Console API (see Section 6)
 
 The edition is controlled by the `EDITION` environment variable:
 - `EDITION=community` for CE deployments
@@ -169,6 +170,15 @@ Assets and tickets can be linked to each other (the same association surfaced in
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
 - **Hudu Integration Status:** `GET /api/integrations/hudu` returns connection health for the tenant's Hudu integration: `status`, `baseUrl`, `connectedAt`, `lastSyncedAt`, and `passwordAccess` (whether the Hudu API key can reach the password endpoints). Connection setup, company mapping, and asset layout mapping are configured through the Alga PSA UI at **Settings → Integrations → Hudu**, not via REST. Requires the `system_settings` read permission; available on EE deployments with the Hudu feature enabled. See [hudu.md](../integrations/hudu.md) for the full admin guide.
+- **Appliance Console API (EE only):** Manages on-premise appliance installations for Enterprise Edition deployments. Three endpoints are available under `/api/v1/appliance-installs/`:
+
+  | Method | Path | Purpose |
+  |--------|------|--------|
+  | `GET` | `/api/v1/appliance-installs` | List appliance installs visible to the authenticated tenant |
+  | `GET` | `/api/v1/appliance-installs/{tenantId}` | Retrieve details for a specific appliance install by tenant ID |
+  | `POST` | `/api/v1/appliance-installs/access` | Log an access event for an appliance install |
+
+  Community Edition deployments respond to all three endpoints with `501 Not Implemented` and the message `"Appliance console is only available in Enterprise Edition."` CORS preflight (`OPTIONS`) requests return `204 No Content` in both editions.
 
 ## 7. Development Guidelines
 

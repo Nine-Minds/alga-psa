@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { PlatformReportAuditService } from '@ee/lib/platformReports';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -97,9 +98,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: logs });
   } catch (error) {
+    const routeError = tenantManagementRouteError(error, 'Failed to load tenant management audit log.');
+
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+      error: routeError.error,
+    }, { status: routeError.status });
   }
 }

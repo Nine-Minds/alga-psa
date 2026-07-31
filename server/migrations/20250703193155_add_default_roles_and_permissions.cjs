@@ -1,8 +1,19 @@
+const MIGRATION_TENANT = 'migration:20250703193155_add_default_roles_and_permissions';
+const TENANT_ENUMERATION_REASON = 'enumerate tenants for default role and permission backfill';
+const DEPRECATED_PERMISSION_CLEANUP_REASON = 'all-tenant deprecated permission cleanup';
+const CLIENT_PORTAL_PERMISSION_UPDATE_REASON = 'all-tenant client portal permission flag normalization';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   // First, add the description column to permissions table if it doesn't exist
   const hasDescriptionColumn = await knex.schema.hasColumn('permissions', 'description');
   if (!hasDescriptionColumn) {
@@ -12,13 +23,13 @@ exports.up = async function(knex) {
   }
 
   // Helper function to create a permission if it doesn't exist
-  const ensurePermission = async (tenant, resource, action, msp = true, client = false, description = null) => {
-    const existing = await knex('permissions')
+  const ensurePermission = async (db, tenant, resource, action, msp = true, client = false, description = null) => {
+    const existing = await db.table('permissions')
       .where({ tenant, resource, action })
       .first();
     
     if (!existing) {
-      const [permission] = await knex('permissions')
+      const [permission] = await db.table('permissions')
         .insert({
           tenant,
           resource,
@@ -34,7 +45,7 @@ exports.up = async function(knex) {
     }
     
     // Update existing permission with msp/client flags and description
-    await knex('permissions')
+    await db.table('permissions')
       .where({ tenant, resource, action })
       .update({ msp, client, description });
     
@@ -42,22 +53,22 @@ exports.up = async function(knex) {
   };
 
   // Helper function to create a role if it doesn't exist
-  const ensureRole = async (tenant, roleName, description, msp = true, client = false) => {
+  const ensureRole = async (db, tenant, roleName, description, msp = true, client = false) => {
     // For roles that can exist in both portals, we need to check for the specific portal
-    const existing = await knex('roles')
+    const existing = await db.table('roles')
       .where({ tenant, role_name: roleName, msp, client })
       .first();
     
     if (!existing) {
       // Check if role with same name exists in opposite portal
-      const oppositePortalRole = await knex('roles')
+      const oppositePortalRole = await db.table('roles')
         .where({ tenant, role_name: roleName })
         .whereNot({ msp, client })
         .first();
       
       if (oppositePortalRole) {
         // Role exists in opposite portal, create new one for this portal
-        const [role] = await knex('roles')
+        const [role] = await db.table('roles')
           .insert({
             tenant,
             role_name: roleName,
@@ -71,7 +82,7 @@ exports.up = async function(knex) {
         return role;
       } else {
         // No role with this name exists, create it
-        const [role] = await knex('roles')
+        const [role] = await db.table('roles')
           .insert({
             tenant,
             role_name: roleName,
@@ -88,7 +99,7 @@ exports.up = async function(knex) {
     
     // Update existing role's description if needed
     if (existing.description !== description) {
-      await knex('roles')
+      await db.table('roles')
         .where({ tenant, role_id: existing.role_id })
         .update({ description });
     }
@@ -97,13 +108,13 @@ exports.up = async function(knex) {
   };
 
   // Helper function to assign permission to role
-  const assignPermissionToRole = async (tenant, roleId, permissionId) => {
-    const existing = await knex('role_permissions')
+  const assignPermissionToRole = async (db, tenant, roleId, permissionId) => {
+    const existing = await db.table('role_permissions')
       .where({ tenant, role_id: roleId, permission_id: permissionId })
       .first();
     
     if (!existing) {
-      await knex('role_permissions').insert({
+      await db.table('role_permissions').insert({
         tenant,
         role_id: roleId,
         permission_id: permissionId,
@@ -113,15 +124,16 @@ exports.up = async function(knex) {
   };
 
   // Get all tenants
-  const tenants = await knex('tenants').select('tenant');
+  const tenants = await migrationDb.unscoped('tenants', TENANT_ENUMERATION_REASON).select('tenant');
 
   for (const { tenant } of tenants) {
+    const db = tenantDb(knex, tenant);
     console.log(`Processing tenant: ${tenant}`);
 
     // First, handle Admin role conversions
     // Convert all existing "Admin" roles to MSP Admin (they were MSP admins before)
     // This needs to happen BEFORE any other role conversions to ensure proper assignment
-    const adminRolesWithoutFlags = await knex('roles')
+    const adminRolesWithoutFlags = await db.table('roles')
       .where({ tenant, role_name: 'Admin' })
       .where(function() {
         this.whereNull('msp').orWhereNull('client');
@@ -129,7 +141,7 @@ exports.up = async function(knex) {
     
     if (adminRolesWithoutFlags.length > 0) {
       console.log(`Converting ${adminRolesWithoutFlags.length} existing Admin roles to MSP Admin for tenant ${tenant}`);
-      await knex('roles')
+      await db.table('roles')
         .where({ tenant, role_name: 'Admin' })
         .where(function() {
           this.whereNull('msp').orWhereNull('client');
@@ -143,7 +155,7 @@ exports.up = async function(knex) {
 
     // First, clean up any duplicate roles that might exist from previous migrations
     // Find all roles grouped by name and portal flags
-    const duplicateRoles = await knex('roles')
+    const duplicateRoles = await db.table('roles')
       .select('role_name', 'msp', 'client')
       .count('* as count')
       .where({ tenant })
@@ -154,7 +166,7 @@ exports.up = async function(knex) {
       console.log(`Found ${dup.count} duplicate "${dup.role_name}" roles in ${dup.msp ? 'MSP' : 'Client'} portal`);
       
       // Get all roles with this name and portal flags
-      const roles = await knex('roles')
+      const roles = await db.table('roles')
         .where({ 
           tenant, 
           role_name: dup.role_name,
@@ -171,12 +183,12 @@ exports.up = async function(knex) {
         // Move any user assignments from duplicate roles to the kept role
         for (const deleteRoleId of deleteRoleIds) {
           // Get users assigned to the duplicate role
-          const userAssignments = await knex('user_roles')
+          const userAssignments = await db.table('user_roles')
             .where({ tenant, role_id: deleteRoleId });
           
           for (const assignment of userAssignments) {
             // Check if user already has the kept role
-            const existingAssignment = await knex('user_roles')
+            const existingAssignment = await db.table('user_roles')
               .where({ 
                 tenant, 
                 user_id: assignment.user_id,
@@ -186,7 +198,7 @@ exports.up = async function(knex) {
             
             if (!existingAssignment) {
               // Move assignment to kept role
-              await knex('user_roles')
+              await db.table('user_roles')
                 .where({ 
                   tenant,
                   user_id: assignment.user_id,
@@ -195,7 +207,7 @@ exports.up = async function(knex) {
                 .update({ role_id: keepRole.role_id });
             } else {
               // User already has kept role, delete duplicate assignment
-              await knex('user_roles')
+              await db.table('user_roles')
                 .where({ 
                   tenant,
                   user_id: assignment.user_id,
@@ -206,12 +218,12 @@ exports.up = async function(knex) {
           }
           
           // Delete role_permissions for duplicate role
-          await knex('role_permissions')
+          await db.table('role_permissions')
             .where({ tenant, role_id: deleteRoleId })
             .delete();
           
           // Delete the duplicate role
-          await knex('roles')
+          await db.table('roles')
             .where({ tenant, role_id: deleteRoleId })
             .delete();
           
@@ -224,7 +236,7 @@ exports.up = async function(knex) {
     // This preserves user assignments while moving roles to correct portal
     
     // Convert 'Client' role (case-insensitive) to 'User' role in client portal
-    const existingClientRoles = await knex('roles')
+    const existingClientRoles = await db.table('roles')
       .where({ tenant })
       .where(knex.raw('LOWER(role_name) = LOWER(?)', ['Client']))
       .select('*');
@@ -232,7 +244,7 @@ exports.up = async function(knex) {
     if (existingClientRoles.length > 0) {
       console.log(`Converting ${existingClientRoles.length} Client role(s) to User role for tenant ${tenant}`);
       for (const role of existingClientRoles) {
-        await knex('roles')
+        await db.table('roles')
           .where({ tenant, role_id: role.role_id })
           .update({ 
             role_name: 'User',
@@ -244,7 +256,7 @@ exports.up = async function(knex) {
     }
 
     // Convert 'Client_Admin' role (case-insensitive) to 'Admin' role in client portal
-    const existingClientAdminRoles = await knex('roles')
+    const existingClientAdminRoles = await db.table('roles')
       .where({ tenant })
       .where(knex.raw('LOWER(role_name) = LOWER(?)', ['Client_Admin']))
       .select('*');
@@ -252,7 +264,7 @@ exports.up = async function(knex) {
     if (existingClientAdminRoles.length > 0) {
       console.log(`Converting ${existingClientAdminRoles.length} Client_Admin role(s) to Admin role in client portal for tenant ${tenant}`);
       for (const role of existingClientAdminRoles) {
-        await knex('roles')
+        await db.table('roles')
           .where({ tenant, role_id: role.role_id })
           .update({ 
             role_name: 'Admin',
@@ -266,7 +278,7 @@ exports.up = async function(knex) {
     // Also handle any other MSP roles that don't have flags set yet
     const mspRoleNames = ['Manager', 'Technician', 'Finance', 'Project Manager', 'Dispatcher'];
     for (const roleName of mspRoleNames) {
-      await knex('roles')
+      await db.table('roles')
         .where({ tenant, role_name: roleName })
         .whereNull('msp') // Only update roles that haven't been flagged yet
         .update({ 
@@ -278,7 +290,7 @@ exports.up = async function(knex) {
     // Clean up any remaining Client_Admin roles after conversion (case-insensitive)
     // Note: We already converted Client_Admin to Admin in client portal above,
     // so this is just a safety check to ensure no orphaned Client_Admin roles remain
-    const remainingClientAdminRoles = await knex('roles')
+    const remainingClientAdminRoles = await db.table('roles')
       .where({ tenant })
       .where(knex.raw('LOWER(role_name) = LOWER(?)', ['Client_Admin']))
       .count('* as count');
@@ -289,20 +301,20 @@ exports.up = async function(knex) {
     }
 
     // Create MSP Roles
-    const mspAdminRole = await ensureRole(tenant, 'Admin', 'Full system administrator access', true, false);
-    const mspFinanceRole = await ensureRole(tenant, 'Finance', 'Financial operations and billing management', true, false);
-    const mspTechnicianRole = await ensureRole(tenant, 'Technician', 'Technical support and ticket management', true, false);
-    const mspProjectManagerRole = await ensureRole(tenant, 'Project Manager', 'Project planning and management', true, false);
-    const mspDispatcherRole = await ensureRole(tenant, 'Dispatcher', 'Technician scheduling and dispatch', true, false);
+    const mspAdminRole = await ensureRole(db, tenant, 'Admin', 'Full system administrator access', true, false);
+    const mspFinanceRole = await ensureRole(db, tenant, 'Finance', 'Financial operations and billing management', true, false);
+    const mspTechnicianRole = await ensureRole(db, tenant, 'Technician', 'Technical support and ticket management', true, false);
+    const mspProjectManagerRole = await ensureRole(db, tenant, 'Project Manager', 'Project planning and management', true, false);
+    const mspDispatcherRole = await ensureRole(db, tenant, 'Dispatcher', 'Technician scheduling and dispatch', true, false);
 
     // Create Client Roles
-    const clientUserRole = await ensureRole(tenant, 'User', 'Standard client portal user', false, true);
-    const clientFinanceRole = await ensureRole(tenant, 'Finance', 'Client financial operations', false, true);
+    const clientUserRole = await ensureRole(db, tenant, 'User', 'Standard client portal user', false, true);
+    const clientFinanceRole = await ensureRole(db, tenant, 'Finance', 'Client financial operations', false, true);
     
     // Only create client Admin role if there are no existing Admin roles without flags
     // This prevents converting pre-existing MSP admins into client admins
     let clientAdminRole;
-    const existingAdminWithoutFlags = await knex('roles')
+    const existingAdminWithoutFlags = await db.table('roles')
       .where({ tenant, role_name: 'Admin' })
       .where(function() {
         this.whereNull('msp').orWhereNull('client');
@@ -311,16 +323,16 @@ exports.up = async function(knex) {
     
     if (!existingAdminWithoutFlags) {
       // Safe to create client admin role
-      clientAdminRole = await ensureRole(tenant, 'Admin', 'Client portal administrator', false, true);
+      clientAdminRole = await ensureRole(db, tenant, 'Admin', 'Client portal administrator', false, true);
     } else {
       // Use the existing client admin role if it exists
-      clientAdminRole = await knex('roles')
+      clientAdminRole = await db.table('roles')
         .where({ tenant, role_name: 'Admin', msp: false, client: true })
         .first();
       
       if (!clientAdminRole) {
         // Create it if it doesn't exist yet
-        clientAdminRole = await ensureRole(tenant, 'Admin', 'Client portal administrator', false, true);
+        clientAdminRole = await ensureRole(db, tenant, 'Admin', 'Client portal administrator', false, true);
       }
     }
 
@@ -458,7 +470,7 @@ exports.up = async function(knex) {
     // Create all permissions
     const permissionMap = new Map();
     for (const perm of permissions) {
-      const permission = await ensurePermission(tenant, perm.resource, perm.action, perm.msp, perm.client, perm.description);
+      const permission = await ensurePermission(db, tenant, perm.resource, perm.action, perm.msp, perm.client, perm.description);
       permissionMap.set(`${perm.resource}:${perm.action}`, permission.permission_id);
     }
 
@@ -466,7 +478,7 @@ exports.up = async function(knex) {
     for (const perm of permissions.filter(p => p.msp)) {
       const permId = permissionMap.get(`${perm.resource}:${perm.action}`);
       if (permId) {
-        await assignPermissionToRole(tenant, mspAdminRole.role_id, permId);
+        await assignPermissionToRole(db, tenant, mspAdminRole.role_id, permId);
       }
     }
 
@@ -494,7 +506,7 @@ exports.up = async function(knex) {
     for (const permKey of financePermissions) {
       const permId = permissionMap.get(permKey);
       if (permId) {
-        await assignPermissionToRole(tenant, mspFinanceRole.role_id, permId);
+        await assignPermissionToRole(db, tenant, mspFinanceRole.role_id, permId);
       }
     }
 
@@ -517,7 +529,7 @@ exports.up = async function(knex) {
     for (const permKey of technicianPermissions) {
       const permId = permissionMap.get(permKey);
       if (permId) {
-        await assignPermissionToRole(tenant, mspTechnicianRole.role_id, permId);
+        await assignPermissionToRole(db, tenant, mspTechnicianRole.role_id, permId);
       }
     }
 
@@ -542,7 +554,7 @@ exports.up = async function(knex) {
     for (const permKey of projectManagerPermissions) {
       const permId = permissionMap.get(permKey);
       if (permId) {
-        await assignPermissionToRole(tenant, mspProjectManagerRole.role_id, permId);
+        await assignPermissionToRole(db, tenant, mspProjectManagerRole.role_id, permId);
       }
     }
 
@@ -559,7 +571,7 @@ exports.up = async function(knex) {
     for (const permKey of dispatcherPermissions) {
       const permId = permissionMap.get(permKey);
       if (permId) {
-        await assignPermissionToRole(tenant, mspDispatcherRole.role_id, permId);
+        await assignPermissionToRole(db, tenant, mspDispatcherRole.role_id, permId);
       }
     }
 
@@ -568,7 +580,7 @@ exports.up = async function(knex) {
       for (const perm of permissions.filter(p => p.client)) {
         const permId = permissionMap.get(`${perm.resource}:${perm.action}`);
         if (permId) {
-          await assignPermissionToRole(tenant, clientAdminRole.role_id, permId);
+          await assignPermissionToRole(db, tenant, clientAdminRole.role_id, permId);
         }
       }
     }
@@ -588,7 +600,7 @@ exports.up = async function(knex) {
     for (const permKey of clientFinancePermissions) {
       const permId = permissionMap.get(permKey);
       if (permId) {
-        await assignPermissionToRole(tenant, clientFinanceRole.role_id, permId);
+        await assignPermissionToRole(db, tenant, clientFinanceRole.role_id, permId);
       }
     }
 
@@ -608,7 +620,7 @@ exports.up = async function(knex) {
     for (const permKey of clientUserPermissions) {
       const permId = permissionMap.get(permKey);
       if (permId) {
-        await assignPermissionToRole(tenant, clientUserRole.role_id, permId);
+        await assignPermissionToRole(db, tenant, clientUserRole.role_id, permId);
       }
     }
   }
@@ -620,17 +632,21 @@ exports.up = async function(knex) {
   const deprecatedResources = ['category', 'comment', 'client_password', 'client_profile', 'company_setting'];
   
   for (const resource of deprecatedResources) {
+    const deprecatedPermissionIds = await migrationDb
+      .unscoped('permissions', DEPRECATED_PERMISSION_CLEANUP_REASON)
+      .where('resource', resource)
+      .pluck('permission_id');
+
     // First remove any role_permissions assignments
-    await knex('role_permissions')
-      .whereIn('permission_id', function() {
-        this.select('permission_id')
-          .from('permissions')
-          .where('resource', resource);
-      })
-      .delete();
+    if (deprecatedPermissionIds.length > 0) {
+      await migrationDb
+        .unscoped('role_permissions', DEPRECATED_PERMISSION_CLEANUP_REASON)
+        .whereIn('permission_id', deprecatedPermissionIds)
+        .delete();
+    }
     
     // Then remove the permissions themselves
-    const deletedCount = await knex('permissions')
+    const deletedCount = await migrationDb.unscoped('permissions', DEPRECATED_PERMISSION_CLEANUP_REASON)
       .where('resource', resource)
       .delete();
       
@@ -650,7 +666,7 @@ exports.up = async function(knex) {
   
   // Update these resources to be MSP-only
   for (const resource of mspOnlyResources) {
-    const updated = await knex('permissions')
+    const updated = await migrationDb.unscoped('permissions', CLIENT_PORTAL_PERMISSION_UPDATE_REASON)
       .where('resource', resource)
       .where('client', true)
       .update({ client: false });
@@ -668,7 +684,7 @@ exports.up = async function(knex) {
   ];
   
   for (const { resource, actions } of clientAllowedUpdates) {
-    const updated = await knex('permissions')
+    const updated = await migrationDb.unscoped('permissions', CLIENT_PORTAL_PERMISSION_UPDATE_REASON)
       .where('resource', resource)
       .whereIn('action', actions)
       .where('client', false)

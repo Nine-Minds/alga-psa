@@ -20,6 +20,7 @@ const SUBJECTS = {
   nl: 'Uw ticket wordt binnenkort gesloten • {{ticket.title}}',
   it: 'Il suo ticket verrà chiuso a breve • {{ticket.title}}',
   pl: 'Twoje zgłoszenie zostanie wkrótce zamknięte • {{ticket.title}}',
+  pt: 'Seu ticket será encerrado em breve • {{ticket.title}}',
 };
 
 /* eslint-disable max-len */
@@ -107,6 +108,18 @@ const COPY = {
     textHeader: 'Twoje zgłoszenie zostanie wkrótce zamknięte',
     textKeepOpen: 'Jeśli nadal potrzebujesz pomocy, odpowiedz na tę wiadomość lub dodaj komentarz do zgłoszenia, aby pozostało otwarte.',
     textView: 'Zobacz zgłoszenie',
+  },
+  pt: {
+    headerLabel: 'Ticket Será Encerrado em Breve',
+    intro: 'Não recebemos retorno seu neste ticket. Ele será encerrado automaticamente em <strong>{{ticket.scheduledCloseDate}}</strong> se não houver nova atividade.',
+    keepOpen: 'Se você ainda precisa de ajuda, basta responder a este email ou adicionar um comentário ao ticket — isso o mantém aberto.',
+    badgePrefix: 'Ticket #',
+    closeDate: 'Programado para encerramento',
+    viewButton: 'Ver ticket',
+    footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+    textHeader: 'Seu ticket será encerrado em breve',
+    textKeepOpen: 'Se você ainda precisa de ajuda, responda a este email ou adicione um comentário ao ticket para mantê-lo aberto.',
+    textView: 'Ver ticket',
   },
 };
 

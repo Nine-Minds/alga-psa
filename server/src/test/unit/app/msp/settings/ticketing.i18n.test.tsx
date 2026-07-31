@@ -67,6 +67,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   });
 
   return {
+    detectClientLocale: () => 'de',
+    useOptionalI18n: () => null,
     I18nProvider: ({
       children,
       initialLocale = 'de',
@@ -121,6 +123,17 @@ vi.mock('@/components/layout/DefaultLayout', () => ({
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="default-layout">{children}</div>
   ),
+}));
+
+vi.mock('server/src/components/layout/DefaultLayout', () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="default-layout">{children}</div>
+  ),
+}));
+
+vi.mock('server/src/components/layout/Header', () => ({
+  QUICK_CREATE_OPEN_EVENT: 'alga:quick-create:open',
+  default: () => null,
 }));
 
 vi.mock('@alga-psa/tags/context', () => ({
@@ -183,11 +196,14 @@ vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/tickets/components', async () => {
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
+
+const ticketingSettingsComponentMocks = vi.hoisted(() => async () => {
   const ReactModule = await import('react');
   const { useTranslation } = await import('@alga-psa/ui/lib/i18n/client');
 
   return {
+    BoardsSettings: () => null,
     CategoriesSettings: () => {
       const { t } = useTranslation('features/tickets');
       return (
@@ -219,17 +235,20 @@ vi.mock('@alga-psa/tickets/components', async () => {
   };
 });
 
+vi.mock('@alga-psa/tickets/components', ticketingSettingsComponentMocks);
+vi.mock('@alga-psa/tickets/components/settings/BoardsSettings', async () => ({
+  default: (await ticketingSettingsComponentMocks()).BoardsSettings,
+}));
+vi.mock('@alga-psa/tickets/components/settings/CategoriesSettings', async () => ({
+  default: (await ticketingSettingsComponentMocks()).CategoriesSettings,
+}));
+vi.mock('@alga-psa/tickets/components/settings/DisplaySettings', async () => ({
+  default: (await ticketingSettingsComponentMocks()).DisplaySettings,
+}));
+
 vi.mock('@alga-psa/reference-data/components', () => ({
   NumberingSettings: () => null,
   PrioritySettings: () => null,
-}));
-
-vi.mock('server/src/components/settings/general/BoardsSettings', () => ({
-  default: () => null,
-}));
-
-vi.mock('server/src/components/settings/general/StatusSettings', () => ({
-  default: () => null,
 }));
 
 const { default: TicketingSettings } = await import('server/src/components/settings/general/TicketingSettings');

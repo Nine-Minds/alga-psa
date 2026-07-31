@@ -1,9 +1,12 @@
 /**
  * Shared types for API controllers
  */
+import type { TenantScopedQuery } from '@alga-psa/db';
 
 export interface CrudOptions {
   resource: string;
+  /** RBAC resource to check permissions against, when it differs from `resource`. */
+  permissionResource?: string;
   createSchema?: any;
   updateSchema?: any;
   querySchema?: any;
@@ -32,7 +35,7 @@ export interface ListOptions {
    * applied to both the data and count queries, so the service paginates and
    * counts only the authorized set in SQL. Services may ignore this if unsupported.
    */
-  applyAuthorization?: (query: import('knex').Knex.QueryBuilder) => void;
+  applyAuthorization?: (query: TenantScopedQuery) => void;
 }
 
 export interface BaseService {

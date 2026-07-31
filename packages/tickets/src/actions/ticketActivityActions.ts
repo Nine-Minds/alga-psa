@@ -4,13 +4,22 @@ import { Knex } from 'knex';
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import {
   buildUnifiedTicketTimeline,
   readTicketActivity,
   type TicketActivityRow,
   type TicketTimelineEntry,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
 
 /**
  * Return the chronological unified timeline (activity + comments) for an
@@ -23,8 +32,9 @@ export const getTicketTimelineEntries = withAuth(
     user,
     { tenant },
     ticketId: string,
-    opts?: { order?: 'asc' | 'desc' },
-  ): Promise<TicketTimelineEntry[]> => {
+    opts?: { order?: 'asc' | 'desc'; includeTimeEntries?: boolean; includeAlerts?: boolean },
+  ): Promise<TicketTimelineEntry[] | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -49,8 +59,8 @@ export const getTicketTimelineEntries = withAuth(
       // Confirm the ticket exists and is in tenant scope before reading
       // activity rows; this guards against orphan reads if a ticket was
       // deleted and only activity rows remain.
-      const ticket = await trx('tickets')
-        .where({ tenant, ticket_id: ticketId })
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
         .first(['ticket_id']);
       if (!ticket) {
         throw new Error('Ticket not found');
@@ -59,8 +69,15 @@ export const getTicketTimelineEntries = withAuth(
       return buildUnifiedTicketTimeline(trx, tenant, ticketId, {
         order: opts?.order ?? 'desc',
         includeInternalNotes: true,
+        includeTimeEntries: opts?.includeTimeEntries ?? false,
+        includeAlerts: opts?.includeAlerts ?? false,
       });
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
@@ -73,7 +90,8 @@ export const getTicketActivityRows = withAuth(
     user,
     { tenant },
     ticketId: string,
-  ): Promise<TicketActivityRow[]> => {
+  ): Promise<TicketActivityRow[] | TicketActionError> => {
+    try {
     if (!tenant) throw new Error('Tenant required');
     if (!ticketId) throw new Error('ticketId required');
 
@@ -89,5 +107,10 @@ export const getTicketActivityRows = withAuth(
       }
       return readTicketActivity(trx, tenant, ticketId);
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );

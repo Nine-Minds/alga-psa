@@ -1,7 +1,7 @@
 /**
  * T090/T091/T093 (Phase 1) + T249/F238 (Phase 2) — permissions sweep: every
- * Hudu server action enforces its guard chain (RBAC, EE tier,
- * `hudu-integration` flag) at the correct level. Phase 1 modules gate on
+ * Hudu server action enforces its guard chain (RBAC, EE tier) at the correct
+ * level. Phase 1 modules gate on
  * system_settings (update = connect/disconnect/test/sync/map, read = status/
  * mappings/data/reveal/context); Phase 2 layout-map actions reuse
  * system_settings, while the Technician flows gate on asset (read = view
@@ -27,7 +27,6 @@ const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' 
 let authenticatedUser: typeof internalUser | null = internalUser;
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
@@ -58,10 +57,6 @@ vi.mock('@alga-psa/auth', () => ({
       return handler(authenticatedUser, { tenant: TENANT }, ...args);
     },
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -172,7 +167,6 @@ beforeEach(() => {
 
   // Happy-path defaults; each describe flips exactly one gate input.
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
   createTenantKnexMock.mockResolvedValue({ knex: vi.fn(), tenant: TENANT });
 });
@@ -257,26 +251,11 @@ describe('T249/F238: every action rejects when unauthenticated', () => {
   });
 });
 
-describe('T093/T249: every action rejects when the hudu-integration flag is off', () => {
-  it.each(allEntries)('$name rejects with permission granted but the flag off', async ({ run }) => {
-    isEnabledMock.mockResolvedValue(false);
-
-    await expect(run()).rejects.toThrow(/disabled for this tenant/);
-    expect(isEnabledMock).toHaveBeenCalledWith('hudu-integration', {
-      userId: 'user-1',
-      tenantId: TENANT,
-    });
-    expect(createTenantKnexMock).not.toHaveBeenCalled();
-  });
-});
-
 describe('T093/T249: every action rejects when the integrations tier is denied', () => {
   it.each(allEntries)('$name rejects when the integrations tier is missing', async ({ run }) => {
     assertTierAccessMock.mockRejectedValue(new Error('Integrations tier required'));
 
     await expect(run()).rejects.toThrow(/Integrations tier required/);
-    // Tier access is checked before the flag is even consulted.
-    expect(isEnabledMock).not.toHaveBeenCalled();
     expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 });

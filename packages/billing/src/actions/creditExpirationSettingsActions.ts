@@ -1,10 +1,34 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ICreditExpirationSettings } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
+
+type CreditExpirationSettingsResult = ICreditExpirationSettings | ActionMessageError | ActionPermissionError;
+type CreditExpirationMutationResult =
+  | { success: boolean; error?: string }
+  | ActionMessageError
+  | ActionPermissionError;
+
+function creditExpirationSettingsErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'Failed to update credit expiration settings';
+  }
+
+  if (error.message.startsWith('Permission denied:')) {
+    return error.message;
+  }
+
+  return 'Failed to update credit expiration settings';
+}
 
 /**
  * Get credit expiration settings for a client.
@@ -12,22 +36,25 @@ import { updateClientBillingSettings as updateClientBillingSettingsShared } from
 export const getCreditExpirationSettings = withAuth(async (
   user,
   { tenant },
-  clientId: string
-): Promise<ICreditExpirationSettings> => {
+  clientId: string | null
+): Promise<CreditExpirationSettingsResult> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
-  if (!tenant) throw new Error('No tenant found');
+  if (!tenant) return actionError('Tenant context not found');
 
-  const clientSettings = await knex('client_billing_settings')
-    .where({
-      client_id: clientId,
-      tenant,
-    })
-    .first();
+  const db = tenantDb(knex, tenant);
+  // A null clientId asks for the tenant defaults directly.
+  const clientSettings = clientId
+    ? await db.table('client_billing_settings')
+        .where({
+          client_id: clientId,
+        })
+        .first()
+    : undefined;
 
-  const defaultSettings = await knex('default_billing_settings').where({ tenant }).first();
+  const defaultSettings = await db.table('default_billing_settings').first();
 
   let enableCreditExpiration = true;
   if (clientSettings?.enable_credit_expiration !== undefined) {
@@ -65,13 +92,13 @@ export const updateCreditExpirationSettings = withAuth(async (
   { tenant },
   clientId: string,
   settings: ICreditExpirationSettings
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<CreditExpirationMutationResult> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   try {
     const { knex } = await createTenantKnex();
-    if (!tenant) throw new Error('No tenant found');
+    if (!tenant) return actionError('Tenant context not found');
 
     await knex.transaction(async (trx) => {
       await updateClientBillingSettingsShared(trx, tenant, clientId, {
@@ -86,7 +113,7 @@ export const updateCreditExpirationSettings = withAuth(async (
     console.error('Error updating credit expiration settings:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: creditExpirationSettingsErrorMessage(error),
     };
   }
 });

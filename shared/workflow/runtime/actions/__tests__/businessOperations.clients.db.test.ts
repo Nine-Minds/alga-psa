@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { getSecret } from '@alga-psa/core/secrets';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 
 dotenv.config();
 
@@ -13,6 +14,22 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const TEST_DB_NAME = 'test_database';
 const PRODUCTION_DB_NAMES = new Set(['sebastian_prod', 'production', 'prod', 'server']);
+const GLOBAL_FIXTURE_TENANT = '__workflow_clients_db_test_global__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, GLOBAL_FIXTURE_TENANT).unscoped(table, reason);
+}
+
+function tagMappingsWithDefinitions(db: Knex, tenantId: string) {
+  const scopedDb = tenantDb(db, tenantId);
+  const query = scopedDb.table('tag_mappings as tm');
+  scopedDb.tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
+  return query;
+}
 
 function verifyTestDatabase(dbName: string): void {
   if (PRODUCTION_DB_NAMES.has(dbName.toLowerCase())) {
@@ -119,7 +136,7 @@ async function createTenant(db: Knex, name = 'Test Tenant'): Promise<string> {
   const tenantId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('tenants').insert({
+  await tenantTable(db, tenantId, 'tenants').insert({
     tenant: tenantId,
     client_name: name,
     phone_number: '555-0100',
@@ -152,7 +169,7 @@ async function createUser(
 ): Promise<string> {
   const userId = uuidv4();
 
-  await db('users').insert({
+  await tenantTable(db, tenantId, 'users').insert({
     user_id: userId,
     tenant: tenantId,
     username: options.username || `test.user.${userId}`,
@@ -182,7 +199,7 @@ async function createClient(
   const clientId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('clients').insert({
+  await tenantTable(db, tenantId, 'clients').insert({
     client_id: clientId,
     client_name: name,
     tenant: tenantId,
@@ -223,7 +240,7 @@ async function createClientLocation(
   const locationId = uuidv4();
   const now = new Date().toISOString();
 
-  await db('client_locations').insert({
+  await tenantTable(db, tenantId, 'client_locations').insert({
     location_id: locationId,
     client_id: clientId,
     tenant: tenantId,
@@ -235,6 +252,10 @@ async function createClientLocation(
     country_code: options.country_code || 'US',
     country_name: options.country_name || 'United States',
     region_code: options.region_code || 'US-NY',
+    location_name: options.location_name,
+    phone: options.phone,
+    is_default: options.is_default ?? false,
+    is_active: options.is_active ?? true,
     created_at: now,
     updated_at: now,
   });
@@ -312,13 +333,13 @@ async function invokeAction(actionId: string, input: Record<string, unknown>, ct
 }
 
 async function getTicketStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses')
+  const existing = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, status_type: 'ticket' })
     .orderBy('order_number', 'asc')
     .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [inserted] = await db('statuses')
+  const [inserted] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Open',
@@ -346,7 +367,7 @@ async function createTicketForClient(
   const ticketId = uuidv4();
   const statusId = await getTicketStatusId(db, params.tenantId, params.actorUserId);
 
-  await db('tickets').insert({
+  await tenantTable(db, params.tenantId, 'tickets').insert({
     ticket_id: ticketId,
     tenant: params.tenantId,
     ticket_number: `WF-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
@@ -363,7 +384,7 @@ async function createTicketForClient(
 
 async function createContactForClient(db: Knex, tenantId: string, clientId: string, fullName: string): Promise<string> {
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: contactId,
     full_name: fullName,
@@ -377,10 +398,12 @@ async function createContactForClient(db: Knex, tenantId: string, clientId: stri
 }
 
 async function getDefaultInteractionStatusId(db: Knex, tenantId: string, actorUserId: string): Promise<string> {
-  const existing = await db('statuses').where({ tenant: tenantId, status_type: 'interaction', is_default: true }).first();
+  const existing = await tenantTable(db, tenantId, 'statuses')
+    .where({ tenant: tenantId, status_type: 'interaction', is_default: true })
+    .first();
   if (existing?.status_id) return existing.status_id;
 
-  const [created] = await db('statuses')
+  const [created] = await tenantTable(db, tenantId, 'statuses')
     .insert({
       tenant: tenantId,
       name: 'Logged',
@@ -396,10 +419,11 @@ async function getDefaultInteractionStatusId(db: Knex, tenantId: string, actorUs
 }
 
 async function getAnyInteractionTypeId(db: Knex, tenantId: string): Promise<string> {
-  const tenantType = await db('interaction_types').where({ tenant: tenantId }).first();
+  const tenantType = await tenantTable(db, tenantId, 'interaction_types').where({ tenant: tenantId }).first();
   if (tenantType?.type_id) return tenantType.type_id;
 
-  const systemType = await db('system_interaction_types').first();
+  const systemType = await unscopedTable(db, 'system_interaction_types', 'global interaction type fallback for client workflow DB fixture')
+    .first();
   if (!systemType?.type_id) {
     throw new Error('Expected at least one system_interaction_types row in seeded DB');
   }
@@ -436,6 +460,146 @@ describe('client workflow runtime DB-backed action handlers', () => {
     runtimeState.db = null;
   });
 
+  it('clients.find matches active client locations by normalized exact phone within the current tenant', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Phone Match Client');
+    const locationId = await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'Phone Match HQ',
+      phone: '+1 (555) 222-3333',
+      is_default: true,
+      is_active: true,
+    });
+
+    const otherTenantId = await createTenant(db, `Other Phone Tenant ${Date.now()}`);
+    const otherClientId = await createClient(db, otherTenantId, 'Other Tenant Phone Client');
+    await createClientLocation(db, otherClientId, otherTenantId, {
+      location_name: 'Other Tenant HQ',
+      phone: '+1 (555) 222-3333',
+      is_default: true,
+      is_active: true,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '+1 555.222.3333',
+    });
+
+    expect(result.client.client_id).toBe(clientId);
+    expect(result.client.client_name).toBe('Phone Match Client');
+    expect(result.primary_contact).toBeNull();
+    expect(result.matched_location).toEqual({
+      location_id: locationId,
+      location_name: 'Phone Match HQ',
+      phone: '+1 (555) 222-3333',
+    });
+    expect(result.matched_count).toBe(1);
+  });
+
+  it('clients.find prefers a default location when multiple active locations match one phone', async () => {
+    const clientA = await createClient(db, runtimeState.tenantId, 'Non Default Phone Client');
+    const clientB = await createClient(db, runtimeState.tenantId, 'Default Phone Client');
+
+    await createClientLocation(db, clientA, runtimeState.tenantId, {
+      location_name: 'Branch',
+      phone: '555-333-4444',
+      is_default: false,
+      is_active: true,
+    });
+    const defaultLocationId = await createClientLocation(db, clientB, runtimeState.tenantId, {
+      location_name: 'Default HQ',
+      phone: '(555) 333-4444',
+      is_default: true,
+      is_active: true,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '5553334444',
+    });
+
+    expect(result.client.client_id).toBe(clientB);
+    expect(result.matched_location.location_id).toBe(defaultLocationId);
+    expect(result.matched_count).toBe(2);
+  });
+
+  it('clients.find counts distinct clients, not locations, in matched_count', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Multi Location Same Phone Client');
+    const defaultLocationId = await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'HQ',
+      phone: '555-777-8888',
+      is_default: true,
+      is_active: true,
+    });
+    await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'Billing Office',
+      phone: '(555) 777-8888',
+      is_default: false,
+      is_active: true,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '5557778888',
+    });
+
+    // One client listing the same number on two locations is an unambiguous
+    // match; authors branching on matched_count > 1 must not see it as one.
+    expect(result.client.client_id).toBe(clientId);
+    expect(result.matched_location.location_id).toBe(defaultLocationId);
+    expect(result.matched_count).toBe(1);
+  });
+
+  it('clients.find excludes inactive locations and applies on_not_found behavior for phone matches', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Inactive Location Client');
+    await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'Inactive HQ',
+      phone: '555-444-5555',
+      is_default: true,
+      is_active: false,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '5554445555',
+      on_not_found: 'return_null',
+    });
+
+    expect(result).toMatchObject({
+      client: null,
+      primary_contact: null,
+      matched_location: null,
+      matched_count: 0,
+    });
+
+    await expect(
+      invokeAction('clients.find', {
+        phone: '5554445555',
+        on_not_found: 'error',
+      })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND', details: { matched_by: 'phone' } });
+  });
+
+  it('clients.find supports last7 phone matching and rejects too-short last7 input', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Last Seven Client');
+    const locationId = await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'Last Seven HQ',
+      phone: '(212) 555-0199',
+      is_default: true,
+      is_active: true,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '(646) 555-0199',
+      phone_match: 'last7',
+    });
+
+    expect(result.client.client_id).toBe(clientId);
+    expect(result.matched_location.location_id).toBe(locationId);
+    expect(result.matched_count).toBe(1);
+
+    await expect(
+      invokeAction('clients.find', {
+        phone: '555019',
+        phone_match: 'last7',
+      })
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR', message: 'phone is invalid' });
+  });
+
   it('T004: clients.create creates tenant-scoped client summary and initial tags; actionProvided idempotency uses actionProvidedKey fallback', async () => {
     const action = getAction('clients.create');
     const keyFromContext = action.idempotency.mode === 'actionProvided'
@@ -454,15 +618,12 @@ describe('client workflow runtime DB-backed action handlers', () => {
     expect(result.client.client_name).toBe('Workflow Created Client');
     expect(result.tags.map((tag: { tag_text: string }) => tag.tag_text).sort()).toEqual(['automation', 'vip']);
 
-    const client = await db('clients')
+    const client = await tenantTable(db, runtimeState.tenantId, 'clients')
       .where({ tenant: runtimeState.tenantId, client_id: result.client.client_id })
       .first();
     expect(client).toBeTruthy();
 
-    const mappings = await db('tag_mappings as tm')
-      .join('tag_definitions as td', function joinTagDefs() {
-        this.on('tm.tenant', 'td.tenant').andOn('tm.tag_id', 'td.tag_id');
-      })
+    const mappings = await tagMappingsWithDefinitions(db, runtimeState.tenantId)
       .where({
         'tm.tenant': runtimeState.tenantId,
         'tm.tagged_type': 'client',
@@ -470,7 +631,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
       })
       .select('td.tag_text');
 
-    expect(mappings.map((row: { tag_text: string }) => row.tag_text).sort()).toEqual(['automation', 'vip']);
+    expect(mappings.map((row) => (row as unknown as { tag_text: string }).tag_text).sort()).toEqual(['automation', 'vip']);
   });
 
   it('T005: clients.update applies patch and rejects cross-tenant client id as not found', async () => {
@@ -515,11 +676,13 @@ describe('client workflow runtime DB-backed action handlers', () => {
     });
 
     expect(deleted).toEqual({ deleted: true, client_id: deletableClientId });
-    const afterDelete = await db('clients').where({ tenant: runtimeState.tenantId, client_id: deletableClientId }).first();
+    const afterDelete = await tenantTable(db, runtimeState.tenantId, 'clients')
+      .where({ tenant: runtimeState.tenantId, client_id: deletableClientId })
+      .first();
     expect(afterDelete).toBeFalsy();
 
     const defaultClientId = await createClient(db, runtimeState.tenantId, 'Default Client Guard');
-    await db('tenant_companies').insert({
+    await tenantTable(db, runtimeState.tenantId, 'tenant_companies').insert({
       tenant: runtimeState.tenantId,
       client_id: defaultClientId,
       is_default: true,
@@ -577,8 +740,10 @@ describe('client workflow runtime DB-backed action handlers', () => {
     expect(noLocations.copied_locations).toBe(0);
 
     const cloneIdA = noLocations.duplicate_client.client_id;
-    const cloneALocations = await db('client_locations').where({ tenant: runtimeState.tenantId, client_id: cloneIdA });
-    const cloneAContacts = await db('contacts').where({ tenant: runtimeState.tenantId, client_id: cloneIdA });
+    const cloneALocations = await tenantTable(db, runtimeState.tenantId, 'client_locations')
+      .where({ tenant: runtimeState.tenantId, client_id: cloneIdA });
+    const cloneAContacts = await tenantTable(db, runtimeState.tenantId, 'contacts')
+      .where({ tenant: runtimeState.tenantId, client_id: cloneIdA });
     expect(cloneALocations.length).toBe(0);
     expect(cloneAContacts.length).toBe(0);
 
@@ -590,17 +755,16 @@ describe('client workflow runtime DB-backed action handlers', () => {
     });
 
     const cloneIdB = withLocations.duplicate_client.client_id;
-    const cloneBLocations = await db('client_locations').where({ tenant: runtimeState.tenantId, client_id: cloneIdB });
-    const cloneBContacts = await db('contacts').where({ tenant: runtimeState.tenantId, client_id: cloneIdB });
+    const cloneBLocations = await tenantTable(db, runtimeState.tenantId, 'client_locations')
+      .where({ tenant: runtimeState.tenantId, client_id: cloneIdB });
+    const cloneBContacts = await tenantTable(db, runtimeState.tenantId, 'contacts')
+      .where({ tenant: runtimeState.tenantId, client_id: cloneIdB });
 
     expect(withLocations.copied_locations).toBeGreaterThanOrEqual(1);
     expect(cloneBLocations.length).toBeGreaterThanOrEqual(1);
     expect(cloneBContacts.length).toBe(0);
 
-    const cloneTagTexts = await db('tag_mappings as tm')
-      .join('tag_definitions as td', function joinTagDefs() {
-        this.on('tm.tenant', 'td.tenant').andOn('tm.tag_id', 'td.tag_id');
-      })
+    const cloneTagTexts = await tagMappingsWithDefinitions(db, runtimeState.tenantId)
       .where({
         'tm.tenant': runtimeState.tenantId,
         'tm.tagged_type': 'client',
@@ -608,7 +772,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
       })
       .select('td.tag_text');
 
-    expect(cloneTagTexts.map((row: { tag_text: string }) => row.tag_text).sort()).toEqual(['gold', 'managed']);
+    expect(cloneTagTexts.map((row) => (row as unknown as { tag_text: string }).tag_text).sort()).toEqual(['gold', 'managed']);
   });
 
   it('T008: clients.add_tag creates missing definitions and no-ops duplicate mappings', async () => {
@@ -622,10 +786,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
     expect(second.added_count).toBe(0);
     expect(second.existing_count).toBe(1);
 
-    const mappings = await db('tag_mappings as tm')
-      .join('tag_definitions as td', function joinTagDefs() {
-        this.on('tm.tenant', 'td.tenant').andOn('tm.tag_id', 'td.tag_id');
-      })
+    const mappings = await tagMappingsWithDefinitions(db, runtimeState.tenantId)
       .where({
         'tm.tenant': runtimeState.tenantId,
         'tm.tagged_type': 'client',
@@ -633,7 +794,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
       })
       .select('td.tag_text');
 
-    expect(mappings.map((row: { tag_text: string }) => row.tag_text).sort()).toEqual(['managed', 'priority']);
+    expect(mappings.map((row) => (row as unknown as { tag_text: string }).tag_text).sort()).toEqual(['managed', 'priority']);
     expect(mappings.length).toBe(2);
   });
 
@@ -719,7 +880,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
     expect(second.created_document).toBe(false);
     expect(second.document_id).toBe(first.document_id);
 
-    const contentRow = await db('document_block_content')
+    const contentRow = await tenantTable(db, runtimeState.tenantId, 'document_block_content')
       .where({ tenant: runtimeState.tenantId, document_id: first.document_id })
       .first();
 
@@ -763,7 +924,7 @@ describe('client workflow runtime DB-backed action handlers', () => {
     expect(result.status_id).toBe(defaultStatusId);
     expect(result.user_id).toBe(runtimeState.actorUserId);
 
-    const stored = await db('interactions')
+    const stored = await tenantTable(db, runtimeState.tenantId, 'interactions')
       .where({ tenant: runtimeState.tenantId, interaction_id: result.interaction_id })
       .first();
     expect(stored).toBeTruthy();
@@ -840,9 +1001,15 @@ describe('client workflow runtime DB-backed action handlers', () => {
     expect(first.previous_is_inactive).toBe(false);
     expect(first.current_is_inactive).toBe(true);
 
-    const archivedClient = await db('clients').where({ tenant: runtimeState.tenantId, client_id: clientId }).first();
-    const archivedContact = await db('contacts').where({ tenant: runtimeState.tenantId, contact_name_id: contactId }).first();
-    const archivedClientUser = await db('users').where({ tenant: runtimeState.tenantId, user_id: clientUserId }).first();
+    const archivedClient = await tenantTable(db, runtimeState.tenantId, 'clients')
+      .where({ tenant: runtimeState.tenantId, client_id: clientId })
+      .first();
+    const archivedContact = await tenantTable(db, runtimeState.tenantId, 'contacts')
+      .where({ tenant: runtimeState.tenantId, contact_name_id: contactId })
+      .first();
+    const archivedClientUser = await tenantTable(db, runtimeState.tenantId, 'users')
+      .where({ tenant: runtimeState.tenantId, user_id: clientUserId })
+      .first();
 
     expect(Boolean(archivedClient?.is_inactive)).toBe(true);
     expect(Boolean(archivedContact?.is_inactive)).toBe(true);

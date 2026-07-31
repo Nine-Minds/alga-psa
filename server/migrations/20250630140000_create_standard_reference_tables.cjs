@@ -1,9 +1,21 @@
+const MIGRATION_TENANT = 'migration:20250630140000_create_standard_reference_tables';
+const STANDARD_REFERENCE_ORDER_BACKFILL_REASON = 'discover tenants with historical reference records for display order backfill';
+const STANDARD_CHANNELS_GLOBAL_REASON = 'standard_channels global reference table is created here and is not registered in tenantDb metadata';
+const CHANNELS_ORDER_BACKFILL_REASON = 'historical channel display order backfill; channels is not registered in tenantDb metadata';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
+
 /**
  * Create standard reference tables for service_categories, categories, and channels
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
+
   // Create standard_service_categories table
   await knex.schema.createTable('standard_service_categories', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
@@ -15,7 +27,7 @@ exports.up = async function(knex) {
   });
 
   // Insert standard service categories
-  await knex('standard_service_categories').insert([
+  await migrationDb.table('standard_service_categories').insert([
     { category_name: 'Labor - Support', description: 'Support and maintenance services', display_order: 1 },
     { category_name: 'Labor - Project', description: 'Project-based services', display_order: 2 },
     { category_name: 'Managed Service - Server', description: 'Server management services', display_order: 3 },
@@ -38,7 +50,7 @@ exports.up = async function(knex) {
   });
 
   // Insert standard categories - parent categories first
-  await knex('standard_categories').insert([
+  await migrationDb.table('standard_categories').insert([
     // General Support Categories
     { category_name: 'Account Management', description: 'Account setup, permissions, and profile management', display_order: 1 },
     { category_name: 'Service Requests', description: 'New services, modifications, and terminations', display_order: 2 },
@@ -102,13 +114,15 @@ exports.up = async function(knex) {
   
   // Get parent category IDs for subcategories
   const categoryIds = {};
-  const categories = await knex('standard_categories').whereNull('parent_category_uuid').select('id', 'category_name');
+  const categories = await migrationDb.table('standard_categories')
+    .whereNull('parent_category_uuid')
+    .select('id', 'category_name');
   categories.forEach(cat => {
     categoryIds[cat.category_name] = cat.id;
   });
   
   // Insert subcategories with parent UUIDs
-  await knex('standard_categories').insert([
+  await migrationDb.table('standard_categories').insert([
     // Account Management subcategories
     { category_name: 'Account Setup', parent_category_uuid: categoryIds['Account Management'], description: 'New account creation', display_order: 1 },
     { category_name: 'User Permissions', parent_category_uuid: categoryIds['Account Management'], description: 'Permission management', display_order: 2 },
@@ -321,7 +335,7 @@ exports.up = async function(knex) {
   });
 
   // Insert standard channels
-  await knex('standard_channels').insert([
+  await migrationDb.unscoped('standard_channels', STANDARD_CHANNELS_GLOBAL_REASON).insert([
     { channel_name: 'General Support', description: 'Account management, service requests, ticket escalation, and knowledge base', display_order: 1, is_default: true },
     { channel_name: 'Technical Issues', description: 'System failures, configuration issues, performance issues, and hardware failures', display_order: 2 },
     { channel_name: 'Projects', description: 'Project planning, execution, client feedback, and project closure', display_order: 3 },
@@ -365,16 +379,25 @@ exports.up = async function(knex) {
 
   // Update existing records with sequential order numbers
   const updateExistingOrders = async (tableName) => {
-    const tenants = await knex(tableName).distinct('tenant').pluck('tenant');
+    const tenants = await migrationDb.unscoped(tableName, STANDARD_REFERENCE_ORDER_BACKFILL_REASON)
+      .distinct('tenant')
+      .pluck('tenant');
     for (const tenantId of tenants) {
-      const items = await knex(tableName)
-        .where('tenant', tenantId)
+      const db = tenantDb(knex, tenantId);
+      const isUnregisteredChannelsTable = tableName === 'channels';
+      const itemsQuery = isUnregisteredChannelsTable
+        ? db.unscoped(tableName, CHANNELS_ORDER_BACKFILL_REASON).where('tenant', tenantId)
+        : db.table(tableName);
+      const items = await itemsQuery
         .orderBy(tableName === 'channels' ? 'channel_name' : 'category_name');
       
       for (let i = 0; i < items.length; i++) {
         const idField = tableName === 'channels' ? 'channel_id' : 'category_id';
-        await knex(tableName)
-          .where({ [idField]: items[i][idField], tenant: tenantId })
+        const updateQuery = isUnregisteredChannelsTable
+          ? db.unscoped(tableName, CHANNELS_ORDER_BACKFILL_REASON).where('tenant', tenantId)
+          : db.table(tableName);
+        await updateQuery
+          .where(idField, items[i][idField])
           .update({ display_order: i + 1 });
       }
     }

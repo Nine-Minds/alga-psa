@@ -28,8 +28,12 @@
         "group": "11111",
         "servicePeriod": "11111",
         "invoiceWindow": "11111",
-        "included": "11111"
-      }
+        "included": "11111",
+        "charge": "11111",
+        "status": "11111",
+        "amount": "11111"
+      },
+      "pageScopeNote": "11111 {{count}} 11111"
     },
     "groups": {
       "item": "11111 {{count}} 11111",
@@ -41,9 +45,6 @@
       "line": "11111 {{count}} 11111",
       "line_one": "11111 {{count}} 11111",
       "line_other": "11111 {{count}} 11111",
-      "obligationCount": "11111 {{count}} 11111",
-      "obligationCount_one": "11111 {{count}} 11111",
-      "obligationCount_other": "11111 {{count}} 11111",
       "includedCount": "11111 {{count}} 11111",
       "includedCount_one": "11111 {{count}} 11111",
       "includedCount_other": "11111 {{count}} 11111",
@@ -208,7 +209,13 @@
         "scheduleKey": "11111"
       },
       "reviewLink": "11111",
-      "helpText": "11111"
+      "helpText": "11111",
+      "fixAll": "11111",
+      "fixAllBusy": "11111",
+      "fixAllResult": "11111 {{schedules}} 11111 {{clients}} 11111",
+      "fixAllNoop": "11111",
+      "fixAllError": "11111",
+      "fixAllDenied": "11111"
     },
     "errors": {
       "title": "11111",
@@ -217,6 +224,61 @@
     },
     "loading": {
       "billingData": "11111"
+    },
+    "views": {
+      "all": "11111",
+      "ready": "11111",
+      "combinable": "11111",
+      "attention": "11111",
+      "notYetDue": "11111"
+    },
+    "status": {
+      "ready": "11111",
+      "combine": "11111",
+      "separate": "11111",
+      "notYetDue": "11111",
+      "approval": "11111",
+      "blocked": "11111"
+    },
+    "chargeTags": {
+      "fixed": "11111",
+      "hourly": "11111",
+      "usage": "11111",
+      "bucket": "11111"
+    },
+    "summary": {
+      "selected": "11111 {{count}} 11111",
+      "breakdown": "11111 {{invoices}} 11111 {{combine}} 11111 {{separate}} 11111",
+      "knownNow": "11111",
+      "knownPlusAtGeneration": "11111 {{count}} 11111",
+      "atGenerationLines": "11111 {{count}} 11111",
+      "empty": "11111",
+      "pageScope": "11111 {{groups}} 11111 {{obligations}} 11111"
+    },
+    "amount": {
+      "atGeneration": "11111",
+      "plusAtGeneration": "11111 {{count}} 11111"
+    },
+    "window": {
+      "open": "11111",
+      "opensOn": "11111 {{date}} 11111",
+      "notOpen": "11111"
+    },
+    "legend": {
+      "confirmed": "11111",
+      "atGeneration": "11111",
+      "combine": "11111",
+      "separate": "11111",
+      "notYetDue": "11111"
+    },
+    "filters": {
+      "title": "11111",
+      "windowOpen": "11111",
+      "charge": "11111",
+      "currency": "11111",
+      "any": "11111",
+      "clear": "11111",
+      "countSummary": "11111 {{groups}} 11111 {{obligations}} 11111"
     }
   },
   "manualInvoices": {
@@ -227,11 +289,15 @@
     "fields": {
       "client": "11111",
       "invoiceNumber": "11111",
-      "invoiceNumberOptional": "11111"
+      "invoiceNumberOptional": "11111",
+      "sourceSalesOrder": "11111"
     },
     "placeholders": {
       "selectClient": "11111",
-      "invoiceNumberOptional": "11111"
+      "invoiceNumberOptional": "11111",
+      "sourceSalesOrder": "11111",
+      "searchSalesOrders": "11111",
+      "noInvoiceableSalesOrders": "11111"
     },
     "automatedItems": {
       "title": "11111",
@@ -248,7 +314,9 @@
       "addDiscount": "11111",
       "generate": "11111",
       "saveChanges": "11111",
-      "processing": "11111"
+      "processing": "11111",
+      "generateSalesOrderInvoice": "11111",
+      "clearSalesOrderSource": "11111"
     },
     "labels": {
       "total": "11111"
@@ -270,11 +338,29 @@
       "loadItems": "11111",
       "refresh": "11111",
       "updateFailed": "11111",
-      "generateFailed": "11111"
+      "generateFailed": "11111",
+      "NO_BILLING_EMAIL": "11111 {{clientName}} 11111",
+      "CLIENT_NOT_FOUND": "11111",
+      "SERVICE_NOT_FOUND": "11111 {{serviceId}} 11111",
+      "INVALID_QUANTITY": "11111",
+      "NO_TAX_RATE": "11111 {{region}} 11111 {{date}} 11111",
+      "DISCOUNT_TARGET_NOT_FOUND": "11111 {{serviceId}} 11111",
+      "INVOICE_NUMBER_CONFLICT": "11111",
+      "PERMISSION_DENIED": "11111",
+      "UNEXPECTED": "11111 {{ref}} 11111",
+      "salesOrderGenerateFailed": "11111",
+      "salesOrderNothingToInvoice": "11111",
+      "salesOrderNotInvoiceable": "11111"
+    },
+    "warnings": {
+      "noBillingEmail": "11111"
     },
     "errorFallback": {
       "title": "11111",
       "retry": "11111"
+    },
+    "salesOrderContext": {
+      "summary": "11111 {{quantity}} 11111 {{lineCount}} 11111"
     }
   },
   "draftsTab": {
@@ -370,7 +456,8 @@
       "pdfFailed": "11111",
       "bulkPdfFailed": "11111",
       "unfinalizeFailed": "11111",
-      "bulkUnfinalizeFailed": "11111"
+      "bulkUnfinalizeFailed": "11111",
+      "bulkUnfinalizeInvoiceFailed": "11111 {{invoiceNumber}} 11111 {{reason}} 11111"
     }
   },
   "recurringServicePeriods": {
@@ -597,6 +684,8 @@
     "error": "11111",
     "errorDescription": "11111",
     "errors": {
+      "notFound": "11111",
+      "noTemplates": "11111",
       "loadFailed": "11111 {{message}} 11111",
       "actionFailed": "11111 {{action}} 11111",
       "actionLabels": {
@@ -920,7 +1009,9 @@
       "description": "11111",
       "quantity": "11111",
       "rate": "11111",
-      "amount": "11111"
+      "amount": "11111",
+      "salesOrder": "11111",
+      "cogsMargin": "11111"
     },
     "labels": {
       "contractSubtotal": "11111",
@@ -934,7 +1025,8 @@
     "tabs": {
       "generate": "11111",
       "drafts": "11111",
-      "finalized": "11111"
+      "finalized": "11111",
+      "projectBilling": "11111"
     }
   },
   "invoiceSyncBadge": {
@@ -1569,6 +1661,66 @@
     },
     "dragOverlay": {
       "component": "11111"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "11111",
+    "bulkActions": "11111 {{count}} 11111",
+    "loading": "11111",
+    "empty": "11111",
+    "columns": {
+      "project": "11111",
+      "client": "11111",
+      "description": "11111",
+      "amount": "11111",
+      "trigger": "11111",
+      "daysWaiting": "11111",
+      "actions": "11111"
+    },
+    "trigger": {
+      "phase": "11111 {{phase}} 11111 {{date}} 11111",
+      "date": "11111",
+      "manual": "11111"
+    },
+    "actions": {
+      "approve": "11111",
+      "approveInvoiceNow": "11111",
+      "hold": "11111",
+      "cancel": "11111",
+      "approveSelected": "11111",
+      "holdSelected": "11111"
+    },
+    "toasts": {
+      "approved": "11111",
+      "approvedWithWarning": "11111 {{warning}} 11111",
+      "invoiced": "11111",
+      "bulkApproved": "11111 {{count}} 11111",
+      "bulkApproveFailed": "11111 {{count}} 11111 {{reason}} 11111",
+      "held": "11111",
+      "bulkHeld": "11111 {{count}} 11111",
+      "bulkHoldFailed": "11111 {{count}} 11111 {{reason}} 11111",
+      "canceled": "11111"
+    },
+    "errors": {
+      "loadFailed": "11111",
+      "approveFailed": "11111",
+      "invoiceFailed": "11111",
+      "holdFailed": "11111",
+      "cancelFailed": "11111"
+    },
+    "holdDialog": {
+      "title": "11111",
+      "titlePlural": "11111 {{count}} 11111",
+      "description": "11111",
+      "reasonPlaceholder": "11111",
+      "cancel": "11111",
+      "confirm": "11111"
+    },
+    "cancelDialog": {
+      "title": "11111",
+      "message": "11111",
+      "confirm": "11111",
+      "dismiss": "11111"
     }
   }
 }

@@ -127,7 +127,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           await loadCredentialsStatus(); // Refresh to show masked status
         } else {
           console.error('NinjaOne save credentials failed:', result.error);
-          setError(t('integrations.rmm.ninjaOne.errors.saveCredentials', { defaultValue: 'Failed to save credentials.' }));
+          setError(result.error ?? t('integrations.rmm.ninjaOne.errors.saveCredentials', { defaultValue: 'Failed to save credentials.' }));
         }
       } catch (err) {
         console.error('NinjaOne save credentials error:', err);
@@ -184,8 +184,13 @@ const NinjaOneIntegrationSettings: React.FC = () => {
     setError(null);
     try {
       const connectUrl = await getNinjaOneConnectUrl(selectedRegion);
+      if (!connectUrl.success || !connectUrl.url) {
+        setError(connectUrl.error ?? t('integrations.rmm.ninjaOne.errors.connect', { defaultValue: 'Failed to initiate NinjaOne connection.' }));
+        return;
+      }
+
       if (typeof window !== 'undefined') {
-        window.location.href = connectUrl;
+        window.location.href = connectUrl.url;
       }
     } catch (err) {
       console.error('NinjaOne connect error:', err);
@@ -204,7 +209,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           setSuccessMessage(t('integrations.rmm.ninjaOne.toasts.disconnectSuccess', { defaultValue: 'NinjaOne connection successfully disconnected.' }));
         } else {
           console.error('NinjaOne disconnect failed:', result.error);
-          setError(t('integrations.rmm.ninjaOne.errors.disconnect', { defaultValue: 'Failed to disconnect NinjaOne.' }));
+          setError(result.error ?? t('integrations.rmm.ninjaOne.errors.disconnect', { defaultValue: 'Failed to disconnect NinjaOne.' }));
         }
       } catch (err) {
         console.error('NinjaOne disconnect error:', err);
@@ -233,7 +238,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           setOrgMappingsRefreshKey((prev) => prev + 1);
         } else {
           console.error('NinjaOne org sync failed:', result.errors);
-          setError(t('integrations.rmm.ninjaOne.errors.orgSyncFailed', { defaultValue: 'Organization sync failed.' }));
+          setError(result.errors?.join('; ') || t('integrations.rmm.ninjaOne.errors.orgSyncFailed', { defaultValue: 'Organization sync failed.' }));
         }
       } catch (err) {
         console.error('NinjaOne org sync error:', err);
@@ -261,7 +266,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           setFleetComplianceRefreshKey((prev) => prev + 1);
         } else {
           console.error('NinjaOne device sync failed:', result.errors);
-          setError(t('integrations.rmm.ninjaOne.errors.deviceSyncFailed', { defaultValue: 'Device sync failed.' }));
+          setError(result.errors?.join('; ') || t('integrations.rmm.ninjaOne.errors.deviceSyncFailed', { defaultValue: 'Device sync failed.' }));
         }
       } catch (err) {
         console.error('NinjaOne device sync error:', err);
@@ -274,6 +279,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
   const isConnected = status?.is_connected;
   const isActive = status?.is_active;
+  const reconnectRequired = status?.reconnect_required;
 
   const renderStatusPanel = () => {
     if (isLoading || isRefreshing) {
@@ -300,17 +306,26 @@ const NinjaOneIntegrationSettings: React.FC = () => {
 
     return (
       <div className="flex gap-3">
-        {hasError ? (
+        {reconnectRequired ? (
+          <AlertTriangle className="mt-1 h-5 w-5 text-red-500" />
+        ) : hasError ? (
           <AlertTriangle className="mt-1 h-5 w-5 text-amber-500" />
         ) : (
           <CheckCircle className="mt-1 h-5 w-5 text-green-500" />
         )}
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
-            {hasError
-              ? t('integrations.rmm.ninjaOne.status.connectedWithErrors', { defaultValue: 'NinjaOne connected with sync errors' })
-              : t('integrations.rmm.ninjaOne.status.connected', { defaultValue: 'Connected to NinjaOne' })}
+            {reconnectRequired
+              ? t('integrations.rmm.ninjaOne.status.reconnectRequired', { defaultValue: 'NinjaOne reconnect required' })
+              : hasError
+                ? t('integrations.rmm.ninjaOne.status.connectedWithErrors', { defaultValue: 'NinjaOne connected with sync errors' })
+                : t('integrations.rmm.ninjaOne.status.connected', { defaultValue: 'Connected to NinjaOne' })}
           </p>
+          {reconnectRequired && (
+            <p className="text-sm text-red-600">
+              {t('integrations.rmm.ninjaOne.status.reconnectRequiredDescription', { defaultValue: 'The NinjaOne authorization can no longer be refreshed (token expired or revoked). Reconnect to restore device sync, alerts, and remote access.' })}
+            </p>
+          )}
           {status?.instance_url && (
             <p className="text-sm text-muted-foreground">
               {t('integrations.rmm.ninjaOne.status.instanceLabel', { defaultValue: 'Instance:' })}{' '}

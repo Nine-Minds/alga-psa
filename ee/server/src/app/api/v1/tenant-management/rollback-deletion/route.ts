@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { rollbackTenantDeletion } from '@ee/lib/tenant-management/workflowClient';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -102,7 +104,9 @@ export async function POST(req: NextRequest) {
 
     // Verify pending deletion exists
     const knex = await getAdminConnection();
-    const pendingDeletion = await knex('pending_tenant_deletions')
+    const auditLogs = tenantDb(knex, MASTER_BILLING_TENANT_ID).table('extension_audit_logs');
+    const pendingDeletion = await tenantDb(knex, '__tenant_deletion_rollback_lookup__')
+      .unscoped('pending_tenant_deletions', 'tenant deletion rollback resolves tenant by workflow id before tenant context exists')
       .where({ workflow_id: workflowId })
       .first();
 
@@ -133,7 +137,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Log to unified extension audit table
-    await knex('extension_audit_logs')
+    await auditLogs
       .insert({
         tenant: MASTER_BILLING_TENANT_ID,
         event_type: 'tenant.rollback_deletion',
@@ -185,7 +189,7 @@ export async function POST(req: NextRequest) {
       message: 'Deletion rolled back. Users will be reactivated and the Canceled tag will be removed.',
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const routeError = tenantManagementRouteError(error, 'Failed to roll back tenant deletion.');
 
     observabilityLogger.error('Rollback tenant deletion failed', error, {
       event_type: 'tenant_management_action_failed',
@@ -194,7 +198,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: false,
-      error: errorMessage,
-    }, { status: 500 });
+      error: routeError.error,
+    }, { status: routeError.status });
   }
 }

@@ -1,42 +1,55 @@
 const { randomUUID } = require('node:crypto');
 
+const { deleteTenantRows, pickTenantOne, selectTenantRows, tenantJoin } = require('../_lib/tenant-sql.cjs');
+
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
 }
 
-async function pickOne(ctx, { label, sql, params }) {
-  const rows = await ctx.db.query(sql, params);
-  if (!rows.length) throw new Error(`Fixture requires ${label} in DB (tenant=${ctx.config.tenantId}).`);
-  return rows[0];
-}
-
 async function ensureUserWithRole(ctx, { tenantId, roleName, label }) {
-  const rows = await ctx.db.query(
-    `
-      select u.user_id
-      from users u
-      join user_roles ur on ur.tenant = u.tenant and ur.user_id = u.user_id
-      join roles r on r.tenant = ur.tenant and r.role_id = ur.role_id
-      where u.tenant = $1 and lower(r.role_name) = $2
-      order by u.created_at asc
-      limit 1
-    `,
-    [tenantId, roleName.toLowerCase()]
-  );
+  const rows = await selectTenantRows(ctx, {
+    columns: 'u.user_id',
+    from: tenantJoin(
+      tenantJoin('users u', 'user_roles ur', {
+        leftAlias: 'u',
+        rightAlias: 'ur',
+        on: 'ur.user_id = u.user_id'
+      }),
+      'roles r',
+      {
+        leftAlias: 'ur',
+        rightAlias: 'r',
+        on: 'r.role_id = ur.role_id'
+      }
+    ),
+    tenantAlias: 'u',
+    tenantId,
+    where: 'lower(r.role_name) = $2',
+    params: [roleName.toLowerCase()],
+    orderBy: 'u.created_at asc',
+    limit: 1
+  });
   if (rows.length) return rows[0];
 
-  const role = await pickOne(ctx, {
+  const role = await pickTenantOne(ctx, {
     label: `a role named "${roleName}"`,
-    sql: `select role_id from roles where tenant = $1 and lower(role_name) = $2 order by created_at asc limit 1`,
-    params: [tenantId, roleName.toLowerCase()]
+    table: 'roles',
+    columns: 'role_id',
+    tenantId,
+    where: 'lower(role_name) = $2',
+    params: [roleName.toLowerCase()],
+    orderBy: 'created_at asc'
   });
 
-  const user = await pickOne(ctx, {
+  const user = await pickTenantOne(ctx, {
     label: label ?? `a user to assign role "${roleName}"`,
-    sql: `select user_id from users where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'users',
+    columns: 'user_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
 
+  // Intentionally raw: the fixture needs idempotent role assignment via ON CONFLICT.
   await ctx.dbWrite.query(
     `
       insert into user_roles (tenant, user_id, role_id)
@@ -58,25 +71,35 @@ module.exports = async function run(ctx) {
   const tenantId = ctx.config.tenantId;
   const marker = '[fixture appointment-created-assign-notify]';
 
-  const client = await pickOne(ctx, {
+  const client = await pickTenantOne(ctx, {
     label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'clients',
+    columns: 'client_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
-  const board = await pickOne(ctx, {
+  const board = await pickTenantOne(ctx, {
     label: 'a ticket board',
-    sql: `select board_id from boards where tenant = $1 order by is_default desc, display_order asc limit 1`,
-    params: [tenantId]
+    table: 'boards',
+    columns: 'board_id',
+    tenantId,
+    orderBy: 'is_default desc, display_order asc'
   });
-  const status = await pickOne(ctx, {
+  const status = await pickTenantOne(ctx, {
     label: 'a ticket status',
-    sql: `select status_id from statuses where tenant = $1 and board_id = $2 and status_type = 'ticket' order by is_default desc, order_number asc limit 1`,
-    params: [tenantId, board.board_id]
+    table: 'statuses',
+    columns: 'status_id',
+    tenantId,
+    where: ['board_id = $2', "status_type = 'ticket'"],
+    params: [board.board_id],
+    orderBy: 'is_default desc, order_number asc'
   });
-  const priority = await pickOne(ctx, {
+  const priority = await pickTenantOne(ctx, {
     label: 'a ticket priority',
-    sql: `select priority_id from priorities where tenant = $1 order by order_number asc limit 1`,
-    params: [tenantId]
+    table: 'priorities',
+    columns: 'priority_id',
+    tenantId,
+    orderBy: 'order_number asc'
   });
   const technician = await ensureUserWithRole(ctx, {
     tenantId,
@@ -111,7 +134,7 @@ module.exports = async function run(ctx) {
       // Ticket deletion may be blocked by FK constraints; fall back to direct DB cleanup.
     }
 
-    await ctx.dbWrite.query(`delete from tickets where tenant = $1 and ticket_id = $2`, [tenantId, ticketId]);
+    await deleteTenantRows(ctx, { table: 'tickets', tenantId, where: 'ticket_id = $2', params: [ticketId] });
   });
 
   const appointmentId = randomUUID();
@@ -142,18 +165,20 @@ module.exports = async function run(ctx) {
     throw new Error(`Expected run SUCCEEDED, got ${runRow.status}. Steps: ${JSON.stringify(ctx.summarizeSteps(steps))}`);
   }
 
-  const entries = await ctx.db.query(
-    `
-      select se.entry_id, se.title, se.work_item_type, se.work_item_id, sea.user_id, se.scheduled_start, se.scheduled_end
-      from schedule_entries as se
-      join schedule_entry_assignees as sea
-        on sea.tenant = se.tenant and sea.entry_id = se.entry_id
-      where se.tenant = $1 and sea.user_id = $2 and se.work_item_type = 'ticket' and se.work_item_id = $3
-      order by se.created_at desc
-      limit 10
-    `,
-    [tenantId, technician.user_id, ticketId]
-  );
+  const entries = await selectTenantRows(ctx, {
+    columns: 'se.entry_id, se.title, se.work_item_type, se.work_item_id, sea.user_id, se.scheduled_start, se.scheduled_end',
+    from: tenantJoin('schedule_entries as se', 'schedule_entry_assignees as sea', {
+      leftAlias: 'se',
+      rightAlias: 'sea',
+      on: 'sea.entry_id = se.entry_id'
+    }),
+    tenantAlias: 'se',
+    tenantId,
+    where: ['sea.user_id = $2', "se.work_item_type = 'ticket'", 'se.work_item_id = $3'],
+    params: [technician.user_id, ticketId],
+    orderBy: 'se.created_at desc',
+    limit: 10
+  });
 
   const entry = entries.find((e) => typeof e.title === 'string' && e.title.includes(marker) && e.title.includes(appointmentId));
   if (!entry) {
@@ -171,24 +196,25 @@ module.exports = async function run(ctx) {
       // Schedule deletion may be blocked by FK constraints; fall back to direct DB cleanup.
     }
 
-    await ctx.dbWrite.query(
-      `delete from schedule_conflicts where tenant = $1 and (entry_id_1 = $2 or entry_id_2 = $2)`,
-      [tenantId, entry.entry_id]
-    );
-    await ctx.dbWrite.query(`delete from schedule_entry_assignees where tenant = $1 and entry_id = $2`, [tenantId, entry.entry_id]);
-    await ctx.dbWrite.query(`delete from schedule_entries where tenant = $1 and entry_id = $2`, [tenantId, entry.entry_id]);
+    await deleteTenantRows(ctx, {
+      table: 'schedule_conflicts',
+      tenantId,
+      where: '(entry_id_1 = $2 or entry_id_2 = $2)',
+      params: [entry.entry_id]
+    });
+    await deleteTenantRows(ctx, { table: 'schedule_entry_assignees', tenantId, where: 'entry_id = $2', params: [entry.entry_id] });
+    await deleteTenantRows(ctx, { table: 'schedule_entries', tenantId, where: 'entry_id = $2', params: [entry.entry_id] });
   });
 
-  const notifications = await ctx.db.query(
-    `
-      select internal_notification_id, title, message
-      from internal_notifications
-      where tenant = $1 and user_id = $2
-      order by created_at desc
-      limit 25
-    `,
-    [tenantId, technician.user_id]
-  );
+  const notifications = await selectTenantRows(ctx, {
+    table: 'internal_notifications',
+    columns: 'internal_notification_id, title, message',
+    tenantId,
+    where: 'user_id = $2',
+    params: [technician.user_id],
+    orderBy: 'created_at desc',
+    limit: 25
+  });
 
   const foundNotification = notifications.find(
     (n) => typeof n.title === 'string' && n.title.includes(marker) && typeof n.message === 'string' && n.message.includes(ticketId)
@@ -198,9 +224,11 @@ module.exports = async function run(ctx) {
   }
 
   ctx.onCleanup(async () => {
-    await ctx.dbWrite.query(
-      `delete from internal_notifications where tenant = $1 and user_id = $2 and title like $3`,
-      [tenantId, technician.user_id, `%${marker}%appointmentId=${appointmentId}%`]
-    );
+    await deleteTenantRows(ctx, {
+      table: 'internal_notifications',
+      tenantId,
+      where: ['user_id = $2', 'title like $3'],
+      params: [technician.user_id, `%${marker}%appointmentId=${appointmentId}%`]
+    });
   });
 };

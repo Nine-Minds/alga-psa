@@ -1,6 +1,7 @@
 "use server";
 
 import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 
 export type ClientPortalMenuItem = {
   id: string;    // registry_id
@@ -16,11 +17,10 @@ export async function listClientPortalMenuItemsForTenant(): Promise<ClientPortal
   if (!tenant) throw new Error('Tenant not found');
 
   // Query: enabled installs where extension_version.ui contains hooks.clientPortalMenu.label (non-empty)
-  const rows = await knex('tenant_extension_install as ti')
+  const rows = await tenantDb(knex, tenant).table('tenant_extension_install as ti')
     .join('extension_version as ev', 'ev.id', 'ti.version_id')
     .join('extension_registry as er', 'er.id', 'ti.registry_id')
-    .where('ti.tenant_id', tenant)
-    .andWhere('ti.is_enabled', true)
+    .where('ti.is_enabled', true)
     .whereNotNull('ev.ui')
     .andWhereRaw("(ev.ui::jsonb #> '{hooks,clientPortalMenu,label}') is not null")
     .andWhereRaw("(ev.ui::jsonb #>> '{hooks,clientPortalMenu,label}') <> ''")

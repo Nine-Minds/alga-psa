@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
@@ -17,6 +18,16 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+const WORKFLOW_BASIC_TEST_BOUNDARY_TENANT = '__workflow_designer_basic_test_boundary__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedWorkflowTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, WORKFLOW_BASIC_TEST_BOUNDARY_TENANT).unscoped(table, reason);
+}
 
 type WorkflowDefinitionSnapshot = {
   definitions: Array<Record<string, any>>;
@@ -75,7 +86,11 @@ async function setupDesigner(page: Page): Promise<{
 async function seedWorkflowDefinitions(db: Knex, count: number): Promise<{ ids: string[]; names: string[] }> {
   const ids: string[] = [];
   const names: string[] = [];
-  const tenantId = (await db('tenants').select('tenant').first())?.tenant;
+  const tenantId = (await unscopedWorkflowTable(
+    db,
+    'tenants',
+    'workflow designer basic test seed resolves the active Playwright tenant'
+  ).select('tenant').first())?.tenant;
   if (!tenantId) throw new Error('tenant_id is required to seed workflow definitions');
   const now = new Date().toISOString();
   const records = Array.from({ length: count }).map((_, index) => {
@@ -107,7 +122,7 @@ async function seedWorkflowDefinitions(db: Knex, count: number): Promise<{ ids: 
   });
 
   if (records.length) {
-    await db('workflow_definitions').insert(records);
+    await tenantTable(db, tenantId, 'workflow_definitions').insert(records);
   }
 
   return { ids, names };
@@ -212,18 +227,38 @@ function buildAppCatalogRegistryOverrides(): WorkflowPlaywrightOverrides {
 }
 
 async function snapshotWorkflowDefinitions(db: Knex): Promise<WorkflowDefinitionSnapshot> {
-  const definitions = await db('workflow_definitions').select();
-  const versions = await db('workflow_definition_versions').select();
+  const definitions = await unscopedWorkflowTable(
+    db,
+    'workflow_definitions',
+    'workflow designer basic test snapshots all workflow definitions before all-tenant empty-list reset'
+  ).select();
+  const versions = await unscopedWorkflowTable(
+    db,
+    'workflow_definition_versions',
+    'workflow designer basic test snapshots all workflow versions before all-tenant empty-list reset'
+  ).select();
   return { definitions, versions };
 }
 
 async function restoreWorkflowDefinitions(db: Knex, snapshot: WorkflowDefinitionSnapshot): Promise<void> {
-  await db('workflow_definitions').del();
+  await unscopedWorkflowTable(
+    db,
+    'workflow_definitions',
+    'workflow designer basic test restores all workflow definitions after empty-list reset'
+  ).del();
   if (snapshot.definitions.length) {
-    await db('workflow_definitions').insert(snapshot.definitions);
+    await unscopedWorkflowTable(
+      db,
+      'workflow_definitions',
+      'workflow designer basic test restores all workflow definitions after empty-list reset'
+    ).insert(snapshot.definitions);
   }
   if (snapshot.versions.length) {
-    await db('workflow_definition_versions').insert(snapshot.versions);
+    await unscopedWorkflowTable(
+      db,
+      'workflow_definition_versions',
+      'workflow designer basic test restores all workflow versions after empty-list reset'
+    ).insert(snapshot.versions);
   }
 }
 
@@ -404,7 +439,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(workflowPage.nameInput).toHaveValue(lastName);
     } finally {
       if (seeded?.ids.length) {
-        await db('workflow_definitions').whereIn('workflow_id', seeded.ids).del().catch(() => undefined);
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').whereIn('workflow_id', seeded.ids).del().catch(() => undefined);
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -422,7 +457,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(workflowPage.versionInput).toHaveValue('1');
       await expect(workflowPage.payloadSchemaSelectButton).toContainText(/payload\./);
       await expect(workflowPage.dropStepsHereText()).toBeVisible();
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -476,7 +511,7 @@ test.describe('Workflow Designer UI - basic', () => {
 
       await expect(page.getByRole('button', { name: workflowName })).toBeVisible({ timeout: 10_000 });
       await expect(workflowPage.triggerInput).toHaveValue('workflow.event.test');
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -499,7 +534,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(workflowPage.saveDraftButton).toHaveText('Save Draft');
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -563,7 +598,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(stepButton).toContainText('Set State');
       await expect(stepButton).toContainText(stepId);
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -593,7 +628,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(workflowPage.payloadSchemaSelectButton).toContainText('payload.EmailWorkflowPayload.v1');
       await expect(workflowPage.triggerInput).toHaveValue('INBOUND_EMAIL_RECEIVED');
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -613,7 +648,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(workflowPage.versionInput).toHaveValue('2');
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -637,7 +672,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(workflowPage.triggerInput).toHaveValue('');
     } finally {
       if (workflowName) {
-        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+        await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       }
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -1165,7 +1200,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(page.locator(`#foreach-concurrency-${stepId}`)).toHaveValue('3');
       await expect(page.locator(`#foreach-onitemerror-${stepId}[role="combobox"]`)).toContainText('Fail');
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -1228,7 +1263,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await workflowPage.stepSelectButton(stepId).click();
       await expect(page.locator(captureInputId)).toHaveValue('');
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -1263,7 +1298,7 @@ test.describe('Workflow Designer UI - basic', () => {
       await expect(page.locator(`#call-workflow-id-${stepId}`)).toHaveValue(workflowIdValue);
       await expect(page.locator(`#call-workflow-version-${stepId}`)).toHaveValue('2');
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
     }
@@ -1346,7 +1381,11 @@ test.describe('Workflow Designer UI - basic', () => {
     const snapshot = await snapshotWorkflowDefinitions(db);
 
     try {
-      await db('workflow_definitions').del();
+      await unscopedWorkflowTable(
+        db,
+        'workflow_definitions',
+        'workflow designer basic test clears all definitions to validate empty-list state'
+      ).del();
 
       await page.reload({ waitUntil: 'domcontentloaded' });
       await workflowPage.waitForLoaded();

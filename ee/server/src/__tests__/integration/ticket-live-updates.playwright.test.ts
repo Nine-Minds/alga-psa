@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -17,11 +18,6 @@ import {
 applyPlaywrightAuthEnvDefaults();
 
 const BASE_URL = resolvePlaywrightBaseUrl();
-const LIVE_UPDATES_ENABLED =
-  process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS === 'false' &&
-  (process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS ?? '')
-    .split(',')
-    .some((entry) => entry.trim() === 'live-ticket-updates:true');
 const LIVE_TICKET_PERF_SMOKE = process.env.LIVE_TICKET_PERF_SMOKE === 'true';
 const LIVE_TICKET_PERF_ITERATIONS = Number.parseInt(process.env.LIVE_TICKET_PERF_ITERATIONS ?? '50', 10);
 const LIVE_TICKET_PERF_THRESHOLD_MS = Number.parseInt(process.env.LIVE_TICKET_PERF_THRESHOLD_MS ?? '500', 10);
@@ -30,6 +26,7 @@ const PROJECT_ROOT = path.resolve(__dirname, '../../../../..');
 const PLAYWRIGHT_DOCKER_ENV_FILE = fs.existsSync(path.resolve(PROJECT_ROOT, 'ee/server/.env'))
   ? 'ee/server/.env'
   : 'ee/server/.env.test';
+const TEST_DISCOVERY_TENANT = '__test_discovery__';
 
 type TicketRefs = {
   boardId: string;
@@ -50,6 +47,10 @@ type InternalUserSeed = {
   lastName: string;
 };
 
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 async function createInternalUserLikeAdmin(
   db: Knex,
   tenantData: TenantTestData,
@@ -59,7 +60,7 @@ async function createInternalUserLikeAdmin(
   const email = `${overrides.emailPrefix}-${userId.slice(0, 6)}@example.com`;
   const username = `${overrides.firstName.toLowerCase()}-${overrides.lastName.toLowerCase()}-${userId.slice(0, 6)}`;
 
-  await db('users').insert({
+  await tenantTable(db, tenantData.tenant.tenantId, 'users').insert({
     user_id: userId,
     tenant: tenantData.tenant.tenantId,
     username,
@@ -71,7 +72,7 @@ async function createInternalUserLikeAdmin(
     hashed_password: 'playwright-not-a-real-hash',
   });
 
-  const adminRoles = await db('user_roles')
+  const adminRoles = await tenantTable(db, tenantData.tenant.tenantId, 'user_roles')
     .where({
       tenant: tenantData.tenant.tenantId,
       user_id: tenantData.adminUser.userId,
@@ -82,7 +83,7 @@ async function createInternalUserLikeAdmin(
     throw new Error(`Admin user ${tenantData.adminUser.userId} has no roles to mirror for Playwright live-ticket tests`);
   }
 
-  await db('user_roles').insert(
+  await tenantTable(db, tenantData.tenant.tenantId, 'user_roles').insert(
     adminRoles.map(({ role_id }) => ({
       tenant: tenantData.tenant.tenantId,
       user_id: userId,
@@ -99,11 +100,13 @@ async function createInternalUserLikeAdmin(
 }
 
 async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: string): Promise<TicketRefs> {
-  const statusColumns = await db('statuses').columnInfo();
-  let board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
+  const statusColumns = await tenantDb(db, TEST_DISCOVERY_TENANT)
+    .unscoped('statuses', 'columnInfo reads schema metadata, not tenant rows')
+    .columnInfo();
+  let board = await tenantTable(db, tenantId, 'boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
   if (!board?.board_id) {
     const boardId = uuidv4();
-    await db('boards').insert({
+    await tenantTable(db, tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: boardId,
       board_name: 'Live Updates Board',
@@ -130,7 +133,7 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
   };
 
   async function ensureStatus(name: string, orderNumber: number, isDefault = false): Promise<{ status_id: string; name: string }> {
-    const existing = await db('statuses')
+    const existing = await tenantTable(db, tenantId, 'statuses')
       .modify(statusScope)
       .andWhere({ name })
       .first<{ status_id: string; name: string }>('status_id', 'name');
@@ -140,7 +143,7 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     }
 
     const statusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTable(db, tenantId, 'statuses').insert({
       tenant: tenantId,
       status_id: statusId,
       ...(Object.prototype.hasOwnProperty.call(statusColumns, 'board_id') ? { board_id: board.board_id } : {}),
@@ -161,14 +164,14 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
   const pendingStatus = await ensureStatus('On Hold', 2);
   const resolvedStatus = await ensureStatus('Resolved', 3);
 
-  let priority = await db('priorities')
+  let priority = await tenantTable(db, tenantId, 'priorities')
     .where({ tenant: tenantId })
     .orderBy('order_number', 'asc')
     .first<{ priority_id: string; priority_name: string }>('priority_id', 'priority_name');
 
   if (!priority?.priority_id) {
     const priorityId = uuidv4();
-    await db('priorities').insert({
+    await tenantTable(db, tenantId, 'priorities').insert({
       tenant: tenantId,
       priority_id: priorityId,
       priority_name: 'Normal',
@@ -181,13 +184,13 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     priority = { priority_id: priorityId, priority_name: 'Normal' };
   }
 
-  let elevatedPriority = await db('priorities')
+  let elevatedPriority = await tenantTable(db, tenantId, 'priorities')
     .where({ tenant: tenantId, priority_name: 'High' })
     .first<{ priority_id: string; priority_name: string }>('priority_id', 'priority_name');
 
   if (!elevatedPriority?.priority_id) {
     const priorityId = uuidv4();
-    await db('priorities').insert({
+    await tenantTable(db, tenantId, 'priorities').insert({
       tenant: tenantId,
       priority_id: priorityId,
       priority_name: 'High',
@@ -215,7 +218,7 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
 
 async function createContact(db: Knex, tenantId: string, clientId: string, fullName: string): Promise<string> {
   const contactId = uuidv4();
-  await db('contacts').insert({
+  await tenantTable(db, tenantId, 'contacts').insert({
     tenant: tenantId,
     contact_name_id: contactId,
     client_id: clientId,
@@ -238,7 +241,7 @@ async function createTicket(db: Knex, params: {
   contactId: string;
 }): Promise<string> {
   const ticketId = uuidv4();
-  await db('tickets').insert({
+  await tenantTable(db, params.tenantId, 'tickets').insert({
     tenant: params.tenantId,
     ticket_id: ticketId,
     ticket_number: `PW-LIVE-${ticketId.slice(0, 6).toUpperCase()}`,
@@ -413,7 +416,10 @@ async function createLiveTicketScenario(
         await contextA?.close().catch(() => undefined);
         await contextB?.close().catch(() => undefined);
         if (tenantData) {
-          await db('tenants').where({ tenant: tenantData.tenant.tenantId }).del().catch(() => undefined);
+          await tenantTable(db, tenantData.tenant.tenantId, 'tenants')
+            .where({ tenant: tenantData.tenant.tenantId })
+            .del()
+            .catch(() => undefined);
         }
         await db.destroy();
       },
@@ -422,7 +428,10 @@ async function createLiveTicketScenario(
     await contextA?.close().catch(() => undefined);
     await contextB?.close().catch(() => undefined);
     if (tenantData) {
-      await db('tenants').where({ tenant: tenantData.tenant.tenantId }).del().catch(() => undefined);
+      await tenantTable(db, tenantData.tenant.tenantId, 'tenants')
+        .where({ tenant: tenantData.tenant.tenantId })
+        .del()
+        .catch(() => undefined);
     }
     await db.destroy();
     throw error;
@@ -445,8 +454,6 @@ async function openContextWithUser(browserContext: BrowserContext, tenantData: T
 }
 
 test.describe('Ticket live updates (Playwright)', () => {
-  test.skip(!LIVE_UPDATES_ENABLED, 'Set NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false and NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true');
-
   test('T046: B saves status and A refreshes without losing a local title draft', async ({ browser }) => {
     test.setTimeout(300_000);
 

@@ -3,6 +3,8 @@ import { PortalSessionHandoff } from '@alga-psa/auth/client';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
 import { getTenantLocaleByDomain } from '@alga-psa/tenancy/actions';
 import type { Metadata } from 'next';
+import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
+import { resolveRequestHost } from '@/lib/deployment/requestHost';
 
 export const metadata: Metadata = {
   title: 'Signing In',
@@ -35,12 +37,12 @@ async function resolveLocale() {
   // which double-fires the single-use OTT exchange.
   try {
     const headersList = await headers();
-    const host = (headersList.get('x-forwarded-host') || headersList.get('host') || '')
-      .split(':')[0];
-    if (!host) {
+    const caps = resolveDeploymentCapabilities();
+    const { hostname } = resolveRequestHost({ headers: headersList }, caps);
+    if (!hostname) {
       return null;
     }
-    return await getTenantLocaleByDomain(host);
+    return await getTenantLocaleByDomain(hostname);
   } catch (error) {
     console.warn('Failed to resolve locale for client portal handoff', error);
     return null;

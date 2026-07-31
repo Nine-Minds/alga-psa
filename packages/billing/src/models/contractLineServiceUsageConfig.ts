@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import type { IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,6 +9,10 @@ export default class ContractLineServiceUsageConfig {
 
   constructor(knex: Knex | Knex.Transaction) {
     this.knex = knex;
+  }
+
+  private table(table: string, tenant: string): Knex.QueryBuilder {
+    return tenantDb(this.knex, tenant).table(table);
   }
 
   /**
@@ -27,10 +31,9 @@ export default class ContractLineServiceUsageConfig {
   async getByConfigId(configId: string): Promise<IContractLineServiceUsageConfig | null> {
     const tenant = await this.getTenant();
     
-    const config = await this.knex('contract_line_service_usage_config')
+    const config = await this.table('contract_line_service_usage_config', tenant)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .first();
     
@@ -45,7 +48,7 @@ export default class ContractLineServiceUsageConfig {
     
     const now = new Date();
     
-    await this.knex('contract_line_service_usage_config').insert({
+    await this.table('contract_line_service_usage_config', tenant).insert({
       config_id: data.config_id,
       unit_of_measure: data.unit_of_measure,
       enable_tiered_pricing: data.enable_tiered_pricing,
@@ -80,10 +83,9 @@ export default class ContractLineServiceUsageConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('contract_line_service_usage_config')
+    const result = await this.table('contract_line_service_usage_config', tenant)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .update(updateData);
     
@@ -96,10 +98,9 @@ export default class ContractLineServiceUsageConfig {
   async delete(configId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('contract_line_service_usage_config')
+    const result = await this.table('contract_line_service_usage_config', tenant)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .delete();
     
@@ -112,10 +113,9 @@ export default class ContractLineServiceUsageConfig {
   async getRateTiers(configId: string): Promise<IContractLineServiceRateTier[]> {
     const tenant = await this.getTenant();
     
-    const tiers = await this.knex('contract_line_service_rate_tiers')
+    const tiers = await this.table('contract_line_service_rate_tiers', tenant)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .orderBy('min_quantity', 'asc')
       .select('*');
@@ -132,7 +132,7 @@ export default class ContractLineServiceUsageConfig {
     const tierId = uuidv4();
     const now = new Date();
     
-    await this.knex('contract_line_service_rate_tiers').insert({
+    await this.table('contract_line_service_rate_tiers', tenant).insert({
       tier_id: tierId,
       config_id: data.config_id,
       min_quantity: data.min_quantity,
@@ -167,10 +167,9 @@ export default class ContractLineServiceUsageConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('contract_line_service_rate_tiers')
+    const result = await this.table('contract_line_service_rate_tiers', tenant)
       .where({
-        tier_id: tierId,
-        tenant
+        tier_id: tierId
       })
       .update(updateData);
     
@@ -183,10 +182,9 @@ export default class ContractLineServiceUsageConfig {
   async deleteRateTier(tierId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('contract_line_service_rate_tiers')
+    const result = await this.table('contract_line_service_rate_tiers', tenant)
       .where({
-        tier_id: tierId,
-        tenant
+        tier_id: tierId
       })
       .delete();
     
@@ -199,10 +197,9 @@ export default class ContractLineServiceUsageConfig {
   async deleteRateTiersByConfigId(configId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('contract_line_service_rate_tiers')
+    const result = await this.table('contract_line_service_rate_tiers', tenant)
       .where({
-        config_id: configId,
-        tenant
+        config_id: configId
       })
       .delete();
     

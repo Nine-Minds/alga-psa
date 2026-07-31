@@ -4,9 +4,29 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// RightSidebar resolves the edition from process.env at module load, and
+// process.env is fork-global: an earlier test file that set EDITION would
+// flip this render onto the lazy enterprise path. Pin CE before the import
+// below evaluates.
+const savedEdition = vi.hoisted(() => {
+  const saved = {
+    next: process.env.NEXT_PUBLIC_EDITION,
+    plain: process.env.EDITION,
+  };
+  process.env.NEXT_PUBLIC_EDITION = 'community';
+  delete process.env.EDITION;
+  return saved;
+});
 
 import RightSidebar from '../../../components/layout/RightSidebar';
+
+afterAll(() => {
+  if (savedEdition.next === undefined) delete process.env.NEXT_PUBLIC_EDITION;
+  else process.env.NEXT_PUBLIC_EDITION = savedEdition.next;
+  if (savedEdition.plain !== undefined) process.env.EDITION = savedEdition.plain;
+});
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
@@ -28,7 +48,7 @@ describe('RightSidebar i18n wiring', () => {
     });
   });
 
-  it('T048/T049: CE fallback title and enterprise-only copy are translated', () => {
+  it('T048/T049: CE fallback title and enterprise-only copy are translated', async () => {
     render(
       <RightSidebar
         isOpen={true}
@@ -46,7 +66,8 @@ describe('RightSidebar i18n wiring', () => {
       />
     );
 
-    expect(screen.getByText('Discussion')).toBeInTheDocument();
+    // findByText: the sidebar body loads asynchronously (spinner first).
+    expect(await screen.findByText('Discussion')).toBeInTheDocument();
     expect(screen.getByText('Le chat est reserve a l edition Enterprise.')).toBeInTheDocument();
   });
 });

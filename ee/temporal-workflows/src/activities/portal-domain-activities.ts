@@ -10,6 +10,7 @@ import { dump as dumpYaml } from "js-yaml";
 import os from "os";
 
 import { getAdminConnection, retryOnAdminReadOnly } from "@alga-psa/db/admin.js";
+import { tenantDb } from "@alga-psa/db";
 
 import type {
   PortalDomainActivityRecord,
@@ -259,8 +260,9 @@ export async function deletePortalDomainRecord(
   await retryOnAdminReadOnly(
     async () => {
       const knex = await getConnection();
-      await knex(TABLE_NAME)
-        .where({ id: args.portalDomainId, tenant: args.tenantId })
+      await tenantDb(knex, args.tenantId)
+        .table(TABLE_NAME)
+        .where({ id: args.portalDomainId })
         .delete();
     },
     { logLabel: 'deletePortalDomainRecord' }

@@ -62,10 +62,13 @@
       "failed": "11111",
       "pending": "11111",
       "processing": "11111",
+      "queued": "11111",
+      "running": "11111",
       "pgboss": "11111",
       "temporal": "11111"
     },
-    "successRate": "11111 {{count}} 11111"
+    "successRate": "11111 {{count}} 11111",
+    "successRateNone": "11111"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,36 @@
   "actions": {
     "print": "11111",
     "printOptions": "11111"
+  },
+  "clearHistory": {
+    "button": "11111",
+    "dialog": {
+      "title": "11111",
+      "warning": "11111",
+      "daysLabel": "11111",
+      "daysError": "11111",
+      "cancel": "11111",
+      "clearing": "11111",
+      "confirm": "11111"
+    },
+    "scope": {
+      "finished": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "all": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "age": {
+      "toggle": "11111"
+    },
+    "toast": {
+      "none": "11111",
+      "error": "11111",
+      "success_one": "11111 {{count}} 11111",
+      "success_other": "11111 {{count}} 11111"
+    }
   }
 }

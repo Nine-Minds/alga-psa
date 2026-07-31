@@ -1,5 +1,9 @@
 {
+  "clientNameCell": {
+    "noClient": "No Client"
+  },
   "reactions": {
+    "add": "React",
     "ariaSummary_one": "{{emoji}} {{count}} reaction",
     "ariaSummary_other": "{{emoji}} {{count}} reactions",
     "ariaYouReacted": ", you reacted"
@@ -10,11 +14,16 @@
     "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
     "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
   },
+  "staleAction": {
+    "message": "This page is out of date. Refresh to restore live updates and actions."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "Enterprise trial expires in {{count}} day. Enter a license key to keep Enterprise features.",
-    "trialExpiresIn_other": "Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.",
-    "trialDaysRemaining_one": "Enterprise trial active — {{count}} day remaining.",
-    "trialDaysRemaining_other": "Enterprise trial active — {{count}} days remaining.",
+    "trialExpiresIn_one": "Pro trial expires in {{count}} day. Enter a license key to keep Pro features.",
+    "trialExpiresIn_other": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features.",
+    "trialDaysRemaining_one": "Pro trial active — {{count}} day remaining.",
+    "trialDaysRemaining_other": "Pro trial active — {{count}} days remaining.",
+    "trialAvailable": "Running Essentials features. Start a free 15-day Pro trial to unlock all features.",
+    "trialExpired": "Pro trial has expired. The install is now running Essentials features.",
     "licenseExpiresIn_one": "License expires in {{count}} day. Renew to avoid service interruption.",
     "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption."
   },
@@ -76,7 +85,8 @@
     "fromDate": "From date",
     "toDate": "To date",
     "noResults": "No results found",
-    "searchPlaceholder": "Search..."
+    "searchPlaceholder": "Search...",
+    "showingOfTotal": "Showing {{shown}} of {{total}} — type to narrow"
   },
   "pickers": {
     "addNewClient": "Add new client",
@@ -384,6 +394,8 @@
     "first": "First",
     "last": "Last",
     "itemsLabel": "items",
+    "itemsLabel_one": "item",
+    "itemsLabel_other": "items",
     "itemsPerPageOption": "{{count}} items/page",
     "itemsPerPagePlaceholder": "Items per page",
     "reflectionLabel": "Pagination",
@@ -401,15 +413,15 @@
     "remove": "Remove",
     "detach": "Detach",
     "preview": "Preview",
-    "linkDocuments": "Link Documents",
+    "linkDocuments": "Link existing",
     "editDocument": "Edit Document",
     "viewDocument": "View Document",
     "downloadToPlay": "Download to Play",
     "delete": "Delete",
     "deletePermanently": "Delete Permanently",
     "previewUnavailable": "Preview unavailable",
-    "newDocument": "New Document",
-    "uploadFile": "Upload File",
+    "newDocument": "Add document",
+    "uploadFile": "Upload file",
     "deleteTitle": "Permanently Delete Document",
     "deleteMessage": "Are you sure you want to permanently delete \"{{name}}\" from the system?\\n\\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.",
     "deleteVideoTitle": "Permanently Delete Video",
@@ -1231,11 +1243,14 @@
     }
   },
   "dataTable": {
-    "columnsHidden_one": "{{count}} column hidden due to limited space.",
-    "columnsHidden_other": "{{count}} columns hidden due to limited space.",
+    "columnsHidden_one": "{{count}} column hidden.",
+    "columnsHidden_other": "{{count}} columns hidden.",
     "showAll": "Show all",
     "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
     "showLess": "Show less",
     "columnsHidden": "{{count}} columns hidden due to limited space."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Loading editor…"
   }
 }

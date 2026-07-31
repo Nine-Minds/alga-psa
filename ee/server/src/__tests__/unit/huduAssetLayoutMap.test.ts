@@ -2,7 +2,7 @@
  * T205/T206/T207/T209 — layout-type-config group: the asset_layout_type_map
  * contract (parse/normalize), the layout-name heuristic, the resolver, and the
  * get/set server actions. Action mocks mirror huduMappingActions.test.ts
- * (auth/flag/tiers/knex/repository/client mocked; the lib module stays REAL).
+ * (auth/tiers/knex/repository/client mocked; the lib module stays REAL).
  * T318/T319 — hudu-tie-in group: slug-shaped storage + registry-validated
  * resolve (F315) and createAssetTypeFromHuduLayout (F316) — the registry
  * module is mocked (knex-level); layoutFieldSchema stays REAL so the
@@ -18,7 +18,6 @@ const TENANT = 'tenant-hudu-1';
 const internalUser = { user_id: 'user-1', tenant: TENANT, user_type: 'internal' };
 
 const hasPermissionMock = vi.fn();
-const isEnabledMock = vi.fn();
 const assertTierAccessMock = vi.fn();
 
 const createTenantKnexMock = vi.fn();
@@ -43,10 +42,6 @@ vi.mock('@alga-psa/auth', () => ({
     (...args: unknown[]) =>
       handler(internalUser, { tenant: TENANT }, ...args),
   hasPermission: hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
@@ -108,7 +103,6 @@ beforeEach(() => {
   vi.clearAllMocks();
 
   hasPermissionMock.mockResolvedValue(true);
-  isEnabledMock.mockResolvedValue(true);
   assertTierAccessMock.mockResolvedValue(undefined);
 
   createTenantKnexMock.mockResolvedValue({ knex: knexCallableMock, tenant: TENANT });
@@ -454,19 +448,6 @@ describe('T206: setHuduAssetLayoutMap guard', () => {
     );
     expect(hasPermissionMock).toHaveBeenCalledWith(internalUser, 'system_settings', 'update');
     expect(upsertHuduIntegrationMock).not.toHaveBeenCalled();
-  });
-
-  it('rejects when the hudu-integration flag is off', async () => {
-    isEnabledMock.mockResolvedValue(false);
-    const { setHuduAssetLayoutMap, getHuduAssetLayoutMap } = await importActions();
-
-    await expect(setHuduAssetLayoutMap({ '7': 'workstation' })).rejects.toThrow(/disabled for this tenant/);
-    await expect(getHuduAssetLayoutMap()).rejects.toThrow(/disabled for this tenant/);
-    expect(isEnabledMock).toHaveBeenCalledWith('hudu-integration', {
-      userId: 'user-1',
-      tenantId: TENANT,
-    });
-    expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 });
 

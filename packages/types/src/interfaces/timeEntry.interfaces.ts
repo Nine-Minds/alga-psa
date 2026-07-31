@@ -138,6 +138,12 @@ export interface ITimePeriodWithStatusView extends Omit<ITimePeriodWithStatus, '
   hoursEntered: number;
   daysLogged: number;
   lastEntryDate?: string;
+  /** Id of the backing time_sheets row, or null when none exists yet (created lazily on view). */
+  timeSheetId?: string | null;
+  /** Total number of time_entries on the backing timesheet. Used to gate safe removal. */
+  entryCount?: number;
+  /** Number of timesheets on this period across all users. Lets a row tell "only my draft" (1) from "shared" (>1) or "unused" (0). */
+  periodTimesheetCount?: number;
 }
 
 export interface ITimeSheetView extends Omit<ITimeSheet, 'time_period'> {

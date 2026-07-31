@@ -140,6 +140,11 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# Optional JSON override for event.wait correlation derivation paths
+# (WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON). Empty = built-in
+# defaults from shared/workflow/runtime/correlationDefaults.ts.
+correlationPathsJson: ""
+
 # Additional env/volumes if needed
 extraEnv: []
 extraVolumes: []

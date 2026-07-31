@@ -19,6 +19,9 @@ function exhaustiveSearchTypeLabel(type: SearchObjectType): string {
     case 'project_task':
     case 'project_task_comment':
     case 'asset':
+    case 'sales_order':
+    case 'purchase_order':
+    case 'stock_unit':
     case 'invoice':
     case 'invoice_item':
     case 'invoice_annotation':
@@ -46,11 +49,11 @@ function exhaustiveSearchTypeLabel(type: SearchObjectType): string {
 }
 
 describe('SearchObjectType exhaustiveness', () => {
-  it('T011 covers all 28 app-wide search object types with an exhaustive switch', () => {
+  it('T011 covers all 31 app-wide search object types with an exhaustive switch', () => {
     const labels = SEARCH_OBJECT_TYPES.map(exhaustiveSearchTypeLabel);
 
-    expect(SEARCH_OBJECT_TYPES).toHaveLength(28);
-    expect(new Set(SEARCH_OBJECT_TYPES)).toHaveProperty('size', 28);
+    expect(SEARCH_OBJECT_TYPES).toHaveLength(31);
+    expect(new Set(SEARCH_OBJECT_TYPES)).toHaveProperty('size', 31);
     expect(labels).toEqual([...SEARCH_OBJECT_TYPES]);
   });
 

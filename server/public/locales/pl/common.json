@@ -1,5 +1,9 @@
 {
+  "clientNameCell": {
+    "noClient": "Brak klienta"
+  },
   "reactions": {
+    "add": "Zareaguj",
     "ariaSummary_one": "{{emoji}} {{count}} reakcja",
     "ariaSummary_few": "{{emoji}} {{count}} reakcje",
     "ariaSummary_many": "{{emoji}} {{count}} reakcji",
@@ -16,15 +20,20 @@
     "expiringForClient_many": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie",
     "expiringForClient_other": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie"
   },
+  "staleAction": {
+    "message": "Ta strona jest nieaktualna. Odśwież ją, aby przywrócić aktualizacje i działania."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "Okres próbny Enterprise wygasa za {{count}} dzień. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
-    "trialExpiresIn_few": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
-    "trialExpiresIn_many": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
-    "trialExpiresIn_other": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
-    "trialDaysRemaining_one": "Okres próbny Enterprise aktywny — pozostał {{count}} dzień.",
-    "trialDaysRemaining_few": "Okres próbny Enterprise aktywny — pozostały {{count}} dni.",
-    "trialDaysRemaining_many": "Okres próbny Enterprise aktywny — pozostało {{count}} dni.",
-    "trialDaysRemaining_other": "Okres próbny Enterprise aktywny — pozostało {{count}} dni.",
+    "trialExpiresIn_one": "Okres próbny Pro wygasa za {{count}} dzień. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
+    "trialExpiresIn_few": "Okres próbny Pro wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
+    "trialExpiresIn_many": "Okres próbny Pro wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
+    "trialExpiresIn_other": "Okres próbny Pro wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
+    "trialDaysRemaining_one": "Okres próbny Pro aktywny — pozostał {{count}} dzień.",
+    "trialDaysRemaining_few": "Okres próbny Pro aktywny — pozostały {{count}} dni.",
+    "trialDaysRemaining_many": "Okres próbny Pro aktywny — pozostało {{count}} dni.",
+    "trialDaysRemaining_other": "Okres próbny Pro aktywny — pozostało {{count}} dni.",
+    "trialAvailable": "Funkcje Essentials są aktywne. Rozpocznij bezpłatny 15-dniowy okres próbny Pro, aby odblokować wszystkie funkcje.",
+    "trialExpired": "Okres próbny Pro wygasł. Instalacja korzysta teraz z funkcji Essentials.",
     "licenseExpiresIn_one": "Licencja wygasa za {{count}} dzień. Odnów, aby uniknąć przerwy w działaniu usługi.",
     "licenseExpiresIn_few": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
     "licenseExpiresIn_many": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
@@ -381,7 +390,11 @@
     "ariaLabel": "Stronicowanie",
     "totalItems": "{{count}} {{itemLabel}} łącznie",
     "totalRecordsInline": "({{count}} łącznie rekordów)",
-    "pageOf": "Strona {{current}} z {{total}}"
+    "pageOf": "Strona {{current}} z {{total}}",
+    "itemsLabel_one": "element",
+    "itemsLabel_few": "elementy",
+    "itemsLabel_many": "elementów",
+    "itemsLabel_other": "elementów"
   },
   "documents": {
     "title": "Dokumenty",
@@ -1097,7 +1110,8 @@
     "fromDate": "Od",
     "toDate": "Do",
     "noResults": "Nie znaleziono wyników",
-    "searchPlaceholder": "Szukaj..."
+    "searchPlaceholder": "Szukaj...",
+    "showingOfTotal": "Wyświetlono {{shown}} z {{total}} — wpisz, aby zawęzić"
   },
   "pickers": {
     "addNewClient": "Dodaj nowego klienta",
@@ -1267,5 +1281,8 @@
     "columnsHidden": "Ukryto {{count}} kolumn z powodu ograniczonej przestrzeni.",
     "columnsHidden_few": "Ukryto {{count}} kolumny z powodu ograniczonego miejsca.",
     "columnsHidden_many": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Ładowanie edytora…"
   }
 }

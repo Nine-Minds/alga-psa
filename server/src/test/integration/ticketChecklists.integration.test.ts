@@ -83,26 +83,51 @@ import {
 } from '@alga-psa/shared/lib/ticketChecklists';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { updateTicketInTransaction } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
+import { tenantDb } from '@alga-psa/db';
 import {
   createCloseRulesFixture,
   insertTicket,
   type CloseRulesFixture,
 } from './helpers/closeRulesFixture';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const HOOK_TIMEOUT = 240_000;
 
 let db: Knex;
 let fixture: CloseRulesFixture;
 
+function scopedDbFor(tenantId: string) {
+  return tenantDb(db, tenantId);
+}
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function expectActionSuccess<T>(result: T | ActionMessageError | ActionPermissionError): T {
+  if (isReturnedActionError(result)) {
+    throw new Error(getErrorMessage(result));
+  }
+  return result;
+}
+
 async function createTemplateWithItems(
   names: Array<{ name: string; required?: boolean }>
 ): Promise<string> {
-  const template = await createChecklistTemplate({ name: `Template ${uuidv4().slice(0, 8)}` });
+  const template = expectActionSuccess(await createChecklistTemplate({ name: `Template ${uuidv4().slice(0, 8)}` }));
   for (const item of names) {
-    await addChecklistTemplateItem(template.template_id, {
-      item_name: item.name,
-      is_required: item.required ?? true,
-    });
+    expectActionSuccess(
+      await addChecklistTemplateItem(template.template_id, {
+        item_name: item.name,
+        is_required: item.required ?? true,
+      })
+    );
   }
   return template.template_id;
 }
@@ -112,7 +137,10 @@ describe('ticket checklists', () => {
     db = await createTestDbConnection();
     dbRef.knex = db;
 
-    const seededUser = await db('users').where({ user_type: 'internal' }).first();
+    const seededUser = await tenantDb(db, '__test_discovery__')
+      .unscoped('users', 'test discovery of seeded internal user for checklist integration')
+      .where({ user_type: 'internal' })
+      .first();
     expect(seededUser).toBeTruthy();
     dbRef.tenant = seededUser.tenant;
     userRef.user = {
@@ -138,44 +166,46 @@ describe('ticket checklists', () => {
   it('T022: checklist item lifecycle with persistent ordering and tenant scoping', async () => {
     const ticketId = await insertTicket(db, fixture);
 
-    const first = await addChecklistItem(ticketId, { item_name: 'First step' });
-    const second = await addChecklistItem(ticketId, { item_name: 'Second step', is_required: false });
+    const first = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'First step' }));
+    const second = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Second step', is_required: false }));
     expect(first.order_number).toBeLessThan(second.order_number);
 
-    const renamed = await updateChecklistItem(first.checklist_item_id, { item_name: 'First step (edited)' });
+    const renamed = expectActionSuccess(await updateChecklistItem(first.checklist_item_id, { item_name: 'First step (edited)' }));
     expect(renamed.item_name).toBe('First step (edited)');
 
-    await reorderChecklistItems(ticketId, [second.checklist_item_id, first.checklist_item_id]);
+    expectActionSuccess(await reorderChecklistItems(ticketId, [second.checklist_item_id, first.checklist_item_id]));
     const reordered = await getTicketChecklistItems(ticketId);
     expect(reordered.map((i) => i.checklist_item_id)).toEqual([
       second.checklist_item_id,
       first.checklist_item_id,
     ]);
 
-    await deleteChecklistItem(second.checklist_item_id);
+    expectActionSuccess(await deleteChecklistItem(second.checklist_item_id));
     expect((await getTicketChecklistItems(ticketId)).length).toBe(1);
 
     // An item id that exists under a different tenant is unreachable: the
     // actions scope every query by the caller's tenant.
-    await expect(updateChecklistItem(uuidv4(), { item_name: 'nope' })).rejects.toThrow(/not found/i);
+    expect(await updateChecklistItem(uuidv4(), { item_name: 'nope' })).toMatchObject({
+      actionError: expect.stringMatching(/not found/i),
+    });
   });
 
   it('T023: completion stamps accountability and audit rows preserve prior signoff', async () => {
     const ticketId = await insertTicket(db, fixture);
-    const item = await addChecklistItem(ticketId, { item_name: 'Verify backups' });
+    const item = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Verify backups' }));
 
-    const completed = await setChecklistItemCompleted(item.checklist_item_id, true);
+    const completed = expectActionSuccess(await setChecklistItemCompleted(item.checklist_item_id, true));
     expect(completed.completed).toBe(true);
     expect(completed.completed_by).toBe(fixture.userId);
     expect(completed.completed_at).not.toBeNull();
 
-    const uncompleted = await setChecklistItemCompleted(item.checklist_item_id, false);
+    const uncompleted = expectActionSuccess(await setChecklistItemCompleted(item.checklist_item_id, false));
     expect(uncompleted.completed).toBe(false);
     expect(uncompleted.completed_by).toBeNull();
     expect(uncompleted.completed_at).toBeNull();
 
-    const audits = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId })
+    const audits = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+      .where({ ticket_id: ticketId })
       .whereIn('event_type', ['TICKET_CHECKLIST_ITEM_COMPLETED', 'TICKET_CHECKLIST_ITEM_UNCOMPLETED'])
       .orderBy('created_at', 'asc');
     expect(audits.map((a: any) => a.event_type)).toEqual([
@@ -216,8 +246,8 @@ describe('ticket checklists', () => {
     expect(items.every((i) => i.source === 'template')).toBe(true);
     expect(items.filter((i) => i.template_id === templateA).length).toBe(2);
 
-    const applyAudit = await db('ticket_audit_logs')
-      .where({ tenant: fixture.tenantId, ticket_id: ticketId, event_type: 'TICKET_CHECKLIST_TEMPLATE_APPLIED' })
+    const applyAudit = await scopedDbFor(fixture.tenantId).table('ticket_audit_logs')
+      .where({ ticket_id: ticketId, event_type: 'TICKET_CHECKLIST_TEMPLATE_APPLIED' })
       .select('audit_id');
     expect(applyAudit.length).toBe(2);
   });
@@ -231,12 +261,12 @@ describe('ticket checklists', () => {
     );
     const before = await getTicketChecklistItems(ticketId);
 
-    const templateItems = await db('checklist_template_items')
-      .where({ tenant: fixture.tenantId, template_id: templateId })
+    const templateItems = await scopedDbFor(fixture.tenantId).table('checklist_template_items')
+      .where({ template_id: templateId })
       .orderBy('order_number');
-    await updateChecklistTemplateItem(templateItems[0].template_item_id, { item_name: 'Renamed in template' });
-    await deleteChecklistTemplateItem(templateItems[1].template_item_id);
-    await addChecklistTemplateItem(templateId, { item_name: 'Added later' });
+    expectActionSuccess(await updateChecklistTemplateItem(templateItems[0].template_item_id, { item_name: 'Renamed in template' }));
+    expectActionSuccess(await deleteChecklistTemplateItem(templateItems[1].template_item_id));
+    expectActionSuccess(await addChecklistTemplateItem(templateId, { item_name: 'Added later' }));
 
     const after = await getTicketChecklistItems(ticketId);
     expect(after).toEqual(before);
@@ -247,15 +277,15 @@ describe('ticket checklists', () => {
     const localFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
     // Rule scoped to the local board + a null (any) category matcher
     const matchingTemplate = await createTemplateWithItems([{ name: 'Board-scoped step' }]);
-    await createChecklistTemplateApplyRule(matchingTemplate, { board_id: localFixture.boardId });
+    expectActionSuccess(await createChecklistTemplateApplyRule(matchingTemplate, { board_id: localFixture.boardId }));
 
     // Rule for a different board must not fire
     const otherTemplate = await createTemplateWithItems([{ name: 'Other board step' }]);
-    await createChecklistTemplateApplyRule(otherTemplate, { board_id: uuidv4() });
+    expectActionSuccess(await createChecklistTemplateApplyRule(otherTemplate, { board_id: uuidv4() }));
 
     // Disabled rule must not fire
     const disabledTemplate = await createTemplateWithItems([{ name: 'Disabled step' }]);
-    await createChecklistTemplateApplyRule(disabledTemplate, { board_id: localFixture.boardId, is_enabled: false });
+    expectActionSuccess(await createChecklistTemplateApplyRule(disabledTemplate, { board_id: localFixture.boardId, is_enabled: false }));
 
     const result = await db.transaction((trx) =>
       TicketModel.createTicket(
@@ -278,8 +308,8 @@ describe('ticket checklists', () => {
 
     // Other tests may register additional board-wide rules (suite order is
     // shuffled), so assert membership rather than the exact list.
-    const items = await db('ticket_checklist_items')
-      .where({ tenant: fixture.tenantId, ticket_id: result.ticket_id })
+    const items = await scopedDbFor(fixture.tenantId).table('ticket_checklist_items')
+      .where({ ticket_id: result.ticket_id })
       .select('item_name', 'template_id');
     const names = items.map((i: any) => i.item_name);
     expect(names).toContain('Board-scoped step');
@@ -292,7 +322,7 @@ describe('ticket checklists', () => {
     // Dedicated board so apply rules registered by other tests can't match.
     const localFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
     const categoryId = uuidv4();
-    await db('categories').insert({
+    await scopedDbFor(localFixture.tenantId).table('categories').insert({
       tenant: localFixture.tenantId,
       category_id: categoryId,
       category_name: `Close Rules Category ${categoryId.slice(0, 6)}`,
@@ -301,7 +331,7 @@ describe('ticket checklists', () => {
     });
 
     const templateId = await createTemplateWithItems([{ name: 'Category step' }]);
-    await createChecklistTemplateApplyRule(templateId, { board_id: localFixture.boardId, category_id: categoryId });
+    expectActionSuccess(await createChecklistTemplateApplyRule(templateId, { board_id: localFixture.boardId, category_id: categoryId }));
 
     const ticketId = await insertTicket(db, localFixture);
     expect((await getTicketChecklistItems(ticketId)).length).toBe(0);
@@ -342,24 +372,34 @@ describe('ticket checklists', () => {
 
   it('T029: mutations are rejected without the ticket update permission', async () => {
     const ticketId = await insertTicket(db, fixture);
-    const item = await addChecklistItem(ticketId, { item_name: 'Permission probe' });
+    const item = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Permission probe' }));
 
     hasPermissionMock.mockResolvedValue(false);
 
-    await expect(addChecklistItem(ticketId, { item_name: 'x' })).rejects.toThrow(/Permission denied/);
-    await expect(setChecklistItemCompleted(item.checklist_item_id, true)).rejects.toThrow(/Permission denied/);
-    await expect(createChecklistTemplate({ name: 'x' })).rejects.toThrow(/Permission denied/);
-    await expect(createChecklistTemplateApplyRule(uuidv4(), {})).rejects.toThrow(/Permission denied/);
+    expect(await addChecklistItem(ticketId, { item_name: 'x' })).toMatchObject({
+      permissionError: expect.stringMatching(/Permission denied/),
+    });
+    expect(await setChecklistItemCompleted(item.checklist_item_id, true)).toMatchObject({
+      permissionError: expect.stringMatching(/Permission denied/),
+    });
+    expect(await createChecklistTemplate({ name: 'x' })).toMatchObject({
+      permissionError: expect.stringMatching(/Permission denied/),
+    });
+    expect(await createChecklistTemplateApplyRule(uuidv4(), {})).toMatchObject({
+      permissionError: expect.stringMatching(/Permission denied/),
+    });
   });
 
   it('auto-apply evaluates all matcher dimensions together', async () => {
     // Dedicated board so apply rules registered by other tests can't match.
     const localFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
     const templateId = await createTemplateWithItems([{ name: 'Priority+board step' }]);
-    await createChecklistTemplateApplyRule(templateId, {
-      board_id: localFixture.boardId,
-      priority_id: localFixture.priorityId,
-    });
+    expectActionSuccess(
+      await createChecklistTemplateApplyRule(templateId, {
+        board_id: localFixture.boardId,
+        priority_id: localFixture.priorityId,
+      })
+    );
 
     const matchingTicket = await insertTicket(db, localFixture);
     const applied = await db.transaction((trx) =>

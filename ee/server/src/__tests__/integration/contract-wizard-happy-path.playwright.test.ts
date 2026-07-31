@@ -9,6 +9,7 @@
  */
 
 import { expect, Page, test } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { knex as createKnex } from 'knex';
 import path from 'node:path';
@@ -38,6 +39,10 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 const EE_SERVER_PATH_SUFFIX = `${path.sep}ee${path.sep}server`;
 const WORKSPACE_ROOT = process.cwd().endsWith(EE_SERVER_PATH_SUFFIX)
@@ -152,7 +157,7 @@ async function seedFixedServiceForTenant(
   const serviceId = uuidv4();
   const orderNumber = Math.floor(Math.random() * 1000000) + 1;
 
-  await db('service_types').insert({
+  await tenantTable(db, tenantId, 'service_types').insert({
     id: serviceTypeId,
     tenant: tenantId,
     name: `Automation Type ${serviceName}`,
@@ -165,7 +170,7 @@ async function seedFixedServiceForTenant(
     updated_at: now,
   });
 
-  await db('service_catalog').insert({
+  await tenantTable(db, tenantId, 'service_catalog').insert({
     service_id: serviceId,
     tenant: tenantId,
     service_name: serviceName,
@@ -192,7 +197,7 @@ async function seedHourlyServiceForTenant(
   const serviceId = uuidv4();
   const orderNumber = Math.floor(Math.random() * 1000000) + 1;
 
-  await db('service_types').insert({
+  await tenantTable(db, tenantId, 'service_types').insert({
     id: serviceTypeId,
     tenant: tenantId,
     name: `Hourly Type ${serviceName}`,
@@ -205,7 +210,7 @@ async function seedHourlyServiceForTenant(
     updated_at: now,
   });
 
-  await db('service_catalog').insert({
+  await tenantTable(db, tenantId, 'service_catalog').insert({
     service_id: serviceId,
     tenant: tenantId,
     service_name: serviceName,
@@ -232,7 +237,7 @@ async function seedUsageServiceForTenant(
   const serviceId = uuidv4();
   const orderNumber = Math.floor(Math.random() * 1000000) + 1;
 
-  await db('service_types').insert({
+  await tenantTable(db, tenantId, 'service_types').insert({
     id: serviceTypeId,
     tenant: tenantId,
     name: `Usage Type ${serviceName}`,
@@ -245,7 +250,7 @@ async function seedUsageServiceForTenant(
     updated_at: now,
   });
 
-  await db('service_catalog').insert({
+  await tenantTable(db, tenantId, 'service_catalog').insert({
     service_id: serviceId,
     tenant: tenantId,
     service_name: serviceName,
@@ -262,25 +267,25 @@ async function seedUsageServiceForTenant(
 }
 
 async function cleanupContractArtifacts(db: Knex, tenantId: string): Promise<void> {
-  await db('bucket_usage').where({ tenant: tenantId }).del().catch(() => {});
-  await db('contract_line_service_bucket_config').where({ tenant: tenantId }).del().catch(() => {});
-  await db('contract_line_service_configuration').where({ tenant: tenantId }).del().catch(() => {});
-  await db('contract_line_services').where({ tenant: tenantId }).del().catch(() => {});
-  await db('client_contract_lines').where({ tenant: tenantId }).del().catch(() => {});
-  await db('client_contracts').where({ tenant: tenantId }).del().catch(() => {});
-  await db('contracts').where({ tenant: tenantId }).del().catch(() => {});
-  await db('contract_lines').where({ tenant: tenantId }).del().catch(() => {});
-  await db('user_type_rates').where({ tenant: tenantId }).del().catch(() => {});
-  await db('plan_service_hourly_configs').where({ tenant: tenantId }).del().catch(() => {});
-  await db('plan_service_fixed_config').where({ tenant: tenantId }).del().catch(() => {});
-  await db('plan_service_configuration').where({ tenant: tenantId }).del().catch(() => {});
-  await db('plan_services').where({ tenant: tenantId }).del().catch(() => {});
-  await db('billing_plan_fixed_config').where({ tenant: tenantId }).del().catch(() => {});
-  await db('bundle_billing_plans').where({ tenant: tenantId }).del().catch(() => {});
-  await db('billing_plans').where({ tenant: tenantId }).del().catch(() => {});
-  await db('company_billing_plans').where({ tenant: tenantId }).del().catch(() => {});
-  await db('client_plan_bundles').where({ tenant: tenantId }).del().catch(() => {});
-  await db('plan_bundles').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'bucket_usage').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'contract_line_service_bucket_config').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'contract_line_service_configuration').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'contract_line_services').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'client_contract_lines').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'client_contracts').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'contracts').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'contract_lines').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'user_type_rates').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'plan_service_hourly_configs').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'plan_service_fixed_config').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'plan_service_configuration').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'plan_services').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'billing_plan_fixed_config').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'bundle_billing_plans').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'billing_plans').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'company_billing_plans').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'client_plan_bundles').where({ tenant: tenantId }).del().catch(() => {});
+  await tenantTable(db, tenantId, 'plan_bundles').where({ tenant: tenantId }).del().catch(() => {});
 }
 
 async function getBucketOverlayForService(
@@ -289,11 +294,9 @@ async function getBucketOverlayForService(
   contractLineIds: string[],
   serviceId: string
 ) {
-  return db('contract_line_service_configuration as clsc')
-    .join('contract_line_service_bucket_config as clsb', function() {
-      this.on('clsc.config_id', '=', 'clsb.config_id')
-        .andOn('clsc.tenant', '=', 'clsb.tenant');
-    })
+  const scopedDb = tenantDb(db, tenantId);
+  return scopedDb.table('contract_line_service_configuration as clsc')
+    .modify((query) => scopedDb.tenantJoin(query, 'contract_line_service_bucket_config as clsb', 'clsc.config_id', 'clsb.config_id'))
     .where('clsc.tenant', tenantId)
     .whereIn('clsc.contract_line_id', contractLineIds)
     .andWhere('clsc.service_id', serviceId)
@@ -314,7 +317,7 @@ async function getContractLineContext(
   tenantId: string,
   contractName: string
 ) {
-  const contract = await db('contracts')
+  const contract = await tenantTable(db, tenantId, 'contracts')
     .where({ tenant: tenantId, contract_name: contractName })
     .first();
 
@@ -322,7 +325,7 @@ async function getContractLineContext(
     return { contract: null, contractLineIds: [], contractLines: [] };
   }
 
-  const contractLines = await db('contract_lines')
+  const contractLines = await tenantTable(db, tenantId, 'contract_lines')
     .where({ tenant: tenantId, contract_id: contract.contract_id });
 
   const contractLineIds = contractLines.map((line: any) => line.contract_line_id);
@@ -676,8 +679,8 @@ test.describe('Contract Wizard Happy Path', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -704,7 +707,7 @@ test.describe('Contract Wizard Happy Path', () => {
 
       await completeContractWizardFlow(page, tenantData, serviceName, contractName);
 
-      const createdBundle = await db('plan_bundles')
+      const createdBundle = await tenantTable(db, tenantId, 'plan_bundles')
         .where({ tenant: tenantId, bundle_name: contractName })
         .first();
 
@@ -716,8 +719,8 @@ test.describe('Contract Wizard Happy Path', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -745,31 +748,31 @@ test.describe('Contract Wizard Happy Path', () => {
         baseRate: 500,
       });
 
-      const bundle = await db('plan_bundles')
+      const bundle = await tenantTable(db, tenantId, 'plan_bundles')
         .where({ tenant: tenantId, bundle_name: contractName })
         .first();
       expect(bundle).toBeDefined();
 
-      const bundlePlan = await db('bundle_billing_plans')
+      const bundlePlan = await tenantTable(db, tenantId, 'bundle_billing_plans')
         .where({ tenant: tenantId, bundle_id: bundle!.bundle_id })
         .first();
       expect(bundlePlan).toBeDefined();
 
-      const plan = await db('billing_plans')
+      const plan = await tenantTable(db, tenantId, 'billing_plans')
         .where({ tenant: tenantId, plan_id: bundlePlan!.plan_id })
         .first();
       expect(plan).toBeDefined();
       expect(plan?.plan_type).toBe('Fixed');
       expect(plan?.billing_frequency).toBe('monthly');
 
-      const planFixedConfig = await db('billing_plan_fixed_config')
+      const planFixedConfig = await tenantTable(db, tenantId, 'billing_plan_fixed_config')
         .where({ tenant: tenantId, plan_id: bundlePlan!.plan_id })
         .first();
       expect(planFixedConfig).toBeDefined();
       expect(Number(planFixedConfig?.base_rate)).toBeCloseTo(500, 2);
       expect(planFixedConfig?.enable_proration).toBe(true);
 
-      const planServiceRow = await db('plan_services')
+      const planServiceRow = await tenantTable(db, tenantId, 'plan_services')
         .where({
           tenant: tenantId,
           plan_id: bundlePlan!.plan_id,
@@ -779,7 +782,7 @@ test.describe('Contract Wizard Happy Path', () => {
       expect(planServiceRow).toBeDefined();
       expect(planServiceRow?.quantity).toBe(1);
 
-      const planServiceConfig = await db('plan_service_configuration')
+      const planServiceConfig = await tenantTable(db, tenantId, 'plan_service_configuration')
         .where({
           tenant: tenantId,
           plan_id: bundlePlan!.plan_id,
@@ -789,7 +792,7 @@ test.describe('Contract Wizard Happy Path', () => {
       expect(planServiceConfig).toBeDefined();
       expect(planServiceConfig?.configuration_type).toBe('Fixed');
 
-      const planServiceFixedConfig = await db('plan_service_fixed_config')
+      const planServiceFixedConfig = await tenantTable(db, tenantId, 'plan_service_fixed_config')
         .where({
           tenant: tenantId,
           config_id: planServiceConfig!.config_id,
@@ -801,8 +804,8 @@ test.describe('Contract Wizard Happy Path', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -849,18 +852,18 @@ test.describe('Contract Wizard Happy Path', () => {
         },
       });
 
-      const bundle = await db('plan_bundles')
+      const bundle = await tenantTable(db, tenantId, 'plan_bundles')
         .where({ tenant: tenantId, bundle_name: contractName })
         .first();
       expect(bundle).toBeDefined();
 
-      const bundlePlans = await db('bundle_billing_plans')
+      const bundlePlans = await tenantTable(db, tenantId, 'bundle_billing_plans')
         .where({ tenant: tenantId, bundle_id: bundle!.bundle_id })
         .orderBy('display_order', 'asc');
       expect(bundlePlans.length).toBeGreaterThanOrEqual(2);
 
       const planIds = bundlePlans.map((bp: any) => bp.plan_id);
-      const hourlyPlan = await db('billing_plans')
+      const hourlyPlan = await tenantTable(db, tenantId, 'billing_plans')
         .whereIn('plan_id', planIds)
         .andWhere({ tenant: tenantId, plan_type: 'Hourly' })
         .first();
@@ -868,19 +871,19 @@ test.describe('Contract Wizard Happy Path', () => {
 
       const hourlyPlanId = hourlyPlan!.plan_id;
 
-      const planServiceRow = await db('plan_services')
+      const planServiceRow = await tenantTable(db, tenantId, 'plan_services')
         .where({ tenant: tenantId, plan_id: hourlyPlanId, service_id: hourlyServiceId })
         .first();
       expect(planServiceRow).toBeDefined();
       expect(planServiceRow?.quantity).toBe(1);
 
-      const hourlyConfigRow = await db('plan_service_configuration')
+      const hourlyConfigRow = await tenantTable(db, tenantId, 'plan_service_configuration')
         .where({ tenant: tenantId, plan_id: hourlyPlanId, service_id: hourlyServiceId })
         .andWhere({ configuration_type: 'Hourly' })
         .first();
       expect(hourlyConfigRow).toBeDefined();
 
-      const hourlyConfigDetails = await db('plan_service_hourly_configs')
+      const hourlyConfigDetails = await tenantTable(db, tenantId, 'plan_service_hourly_configs')
         .where({ tenant: tenantId, config_id: hourlyConfigRow!.config_id })
         .first();
       expect(hourlyConfigDetails).toBeDefined();
@@ -891,8 +894,8 @@ test.describe('Contract Wizard Happy Path', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -930,12 +933,12 @@ test.describe('Contract Wizard Happy Path', () => {
         },
       });
 
-      const bundle = await db('plan_bundles')
+      const bundle = await tenantTable(db, tenantId, 'plan_bundles')
         .where({ tenant: tenantId, bundle_name: contractName })
         .first();
       expect(bundle).toBeDefined();
 
-      const bundleLink = await db('client_plan_bundles')
+      const bundleLink = await tenantTable(db, tenantId, 'client_plan_bundles')
         .where({ tenant: tenantId, client_id: tenantData.client.clientId, bundle_id: bundle?.bundle_id })
         .first();
 
@@ -947,8 +950,8 @@ test.describe('Contract Wizard Happy Path', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -996,12 +999,12 @@ test.describe('Contract Wizard Happy Path', () => {
       const fixedLine = contractLines.find((line: any) => line.contract_line_type === 'Fixed');
       expect(fixedLine).toBeDefined();
 
-      const fixedConfig = await db('contract_line_fixed_config')
+      const fixedConfig = await tenantTable(db, tenantId, 'contract_line_fixed_config')
         .where({ tenant: tenantId, contract_line_id: fixedLine!.contract_line_id })
         .first();
       expect(Number(fixedConfig?.base_rate)).toBeCloseTo(500, 2);
 
-      const service = await db('service_catalog')
+      const service = await tenantTable(db, tenantId, 'service_catalog')
         .where({ tenant: tenantId, service_name: fixedServiceName })
         .first();
       expect(service).toBeDefined();
@@ -1016,7 +1019,7 @@ test.describe('Contract Wizard Happy Path', () => {
       expect(Number(overlay?.total_minutes)).toBe(40 * 60);
       expect(Number(overlay?.overage_rate)).toBe(15000);
 
-      const contractLineService = await db('contract_line_services')
+      const contractLineService = await tenantTable(db, tenantId, 'contract_line_services')
         .where({
           tenant: tenantId,
           contract_line_id: overlay!.contract_line_id,
@@ -1028,8 +1031,8 @@ test.describe('Contract Wizard Happy Path', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1073,7 +1076,7 @@ test.describe('Contract Wizard Happy Path', () => {
       const fixedLine = contractLines.find((line: any) => line.contract_line_type === 'Fixed');
       expect(fixedLine).toBeDefined();
 
-      const service = await db('service_catalog')
+      const service = await tenantTable(db, tenantId, 'service_catalog')
         .where({ tenant: tenantId, service_name: fixedServiceName })
         .first();
       expect(service).toBeDefined();
@@ -1089,7 +1092,7 @@ test.describe('Contract Wizard Happy Path', () => {
       expect(Number(overlay!.total_minutes)).toBe(40 * 60);
       expect(Number(overlay!.overage_rate)).toBe(15000);
 
-      const contractLineService = await db('contract_line_services')
+      const contractLineService = await tenantTable(db, tenantId, 'contract_line_services')
         .where({
           tenant: tenantId,
           contract_line_id: overlay!.contract_line_id,
@@ -1101,8 +1104,8 @@ test.describe('Contract Wizard Happy Path', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1146,7 +1149,7 @@ test.describe('Contract Wizard Happy Path', () => {
       expect(contractLineIds.length).toBeGreaterThan(0);
       expect(contractLines.some((line: any) => line.contract_line_type === 'Fixed')).toBe(true);
 
-      const service = await db('service_catalog')
+      const service = await tenantTable(db, tenantId, 'service_catalog')
         .where({ tenant: tenantId, service_name: usageServiceName })
         .first();
       expect(service).toBeDefined();
@@ -1163,7 +1166,7 @@ test.describe('Contract Wizard Happy Path', () => {
       expect(Number(overlay!.total_minutes)).toBe(1000);
       expect(Number(overlay!.overage_rate)).toBe(50);
 
-      const contractLineService = await db('contract_line_services')
+      const contractLineService = await tenantTable(db, tenantId, 'contract_line_services')
         .where({
           tenant: tenantId,
           contract_line_id: overlay!.contract_line_id,
@@ -1175,8 +1178,8 @@ test.describe('Contract Wizard Happy Path', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1253,8 +1256,8 @@ test.describe('Contract Wizard Invalid Numeric Inputs', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1330,8 +1333,8 @@ test.describe('Date Picker Timezone Regression', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1400,11 +1403,11 @@ test.describe('Date Picker Timezone Regression', () => {
       });
 
       // Read back dates as text to avoid driver date parsing
-      const bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+      const bundle = await tenantTable(db, tenantId, 'plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
       expect(bundle).toBeDefined();
-      const row = await db
-        .raw('select start_date::text as s, end_date::text as e from client_plan_bundles where tenant = ? and bundle_id = ? limit 1', [tenantId, bundle!.bundle_id])
-        .then((r: any) => r.rows?.[0]);
+      const row = await tenantTable(db, tenantId, 'client_plan_bundles')
+        .where({ tenant: tenantId, bundle_id: bundle!.bundle_id })
+        .first(db.raw('start_date::text as s'), db.raw('end_date::text as e'));
       expect(row).toBeDefined();
       // Compare YMD; en-CA locale gives YYYY-MM-DD reliably
       expect(row.s).toBe(startYMD);
@@ -1413,8 +1416,8 @@ test.describe('Date Picker Timezone Regression', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1499,8 +1502,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1540,8 +1543,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1570,7 +1573,7 @@ test.describe('Contract Wizard Corner Cases', () => {
       await page.locator('[data-automation-id="wizard-save-draft"], #wizard-save-draft').click();
       await expect(page.locator('[data-automation-id="dialog-dialog"]')).toBeHidden({ timeout: 10_000 });
       // No bundles yet
-      const zeroBundles = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName });
+      const zeroBundles = await tenantTable(db, tenantId, 'plan_bundles').where({ tenant: tenantId, bundle_name: contractName });
       expect(zeroBundles.length).toBe(0);
 
       // Reopen wizard and complete a minimal fixed flow
@@ -1594,7 +1597,7 @@ test.describe('Contract Wizard Corner Cases', () => {
       let bundle: any | undefined;
       for (let i = 0; i < 30; i++) {
         // eslint-disable-next-line no-await-in-loop
-        bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+        bundle = await tenantTable(db, tenantId, 'plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
         if (bundle) break;
         // eslint-disable-next-line no-await-in-loop
         await page.waitForTimeout(250);
@@ -1604,8 +1607,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1646,8 +1649,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1700,13 +1703,13 @@ test.describe('Contract Wizard Corner Cases', () => {
         await expect(page.locator('[data-automation-id="wizard-contract-button"], #wizard-contract-button')).toBeVisible({ timeout: 15000 });
       });
 
-      const bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+      const bundle = await tenantTable(db, tenantId, 'plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
       expect(bundle).toBeDefined();
-      const bundlePlan = await db('bundle_billing_plans').where({ tenant: tenantId, bundle_id: bundle!.bundle_id }).first();
+      const bundlePlan = await tenantTable(db, tenantId, 'bundle_billing_plans').where({ tenant: tenantId, bundle_id: bundle!.bundle_id }).first();
       const planId = bundlePlan!.plan_id;
-      const planFixed = await db('billing_plan_fixed_config').where({ tenant: tenantId, plan_id: planId });
+      const planFixed = await tenantTable(db, tenantId, 'billing_plan_fixed_config').where({ tenant: tenantId, plan_id: planId });
       expect(planFixed.length).toBe(1); // persisted once at plan level
-      const ps = await db('plan_services').where({ tenant: tenantId, plan_id: planId }).orderBy('service_id');
+      const ps = await tenantTable(db, tenantId, 'plan_services').where({ tenant: tenantId, plan_id: planId }).orderBy('service_id');
       expect(ps.length).toBe(2);
       const serviceIds = [serviceIdA, serviceIdB].sort();
       expect(ps.map((r: any) => r.service_id).sort()).toEqual(serviceIds);
@@ -1714,8 +1717,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1774,27 +1777,27 @@ test.describe('Contract Wizard Corner Cases', () => {
       });
 
       // DB assertions
-      let bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+      let bundle = await tenantTable(db, tenantId, 'plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
       for (let i = 0; i < 30 && !bundle; i++) {
         // eslint-disable-next-line no-await-in-loop
         await page.waitForTimeout(250);
         // eslint-disable-next-line no-await-in-loop
-        bundle = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
+        bundle = await tenantTable(db, tenantId, 'plan_bundles').where({ tenant: tenantId, bundle_name: contractName }).first();
       }
       expect(bundle).toBeDefined();
       let planLinks: any[] = [];
       for (let i = 0; i < 30 && planLinks.length === 0; i++) {
         // eslint-disable-next-line no-await-in-loop
-        planLinks = await db('bundle_billing_plans').where({ tenant: tenantId, bundle_id: bundle!.bundle_id });
+        planLinks = await tenantTable(db, tenantId, 'bundle_billing_plans').where({ tenant: tenantId, bundle_id: bundle!.bundle_id });
         if (planLinks.length === 0) {
           // eslint-disable-next-line no-await-in-loop
           await page.waitForTimeout(250);
         }
       }
-      const hourlyPlan = await db('billing_plans').whereIn('plan_id', planLinks.map((r:any)=>r.plan_id)).andWhere({ tenant: tenantId, plan_type: 'Hourly' }).first();
-      const configs = await db('plan_service_configuration').where({ tenant: tenantId, plan_id: hourlyPlan!.plan_id, configuration_type: 'Hourly' });
+      const hourlyPlan = await tenantTable(db, tenantId, 'billing_plans').whereIn('plan_id', planLinks.map((r:any)=>r.plan_id)).andWhere({ tenant: tenantId, plan_type: 'Hourly' }).first();
+      const configs = await tenantTable(db, tenantId, 'plan_service_configuration').where({ tenant: tenantId, plan_id: hourlyPlan!.plan_id, configuration_type: 'Hourly' });
       expect(configs.length).toBe(2);
-      const details = await db('plan_service_hourly_configs').whereIn('config_id', configs.map((r:any)=>r.config_id)).orderBy('config_id');
+      const details = await tenantTable(db, tenantId, 'plan_service_hourly_configs').whereIn('config_id', configs.map((r:any)=>r.config_id)).orderBy('config_id');
       const rates = details.map((d:any)=> Number(d.hourly_rate)).sort((a:number,b:number)=>a-b);
       expect(rates).toEqual([15000, 20000]);
       expect(details.every((d:any)=> d.minimum_billable_time === 15 && d.round_up_to_nearest === 30)).toBe(true);
@@ -1802,8 +1805,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1824,7 +1827,7 @@ test.describe('Contract Wizard Corner Cases', () => {
       const tenantId = tenantData.tenant.tenantId;
       await prepareWizardTenant(db, tenantId, now);
       await seedFixedServiceForTenant(db, tenantId, serviceName, now);
-      const service = await db('service_catalog')
+      const service = await tenantTable(db, tenantId, 'service_catalog')
         .where({ tenant: tenantId, service_name: serviceName })
         .first();
       expect(service).toBeDefined();
@@ -1878,8 +1881,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1914,8 +1917,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();
@@ -1959,7 +1962,7 @@ test.describe('Contract Wizard Corner Cases', () => {
       let rows: any[] = [];
       for (let i = 0; i < 30; i++) {
         // eslint-disable-next-line no-await-in-loop
-        rows = await db('plan_bundles').where({ tenant: tenantId, bundle_name: contractName });
+        rows = await tenantTable(db, tenantId, 'plan_bundles').where({ tenant: tenantId, bundle_name: contractName });
         if (rows.length >= 1) break;
         // eslint-disable-next-line no-await-in-loop
         await page.waitForTimeout(250);
@@ -1969,8 +1972,8 @@ test.describe('Contract Wizard Corner Cases', () => {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
         await cleanupContractArtifacts(db, tenantId);
-        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
-        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await tenantTable(db, tenantId, 'service_types').where({ tenant: tenantId }).del().catch(() => {});
         await rollbackTenant(db, tenantId).catch(() => {});
       }
       await db.destroy();

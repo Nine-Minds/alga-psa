@@ -3,12 +3,11 @@
 import TagDefinition, { ITagDefinition } from '../models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from '../models/tagMapping';
 import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/types';
-import { withTransaction } from '@alga-psa/db';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -17,11 +16,17 @@ import {
   buildTagDefinitionUpdatedPayload,
   buildTagRemovedPayload,
 } from '@alga-psa/workflow-streams';
+import {
+  actionError,
+  permissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { isTagActionError, type TagActionError } from './tagActionErrors';
 
 /** Map tagged entity types to their permission resource equivalents */
 const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {
   client: 'client',
   knowledge_base_article: 'document',
+  opportunity: 'opportunities',
 };
 
 function getPermissionResource(taggedType: TaggedEntityType): string {
@@ -30,9 +35,90 @@ function getPermissionResource(taggedType: TaggedEntityType): string {
 
 type TagTextSnapshot = string[];
 
+function tagActionErrorFrom(error: unknown): TagActionError | null {
+  if (isTagActionError(error)) {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied') || message === 'user is not logged in' || /unauthorized|not authenticated|must sign in/i.test(message)) {
+      return permissionError(message);
+    }
+    if (
+      message === 'Tag text is required' ||
+      message === 'Tag text too long (max 50 characters)' ||
+      message === 'Tag text contains invalid characters' ||
+      message === 'Tag text cannot be empty'
+    ) {
+      return actionError(message);
+    }
+    if (message.includes('already exists')) {
+      return actionError(message);
+    }
+    if (message.startsWith('Tag with id ') || message.startsWith('Tag mapping with id ')) {
+      return actionError('Tag not found. It may have been deleted. Please refresh and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected tag values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '22001') {
+    return actionError('Tag text is too long.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required tag field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected tag or tagged record no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('tag_mappings')) {
+      return actionError('That tag is already applied to this item.');
+    }
+    return actionError('A tag with those details already exists.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the tag values is not allowed. Please review the tag and try again.');
+  }
+
+  return null;
+}
+
 type CreateTagOptions = {
   suppressEntityUpdateEvent?: boolean;
 };
+
+type TagMappingDefinitionRow = {
+  tag_id: string;
+  board_id?: string | null;
+  tag_text: string;
+  tagged_id: string;
+  tagged_type: TaggedEntityType;
+  background_color?: string | null;
+  text_color?: string | null;
+  tenant: string;
+  created_by?: string | null;
+  definition_tag_id?: string;
+};
+
+type TagMappingDefinitionWithDefinitionIdRow = TagMappingDefinitionRow & {
+  definition_tag_id: string;
+};
+
+const projectTasksQuery = (trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).table('project_tasks as pt');
+
+const tagMappingsWithDefinitionsQuery = (trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).table('tag_mappings as tm');
+
+const joinProjectPhases = (query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+
+const joinTagDefinitions = (query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string) =>
+  tenantDb(trx, tenant).tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
 
 async function getTagTextSnapshot(
   trx: Knex.Transaction,
@@ -53,13 +139,10 @@ async function resolveProjectTaskTagContext(
   tenant: string,
   taskId: string
 ): Promise<{ projectId: string; phaseId: string } | null> {
-  const row = await trx('project_tasks as pt')
-    .join('project_phases as pp', function joinProjectPhases() {
-      this.on('pt.phase_id', '=', 'pp.phase_id')
-        .andOn('pt.tenant', '=', 'pp.tenant');
-    })
-    .where({ 'pt.tenant': tenant, 'pt.task_id': taskId })
-    .first<{ project_id: string; phase_id: string }>('pp.project_id', 'pt.phase_id');
+  const row = await projectTasksQuery(trx, tenant)
+    .modify((query) => joinProjectPhases(query, trx, tenant))
+    .where({ 'pt.task_id': taskId })
+    .first('pp.project_id', 'pt.phase_id') as { project_id: string; phase_id: string } | undefined;
 
   if (!row) {
     return null;
@@ -85,18 +168,14 @@ async function resolveProjectTaskTagContexts(
     return contexts;
   }
 
-  const rows = await trx('project_tasks as pt')
-    .join('project_phases as pp', function joinProjectPhases() {
-      this.on('pt.phase_id', '=', 'pp.phase_id')
-        .andOn('pt.tenant', '=', 'pp.tenant');
-    })
-    .where('pt.tenant', tenant)
+  const rows = await projectTasksQuery(trx, tenant)
+    .modify((query) => joinProjectPhases(query, trx, tenant))
     .whereIn('pt.task_id', taskIds)
-    .select<Array<{ task_id: string; project_id: string; phase_id: string }>>(
+    .select(
       'pt.task_id',
       'pp.project_id',
       'pt.phase_id',
-    );
+    ) as Array<{ task_id: string; project_id: string; phase_id: string }>;
 
   for (const row of rows) {
     contexts.set(row.task_id, { projectId: row.project_id, phaseId: row.phase_id });
@@ -166,7 +245,7 @@ async function publishEntityTagUpdateEvent(params: {
   }
 }
 
-export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[]> => {
+export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[] | TagActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -185,22 +264,20 @@ export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenan
     });
   } catch (error) {
     console.error(`Error finding tags for ${entityType} id ${entityId}:`, error);
-    throw new Error(`Failed to find tags for ${entityType} id: ${entityId}`);
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, tagId: string): Promise<ITag | undefined> => {
+export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, tagId: string): Promise<ITag | undefined | TagActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
-      const tag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -212,7 +289,7 @@ export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: Au
           'tm.tenant',
           'tm.created_by'
         )
-        .first();
+        .first() as TagMappingDefinitionRow | undefined;
 
       if (!tag) {
         console.warn(`Tag with id ${tagId} not found`);
@@ -233,7 +310,9 @@ export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: Au
     });
   } catch (error) {
     console.error(`Error finding tag with id ${tagId}:`, error);
-    throw new Error(`Failed to find tag with id: ${tagId}`);
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -242,22 +321,22 @@ export const createTag = withAuth(async (
   { tenant }: AuthContext,
   tag: Omit<ITag, 'tag_id' | 'tenant'>,
   options: CreateTagOptions = {}
-): Promise<ITag> => {
+): Promise<ITag | TagActionError> => {
   // Validate tag text
   if (!tag.tag_text || !tag.tag_text.trim()) {
-    throw new Error('Tag text is required');
+    return actionError('Tag text is required');
   }
 
   const tagText = tag.tag_text.trim();
 
   // Validate length
   if (tagText.length > 50) {
-    throw new Error('Tag text too long (max 50 characters)');
+    return actionError('Tag text too long (max 50 characters)');
   }
 
   // Validate characters - allow letters, numbers, spaces, and common punctuation
   if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\][{};':",./<>?]+$/.test(tagText)) {
-    throw new Error('Tag text contains invalid characters');
+    return actionError('Tag text contains invalid characters');
   }
 
   const userId = currentUser.user_id;
@@ -385,28 +464,22 @@ export const createTag = withAuth(async (
       return createdTag;
     } catch (error) {
       console.error(`Error creating tag:`, error);
-      // Re-throw permission errors as-is
-      if (error instanceof Error && error.message.includes('Permission denied')) {
-        throw error;
-      }
-      throw new Error(`Failed to create tag`);
+      const expected = tagActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
     }
   });
 });
 
-export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, id: string, tag: Partial<ITag>): Promise<void> => {
+export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, id: string, tag: Partial<ITag>): Promise<void | TagActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get existing tag to check entity type (id is mapping_id)
-      const existingTag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const existingTag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', id)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -419,7 +492,7 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           'tm.created_by',
           'tm.tag_id as definition_tag_id'
         )
-        .first();
+        .first() as TagMappingDefinitionWithDefinitionIdRow | undefined;
 
       if (!existingTag) {
         throw new Error(`Tag with id ${id} not found`);
@@ -465,54 +538,52 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
       });
     } catch (error) {
       console.error(`Error updating tag with id ${id}:`, error);
-      if (error instanceof Error && error.message.includes('Permission denied')) {
-        throw error;
-      }
-      throw new Error(`Failed to update tag with id ${id}`);
+      const expected = tagActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
     }
   });
 });
 
-export const getTagMappingUsageCount = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, mappingId: string): Promise<{ tagId: string; tagText: string; usageCount: number }> => {
+export const getTagMappingUsageCount = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, mappingId: string): Promise<{ tagId: string; tagText: string; usageCount: number } | TagActionError> => {
   const { knex: db } = await createTenantKnex();
-  return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const mapping = await trx('tag_mappings as tm')
-      .join('tag_definitions as td', function() {
-        this.on('tm.tenant', '=', 'td.tenant')
-            .andOn('tm.tag_id', '=', 'td.tag_id');
-      })
-      .where('tm.mapping_id', mappingId)
-      .where('tm.tenant', tenant)
-      .select('td.tag_id', 'td.tag_text')
-      .first();
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const mapping = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
+        .where('tm.mapping_id', mappingId)
+        .select('td.tag_id', 'td.tag_text')
+        .first() as { tag_id: string; tag_text: string } | undefined;
 
-    if (!mapping) {
-      throw new Error(`Tag mapping with id ${mappingId} not found`);
-    }
+      if (!mapping) {
+        throw new Error(`Tag mapping with id ${mappingId} not found`);
+      }
 
-    const usageCount = await TagMapping.getUsageCount(trx, tenant, mapping.tag_id);
+      const usageCount = await TagMapping.getUsageCount(trx, tenant, mapping.tag_id);
 
-    return {
-      tagId: mapping.tag_id,
-      tagText: mapping.tag_text,
-      usageCount,
-    };
-  });
+      return {
+        tagId: mapping.tag_id,
+        tagText: mapping.tag_text,
+        usageCount,
+      };
+    });
+  } catch (error) {
+    console.error(`Error getting usage count for tag mapping ${mappingId}:`, error);
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
-export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, id: string, deleteDefinition?: boolean): Promise<void> => {
+export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, id: string, deleteDefinition?: boolean): Promise<void | TagActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Get existing tag to check entity type and creator (id is mapping_id)
-      const existingTag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const existingTag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', id)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -525,7 +596,7 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           'tm.created_by',
           'tm.tag_id as definition_tag_id'
         )
-        .first();
+        .first() as TagMappingDefinitionWithDefinitionIdRow | undefined;
 
       if (!existingTag) {
         throw new Error(`Tag with id ${id} not found`);
@@ -610,15 +681,14 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
       });
     } catch (error) {
       console.error(`Error deleting tag with id ${id}:`, error);
-      if (error instanceof Error && error.message.includes('Permission denied')) {
-        throw error;
-      }
-      throw new Error(`Failed to delete tag with id ${id}`);
+      const expected = tagActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
     }
   });
 });
 
-export const findTagsByEntityIds = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityIds: string[], entityType: TaggedEntityType): Promise<ITag[]> => {
+export const findTagsByEntityIds = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityIds: string[], entityType: TaggedEntityType): Promise<ITag[] | TagActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     if (entityIds.length === 0) {
@@ -639,11 +709,13 @@ export const findTagsByEntityIds = withAuth(async (_user: IUserWithRoles, { tena
     });
   } catch (error) {
     console.error(`Error finding tags for ${entityType} ids: ${entityIds.join(', ')}:`, error);
-    throw new Error(`Failed to find tags for ${entityType} ids: ${entityIds.join(', ')}`);
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<ITag[]> => {
+export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null): Promise<ITag[] | TagActionError> => {
   try {
     if (!user || !ctx) {
       // Return empty array when no tenant context (e.g., during initial client render)
@@ -655,12 +727,8 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Join mappings with definitions to create ITag structure
-      const tags = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
-        .where('tm.tenant', tenant)
+      const tags = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .select(
           'tm.mapping_id as tag_id', // Use mapping_id as tag_id for backward compatibility
           'td.board_id',
@@ -670,17 +738,19 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
           'td.background_color',
           'td.text_color',
           'tm.tenant'
-        );
+        ) as ITag[];
 
       return tags;
     });
   } catch (error) {
     console.error('Error getting all tags:', error);
-    throw new Error('Failed to get all tags');
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null, entityType: TaggedEntityType): Promise<ITag[]> => {
+export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | null, ctx: AuthContext | null, entityType: TaggedEntityType): Promise<ITag[] | TagActionError> => {
   try {
     if (!user || !ctx) {
       console.warn(`No tenant context available for findAllTagsByType(${entityType}) - returning empty array`);
@@ -692,19 +762,19 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get tag definitions that have at least one mapping (filter out orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
-      const result = await trx.raw(`
-        SELECT DISTINCT ON (td.tag_text) td.*
-        FROM tag_definitions td
-        WHERE td.tenant = ?
-          AND td.tagged_type = ?
-          AND EXISTS (
-            SELECT 1 FROM tag_mappings tm
-            WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
-          )
-        ORDER BY td.tag_text ASC, td.created_at ASC
-      `, [tenant, entityType]);
+      const scopedDb = tenantDb(trx, tenant);
+      const tagMappingsQuery = scopedDb.table('tag_mappings as tm')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(tagMappingsQuery, 'tm.tenant', 'td.tenant');
 
-      const definitions = result.rows || [];
+      const definitions = await scopedDb.table('tag_definitions as td')
+        .distinctOn('td.tag_text')
+        .select('td.*')
+        .where('td.tagged_type', entityType)
+        .whereExists(tagMappingsQuery)
+        .orderBy('td.tag_text', 'asc')
+        .orderBy('td.created_at', 'asc');
 
       // Convert to ITag format (use definition ID as tag_id since these are unique)
       return definitions.map((def: any) => ({
@@ -720,7 +790,9 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     });
   } catch (error) {
     console.error(`Error finding all tags for type ${entityType}:`, error);
-    throw new Error(`Failed to find all tags for type: ${entityType}`);
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -750,6 +822,10 @@ export async function createTagsForEntity(
         background_color: tag.background_color,
         text_color: tag.text_color,
       }, { suppressEntityUpdateEvent: true });
+      if (isTagActionError(newTag)) {
+        console.error(`Failed to create tag "${tag.tag_text}" for ${entityType}:`, newTag);
+        continue;
+      }
       createdTags.push(newTag);
     } catch (error) {
       console.error(`Failed to create tag "${tag.tag_text}" for ${entityType}:`, error);
@@ -1038,7 +1114,7 @@ export const bulkApplyTagsToEntities = withAuth(async (
   // unique(tenant, tag_id, tagged_id) and roll back the entire batch. RETURNING
   // yields only the rows we actually inserted, so events fire for real changes
   // only; a skipped row just means the tag is already present.
-  const insertedRows = await trx('tag_mappings')
+  const insertedRows = await tenantDb(trx, tenant).table('tag_mappings')
     .insert(rows)
     .onConflict(['tenant', 'tag_id', 'tagged_id'])
     .ignore()
@@ -1121,28 +1197,24 @@ export const bulkApplyTagsToEntities = withAuth(async (
   return { appliedByEntity };
 });
 
-export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tagId: string, backgroundColor: string | null, textColor: string | null): Promise<{ tag_text: string; background_color: string | null; text_color: string | null; }> => {
+export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tagId: string, backgroundColor: string | null, textColor: string | null): Promise<{ tag_text: string; background_color: string | null; text_color: string | null; } | TagActionError> => {
   const { knex: db } = await createTenantKnex();
 
   // Validate hex color codes if provided
   const hexColorRegex = /^#[0-9A-F]{6}$/i;
   if (backgroundColor && !hexColorRegex.test(backgroundColor)) {
-    throw new Error('Invalid background color format. Must be a valid hex color code (e.g., #FF0000)');
+    return actionError('Invalid background color format. Must be a valid hex color code (e.g., #FF0000)');
   }
   if (textColor && !hexColorRegex.test(textColor)) {
-    throw new Error('Invalid text color format. Must be a valid hex color code (e.g., #FFFFFF)');
+    return actionError('Invalid text color format. Must be a valid hex color code (e.g., #FFFFFF)');
   }
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
-      const tag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -1153,7 +1225,7 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
           'td.text_color',
           'tm.tenant'
         )
-        .first();
+        .first() as TagMappingDefinitionRow | undefined;
 
       if (!tag) {
         throw new Error(`Tag with id ${tagId} not found`);
@@ -1203,19 +1275,18 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
     });
   } catch (error) {
     console.error(`Error updating tag color for tag id ${tagId}:`, error);
-    if (error instanceof Error && error.message.includes('Permission denied')) {
-      throw error;
-    }
-    throw new Error(`Failed to update tag color for tag id ${tagId}`);
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tagId: string, newTagText: string): Promise<{ old_tag_text: string; new_tag_text: string; tagged_type: TaggedEntityType; updated_count: number; }> => {
+export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tagId: string, newTagText: string): Promise<{ old_tag_text: string; new_tag_text: string; tagged_type: TaggedEntityType; updated_count: number; } | TagActionError> => {
   const { knex: db } = await createTenantKnex();
 
   // Validate tag text
   if (!newTagText || !newTagText.trim()) {
-    throw new Error('Tag text cannot be empty');
+    return actionError('Tag text cannot be empty');
   }
 
   const trimmedNewText = newTagText.trim();
@@ -1223,13 +1294,9 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // tagId is actually mapping_id in the new system
-      const tag = await trx('tag_mappings as tm')
-        .join('tag_definitions as td', function() {
-          this.on('tm.tenant', '=', 'td.tenant')
-              .andOn('tm.tag_id', '=', 'td.tag_id');
-        })
+      const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
+        .modify((query) => joinTagDefinitions(query, trx, tenant))
         .where('tm.mapping_id', tagId)
-        .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
           'td.board_id',
@@ -1240,7 +1307,7 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
           'td.text_color',
           'tm.tenant'
         )
-        .first();
+        .first() as TagMappingDefinitionRow | undefined;
 
       if (!tag) {
         throw new Error(`Tag with id ${tagId} not found`);
@@ -1321,10 +1388,9 @@ export const updateTagText = withAuth(async (currentUser: IUserWithRoles, { tena
     });
   } catch (error) {
     console.error(`Error updating tag text for tag id ${tagId}:`, error);
-    if (error instanceof Error && (error.message.includes('already exists') || error.message.includes('Permission denied'))) {
-      throw error;
-    }
-    throw new Error(`Failed to update tag text for tag id ${tagId}`);
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -1385,12 +1451,12 @@ export const checkTagPermissions = withOptionalAuth(async (currentUser: IUserWit
   }
 });
 
-export const deleteAllTagsByText = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tagText: string, taggedType: TaggedEntityType): Promise<{ deleted_count: number }> => {
+export const deleteAllTagsByText = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tagText: string, taggedType: TaggedEntityType): Promise<{ deleted_count: number } | TagActionError> => {
   const { knex: db } = await createTenantKnex();
 
   // Validate tag text
   if (!tagText || !tagText.trim()) {
-    throw new Error('Tag text cannot be empty');
+    return actionError('Tag text cannot be empty');
   }
 
   const trimmedText = tagText.trim();
@@ -1429,9 +1495,8 @@ export const deleteAllTagsByText = withAuth(async (currentUser: IUserWithRoles, 
     });
   } catch (error) {
     console.error(`Error deleting tags with text "${tagText}" and type ${taggedType}:`, error);
-    if (error instanceof Error && error.message.includes('Permission denied')) {
-      throw error;
-    }
-    throw new Error(`Failed to delete tags with text "${tagText}"`);
+    const expected = tagActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

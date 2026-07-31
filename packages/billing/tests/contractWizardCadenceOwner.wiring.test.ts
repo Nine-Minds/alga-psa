@@ -40,12 +40,12 @@ describe('contract wizard cadence_owner wiring', () => {
       'utf8'
     );
 
-    expect(wizardSource).toContain("cadence_owner: 'client'");
-    expect(wizardSource).toContain("billing_timing: 'arrears'");
+    expect(wizardSource).toContain('cadence_owner: "client"');
+    expect(wizardSource).toContain('billing_timing: "arrears"');
     expect(wizardSource).toContain('cadence_owner: snapshot.cadence_owner ?? prev.cadence_owner');
     expect(wizardSource).toContain('billing_timing: snapshot.billing_timing ?? prev.billing_timing');
-    expect(wizardSource).toContain("cadence_owner: wizardData.cadence_owner ?? 'client'");
-    expect(wizardSource).toContain("billing_timing: wizardData.billing_timing ?? 'arrears'");
+    expect(wizardSource).toContain('cadence_owner: wizardData.cadence_owner ?? "client"');
+    expect(wizardSource).toContain('billing_timing: wizardData.billing_timing ?? "arrears"');
     expect(contractBasicsSource).toContain('Invoice on client billing schedule');
     expect(contractBasicsSource).toContain('Invoice on contract anniversary');
     expect(contractBasicsSource).toContain(
@@ -81,7 +81,7 @@ describe('contract wizard cadence_owner wiring', () => {
       'utf8'
     );
 
-    expect(wizardSource).toContain("cadence_owner: wizardData.cadence_owner ?? 'client'");
+    expect(wizardSource).toContain('cadence_owner: wizardData.cadence_owner ?? "client"');
     expect(templateWizardSource).toContain("cadence_owner: wizardData.cadence_owner ?? 'client'");
     expect(actionsSource).toContain('defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER');
     expect(recurringAuthoringPolicySource).toContain('defaultCadenceOwner?: CadenceOwner | null;');

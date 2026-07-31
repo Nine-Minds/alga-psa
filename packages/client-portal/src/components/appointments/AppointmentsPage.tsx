@@ -84,6 +84,11 @@ export default function AppointmentsPage() {
       }
 
       toast.success(t('messages.cancelSuccess'));
+      if (result.teamsMeetingWarning) {
+        toast(t('cancel.teamsMeetingCleanupNotice', {
+          defaultValue: 'The linked Microsoft Teams meeting is being cancelled; attendees will see it removed from their calendars shortly.',
+        }));
+      }
       setAppointmentToCancel(null);
       loadAppointments();
     } catch (error) {

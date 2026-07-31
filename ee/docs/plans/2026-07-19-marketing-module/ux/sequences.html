@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Concept B — Sequences (journey cards)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-background: 248 250 252;
+    --color-card: 255 255 255;
+    --color-border-50: 248 250 252; --color-border-100: 241 245 249; --color-border-200: 226 232 240; --color-border-300: 203 213 225;
+    --color-text-400: 148 163 184; --color-text-500: 100 116 139; --color-text-600: 71 85 105; --color-text-700: 51 65 85; --color-text-800: 30 41 59; --color-text-900: 15 23 42;
+    --color-primary-50: 245 243 255; --color-primary-100: 237 233 254; --color-primary-200: 221 214 254; --color-primary-300: 196 181 253; --color-primary-400: 167 139 250; --color-primary-500: 139 92 246; --color-primary-600: 124 58 237;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: rgb(var(--color-background)); }
+</style>
+</head>
+<body class="min-h-screen flex">
+
+<!-- Sidebar stub -->
+<aside class="w-52 flex-shrink-0 bg-white border-r border-[rgb(var(--color-border-200))] flex flex-col py-4 px-3">
+  <div class="flex items-center gap-2 px-2 mb-6">
+    <div class="h-7 w-7 rounded-md bg-[rgb(var(--color-primary-500))] flex items-center justify-center text-white text-xs font-bold">A</div>
+    <span class="text-sm font-bold text-[rgb(var(--color-text-900))]">Alga PSA</span>
+  </div>
+  <nav class="space-y-0.5 text-sm">
+    <div class="px-2 py-1.5 rounded-md text-[rgb(var(--color-text-500))]">Dashboard</div>
+    <div class="px-2 py-1.5 rounded-md text-[rgb(var(--color-text-500))]">Tickets</div>
+    <div class="px-2 py-1.5 rounded-md text-[rgb(var(--color-text-500))]">Schedule</div>
+    <div class="px-2 py-1.5 rounded-md text-[rgb(var(--color-text-500))]">Opportunities</div>
+    <div class="px-2 py-1.5 rounded-md font-medium text-[rgb(var(--color-text-800))] bg-[rgb(var(--color-border-100))]">Marketing</div>
+    <div class="ml-4 mt-0.5 space-y-0.5 border-l border-[rgb(var(--color-border-200))] pl-2">
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Calendar</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Posts</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Content</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Campaigns</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-50))] font-medium">Sequences</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Forms</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Channels</div>
+    </div>
+  </nav>
+  <div class="mt-auto px-2 flex items-center gap-2">
+    <div class="h-7 w-7 rounded-full bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-600))] flex items-center justify-center text-[10px] font-semibold">RI</div>
+    <span class="text-xs text-[rgb(var(--color-text-500))] truncate">Robert Isaacs</span>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="flex-1 min-w-0 p-6">
+  <!-- Page header -->
+  <div class="flex items-center mb-1">
+    <div class="min-w-0">
+      <h1 class="text-lg font-bold text-[rgb(var(--color-text-900))]">Welcome — demo request</h1>
+      <p class="text-xs text-[rgb(var(--color-text-500))]">4 steps · 16 active enrollments · 61% open rate</p>
+    </div>
+    <div class="ml-auto flex items-center gap-2 flex-shrink-0">
+      <button class="text-xs font-medium px-3 py-1.5 rounded-md border border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))]">Pause</button>
+      <button class="text-xs font-medium px-3 py-1.5 rounded-md bg-[rgb(var(--color-primary-600))] text-white">+ Enroll contacts</button>
+    </div>
+  </div>
+  <p class="text-xs text-[rgb(var(--color-text-400))] mb-4">Sequences · Welcome — demo request</p>
+
+  <!-- Journey cards -->
+  <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 mb-4">
+    <div class="flex items-center mb-3">
+      <svg class="h-4 w-4 text-[rgb(var(--color-primary-500))] mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <span class="text-sm font-semibold text-[rgb(var(--color-text-800))]">Journey</span>
+      <span class="ml-auto text-[10px] font-semibold rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))] px-2 py-0.5">9 days end-to-end</span>
+    </div>
+    <div class="flex items-stretch gap-0 overflow-x-auto pb-1">
+      <!-- Step 1 card -->
+      <div class="w-56 flex-shrink-0 rounded-md border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] p-3">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="h-5 w-5 rounded-full bg-[rgb(var(--color-primary-500))] text-white text-[10px] font-semibold flex items-center justify-center">1</span>
+          <span class="text-[10px] font-semibold rounded-full bg-white border border-[rgb(var(--color-primary-200))] text-[rgb(var(--color-primary-600))] px-1.5 py-0.5">immediately</span>
+        </div>
+        <div class="text-sm font-semibold text-[rgb(var(--color-text-800))] truncate">Thanks for requesting a demo</div>
+        <p class="text-xs text-[rgb(var(--color-text-500))] mt-0.5 line-clamp-2">Hi {{contact.first_name}} — thanks for reaching out…</p>
+        <div class="flex items-center gap-2 mt-2 text-[10px] text-[rgb(var(--color-text-500))]">
+          <span>16 sent</span><span>·</span><span>75% opened</span>
+        </div>
+      </div>
+      <!-- Connector -->
+      <div class="flex flex-col items-center justify-center px-1.5 flex-shrink-0">
+        <span class="text-[9px] font-semibold tracking-wide text-[rgb(var(--color-text-400))] whitespace-nowrap">2 DAYS</span>
+        <svg class="h-4 w-8 text-[rgb(var(--color-border-300))]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 32 16"><path d="M0 8h28m-6-5 6 5-6 5"/></svg>
+      </div>
+      <!-- Step 2 card -->
+      <div class="w-56 flex-shrink-0 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="h-5 w-5 rounded-full bg-[rgb(var(--color-primary-500))] text-white text-[10px] font-semibold flex items-center justify-center">2</span>
+          <span class="text-[10px] font-semibold rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))] px-1.5 py-0.5">day 2</span>
+        </div>
+        <div class="text-sm font-semibold text-[rgb(var(--color-text-800))] truncate">Operate like a seasoned shop</div>
+        <p class="text-xs text-[rgb(var(--color-text-500))] mt-0.5 line-clamp-2">The five things every mature MSP does in week one…</p>
+        <div class="flex items-center gap-2 mt-2 text-[10px] text-[rgb(var(--color-text-500))]">
+          <span>9 sent</span><span>·</span><span>66% opened</span>
+        </div>
+      </div>
+      <!-- Connector -->
+      <div class="flex flex-col items-center justify-center px-1.5 flex-shrink-0">
+        <span class="text-[9px] font-semibold tracking-wide text-[rgb(var(--color-text-400))] whitespace-nowrap">3 DAYS</span>
+        <svg class="h-4 w-8 text-[rgb(var(--color-border-300))]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 32 16"><path d="M0 8h28m-6-5 6 5-6 5"/></svg>
+      </div>
+      <!-- Step 3 card -->
+      <div class="w-56 flex-shrink-0 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="h-5 w-5 rounded-full bg-[rgb(var(--color-primary-500))] text-white text-[10px] font-semibold flex items-center justify-center">3</span>
+          <span class="text-[10px] font-semibold rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))] px-1.5 py-0.5">day 5</span>
+        </div>
+        <div class="text-sm font-semibold text-[rgb(var(--color-text-800))] truncate">Your first 90 days as an MSP</div>
+        <p class="text-xs text-[rgb(var(--color-text-500))] mt-0.5 line-clamp-2">Contracts, SLAs, billing rhythm — the operating template…</p>
+        <div class="flex items-center gap-2 mt-2 text-[10px] text-[rgb(var(--color-text-500))]">
+          <span>7 sent</span><span>·</span><span>57% opened</span>
+        </div>
+      </div>
+      <!-- Connector -->
+      <div class="flex flex-col items-center justify-center px-1.5 flex-shrink-0">
+        <span class="text-[9px] font-semibold tracking-wide text-[rgb(var(--color-text-400))] whitespace-nowrap">4 DAYS</span>
+        <svg class="h-4 w-8 text-[rgb(var(--color-border-300))]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 32 16"><path d="M0 8h28m-6-5 6 5-6 5"/></svg>
+      </div>
+      <!-- Step 4 card -->
+      <div class="w-56 flex-shrink-0 rounded-md border border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-border-50))] p-3">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="h-5 w-5 rounded-full border-2 border-[rgb(var(--color-border-300))] text-[rgb(var(--color-text-500))] text-[10px] font-semibold flex items-center justify-center">4</span>
+          <span class="text-[10px] font-semibold rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))] px-1.5 py-0.5">day 9</span>
+        </div>
+        <div class="text-sm font-semibold text-[rgb(var(--color-text-700))] truncate">Ready when you are</div>
+        <p class="text-xs text-[rgb(var(--color-text-400))] mt-0.5 line-clamp-2">No pressure — reply and I'll set up a time…</p>
+        <div class="flex items-center gap-2 mt-2 text-[10px] text-[rgb(var(--color-text-400))]">
+          <span>0 sent</span>
+        </div>
+      </div>
+      <!-- Add step -->
+      <div class="flex items-center px-2 flex-shrink-0">
+        <button class="h-8 w-8 rounded-full border border-dashed border-[rgb(var(--color-border-300))] text-[rgb(var(--color-text-400))] text-lg leading-none hover:border-[rgb(var(--color-primary-400))] hover:text-[rgb(var(--color-primary-500))]">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-4 items-start">
+    <!-- Enrollments table -->
+    <div class="flex-1 min-w-0 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+      <div class="flex items-center mb-2">
+        <svg class="h-4 w-4 text-[rgb(var(--color-primary-500))] mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="text-sm font-semibold text-[rgb(var(--color-text-800))] truncate">Enrollments</span>
+        <span class="ml-auto flex-shrink-0 text-[10px] font-semibold rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))] px-2 py-0.5">16</span>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+            <th class="py-1.5 pr-2 font-semibold">Contact</th>
+            <th class="py-1.5 pr-2 font-semibold">Progress</th>
+            <th class="py-1.5 pr-2 font-semibold">Next send</th>
+            <th class="py-1.5 font-semibold text-right">State</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[rgb(var(--color-border-100))]">
+          <tr>
+            <td class="py-2 pr-2"><div class="font-medium text-[rgb(var(--color-text-800))] truncate">Dana Keller</div><div class="text-xs text-[rgb(var(--color-text-500))] truncate">Brightpath IT</div></td>
+            <td class="py-2 pr-2 w-40">
+              <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-1.5 rounded-full bg-[rgb(var(--color-border-100))]"><div class="h-1.5 rounded-full bg-[rgb(var(--color-primary-500))]" style="width:66%"></div></div>
+                <span class="text-xs text-[rgb(var(--color-text-500))] flex-shrink-0">3/4</span>
+              </div>
+            </td>
+            <td class="py-2 pr-2 text-xs text-[rgb(var(--color-text-500))]">Thu Jul 23</td>
+            <td class="py-2 text-right"><span class="text-[10px] font-semibold rounded-full bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] px-2 py-0.5">active</span></td>
+          </tr>
+          <tr>
+            <td class="py-2 pr-2"><div class="font-medium text-[rgb(var(--color-text-800))] truncate">Marcus Oduya</div><div class="text-xs text-[rgb(var(--color-text-500))] truncate">Lakeside MSP</div></td>
+            <td class="py-2 pr-2 w-40">
+              <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-1.5 rounded-full bg-[rgb(var(--color-border-100))]"><div class="h-1.5 rounded-full bg-[rgb(var(--color-primary-500))]" style="width:33%"></div></div>
+                <span class="text-xs text-[rgb(var(--color-text-500))] flex-shrink-0">2/4</span>
+              </div>
+            </td>
+            <td class="py-2 pr-2 text-xs text-[rgb(var(--color-text-500))]">Tue Jul 21</td>
+            <td class="py-2 text-right"><span class="text-[10px] font-semibold rounded-full bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] px-2 py-0.5">active</span></td>
+          </tr>
+          <tr>
+            <td class="py-2 pr-2"><div class="font-medium text-[rgb(var(--color-text-800))] truncate">Sofia Park</div><div class="text-xs text-[rgb(var(--color-text-500))] truncate">Park &amp; Associates</div></td>
+            <td class="py-2 pr-2 w-40">
+              <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-1.5 rounded-full bg-[rgb(var(--color-border-100))]"><div class="h-1.5 rounded-full bg-[rgb(var(--color-primary-500))]" style="width:33%"></div></div>
+                <span class="text-xs text-[rgb(var(--color-text-500))] flex-shrink-0">2/4</span>
+              </div>
+            </td>
+            <td class="py-2 pr-2 text-xs text-[rgb(var(--color-text-500))]">Wed Jul 22</td>
+            <td class="py-2 text-right"><span class="text-[10px] font-semibold rounded-full bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] px-2 py-0.5">active</span></td>
+          </tr>
+          <tr>
+            <td class="py-2 pr-2"><div class="text-[rgb(var(--color-text-700))] truncate">James Tran</div><div class="text-xs text-[rgb(var(--color-text-500))] truncate">TranTech Solutions</div></td>
+            <td class="py-2 pr-2 w-40">
+              <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-1.5 rounded-full bg-emerald-500"></div>
+                <span class="text-xs text-[rgb(var(--color-text-500))] flex-shrink-0">4/4</span>
+              </div>
+            </td>
+            <td class="py-2 pr-2 text-xs text-[rgb(var(--color-text-400))]">—</td>
+            <td class="py-2 text-right"><span class="text-[10px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5">completed</span></td>
+          </tr>
+          <tr>
+            <td class="py-2 pr-2"><div class="text-[rgb(var(--color-text-400))] truncate">Ari Benitez</div><div class="text-xs text-[rgb(var(--color-text-400))] truncate">Northwind Consulting</div></td>
+            <td class="py-2 pr-2 w-40">
+              <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-1.5 rounded-full bg-[rgb(var(--color-border-100))]"><div class="h-1.5 rounded-full bg-[rgb(var(--color-border-300))]" style="width:25%"></div></div>
+                <span class="text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">1/4</span>
+              </div>
+            </td>
+            <td class="py-2 pr-2 text-xs text-[rgb(var(--color-text-400))]">—</td>
+            <td class="py-2 text-right"><span class="text-[10px] font-semibold rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-400))] px-2 py-0.5">unsubscribed</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <a class="mt-2 inline-block text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline" href="#">View all 16</a>
+    </div>
+
+    <!-- Right rail: sending -->
+    <div class="w-72 flex-shrink-0 space-y-4">
+      <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 flex flex-col min-w-0">
+        <div class="flex items-center mb-2">
+          <svg class="h-4 w-4 text-[rgb(var(--color-primary-500))] mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16v12H4z"/><path d="m4 6 8 6 8-6"/></svg>
+          <span class="text-sm font-semibold text-[rgb(var(--color-text-800))] truncate">Sending</span>
+        </div>
+        <div class="space-y-1.5 text-sm">
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">From</span><span class="font-medium text-[rgb(var(--color-text-800))] truncate">robert@nineminds.com</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Provider</span><span class="font-medium text-[rgb(var(--color-text-800))]">Outbound email</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Unsubscribe link</span><span class="font-medium text-emerald-600">On</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Tracking</span><span class="font-medium text-[rgb(var(--color-text-800))]">PostHog</span></div>
+        </div>
+      </div>
+      <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] mb-2">Performance</div>
+        <div class="space-y-1.5 text-sm">
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Open rate</span><span class="font-medium text-[rgb(var(--color-text-800))]">61%</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Click rate</span><span class="font-medium text-[rgb(var(--color-text-800))]">18%</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Replies → suggestions</span><span class="font-medium text-[rgb(var(--color-text-800))]">2</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Unsubscribed</span><span class="font-medium text-[rgb(var(--color-text-800))]">1</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

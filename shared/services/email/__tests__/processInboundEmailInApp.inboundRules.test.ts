@@ -57,6 +57,9 @@ function makeQueryBuilder(firstResult: unknown) {
 
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) => withAdminTransactionMock(callback),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+  }),
 }));
 
 vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({

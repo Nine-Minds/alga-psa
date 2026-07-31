@@ -1,3 +1,4 @@
+/* @vitest-environment jsdom */
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, renderHook } from '@testing-library/react';
@@ -43,6 +44,7 @@ describe('SchedulingContext', () => {
     const callbacks = {
       renderAgentSchedule: (agentId: string) => <div data-testid={`custom-${agentId}`} />,
       launchTimeEntry: launchSpy,
+      launchScheduleEntry: vi.fn(),
       fetchTimeEntriesForTicket: vi.fn(),
       deleteTimeEntry: vi.fn(),
     };

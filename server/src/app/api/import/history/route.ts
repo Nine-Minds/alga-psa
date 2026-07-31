@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listImportJobs } from '@/lib/imports/importActions';
+import { importErrorResponse } from '../importRouteErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,9 +19,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(history);
   } catch (error) {
     console.error('[API] /import/history', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to load import history' },
-      { status: 500 }
-    );
+    return importErrorResponse(error, 'Failed to load import history');
   }
 }

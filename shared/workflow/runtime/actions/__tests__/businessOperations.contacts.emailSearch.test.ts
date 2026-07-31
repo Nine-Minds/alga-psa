@@ -20,6 +20,17 @@ const scenario = {
   usedAdditionalEmailSearch: false,
 };
 
+function makeExistsQuery() {
+  return {
+    where: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    whereRaw: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    andWhereRaw: vi.fn().mockReturnThis(),
+  };
+}
+
 vi.mock('../../registries/actionRegistry', () => ({
   getActionRegistryV2: () => ({ register: registerMock }),
 }));
@@ -47,16 +58,11 @@ function makeSearchQuery(rows: any[]) {
         const scoped: any = {
           whereRaw: vi.fn().mockReturnThis(),
           orWhereRaw: vi.fn().mockReturnThis(),
-          orWhereExists: vi.fn().mockImplementation((callback: (this: any) => void) => {
+          orWhereExists: vi.fn().mockImplementation((callbackOrBuilder: ((this: any) => void) | any) => {
             scenario.usedAdditionalEmailSearch = true;
-            const existsQuery: any = {
-              select: vi.fn().mockReturnThis(),
-              from: vi.fn().mockReturnThis(),
-              whereRaw: vi.fn().mockReturnThis(),
-              andWhere: vi.fn().mockReturnThis(),
-              andWhereRaw: vi.fn().mockReturnThis(),
-            };
-            callback.call(existsQuery);
+            if (typeof callbackOrBuilder === 'function') {
+              callbackOrBuilder.call(makeExistsQuery());
+            }
             return scoped;
           }),
         };
@@ -97,6 +103,9 @@ describe('workflow business contact email lookup', () => {
         vi.fn((table: string) => {
           if (table === 'contacts') {
             return searchQuery;
+          }
+          if (table === 'contact_additional_email_addresses as caea') {
+            return makeExistsQuery();
           }
           throw new Error(`Unexpected table ${table}`);
         }),

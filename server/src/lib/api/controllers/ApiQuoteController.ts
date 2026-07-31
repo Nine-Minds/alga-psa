@@ -22,6 +22,7 @@ import {
   runWithTenant,
 } from '../../db';
 import { getConnection } from '../../db/db';
+import { hasPermission } from '../../auth/rbac';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -32,8 +33,10 @@ import {
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import {
+  ConflictError,
   ForbiddenError,
   NotFoundError,
+  UnauthorizedError,
   ValidationError,
   createSuccessResponse,
   createPaginatedResponse,
@@ -49,6 +52,9 @@ export class ApiQuoteController extends ApiBaseController {
 
     super(quoteService, {
       resource: 'quote',
+      // Quotes are gated by the pre-existing `billing` permission set; there is
+      // no `quote` resource in the permissions table.
+      permissionResource: 'billing',
       createSchema: createQuoteApiSchema,
       updateSchema: updateQuoteApiSchema,
       querySchema: quoteListQuerySchema,
@@ -62,6 +68,22 @@ export class ApiQuoteController extends ApiBaseController {
     });
 
     this.quoteService = quoteService;
+  }
+
+  /**
+   * Approval is gated by the dedicated `quotes:approve` permission rather than
+   * the `billing` set used for CRUD, mirroring quoteActions.
+   */
+  private async checkQuoteApprovePermission(apiRequest: AuthenticatedApiRequest): Promise<void> {
+    if (!apiRequest.context.user) {
+      throw new UnauthorizedError('User context required');
+    }
+
+    const knex = await getConnection(apiRequest.context.tenant);
+    const allowed = await hasPermission(apiRequest.context.user, 'quotes', 'approve', knex);
+    if (!allowed) {
+      throw new ForbiddenError('Permission denied: Cannot approve quote');
+    }
   }
 
   private buildQuoteRecordContext(quote: Record<string, any>) {
@@ -569,14 +591,14 @@ export class ApiQuoteController extends ApiBaseController {
         const apiRequest = await this.authenticate(req);
 
         return await runWithTenant(apiRequest.context.tenant, async () => {
-          await this.checkPermission(apiRequest, 'approve');
+          await this.checkQuoteApprovePermission(apiRequest);
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
           const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           if (existingQuote.status !== 'pending_approval') {
-            throw new ForbiddenError('Only quotes pending approval can be approved');
+            throw new ConflictError('Only quotes pending approval can be approved');
           }
 
           await this.assertQuoteApproveAllowed(apiRequest, existingQuote as Record<string, any>);
@@ -596,7 +618,7 @@ export class ApiQuoteController extends ApiBaseController {
         const apiRequest = await this.authenticate(req);
 
         return await runWithTenant(apiRequest.context.tenant, async () => {
-          await this.checkPermission(apiRequest, 'approve');
+          await this.checkQuoteApprovePermission(apiRequest);
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
@@ -605,7 +627,7 @@ export class ApiQuoteController extends ApiBaseController {
           const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           if (existingQuote.status !== 'pending_approval') {
-            throw new ForbiddenError('Only quotes pending approval can be sent back for changes');
+            throw new ConflictError('Only quotes pending approval can be sent back for changes');
           }
 
           const quote = await this.quoteService.requestChanges(id, data.reason, apiRequest.context);

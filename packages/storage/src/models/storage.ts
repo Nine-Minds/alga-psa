@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { requireTenantId } from '@alga-psa/db';
+import { requireTenantId, tenantDb } from '@alga-psa/db';
 import type { FileStore } from '../types/storage';
 
 export class FileStoreModel {
@@ -15,7 +15,7 @@ export class FileStoreModel {
     const tenant = await requireTenantId(knexOrTrx);
     const file_id = data.fileId || uuidv4();
 
-    const [file] = await knexOrTrx<FileStore>('external_files')
+    const [file] = await tenantDb(knexOrTrx, tenant).table<FileStore>('external_files')
       .insert({
         file_id,
         file_name: data.file_name,
@@ -38,13 +38,15 @@ export class FileStoreModel {
   ): Promise<void> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    await knexOrTrx('external_files').where({ file_id: fileId, tenant }).update({ metadata });
+    await tenantDb(knexOrTrx, tenant).table('external_files').where({ file_id: fileId }).update({ metadata });
   }
 
   static async findById(knexOrTrx: Knex | Knex.Transaction, file_id: string): Promise<FileStore | null> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    const file = await knexOrTrx<FileStore>('external_files').where({ tenant, file_id, is_deleted: false }).first();
+    const file = await tenantDb(knexOrTrx, tenant).table<FileStore>('external_files')
+      .where({ file_id, is_deleted: false })
+      .first();
 
     return file || null;
   }
@@ -56,8 +58,8 @@ export class FileStoreModel {
   ): Promise<FileStore> {
     const tenant = await requireTenantId(knexOrTrx);
 
-    const [file] = await knexOrTrx<FileStore>('external_files')
-      .where({ tenant, file_id })
+    const [file] = await tenantDb(knexOrTrx, tenant).table<FileStore>('external_files')
+      .where({ file_id })
       .update({
         is_deleted: true,
         deleted_at: new Date().toISOString(),
@@ -70,7 +72,7 @@ export class FileStoreModel {
 
   static async list(knexOrTrx: Knex | Knex.Transaction): Promise<FileStore[]> {
     const tenant = await requireTenantId(knexOrTrx);
-    return await knexOrTrx<FileStore>('external_files').where({ tenant, is_deleted: false });
+    return await tenantDb(knexOrTrx, tenant).table<FileStore>('external_files').where({ is_deleted: false });
   }
 
   static async createDocumentSystemEntry(
@@ -82,7 +84,7 @@ export class FileStoreModel {
     }
   ): Promise<void> {
     const tenant = await requireTenantId(knexOrTrx);
-    await knexOrTrx('document_system_entries').insert({
+    await tenantDb(knexOrTrx, tenant).table('document_system_entries').insert({
       tenant,
       file_id: options.fileId,
       category: options.category,
@@ -91,4 +93,3 @@ export class FileStoreModel {
     });
   }
 }
-

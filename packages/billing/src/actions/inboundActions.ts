@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { InvoiceStatus } from '@alga-psa/types';
 
 import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
@@ -120,8 +120,9 @@ async function updateMappedInvoice(
       return null;
     }
 
-    const current = await trx('invoices')
-      .where({ tenant, invoice_id: lookup.algaEntityId })
+    const db = tenantDb(trx, tenant);
+    const current = await db.table('invoices')
+      .where({ invoice_id: lookup.algaEntityId })
       .first<{ invoice_id: string; status: string; custom_fields: Record<string, unknown> | null }>();
 
     if (!current) {
@@ -132,8 +133,8 @@ async function updateMappedInvoice(
       return current;
     }
 
-    const [updated] = await trx('invoices')
-      .where({ tenant, invoice_id: lookup.algaEntityId })
+    const [updated] = await db.table('invoices')
+      .where({ invoice_id: lookup.algaEntityId })
       .update({
         status: input.status,
         custom_fields: {

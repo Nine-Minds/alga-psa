@@ -462,7 +462,8 @@
       "correlationKeyPlaceholder": "55555",
       "statusLabel": "55555",
       "fromLabel": "55555",
-      "toLabel": "55555"
+      "toLabel": "55555",
+      "datePlaceholder": "55555"
     },
     "actions": {
       "applyFilters": "55555",

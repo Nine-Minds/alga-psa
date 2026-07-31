@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
+  assignContractLineToClient,
   createTestService,
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
@@ -13,23 +15,16 @@ import {
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
@@ -40,7 +35,8 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));
@@ -54,7 +50,8 @@ vi.mock('@alga-psa/core/logger', () => ({
   }
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -64,7 +61,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -80,11 +78,12 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
-    publishEvent: vi.fn()
+    publishEvent: vi.fn(),
   }),
-  toStreamEvent: (event: unknown) => event
+  toStreamEvent: (event: unknown) => event,
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
@@ -142,14 +141,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
 
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     await configureDefaultTax();
     await ensureDefaultBillingSettings(context);
@@ -158,13 +155,11 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
   beforeEach(async () => {
     context = await resetContext();
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     // Set up invoice numbering settings
     const nextNumberRecord = {
@@ -245,24 +240,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Assign plan to client for both periods
-    await context.db('client_contract_lines').insert([
-      {
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      }
-    ]);
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
 
     // Generate invoices that will exceed padding length
     const invoice1 = await generateInvoice(billingCycle1);
@@ -331,13 +311,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Generate invoice
@@ -455,32 +430,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Assign plan to client for all periods
-    await context.db('client_contract_lines').insert([
-      {
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      }
-    ]);
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
 
     // 1. Query for the minimum invoice number.
     const minInvoiceNumber = await getMinimumInvoiceNumber();
@@ -602,32 +554,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     // Assign plan to client for all periods
-    await context.db('client_contract_lines').insert([
-      {
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      }
-    ]);
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
 
     // Generate invoices in sequence
     const invoice1 = await generateInvoice(billingCycle1);
@@ -711,13 +640,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Generate invoice
@@ -782,13 +706,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Generate invoice
@@ -855,13 +774,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Generate invoice
@@ -926,13 +840,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Generate invoice with initial prefix
@@ -956,13 +865,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
   
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
+      await assignContractLineToClient(context, planId, {
+        startDate: createTestDateISO({ year: 2023, month: 2, day: 1 })
       });
 
     // Generate invoice with new prefix
@@ -1027,13 +931,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Generate invoice with initial prefix
@@ -1057,13 +956,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
   
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
+      await assignContractLineToClient(context, planId, {
+        startDate: createTestDateISO({ year: 2023, month: 2, day: 1 })
       });      
 
     // Generate invoice with shorter prefix
@@ -1087,13 +981,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 4, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 3, day: 1 })
     });
 
     // Generate invoice with longer prefix

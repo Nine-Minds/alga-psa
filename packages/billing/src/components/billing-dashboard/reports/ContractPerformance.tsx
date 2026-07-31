@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -12,6 +13,14 @@ import { getClientContractsForBilling, getAllClientsForBilling } from '@alga-psa
 import { IClient } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContractMetrics {
   contractId: string;
@@ -27,6 +36,7 @@ interface ContractMetrics {
 const ContractPerformance: React.FC = () => {
   const { t } = useTranslation('msp/reports');
   const { formatCurrency } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [contracts, setContracts] = useState<IContract[]>([]);
   const [contractMetrics, setContractMetrics] = useState<ContractMetrics[]>([]);
   const [selectedContract, setSelectedContract] = useState<string | null>(null);
@@ -43,6 +53,11 @@ const ContractPerformance: React.FC = () => {
     
     try {
       const fetchedContracts = await getContracts();
+      if (isReturnedActionError(fetchedContracts)) {
+        setError(getErrorMessage(fetchedContracts));
+        setContracts([]);
+        return;
+      }
       setContracts(fetchedContracts);
       
       // Calculate metrics for all contracts
@@ -64,12 +79,15 @@ const ContractPerformance: React.FC = () => {
     }
   };
 
-  const formatCents = (value: number) => formatCurrency(value / 100, 'USD');
+  const formatCents = (value: number) => formatCurrency(value / 100, tenantCurrency);
 
   const calculateContractMetrics = async (contract: IContract): Promise<ContractMetrics> => {
     try {
       // Get all clients
       const clients = await getAllClientsForBilling(false);
+      if (isReturnedActionError(clients)) {
+        throw new Error(getErrorMessage(clients));
+      }
       
       // Get all clients using this contract
       const clientsWithContract: IClient[] = [];
@@ -77,6 +95,9 @@ const ContractPerformance: React.FC = () => {
       
       for (const client of clients) {
         const clientContracts = await getClientContractsForBilling(client.client_id);
+        if (isReturnedActionError(clientContracts)) {
+          throw new Error(getErrorMessage(clientContracts));
+        }
         const matchingContract = clientContracts.find(cc => 
           cc.contract_id === contract.contract_id && cc.is_active
         );
@@ -91,6 +112,9 @@ const ContractPerformance: React.FC = () => {
       
       // Get all contract lines in the contract
       const contractLines = await getContractLinesForContract(contract.contract_id);
+      if (isReturnedActionError(contractLines)) {
+        throw new Error(getErrorMessage(contractLines));
+      }
       
       return {
         contractId: contract.contract_id,

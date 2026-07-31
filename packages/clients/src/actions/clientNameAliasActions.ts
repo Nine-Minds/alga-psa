@@ -1,10 +1,25 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { assertMspPermission } from '../lib/authHelpers';
+import { hasMspPermission } from '../lib/authHelpers';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type ClientNameAliasActionError = ActionMessageError | ActionPermissionError;
+
+class ExpectedClientNameAliasError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ExpectedClientNameAliasError';
+  }
+}
 
 export interface ClientNameAlias {
   id: string;
@@ -22,14 +37,13 @@ async function findAliasOwner(
   tenant: string,
   alias: string
 ): Promise<{ client_id: string; client_name: string } | null> {
-  const row = await trx('client_name_aliases as a')
-    .leftJoin('clients as c', function () {
-      this.on('a.client_id', '=', 'c.client_id').andOn('a.tenant', '=', 'c.tenant');
-    })
+  const db = tenantDb(trx, tenant);
+  const query = db.table('client_name_aliases as a')
     .select('a.client_id', 'c.client_name')
-    .where('a.tenant', tenant)
-    .andWhereRaw('lower(a.alias) = ?', [alias.toLowerCase()])
-    .first();
+    .andWhereRaw('lower(a.alias) = ?', [alias.toLowerCase()]);
+  db.tenantJoin(query, 'clients as c', 'a.client_id', 'c.client_id', { type: 'left' });
+
+  const row = await query.first();
 
   const clientId = (row as any)?.client_id;
   const clientName = (row as any)?.client_name;
@@ -44,14 +58,16 @@ export const listClientNameAliases = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<ClientNameAlias[]> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+): Promise<ClientNameAlias[] | ClientNameAliasActionError> => {
+  if (!await hasMspPermission(user, 'client', 'read')) {
+    return permissionError('Permission denied: Cannot read clients');
+  }
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const rows = await trx('client_name_aliases')
+    const rows = await tenantDb(trx, tenant).table('client_name_aliases')
       .select('id', 'client_id', 'alias', 'created_at')
-      .where({ tenant, client_id: clientId })
+      .where({ client_id: clientId })
       .orderBy('alias', 'asc');
     return rows as any;
   });
@@ -62,45 +78,55 @@ export const addClientNameAlias = withAuth(async (
   { tenant },
   clientId: string,
   rawAlias: string
-): Promise<ClientNameAlias> => {
-  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
+): Promise<ClientNameAlias | ClientNameAliasActionError> => {
+  if (!await hasMspPermission(user, 'client', 'update')) {
+    return permissionError('Permission denied: Cannot update clients');
+  }
 
   const alias = normalizeAliasInput(rawAlias);
   if (!alias) {
-    throw new Error('Alias is required');
+    return actionError('Alias is required');
   }
   if (alias.length > 255) {
-    throw new Error('Alias is too long');
+    return actionError('Alias is too long');
   }
 
   const { knex } = await createTenantKnex();
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    try {
-      const id = uuidv4();
-      const now = new Date().toISOString();
-      const [row] = await trx('client_name_aliases')
-        .insert({
-          tenant,
-          id,
-          client_id: clientId,
-          alias,
-          created_at: now,
-          updated_at: now,
-        })
-        .returning(['id', 'client_id', 'alias', 'created_at']);
-      return row as any;
-    } catch (e: any) {
-      // Uniqueness (tenant, lower(alias))
-      if (String(e?.code ?? '') === '23505') {
-        const owner = await findAliasOwner(trx, tenant, alias);
-        if (owner && owner.client_id !== clientId) {
-          throw new Error(`Alias "${alias}" is already assigned to client "${owner.client_name}".`);
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      try {
+        const id = uuidv4();
+        const now = new Date().toISOString();
+        const [row] = await tenantDb(trx, tenant).table('client_name_aliases')
+          .insert({
+            tenant,
+            id,
+            client_id: clientId,
+            alias,
+            created_at: now,
+            updated_at: now,
+          })
+          .returning(['id', 'client_id', 'alias', 'created_at']);
+        return row as any;
+      } catch (e: any) {
+        // Uniqueness (tenant, lower(alias))
+        if (String(e?.code ?? '') === '23505') {
+          const owner = await findAliasOwner(trx, tenant, alias);
+          if (owner && owner.client_id !== clientId) {
+            throw new ExpectedClientNameAliasError(`Alias "${alias}" is already assigned to client "${owner.client_name}".`);
+          }
+          throw new ExpectedClientNameAliasError(`Alias "${alias}" is already assigned to a client.`);
         }
-        throw new Error(`Alias "${alias}" is already assigned to a client.`);
+        throw e;
       }
-      throw e;
+    });
+  } catch (e) {
+    if (e instanceof ExpectedClientNameAliasError) {
+      return actionError(e.message);
     }
-  });
+    console.error('Unexpected failure while adding client name alias:', e);
+    return actionError('Failed to add client alias. Please try again.');
+  }
 });
 
 export const removeClientNameAlias = withAuth(async (
@@ -108,14 +134,19 @@ export const removeClientNameAlias = withAuth(async (
   { tenant },
   clientId: string,
   aliasId: string
-): Promise<{ success: true }> => {
-  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
+): Promise<{ success: true } | ClientNameAliasActionError> => {
+  if (!await hasMspPermission(user, 'client', 'update')) {
+    return permissionError('Permission denied: Cannot update clients');
+  }
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    await trx('client_name_aliases')
-      .where({ tenant, client_id: clientId, id: aliasId })
+    const deleted = await tenantDb(trx, tenant).table('client_name_aliases')
+      .where({ client_id: clientId, id: aliasId })
       .delete();
+    if (deleted === 0) {
+      return actionError('Alias not found.');
+    }
     return { success: true as const };
   });
 });

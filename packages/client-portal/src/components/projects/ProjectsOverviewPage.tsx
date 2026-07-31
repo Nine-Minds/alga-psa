@@ -12,6 +12,12 @@ import { IProject } from '@alga-psa/types';
 import { ColumnDefinition } from '@alga-psa/types';
 import { formatDateOnly } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export default function ProjectsOverviewPage() {
   const { t } = useTranslation('features/projects');
@@ -23,6 +29,7 @@ export default function ProjectsOverviewPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
   
   // Define columns for the DataTable
   const columns: ColumnDefinition<IProject>[] = [
@@ -99,6 +106,7 @@ export default function ProjectsOverviewPage() {
   useEffect(() => {
     async function loadProjects() {
       setLoading(true);
+      setError(null);
       try {
         const result = await getClientProjects({
           page,
@@ -106,11 +114,18 @@ export default function ProjectsOverviewPage() {
           status: statusFilter !== 'all' ? statusFilter : undefined,
           search: searchQuery || undefined
         });
+        if (isReturnedActionError(result)) {
+          setProjects([]);
+          setTotalItems(0);
+          setError(getErrorMessage(result));
+          return;
+        }
         
         setProjects(result.projects);
         setTotalItems(result.total);
       } catch (error) {
         console.error('Error loading projects:', error);
+        setError(t('loadError', 'Failed to load projects'));
       } finally {
         setLoading(false);
       }
@@ -172,6 +187,12 @@ export default function ProjectsOverviewPage() {
             {t('resetFilters')}
           </Button>
       </div>
+
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       
       {/* Projects Table */}
       <DataTable

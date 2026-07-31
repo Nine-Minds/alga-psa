@@ -14,6 +14,7 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { HUDU_INTEGRATION_TYPE, HUDU_MAPPING_TABLE } from './contracts';
 import { HUDU_MAPPING_SYNC_STATUS } from './companyMapping';
 
@@ -76,9 +77,10 @@ export async function setHuduAssetMappingRow(
   input: SetHuduAssetMappingInput
 ): Promise<HuduAssetMappingWriteResult> {
   const externalId = String(input.huduAssetId);
+  const db = tenantDb(knex, tenant);
 
-  const assetTaken = await knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduAssetMappingScope, alga_entity_id: input.assetId })
+  const assetTaken = await db.table(HUDU_MAPPING_TABLE)
+    .where({ ...huduAssetMappingScope, alga_entity_id: input.assetId })
     .first('id', 'external_entity_id');
   if (assetTaken) {
     return {
@@ -88,8 +90,8 @@ export async function setHuduAssetMappingRow(
     };
   }
 
-  const huduAssetTaken = await knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduAssetMappingScope, external_entity_id: externalId })
+  const huduAssetTaken = await db.table(HUDU_MAPPING_TABLE)
+    .where({ ...huduAssetMappingScope, external_entity_id: externalId })
     .first('id', 'alga_entity_id');
   if (huduAssetTaken) {
     return {
@@ -100,7 +102,7 @@ export async function setHuduAssetMappingRow(
   }
 
   try {
-    const [row] = await knex(HUDU_MAPPING_TABLE)
+    const [row] = await db.table(HUDU_MAPPING_TABLE)
       .insert({
         tenant,
         ...huduAssetMappingScope,
@@ -147,7 +149,7 @@ export async function clearHuduAssetMappingRow(
     throw new Error('clearHuduAssetMappingRow requires mappingId or huduAssetId');
   }
 
-  const query = knex(HUDU_MAPPING_TABLE).where({ tenant, ...huduAssetMappingScope });
+  const query = tenantDb(knex, tenant).table(HUDU_MAPPING_TABLE).where(huduAssetMappingScope);
   if (ref.mappingId) {
     query.andWhere({ id: ref.mappingId });
   } else {
@@ -167,12 +169,16 @@ export async function getHuduAssetMappingRows(
   tenant: string,
   filter: GetHuduAssetMappingRowsFilter = {}
 ): Promise<Array<HuduAssetMappingRow & { asset_name: string | null }>> {
-  const query = knex(`${HUDU_MAPPING_TABLE} as m`)
-    .leftJoin('assets as a', function joinAssets() {
-      this.on('a.tenant', '=', 'm.tenant').andOn(knex.raw('a.asset_id::text = m.alga_entity_id'));
-    })
+  const db = tenantDb(knex, tenant);
+  const query = db.table(`${HUDU_MAPPING_TABLE} as m`);
+  db.tenantJoin(query, 'assets as a', 'a.tenant', 'm.tenant', {
+    type: 'left',
+    on(join) {
+      join.andOn(knex.raw('a.asset_id::text = m.alga_entity_id'));
+    },
+  });
+  query
     .where({
-      'm.tenant': tenant,
       'm.integration_type': HUDU_INTEGRATION_TYPE,
       'm.alga_entity_type': HUDU_ASSET_MAPPING_ENTITY_TYPE,
     })
@@ -199,7 +205,7 @@ export async function setHuduAssetMappingStale(
     throw new Error('setHuduAssetMappingStale requires mappingId or huduAssetId');
   }
 
-  const query = knex(HUDU_MAPPING_TABLE).where({ tenant, ...huduAssetMappingScope });
+  const query = tenantDb(knex, tenant).table(HUDU_MAPPING_TABLE).where(huduAssetMappingScope);
   if (ref.mappingId) {
     query.andWhere({ id: ref.mappingId });
   } else {
@@ -220,8 +226,8 @@ export async function touchHuduAssetMappingsSynced(
   if (mappingIds.length === 0) {
     return 0;
   }
-  return knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduAssetMappingScope })
+  return tenantDb(knex, tenant).table(HUDU_MAPPING_TABLE)
+    .where(huduAssetMappingScope)
     .whereIn('id', mappingIds)
     .update({ last_synced_at: at });
 }
@@ -233,8 +239,8 @@ export async function resolveAlgaAssetIdForHuduAsset(
   tenant: string,
   huduAssetId: string | number
 ): Promise<string | null> {
-  const row = await knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduAssetMappingScope, external_entity_id: String(huduAssetId) })
+  const row = await tenantDb(knex, tenant).table(HUDU_MAPPING_TABLE)
+    .where({ ...huduAssetMappingScope, external_entity_id: String(huduAssetId) })
     .first('alga_entity_id');
   return row?.alga_entity_id ?? null;
 }
@@ -244,8 +250,8 @@ export async function resolveHuduAssetIdForAlgaAsset(
   tenant: string,
   assetId: string
 ): Promise<string | null> {
-  const row = await knex(HUDU_MAPPING_TABLE)
-    .where({ tenant, ...huduAssetMappingScope, alga_entity_id: assetId })
+  const row = await tenantDb(knex, tenant).table(HUDU_MAPPING_TABLE)
+    .where({ ...huduAssetMappingScope, alga_entity_id: assetId })
     .first('external_entity_id');
   return row?.external_entity_id ?? null;
 }

@@ -112,6 +112,20 @@ const COPY = {
     textIntro: 'P\u0142atno\u015b\u0107 za faktur\u0119 jest po terminie:',
   },
 };
+SUBJECTS.pt = 'Pagamento vencido: fatura #{{invoice.number}}';
+COPY.pt = {
+  headerLabel: 'Pagamento vencido',
+  intro: 'O pagamento da fatura #{{invoice.number}} está vencido.',
+  invoiceNumberLabel: 'Número da fatura',
+  amountDueLabel: 'Valor devido',
+  dueDateLabel: 'Data de vencimento',
+  daysOverdueLabel: 'Dias em atraso',
+  viewButton: 'Ver fatura',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Pagamento vencido',
+  textIntro: 'O pagamento da fatura #{{invoice.number}} está vencido:',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

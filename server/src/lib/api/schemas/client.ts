@@ -53,6 +53,7 @@ export const createClientSchema = z.object({
   payment_terms: z.string().optional(),
   billing_cycle: z.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']),
   credit_limit: z.number().min(0).optional(),
+  default_currency_code: z.string().trim().min(3).max(3).transform((value) => value.toUpperCase()).optional(),
   preferred_payment_method: z.string().optional(),
   auto_invoice: z.boolean().optional().default(false),
   invoice_delivery_method: z.enum(['email', 'mail', 'portal']).optional(),

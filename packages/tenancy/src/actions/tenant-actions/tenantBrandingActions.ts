@@ -1,20 +1,31 @@
 'use server';
 
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { revalidateTag } from 'next/cache';
 import { generateBrandingStyles } from '../../lib/generateBrandingStyles';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import type { Knex } from 'knex';
+
+export type PortalHeroGradient = 'primary-shades' | 'primary-secondary';
 
 export interface TenantBranding {
   logoUrl: string;
   primaryColor: string;
   secondaryColor: string;
   clientName: string;
+  /**
+   * Controls the client dashboard welcome gradient. Missing values retain the
+   * original primary-500 -> primary-700 behavior for existing tenants.
+   */
+  portalHeroGradient?: PortalHeroGradient;
   supportEmail?: string;
   supportPhone?: string;
   computedStyles?: string; // Cached CSS styles
 }
+
+const tenantSettingsQuery = (knex: Knex, tenant: string) =>
+  tenantDb(knex, tenant).table('tenant_settings');
 
 /**
  * Update tenant's branding settings
@@ -28,8 +39,7 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
   const knex = await getConnection(tenant);
 
   // Get existing settings
-  const existingRecord = await knex('tenant_settings')
-    .where({ tenant })
+  const existingRecord = await tenantSettingsQuery(knex, tenant)
     .first();
 
   const existingSettings = existingRecord?.settings || {};
@@ -54,19 +64,19 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
       clientName: branding.clientName,
+      portalHeroGradient: branding.portalHeroGradient,
       computedStyles, // Store precomputed CSS
     }
   };
 
   if (existingRecord) {
-    await knex('tenant_settings')
-      .where({ tenant })
+    await tenantSettingsQuery(knex, tenant)
       .update({
         settings: updatedSettings,
         updated_at: knex.fn.now()
       });
   } else {
-    await knex('tenant_settings').insert({
+    await tenantSettingsQuery(knex, tenant).insert({
       tenant,
       settings: updatedSettings,
       created_at: knex.fn.now(),
@@ -92,8 +102,7 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
   const { tenant } = ctx;
   const knex = await getConnection(tenant);
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant })
+  const tenantSettings = await tenantSettingsQuery(knex, tenant)
     .first();
 
   if (!tenantSettings?.settings?.branding) {
@@ -113,8 +122,7 @@ export const getTenantBrandingAction = withOptionalAuth(async (user: IUserWithRo
 export async function getTenantBrandingByIdAction(tenantId: string): Promise<TenantBranding | null> {
   const knex = await getConnection(tenantId);
 
-  const tenantSettings = await knex('tenant_settings')
-    .where({ tenant: tenantId })
+  const tenantSettings = await tenantSettingsQuery(knex, tenantId)
     .first();
 
   if (!tenantSettings?.settings?.branding) {

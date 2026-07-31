@@ -13,15 +13,18 @@ const mockGetAllBoards = vi.fn();
 const mockGetTicketStatuses = vi.fn();
 const mockHandleError = vi.fn();
 
-vi.mock('@alga-psa/billing/actions', () => ({
+vi.mock('../src/actions/billingSettingsActions', () => ({
   getDefaultBillingSettings: (...args: unknown[]) => mockGetDefaultBillingSettings(...args),
   updateDefaultBillingSettings: (...args: unknown[]) => mockUpdateDefaultBillingSettings(...args),
 }));
 
 // The component imports getAllBoards from reference-data/actions, not
 // tickets/actions — mock the exact specifier the code under test imports.
-vi.mock('@alga-psa/reference-data/actions', () => ({
+vi.mock('@alga-psa/reference-data/actions/boardActions', () => ({
   getAllBoards: (...args: unknown[]) => mockGetAllBoards(...args),
+}));
+
+vi.mock('@alga-psa/reference-data/actions/status-actions/statusActions', () => ({
   getTicketStatuses: (...args: unknown[]) => mockGetTicketStatuses(...args),
 }));
 

@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     'index': 'src/index.ts',
     'components/index': 'src/components/index.ts',
+    'components/bento/index': 'src/components/bento/index.ts',
     'ui-reflection/index': 'src/ui-reflection/index.ts',
     'keyboard-shortcuts/index': 'src/keyboard-shortcuts/index.ts',
     'lib/index': 'src/lib/index.ts',

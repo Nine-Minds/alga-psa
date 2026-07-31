@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { BillingCycleType, IClient } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 
 const Client = {
   async getById(knexOrTrx: Knex | Knex.Transaction, tenant: string, clientId: string): Promise<IClient | null> {
@@ -8,8 +9,8 @@ const Client = {
     }
 
     try {
-      const client = await knexOrTrx<IClient>('clients')
-        .where({ client_id: clientId, tenant })
+      const client = await tenantDb(knexOrTrx, tenant).table<IClient>('clients')
+        .where({ client_id: clientId })
         .first();
       return client || null;
     } catch (error) {
@@ -24,8 +25,7 @@ const Client = {
     }
 
     try {
-      const clients = await knexOrTrx<IClient>('clients')
-        .where({ tenant })
+      const clients = await tenantDb(knexOrTrx, tenant).table<IClient>('clients')
         .select('*');
       return clients;
     } catch (error) {
@@ -40,8 +40,8 @@ const Client = {
     }
 
     try {
-      const client = await knexOrTrx<IClient>('clients')
-        .where({ client_id: clientId, tenant })
+      const client = await tenantDb(knexOrTrx, tenant).table<IClient>('clients')
+        .where({ client_id: clientId })
         .select('billing_cycle')
         .first();
       return client ? (client.billing_cycle as BillingCycleType) || null : null;

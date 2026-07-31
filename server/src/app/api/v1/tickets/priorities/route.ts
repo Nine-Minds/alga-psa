@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { runWithTenant } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@/lib/auth/rbac';
 import { getConnection } from '@/lib/db/db';
 import {
@@ -24,8 +25,8 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
       if (!canRead) throw new ForbiddenError('Permission denied: Cannot read ticket');
 
       const knex = await getConnection(tenantId);
-      const priorities = await knex('priorities')
-        .where({ tenant: tenantId, item_type: 'ticket' })
+      const priorities = await tenantDb(knex, tenantId).table('priorities')
+        .where({ item_type: 'ticket' })
         .select('priority_id', 'priority_name')
         .orderBy('priority_name', 'asc');
 

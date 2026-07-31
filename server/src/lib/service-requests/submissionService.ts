@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { getVisiblePublishedServiceRequestDefinitionDetail } from './portalDetail';
 import {
   getServiceRequestExecutionProvider,
@@ -148,9 +149,10 @@ export async function submitPortalServiceRequest(
   }
 
   if (attachments.length > 0) {
+    const db = tenantDb(knex, tenant);
     const attachmentFileIds = [...new Set(attachments.map((attachment) => attachment.fileId))];
-    const existingFileRows = await knex('external_files')
-      .where({ tenant, is_deleted: false })
+    const existingFileRows = await db.table('external_files')
+      .where({ is_deleted: false })
       .whereIn('file_id', attachmentFileIds)
       .select('file_id');
     const existingFileIds = new Set(existingFileRows.map((row) => row.file_id as string));
@@ -161,7 +163,8 @@ export async function submitPortalServiceRequest(
   }
 
   const submissionId = await knex.transaction(async (trx) => {
-    const [submissionRow] = await trx('service_request_submissions')
+    const db = tenantDb(trx, tenant);
+    const [submissionRow] = await db.table('service_request_submissions')
       .insert({
         tenant,
         definition_id: definitionDetail.definitionId,
@@ -178,7 +181,7 @@ export async function submitPortalServiceRequest(
     const submissionId: string = submissionRow.submission_id;
 
     if (attachments.length > 0) {
-      await trx('service_request_submission_attachments').insert(
+      await db.table('service_request_submission_attachments').insert(
         attachments.map((attachment) => ({
           tenant,
           submission_id: submissionId,
@@ -213,8 +216,8 @@ export async function submitPortalServiceRequest(
   const executionProvider = getServiceRequestExecutionProvider(definitionDetail.executionProvider);
   if (!executionProvider) {
     const errorSummary = `Execution provider "${definitionDetail.executionProvider}" is not registered.`;
-    await knex('service_request_submissions')
-      .where({ tenant, submission_id: submissionId })
+    await tenantDb(knex, tenant).table('service_request_submissions')
+      .where({ submission_id: submissionId })
       .update({
         execution_status: 'failed',
         execution_error_summary: errorSummary,
@@ -253,8 +256,8 @@ export async function submitPortalServiceRequest(
     });
 
     if (executionResult.status === 'succeeded') {
-      await knex('service_request_submissions')
-        .where({ tenant, submission_id: submissionId })
+      await tenantDb(knex, tenant).table('service_request_submissions')
+        .where({ submission_id: submissionId })
         .update({
           execution_status: 'succeeded',
           created_ticket_id: executionResult.createdTicketId ?? null,
@@ -290,8 +293,8 @@ export async function submitPortalServiceRequest(
       };
     }
 
-    await knex('service_request_submissions')
-      .where({ tenant, submission_id: submissionId })
+    await tenantDb(knex, tenant).table('service_request_submissions')
+      .where({ submission_id: submissionId })
       .update({
         execution_status: 'failed',
         execution_error_summary: executionResult.errorSummary ?? 'Execution failed.',
@@ -317,8 +320,8 @@ export async function submitPortalServiceRequest(
     };
   } catch (error) {
     const errorSummary = error instanceof Error ? error.message : 'Execution failed.';
-    await knex('service_request_submissions')
-      .where({ tenant, submission_id: submissionId })
+    await tenantDb(knex, tenant).table('service_request_submissions')
+      .where({ submission_id: submissionId })
       .update({
         execution_status: 'failed',
         execution_error_summary: errorSummary,
@@ -351,8 +354,8 @@ export async function deleteServiceRequestSubmission(input: {
 }): Promise<boolean> {
   const { knex, tenant, submissionId, deletedBy } = input;
 
-  const existing = await knex('service_request_submissions')
-    .where({ tenant, submission_id: submissionId })
+  const existing = await tenantDb(knex, tenant).table('service_request_submissions')
+    .where({ submission_id: submissionId })
     .select('definition_id', 'client_id', 'requester_user_id', 'execution_status')
     .first<{
       definition_id: string;
@@ -367,12 +370,13 @@ export async function deleteServiceRequestSubmission(input: {
 
   let deleted = 0;
   await knex.transaction(async (trx) => {
-    await trx('service_request_submission_attachments')
-      .where({ tenant, submission_id: submissionId })
+    const db = tenantDb(trx, tenant);
+    await db.table('service_request_submission_attachments')
+      .where({ submission_id: submissionId })
       .delete();
 
-    const deletedRows = await trx('service_request_submissions')
-      .where({ tenant, submission_id: submissionId })
+    const deletedRows = await db.table('service_request_submissions')
+      .where({ submission_id: submissionId })
       .delete();
 
     deleted = Number(deletedRows ?? 0);

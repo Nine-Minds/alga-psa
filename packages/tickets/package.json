@@ -46,6 +46,7 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/inventory": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",

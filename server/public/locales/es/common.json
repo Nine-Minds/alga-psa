@@ -1,5 +1,9 @@
 {
+  "clientNameCell": {
+    "noClient": "Sin cliente"
+  },
   "reactions": {
+    "add": "Reaccionar",
     "ariaSummary_one": "{{emoji}} {{count}} reacción",
     "ariaSummary_other": "{{emoji}} {{count}} reacciones",
     "ariaYouReacted": ", has reaccionado"
@@ -10,11 +14,16 @@
     "expiringForClient_one": "{{count}} crédito de {{clientName}} vencerá pronto",
     "expiringForClient_other": "{{count}} créditos de {{clientName}} vencerán pronto"
   },
+  "staleAction": {
+    "message": "Esta página está desactualizada. Actualízala para restaurar las actualizaciones y las acciones."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "La prueba Enterprise vence en {{count}} día. Introduzca una clave de licencia para conservar las funciones Enterprise.",
-    "trialExpiresIn_other": "La prueba Enterprise vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Enterprise.",
-    "trialDaysRemaining_one": "Prueba Enterprise activa: queda {{count}} día.",
-    "trialDaysRemaining_other": "Prueba Enterprise activa: quedan {{count}} días.",
+    "trialExpiresIn_one": "La prueba Pro vence en {{count}} día. Introduzca una clave de licencia para conservar las funciones Pro.",
+    "trialExpiresIn_other": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
+    "trialDaysRemaining_one": "Prueba Pro activa: queda {{count}} día.",
+    "trialDaysRemaining_other": "Prueba Pro activa: quedan {{count}} días.",
+    "trialAvailable": "Las funciones Essentials están activas. Inicie una prueba Pro gratuita de 15 días para desbloquear todas las funciones.",
+    "trialExpired": "La prueba Pro ha vencido. La instalación ahora usa las funciones Essentials.",
     "licenseExpiresIn_one": "La licencia vence en {{count}} día. Renueve para evitar interrupciones del servicio.",
     "licenseExpiresIn_other": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio."
   },
@@ -365,7 +374,9 @@
     "ariaLabel": "Paginación",
     "totalItems": "{{count}} {{itemLabel}} en total",
     "totalRecordsInline": "({{count}} registros en total)",
-    "pageOf": "Página {{current}} de {{total}}"
+    "pageOf": "Página {{current}} de {{total}}",
+    "itemsLabel_one": "elemento",
+    "itemsLabel_other": "elementos"
   },
   "documents": {
     "title": "Documentos",
@@ -1069,7 +1080,8 @@
     "fromDate": "Desde",
     "toDate": "Hasta",
     "noResults": "No se encontraron resultados",
-    "searchPlaceholder": "Buscar..."
+    "searchPlaceholder": "Buscar...",
+    "showingOfTotal": "Mostrando {{shown}} de {{total}} — escriba para acotar"
   },
   "pickers": {
     "addNewClient": "Agregar nuevo cliente",
@@ -1237,5 +1249,8 @@
     "showingAllColumns": "Mostrando todas las columnas; desplázate horizontalmente para verlas.",
     "showLess": "Mostrar menos",
     "columnsHidden": "{{count}} columnas ocultas por espacio limitado."
+  },
+  "richTextEditorSkeleton": {
+    "loading": "Cargando editor…"
   }
 }

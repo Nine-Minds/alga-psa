@@ -4,6 +4,7 @@
 
 import { setupE2ETestEnvironment } from './e2eTestSetup';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
+import { tenantDb } from '@alga-psa/db';
 
 async function debugApiKey() {
   console.log('🔍 Starting API key debug...\n');
@@ -18,9 +19,8 @@ async function debugApiKey() {
     console.log(`👤 User ID: ${env.userId}\n`);
     
     // Check what's in the database
-    const apiKeyRecord = await env.db('api_keys')
+    const apiKeyRecord = await tenantDb(env.db, env.tenant).table('api_keys')
       .where('user_id', env.userId)
-      .where('tenant', env.tenant)
       .first();
     
     console.log('📊 API Key record from database:');

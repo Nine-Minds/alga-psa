@@ -266,6 +266,47 @@
       "message": "{{count}} contacts existent déjà. Voulez-vous les mettre à jour avec les nouvelles données ?"
     }
   },
+  "contactEmailAddressesEditor": {
+    "title": "Adresses e-mail",
+    "description": "Ajoutez une ou plusieurs adresses e-mail et choisissez exactement une adresse par défaut.",
+    "actions": {
+      "addEmail": "Ajouter un e-mail"
+    },
+    "emailTypes": {
+      "work": "Professionnel",
+      "personal": "Personnel",
+      "billing": "Facturation",
+      "other": "Autre",
+      "custom": "Personnalisé"
+    },
+    "primary": {
+      "title": "E-mail principal",
+      "description": "Cette adresse reste l'adresse par défaut enregistrée sur la fiche du contact"
+    },
+    "row": {
+      "title": "E-mail supplémentaire {{number}}",
+      "secondaryDescription": "Enregistré comme adresse e-mail non par défaut",
+      "defaultLabel": "Par défaut",
+      "noEmailYet": "Aucun e-mail saisi pour le moment",
+      "editLabel": "Modifier",
+      "edit": "Modifier l'e-mail supplémentaire {{number}}",
+      "doneLabel": "Terminé",
+      "done": "Terminer la modification de l'e-mail supplémentaire {{number}}",
+      "moveUp": "Monter l'e-mail supplémentaire {{number}}",
+      "moveDown": "Descendre l'e-mail supplémentaire {{number}}",
+      "remove": "Supprimer l'e-mail supplémentaire {{number}}"
+    },
+    "fields": {
+      "emailAddress": "Adresse e-mail",
+      "emailPlaceholder": "nom@exemple.com",
+      "emailLabel": "Type d'e-mail",
+      "customEmailLabel": "Type d'e-mail personnalisé",
+      "customTypePlaceholder": "Sélectionnez ou saisissez un type d'e-mail personnalisé",
+      "customTypeSearchPlaceholder": "Recherchez ou saisissez un type d'e-mail personnalisé...",
+      "customTypeEmpty": "Aucun type d'e-mail personnalisé correspondant.",
+      "customTypeUseValue": "Utiliser \"{{value}}\""
+    }
+  },
   "contactPhoneNumbersEditor": {
     "title": "Numéros de téléphone",
     "description": "Éditeur de numéros de téléphone avec gestion des types, validation, valeurs par défaut et prise en charge des extensions",
@@ -324,6 +365,9 @@
     "noAccess": {
       "title": "Aucun accès au portail",
       "description": "Ce contact n’a pas encore accès au portail client"
+    },
+    "noClient": {
+      "description": "Associez ce contact à un client pour gérer l’accès au portail."
     },
     "portalAdmin": {
       "label": "Administrateur du portail",
@@ -406,7 +450,8 @@
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",
         "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
         "invitationNotFound": "Invitation introuvable ou déjà utilisée."
-      }
+      },
+      "userNotFound": "Client user not found"
     }
   },
   "quickAddContact": {
@@ -571,13 +616,15 @@
       "name": "Nom",
       "email": "E-mail",
       "phoneNumber": "Numéro de téléphone",
-      "actions": "Actions"
+      "actions": "Actions",
+      "role": "Rôle"
     },
     "filter": {
       "show": "Afficher :",
       "active": "Contacts actifs",
       "inactive": "Contacts inactifs",
-      "all": "Tous les contacts"
+      "all": "Tous les contacts",
+      "searchPlaceholder": "Rechercher des contacts..."
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
@@ -603,7 +650,7 @@
     "description": "Zone de téléversement pour les images de profil des contacts"
   },
   "contactNotesPanel": {
-    "title": "Notes et infos rapides",
+    "title": "Notes",
     "description": "Panneau de notes enrichies avec affichage de la note héritée et actions enregistrer/réessayer",
     "legacy": {
       "initialNote": "Note initiale"
@@ -649,6 +696,13 @@
         "openTicketFailed": "Échec de l'ouverture du ticket",
         "userNotAuthenticated": "Utilisateur non authentifié"
       }
+    }
+  },
+  "contactBento": {
+    "toast": {
+      "saved": "Contact mis a jour",
+      "saveFailed": "Impossible de mettre a jour le contact",
+      "saveFailedDescription": "The contact could not be updated. Please try again."
     }
   }
 }

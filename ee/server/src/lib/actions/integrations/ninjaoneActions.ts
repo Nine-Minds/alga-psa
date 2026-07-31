@@ -15,6 +15,7 @@ import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { TIER_FEATURES } from '@alga-psa/types';
+import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import { auditLog } from '@/lib/logging/auditLog';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -109,6 +110,117 @@ function extractErrorInfo(error: unknown): object {
   return { message: String(error) };
 }
 
+function ninjaOneActionErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status;
+
+    if (!status) {
+      return 'Unable to reach NinjaOne. Check the selected region and try again.';
+    }
+
+    if (status === 400) {
+      return 'NinjaOne rejected the request. Check the integration settings and try again.';
+    }
+
+    if (status === 401) {
+      return 'NinjaOne credentials are invalid or expired. Reconnect the integration.';
+    }
+
+    if (status === 403) {
+      return 'The connected NinjaOne account does not have permission for this operation.';
+    }
+
+    if (status === 404) {
+      return 'The requested NinjaOne resource was not found. Refresh the integration and try again.';
+    }
+
+    if (status === 429) {
+      return 'NinjaOne rate limit reached. Please try again later.';
+    }
+
+    if (status >= 500) {
+      return 'NinjaOne is temporarily unavailable. Please try again later.';
+    }
+
+    return fallback;
+  }
+
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : '';
+
+  if (!message) {
+    return fallback;
+  }
+
+  if (message.startsWith('Insufficient permissions')) {
+    return 'You do not have permission to perform this NinjaOne action.';
+  }
+
+  if (message === 'Client ID is required' || message === 'Client Secret is required') {
+    return message;
+  }
+
+  if (message === 'NinjaOne integration not configured' || message === 'No active NinjaOne integration found') {
+    return 'NinjaOne is not connected. Connect the integration before running this action.';
+  }
+
+  if (message.includes('client ID not configured')) {
+    return 'NinjaOne client ID is not configured. Save the client ID before starting OAuth.';
+  }
+
+  if (message.includes('client credentials not configured')) {
+    return 'NinjaOne client credentials are not configured. Save the client ID and client secret before continuing.';
+  }
+
+  if (
+    message === 'No refresh token available' ||
+    message === 'NinjaOne reconnect required' ||
+    message.includes('requires reconnection')
+  ) {
+    return 'NinjaOne needs to be reconnected before this action can continue.';
+  }
+
+  if (message.startsWith('Invalid region:')) {
+    return 'Selected NinjaOne region is not supported.';
+  }
+
+  if (message === 'Asset not found') {
+    return 'Asset not found. It may have been deleted or moved.';
+  }
+
+  if (message === 'Asset is not managed by NinjaOne') {
+    return 'This asset is not managed by NinjaOne.';
+  }
+
+  if (message === 'Alert not found') {
+    return 'Alert not found. It may have already been cleared.';
+  }
+
+  if (message === 'Sync is already in progress') {
+    return 'A NinjaOne sync is already in progress. Please wait for it to finish.';
+  }
+
+  if (message.startsWith('No client mapping found for organization')) {
+    return 'One or more NinjaOne organizations must be mapped to clients before devices can sync.';
+  }
+
+  if (message.startsWith('Invalid device ID:')) {
+    return 'One or more selected assets has an invalid NinjaOne device ID.';
+  }
+
+  if (
+    message === 'Software inventory only available for workstations and servers' ||
+    message === 'Patch status only available for workstations and servers'
+  ) {
+    return message;
+  }
+
+  return fallback;
+}
+
 /**
  * Save NinjaOne API credentials for a tenant
  * These credentials are used for OAuth authentication with NinjaOne
@@ -144,7 +256,7 @@ export const saveNinjaOneCredentials = withAdvancedAssetsAccess(async (
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to save NinjaOne credentials.');
     logger.error('[NinjaOneActions] Error saving NinjaOne credentials:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -210,7 +322,7 @@ export const clearNinjaOneCredentials = withAdvancedAssetsAccess(async (user, { 
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to clear NinjaOne credentials.');
     logger.error('[NinjaOneActions] Error clearing NinjaOne credentials:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -228,10 +340,11 @@ export const getNinjaOneConnectionStatus = withAdvancedAssetsAccess(async (user,
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration record
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -248,21 +361,29 @@ export const getNinjaOneConnectionStatus = withAdvancedAssetsAccess(async (user,
     const hasCredentials = !!credentialsJson;
 
     // Get organization and device counts
-    const orgCount = await knex('rmm_organization_mappings')
-      .where({ tenant, integration_id: integration.integration_id })
+    const orgCount = await db.table('rmm_organization_mappings')
+      .where('integration_id', integration.integration_id)
       .count('mapping_id as count')
       .first();
 
     // Get active alert count
-    const alertCount = await knex('rmm_alerts')
-      .where({ tenant, integration_id: integration.integration_id, status: 'active' })
+    const alertCount = await db.table('rmm_alerts')
+      .where({ integration_id: integration.integration_id, status: 'active' })
       .count('alert_id as count')
       .first();
+
+    // The proactive token-refresh job marks the token lifecycle 'reconnect_required'
+    // when the OAuth refresh permanently fails (e.g. invalid_token). Credentials are
+    // still stored (is_connected true), so surface this so the UI can prompt re-auth.
+    const tokenLifecycleStatus = (integration as { settings?: { tokenLifecycle?: { status?: string } } })
+      ?.settings?.tokenLifecycle?.status;
+    const reconnectRequired = tokenLifecycleStatus === 'reconnect_required';
 
     return {
       provider: 'ninjaone',
       is_connected: hasCredentials && integration.is_active,
       is_active: integration.is_active,
+      reconnect_required: reconnectRequired,
       instance_url: integration.instance_url || undefined,
       connected_at: integration.connected_at || undefined,
       last_sync_at: integration.last_sync_at || undefined,
@@ -293,6 +414,7 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // 1. Try to remove webhook from NinjaOne before clearing credentials
     // This is best-effort - we proceed even if it fails
@@ -316,8 +438,8 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
     }
 
     // 2. Load the integration row and stop its lifecycle workflow before mutating secrets.
-    let existingIntegration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    let existingIntegration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first();
 
     if (existingIntegration?.integration_id) {
@@ -327,8 +449,8 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
         'disconnect'
       );
 
-      existingIntegration = await knex('rmm_integrations')
-        .where({ tenant, provider: 'ninjaone' })
+      existingIntegration = await db.table('rmm_integrations')
+        .where('provider', 'ninjaone')
         .first();
     }
 
@@ -362,8 +484,8 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
       delete settings.webhookSecret;
       delete settings.webhookRegisteredAt;
 
-      await knex('rmm_integrations')
-        .where({ tenant, provider: 'ninjaone' })
+      await db.table('rmm_integrations')
+        .where('provider', 'ninjaone')
         .update({
           is_active: false,
           sync_status: 'pending',
@@ -377,7 +499,7 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
       // waiting for the periodic reconciler tick.
       try {
         const { reconcileRmmPollingSchedules } = await import(
-          'server/src/lib/jobs/handlers/rmmAlertPollingHandlers'
+          '@alga-psa/jobs/handlers/rmmAlertPollingHandlers'
         );
         const { initializeJobRunner } = await import('server/src/lib/jobs/initializeJobRunner');
         await reconcileRmmPollingSchedules(await initializeJobRunner());
@@ -423,7 +545,7 @@ export const disconnectNinjaOneIntegration = withAdvancedAssetsAccess(async (use
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to disconnect NinjaOne.');
     logger.error('[NinjaOneActions] Error disconnecting NinjaOne:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -445,12 +567,12 @@ export const testNinjaOneConnection = withAdvancedAssetsAccess(async (user, { te
     const isConnected = await client.testConnection();
 
     if (!isConnected) {
-      return { success: false, error: 'Failed to connect to NinjaOne API' };
+      return { success: false, error: 'Unable to connect to NinjaOne. Verify the credentials and selected region.' };
     }
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to test the NinjaOne connection.');
     logger.error('[NinjaOneActions] Error testing NinjaOne connection:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -468,10 +590,11 @@ export const syncNinjaOneOrganizations = withAdvancedAssetsAccess(async (user, {
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -489,14 +612,15 @@ export const syncNinjaOneOrganizations = withAdvancedAssetsAccess(async (user, {
 
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync NinjaOne organizations.');
     logger.error('[NinjaOneActions] Error syncing organizations:', extractErrorInfo(error));
 
     // Try to update sync status to error
     try {
       const { knex } = await createTenantKnex();
-      await knex('rmm_integrations')
-        .where({ tenant, provider: 'ninjaone' })
+      const db = tenantDb(knex, tenant);
+      await db.table('rmm_integrations')
+        .where('provider', 'ninjaone')
         .update({
           sync_status: 'error',
           sync_error: errorMessage,
@@ -533,10 +657,11 @@ export const getNinjaOneOrganizationMappings = withAdvancedAssetsAccess(async (u
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -544,20 +669,20 @@ export const getNinjaOneOrganizationMappings = withAdvancedAssetsAccess(async (u
     }
 
     // Get mappings with company names
-    const mappings = await knex('rmm_organization_mappings as rom')
-      .leftJoin('clients as c', function() {
-        this.on('rom.tenant', '=', 'c.tenant')
-          .andOn('rom.client_id', '=', 'c.client_id');
-      })
-      .where('rom.tenant', tenant)
+    const mappingsQuery = db.table('rmm_organization_mappings as rom');
+    db.tenantJoin(mappingsQuery, 'clients as c', 'c.client_id', 'rom.client_id', { type: 'left' });
+    type OrganizationMappingRow = Omit<RmmOrganizationMapping, 'metadata'> & {
+      metadata?: string | Record<string, unknown> | null;
+    };
+    const mappings = (await mappingsQuery
       .where('rom.integration_id', integration.integration_id)
       .select(
         'rom.*',
         'c.client_name as company_name'
       )
-      .orderBy('rom.external_organization_name');
+      .orderBy('rom.external_organization_name')) as unknown as OrganizationMappingRow[];
 
-    return mappings.map(m => ({
+    return mappings.map((m): RmmOrganizationMapping => ({
       ...m,
       metadata: typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata || {},
     }));
@@ -576,6 +701,7 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
   mappingId: string,
   updates: {
     company_id?: string | null;
+    default_contact_id?: string | null;
     auto_sync_assets?: boolean;
     auto_create_tickets?: boolean;
   }
@@ -588,6 +714,7 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Map company_id to client_id (database column name)
     const dbUpdates: Record<string, unknown> = {};
@@ -600,9 +727,12 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     if ('auto_create_tickets' in updates) {
       dbUpdates.auto_create_tickets = updates.auto_create_tickets;
     }
+    if ('default_contact_id' in updates) {
+      dbUpdates.default_contact_id = updates.default_contact_id;
+    }
 
-    await knex('rmm_organization_mappings')
-      .where({ tenant, mapping_id: mappingId })
+    await db.table('rmm_organization_mappings')
+      .where('mapping_id', mappingId)
       .update({
         ...dbUpdates,
         updated_at: knex.fn.now(),
@@ -612,7 +742,7 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to update the NinjaOne organization mapping.');
     logger.error('[NinjaOneActions] Error updating organization mapping:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -621,45 +751,55 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
 /**
  * Get connect URL for NinjaOne OAuth
  */
-export const getNinjaOneConnectUrl = withAdvancedAssetsAccess(async (user, { tenant }, region: NinjaOneRegion = 'US'): Promise<string> => {
-  if (!NINJAONE_REGIONS[region]) {
-    throw new Error(`Invalid region: ${region}`);
+export const getNinjaOneConnectUrl = withAdvancedAssetsAccess(async (user, { tenant }, region: NinjaOneRegion = 'US'): Promise<{
+  success: boolean;
+  url?: string;
+  error?: string;
+}> => {
+  try {
+    if (!NINJAONE_REGIONS[region]) {
+      throw new Error(`Invalid region: ${region}`);
+    }
+
+    const canView = await hasPermission(user, 'settings', 'read');
+    if (!canView) {
+      throw new Error('Insufficient permissions to view NinjaOne settings');
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    const clientId = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
+    if (!clientId) {
+      throw new Error('NinjaOne client ID not configured for this tenant.');
+    }
+
+    const csrfToken = crypto.randomBytes(16).toString('hex');
+    const statePayload = {
+      tenantId: tenant,
+      region,
+      csrf: csrfToken,
+      timestamp: Date.now(),
+    };
+    // Persisted so the OAuth callback can verify the state round-tripped from
+    // this tenant's own connect request (one-time use; the callback deletes it).
+    await secretProvider.setTenantSecret(tenant, 'ninjaone_oauth_state', csrfToken);
+    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+    const instanceUrl = NINJAONE_REGIONS[region];
+    const redirectUri = getRedirectUri();
+    const params = new URLSearchParams({
+      client_id: clientId,
+      response_type: 'code',
+      scope: NINJAONE_SCOPES,
+      redirect_uri: redirectUri,
+      state,
+    });
+
+    return { success: true, url: `${instanceUrl}/oauth/authorize?${params.toString()}` };
+  } catch (error) {
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to start NinjaOne authorization.');
+    logger.error('[NinjaOneActions] Error creating connect URL:', extractErrorInfo(error));
+    return { success: false, error: errorMessage };
   }
-
-  const canView = await hasPermission(user, 'settings', 'read');
-  if (!canView) {
-    throw new Error('Insufficient permissions to view NinjaOne settings');
-  }
-
-  const secretProvider = await getSecretProviderInstance();
-  const clientId = await secretProvider.getTenantSecret(tenant, NINJAONE_CLIENT_ID_SECRET);
-  if (!clientId) {
-    throw new Error('NinjaOne client ID not configured for this tenant.');
-  }
-
-  const csrfToken = crypto.randomBytes(16).toString('hex');
-  const statePayload = {
-    tenantId: tenant,
-    region,
-    csrf: csrfToken,
-    timestamp: Date.now(),
-  };
-  // Persisted so the OAuth callback can verify the state round-tripped from
-  // this tenant's own connect request (one-time use; the callback deletes it).
-  await secretProvider.setTenantSecret(tenant, 'ninjaone_oauth_state', csrfToken);
-  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
-
-  const instanceUrl = NINJAONE_REGIONS[region];
-  const redirectUri = getRedirectUri();
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: 'code',
-    scope: NINJAONE_SCOPES,
-    redirect_uri: redirectUri,
-    state,
-  });
-
-  return `${instanceUrl}/oauth/authorize?${params.toString()}`;
 });
 
 /**
@@ -678,10 +818,11 @@ export const triggerNinjaOneFullSync = withAdvancedAssetsAccess(async (
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -703,7 +844,7 @@ export const triggerNinjaOneFullSync = withAdvancedAssetsAccess(async (
 
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to start the NinjaOne full sync.');
     logger.error('[NinjaOneActions] Error triggering full sync:', extractErrorInfo(error));
     return {
       success: false,
@@ -732,10 +873,11 @@ export const triggerNinjaOneIncrementalSync = withAdvancedAssetsAccess(async (us
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -761,7 +903,7 @@ export const triggerNinjaOneIncrementalSync = withAdvancedAssetsAccess(async (us
 
     return result;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to start the NinjaOne incremental sync.');
     logger.error('[NinjaOneActions] Error triggering incremental sync:', extractErrorInfo(error));
     return {
       success: false,
@@ -794,10 +936,11 @@ export const syncNinjaOneDevice = withAdvancedAssetsAccess(async (user, { tenant
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -817,8 +960,8 @@ export const syncNinjaOneDevice = withAdvancedAssetsAccess(async (user, { tenant
 
     return { success: true, asset };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error syncing device:', { deviceId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync this NinjaOne device.');
+    logger.error('[NinjaOneActions] Error syncing device:', { deviceId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -839,10 +982,11 @@ export const getNinjaOneRemoteAccessUrl = withAdvancedAssetsAccess(async (user, 
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get the asset to find the RMM device ID
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
@@ -891,8 +1035,8 @@ export const getNinjaOneRemoteAccessUrl = withAdvancedAssetsAccess(async (user, 
 
     return { success: true, url };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error getting remote access URL:', { assetId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to start NinjaOne remote access.');
+    logger.error('[NinjaOneActions] Error getting remote access URL:', { assetId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -913,10 +1057,11 @@ export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, 
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get the asset to verify RMM management
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
@@ -928,8 +1073,8 @@ export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, 
     }
 
     // Get alerts for this asset
-    const alerts = await knex('rmm_alerts')
-      .where({ tenant, asset_id: assetId })
+    const alerts = await db.table('rmm_alerts')
+      .where('asset_id', assetId)
       .whereIn('status', ['active', 'acknowledged'])
       .orderBy('triggered_at', 'desc')
       .limit(50);
@@ -942,8 +1087,8 @@ export const getAssetAlerts = withAdvancedAssetsAccess(async (user, { tenant }, 
       })),
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error getting asset alerts:', { assetId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to load NinjaOne alerts for this asset.');
+    logger.error('[NinjaOneActions] Error getting asset alerts:', { assetId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -963,10 +1108,11 @@ export const acknowledgeRmmAlert = withAdvancedAssetsAccess(async (user, { tenan
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Update the alert
-    const updated = await knex('rmm_alerts')
-      .where({ tenant, alert_id: alertId })
+    const updated = await db.table('rmm_alerts')
+      .where('alert_id', alertId)
       .update({
         status: 'acknowledged',
         acknowledged_at: knex.fn.now(),
@@ -982,8 +1128,8 @@ export const acknowledgeRmmAlert = withAdvancedAssetsAccess(async (user, { tenan
 
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error acknowledging alert:', { alertId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to acknowledge this alert.');
+    logger.error('[NinjaOneActions] Error acknowledging alert:', { alertId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -1012,8 +1158,8 @@ export const createTicketFromRmmAlert = withAdvancedAssetsAccess(async (user, { 
 
     return { success: true, ticketId: ticket.ticket_id };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error creating ticket from alert:', { alertId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to create a ticket from this alert.');
+    logger.error('[NinjaOneActions] Error creating ticket from alert:', { alertId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -1034,10 +1180,11 @@ export const getNinjaOneDeviceDetails = withAdvancedAssetsAccess(async (user, { 
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get the asset to find the RMM device ID
-    const asset = await knex('assets')
-      .where({ tenant, asset_id: assetId })
+    const asset = await db.table('assets')
+      .where('asset_id', assetId)
       .first();
 
     if (!asset) {
@@ -1054,8 +1201,8 @@ export const getNinjaOneDeviceDetails = withAdvancedAssetsAccess(async (user, { 
 
     return { success: true, device };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('[NinjaOneActions] Error getting device details:', { assetId, error });
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to load NinjaOne device details.');
+    logger.error('[NinjaOneActions] Error getting device details:', { assetId, error: extractErrorInfo(error) });
     return { success: false, error: errorMessage };
   }
 });
@@ -1082,10 +1229,11 @@ export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { te
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -1111,7 +1259,7 @@ export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { te
       },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync NinjaOne patch status.');
     logger.error('[NinjaOneActions] Error triggering patch sync:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -1141,10 +1289,11 @@ export const triggerSoftwareInventorySync = withAdvancedAssetsAccess(async (user
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get integration
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
 
     if (!integration) {
@@ -1172,7 +1321,7 @@ export const triggerSoftwareInventorySync = withAdvancedAssetsAccess(async (user
       },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync NinjaOne software inventory.');
     logger.error('[NinjaOneActions] Error triggering software sync:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -1224,7 +1373,7 @@ export const searchSoftware = withAdvancedAssetsAccess(async (
 
     return { success: true, results };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to search NinjaOne software inventory.');
     logger.error('[NinjaOneActions] Error searching software:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
@@ -1255,18 +1404,17 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
     }
 
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     // Get total RMM-managed devices
-    const totalDevicesResult = await knex('assets')
-      .where({ tenant })
+    const totalDevicesResult = await db.table('assets')
       .where('rmm_provider', 'ninjaone')
       .whereNotNull('rmm_device_id')
       .count('asset_id as count')
       .first();
 
     // Get devices by status
-    const devicesByStatus = await knex('assets')
-      .where({ tenant })
+    const devicesByStatus = await db.table('assets')
       .where('rmm_provider', 'ninjaone')
       .whereNotNull('rmm_device_id')
       .select('agent_status')
@@ -1279,18 +1427,15 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
     });
 
     // Get devices with active alerts
-    const devicesWithAlertsResult = await knex('rmm_alerts')
-      .where({ tenant, status: 'active' })
+    const devicesWithAlertsResult = await db.table('rmm_alerts')
+      .where('status', 'active')
       .countDistinct('asset_id as count')
       .first();
 
     // Get patch statistics from workstations
-    const workstationPatches = await knex('workstation_assets as aw')
-      .join('assets as a', function() {
-        this.on('aw.tenant', '=', 'a.tenant')
-          .andOn('aw.asset_id', '=', 'a.asset_id');
-      })
-      .where('aw.tenant', tenant)
+    const workstationPatchesQuery = db.table('workstation_assets as aw');
+    db.tenantJoin(workstationPatchesQuery, 'assets as a', 'a.asset_id', 'aw.asset_id');
+    const workstationPatches = await workstationPatchesQuery
       .where('a.rmm_provider', 'ninjaone')
       .select(
         knex.raw('COALESCE(SUM(COALESCE(aw.pending_patches, 0)), 0) as pending'),
@@ -1300,12 +1445,9 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
       .first<{ pending: string | number; failed: string | number; needing_patches: string | number }>();
 
     // Get patch statistics from servers
-    const serverPatches = await knex('server_assets as asrv')
-      .join('assets as a', function() {
-        this.on('asrv.tenant', '=', 'a.tenant')
-          .andOn('asrv.asset_id', '=', 'a.asset_id');
-      })
-      .where('asrv.tenant', tenant)
+    const serverPatchesQuery = db.table('server_assets as asrv');
+    db.tenantJoin(serverPatchesQuery, 'assets as a', 'a.asset_id', 'asrv.asset_id');
+    const serverPatches = await serverPatchesQuery
       .where('a.rmm_provider', 'ninjaone')
       .select(
         knex.raw('COALESCE(SUM(COALESCE(asrv.pending_patches, 0)), 0) as pending'),
@@ -1315,8 +1457,8 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
       .first<{ pending: string | number; failed: string | number; needing_patches: string | number }>();
 
     // Get last sync time
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: 'ninjaone' })
+    const integration = await db.table('rmm_integrations')
+      .where('provider', 'ninjaone')
       .select('last_sync_at')
       .first();
 
@@ -1338,7 +1480,7 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
       },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to load NinjaOne compliance summary.');
     logger.error('[NinjaOneActions] Error getting compliance summary:', extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }

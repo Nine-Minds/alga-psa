@@ -4,6 +4,12 @@ exports.config = { transaction: false };
 
 const LEGACY_EMAIL_WORKFLOW_ID = '00000000-0000-0000-0000-00000000e001';
 const LEGACY_EMAIL_WORKFLOW_KEY = 'system.email-processing';
+const MIGRATION_TENANT = 'migration:20260425200000_add_tenant_id_to_workflow_definitions';
+const WORKFLOW_TENANT_BACKFILL_REASON = 'workflow tenant_id backfill before facade tenant column is available';
+
+async function loadTenantDb() {
+  return require('./utils/tenantDb.cjs').tenantDb;
+}
 
 const ensureSequentialMode = async (knex) => {
   await knex.raw(`
@@ -149,17 +155,17 @@ const deterministicWorkflowId = (workflowId, tenantId) => {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
-const collectTenantEvidence = async (knex, workflow) => {
+const collectTenantEvidence = async (knex, migrationDb, workflow) => {
   const evidence = [];
 
-  const runRows = await knex('workflow_runs')
+  const runRows = await migrationDb.unscoped('workflow_runs', WORKFLOW_TENANT_BACKFILL_REASON)
     .distinct('tenant_id')
     .where({ workflow_id: workflow.workflow_id })
     .whereNotNull('tenant_id');
   evidence.push(...runRows.map((row) => row.tenant_id));
 
   if (await hasTable(knex, 'tenant_workflow_schedule')) {
-    const scheduleRows = await knex('tenant_workflow_schedule')
+    const scheduleRows = await migrationDb.unscoped('tenant_workflow_schedule', WORKFLOW_TENANT_BACKFILL_REASON)
       .distinct('tenant_id')
       .where({ workflow_id: workflow.workflow_id })
       .whereNotNull('tenant_id');
@@ -176,27 +182,27 @@ const collectTenantEvidence = async (knex, workflow) => {
     return [];
   }
 
-  const actorRows = await knex('users')
+  const actorRows = await migrationDb.unscoped('users', WORKFLOW_TENANT_BACKFILL_REASON)
     .distinct('tenant')
     .whereIn('user_id', actorIds)
     .whereNotNull('tenant');
   return uniqueStrings(actorRows.map((row) => row.tenant));
 };
 
-const deleteObsoleteLegacyWorkflow = async (knex, workflow) => {
-  await knex('workflow_definition_versions').where({ workflow_id: workflow.workflow_id }).del();
+const deleteObsoleteLegacyWorkflow = async (knex, migrationDb, workflow) => {
+  await migrationDb.unscoped('workflow_definition_versions', WORKFLOW_TENANT_BACKFILL_REASON).where({ workflow_id: workflow.workflow_id }).del();
 
   if (await hasTable(knex, 'tenant_workflow_schedule')) {
-    await knex('tenant_workflow_schedule').where({ workflow_id: workflow.workflow_id }).del();
+    await migrationDb.unscoped('tenant_workflow_schedule', WORKFLOW_TENANT_BACKFILL_REASON).where({ workflow_id: workflow.workflow_id }).del();
   }
 
-  await knex('workflow_definitions').where({ workflow_id: workflow.workflow_id }).del();
+  await migrationDb.unscoped('workflow_definitions', WORKFLOW_TENANT_BACKFILL_REASON).where({ workflow_id: workflow.workflow_id }).del();
 };
 
-const cloneWorkflowForTenant = async (knex, workflow, tenantId, options = {}) => {
+const cloneWorkflowForTenant = async (knex, migrationDb, workflow, tenantId, options = {}) => {
   const now = new Date().toISOString();
   const existingClone = workflow.key
-    ? await knex('workflow_definitions')
+    ? await migrationDb.unscoped('workflow_definitions', WORKFLOW_TENANT_BACKFILL_REASON)
       .where({ tenant_id: tenantId, key: workflow.key })
       .whereNot('workflow_id', workflow.workflow_id)
       .first()
@@ -216,18 +222,18 @@ const cloneWorkflowForTenant = async (knex, workflow, tenantId, options = {}) =>
       updated_at: now,
     };
 
-    await knex('workflow_definitions')
+    await migrationDb.unscoped('workflow_definitions', WORKFLOW_TENANT_BACKFILL_REASON)
       .insert(serializeJsonColumnsForPg(clonedWorkflow, WORKFLOW_DEFINITION_JSON_COLUMNS))
       .onConflict('workflow_id')
       .ignore();
   }
 
-  const versionRows = await knex('workflow_definition_versions')
+  const versionRows = await migrationDb.unscoped('workflow_definition_versions', WORKFLOW_TENANT_BACKFILL_REASON)
     .where({ workflow_id: workflow.workflow_id })
     .orderBy('version', 'asc');
 
   for (const version of versionRows) {
-    await knex('workflow_definition_versions')
+    await migrationDb.unscoped('workflow_definition_versions', WORKFLOW_TENANT_BACKFILL_REASON)
       .insert(serializeJsonColumnsForPg({
         ...version,
         version_id: randomUUID(),
@@ -240,12 +246,12 @@ const cloneWorkflowForTenant = async (knex, workflow, tenantId, options = {}) =>
       .ignore();
   }
 
-  await knex('workflow_runs')
+  await migrationDb.unscoped('workflow_runs', WORKFLOW_TENANT_BACKFILL_REASON)
     .where({ workflow_id: workflow.workflow_id, tenant_id: tenantId })
     .update({ workflow_id: newWorkflowId });
 
   if (await hasTable(knex, 'tenant_workflow_schedule')) {
-    await knex('tenant_workflow_schedule')
+    await migrationDb.unscoped('tenant_workflow_schedule', WORKFLOW_TENANT_BACKFILL_REASON)
       .where({ workflow_id: workflow.workflow_id, tenant_id: tenantId })
       .update({ workflow_id: newWorkflowId });
   }
@@ -254,6 +260,8 @@ const cloneWorkflowForTenant = async (knex, workflow, tenantId, options = {}) =>
 };
 
 exports.up = async function up(knex) {
+  const tenantDb = await loadTenantDb();
+  const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   await ensureSequentialMode(knex);
 
   const hasTenantId = await knex.schema.hasColumn('workflow_definitions', 'tenant_id');
@@ -266,7 +274,7 @@ exports.up = async function up(knex) {
   await knex.raw('ALTER TABLE workflow_definitions DROP CONSTRAINT IF EXISTS workflow_definitions_key_unique');
   await knex.raw('DROP INDEX IF EXISTS idx_workflow_definitions_key');
 
-  const workflows = await knex('workflow_definitions').select('*').orderBy('created_at', 'asc');
+  const workflows = await migrationDb.unscoped('workflow_definitions', WORKFLOW_TENANT_BACKFILL_REASON).select('*').orderBy('created_at', 'asc');
 
   for (const workflow of workflows) {
     const isLegacyEmailWorkflow =
@@ -274,7 +282,7 @@ exports.up = async function up(knex) {
       workflow.key === LEGACY_EMAIL_WORKFLOW_KEY;
 
     if (workflow.tenant_id) {
-      await knex('workflow_definitions')
+      await migrationDb.unscoped('workflow_definitions', WORKFLOW_TENANT_BACKFILL_REASON)
         .where({ workflow_id: workflow.workflow_id })
         .update({
           is_system: false,
@@ -283,13 +291,13 @@ exports.up = async function up(knex) {
       continue;
     }
 
-    const tenantIds = await collectTenantEvidence(knex, workflow);
+    const tenantIds = await collectTenantEvidence(knex, migrationDb, workflow);
 
     if (tenantIds.length === 0) {
       const isObsoleteSystemWorkflow = workflow.is_system === true || isLegacyEmailWorkflow;
 
       if (isObsoleteSystemWorkflow) {
-        await deleteObsoleteLegacyWorkflow(knex, workflow);
+        await deleteObsoleteLegacyWorkflow(knex, migrationDb, workflow);
         continue;
       }
 
@@ -302,13 +310,13 @@ exports.up = async function up(knex) {
     const [primaryTenantId, ...additionalTenantIds] = tenantIds.sort();
 
     for (const tenantId of additionalTenantIds) {
-      await cloneWorkflowForTenant(knex, workflow, tenantId, {
+      await cloneWorkflowForTenant(knex, migrationDb, workflow, tenantId, {
         hide: isLegacyEmailWorkflow,
         pause: isLegacyEmailWorkflow,
       });
     }
 
-    await knex('workflow_definitions')
+    await migrationDb.unscoped('workflow_definitions', WORKFLOW_TENANT_BACKFILL_REASON)
       .where({ workflow_id: workflow.workflow_id })
       .update({
         tenant_id: primaryTenantId,
@@ -318,7 +326,7 @@ exports.up = async function up(knex) {
       });
   }
 
-  const unresolved = await knex('workflow_definitions')
+  const unresolved = await migrationDb.unscoped('workflow_definitions', WORKFLOW_TENANT_BACKFILL_REASON)
     .whereNull('tenant_id')
     .select('workflow_id', 'key', 'name');
   if (unresolved.length > 0) {

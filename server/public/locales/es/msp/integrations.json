@@ -346,16 +346,363 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Cancelar",
+          "connect": "Conectar",
+          "connecting": "Conectando...",
+          "test": "Probar conexión",
+          "testing": "Probando…"
+        },
+        "description": "Introduzca la URL de su instancia CIPP y un token de API para permitir que Alga descubra y sincronice los datos de Entra.",
+        "encryptionNote": "La clave de API se cifra en reposo y no se vuelve a mostrar después de guardar.",
+        "errors": {
+          "missingFields": "Se requieren tanto la URL base como el token de API.",
+          "testFirst": "Pruebe la conexión antes de guardar.",
+          "unknown": "Se produjo un error desconocido."
+        },
+        "fields": {
+          "apiToken": "Token de API",
+          "apiTokenHelp": "En CIPP: Configuración → CIPP → Acceso a API. Copie la clave de API, no un secreto de cliente de Azure.",
+          "apiTokenPlaceholder": "Introduzca el token...",
+          "baseUrl": "URL base de CIPP",
+          "baseUrlHelp": "Este es el host de la function app CIPP-API (por ejemplo my-cipp-api.azurewebsites.net), no el frontend de CIPP donde inicia sesión.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "test": {
+          "passed": "CIPP respondió. {{count}} inquilinos visibles.",
+          "required": "Pruebe la conexión antes de guardar."
+        },
+        "title": "Conectar CIPP"
+      },
+      "console": {
+        "actions": {
+          "pause": "Pausar sincronización",
+          "resume": "Reanudar sincronización",
+          "syncNeedsClients": "Asigne al menos un cliente antes de sincronizar.",
+          "syncNeedsConnection": "Repare la conexión antes de sincronizar.",
+          "syncNow": "Sincronizar ahora",
+          "syncingNow": "Iniciando…"
+        },
+        "attention": {
+          "actions": {
+            "fixConnection": "Arreglar conexión",
+            "mapClients": "Asignar clientes",
+            "openSchedule": "Activarla",
+            "review": "Revisar",
+            "viewClients": "Ver clientes"
+          },
+          "connection": "La conexión no funciona. No se sincronizará nada hasta arreglarla.",
+          "connectionDetail": "Arregle primero la conexión: hasta entonces todos los clientes fallan igual.",
+          "empty": "Nada requiere atención.",
+          "failedClients": "{{count}} clientes no se sincronizaron correctamente.",
+          "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} cliente no se sincronizó correctamente.",
+          "neverSynced": "{{count}} clientes asignados nunca se han sincronizado.",
+          "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} cliente asociado nunca se ha sincronizado.",
+          "noClients": "No hay clientes asignados, por lo que no se puede sincronizar nada.",
+          "noClientsDetail": "Asocie un inquilino de Microsoft a un cliente para empezar a sincronizar contactos.",
+          "reviewQueue": "{{count}} identidades esperan una decisión.",
+          "reviewQueueAtLeast": "Al menos {{count}} identidades esperan una decisión.",
+          "reviewQueueDetail": "Dos o más contactos comparten un correo de Microsoft, así que no les pasa nada hasta que usted elija.",
+          "reviewQueueOne": "{{count}} identidad espera una decisión.",
+          "scheduleNotApplied": "La sincronización automática está activada, pero la programación nunca se aplicó.",
+          "scheduleNotAppliedDetail": "Hasta entonces no se ejecutará nada solo. Guarde la programación de nuevo para reintentarlo.",
+          "scheduleOff": "La sincronización automática está desactivada.",
+          "scheduleOffDetail": "Los contactos solo cambian cuando alguien ejecuta una sincronización a mano.",
+          "severity": {
+            "blocking": "Bloqueante",
+            "info": "Para información",
+            "warning": "Advertencia"
+          },
+          "title": "Requiere atención"
+        },
+        "clients": {
+          "columns": {
+            "lastSync": "Última sincronización",
+            "tenant": "Inquilino de Microsoft",
+            "users": "Usuarios"
+          },
+          "empty": "Ningún cliente coincide con esta búsqueda.",
+          "filters": {
+            "all": "Todos",
+            "failing": "Con fallos",
+            "never-synced": "Nunca sincronizados",
+            "synced": "Sincronizado"
+          },
+          "searchPlaceholder": "Buscar clientes o dominios",
+          "sync": "Sincronizar",
+          "unlink": "Desvincular",
+          "status": {
+            "failed": "Con fallos",
+            "neverSynced": "Nunca sincronizado",
+            "partlyFailed": "Parcialmente fallido",
+            "synced": "Sincronizado",
+            "syncing": "Sincronizando"
+          },
+          "emptyTitle": "Aún no hay clientes asociados",
+          "emptyDescription": "Asocie un inquilino de Microsoft a un cliente en la pestaña Conexión. Los clientes aparecen aquí una vez asociados.",
+          "emptyAction": "Abrir la pestaña Conexión",
+          "clearFilters": "Borrar filtros",
+          "unlinkConfirm": {
+            "body": "{{client}} deja de sincronizarse, ahora y según la programación. Sus contactos quedan tal cual y conservan su vínculo con Microsoft. El inquilino vuelve a la tabla de asociación en la pestaña Conexión.",
+            "title": "¿Dejar de sincronizar {{client}}?"
+          },
+          "unlinked": "{{client}} ya no se sincroniza.",
+          "unlinkFailed": "No se pudo desvincular ese cliente.",
+          "hidePreview": "Ocultar vista previa",
+          "previewLoading": "Leyendo el directorio de {{client}} desde Microsoft…",
+          "previewLoadingHint": "El tiempo depende de cuántos usuarios tenga el cliente.",
+          "previousCount": "Anterior",
+          "syncFinished": "Sincronización finalizada para {{client}}.",
+          "syncing": "Sincronizando…",
+          "syncTrackingFailed": "La sincronización se inició, pero esta página no pudo seguirla hasta el final. Actualice para ver el resultado más reciente."
+        },
+        "connection": {
+          "changeAction": "Cambiar conexión",
+          "exportRecord": "Exportar registro de conexión",
+          "mappingDescription": "Revise o cambie a qué cliente pertenece cada inquilino de Microsoft.",
+          "mappingTitle": "Asignación de inquilinos",
+          "methodLabel": "Método",
+          "permissionsTitle": "Permisos vigentes",
+          "rotate": "Rotar credencial",
+          "validate": "Probar conexión",
+          "validated": "La conexión funciona.",
+          "validating": "Probando…"
+        },
+        "errors": {
+          "loadFailed": "Esta pantalla no se pudo cargar, por lo que lo que muestra puede estar incompleto.",
+          "syncFailed": "No se pudo iniciar la sincronización.",
+          "syncNotStarted": "La sincronización no se inició: el procesador en segundo plano no está disponible. No ha cambiado nada; inténtelo de nuevo cuando vuelva.",
+          "validateFailed": "No se pudo validar la conexión."
+        },
+        "health": {
+          "checking": "Comprobando…",
+          "failingClients": "{{count}} clientes con fallos",
+          "failingClientsOne": "{{count}} cliente con fallos",
+          "healthy": "Correcto",
+          "unknown": "Estado desconocido"
+        },
+        "history": {
+          "allClients": "Todos los clientes",
+          "columns": {
+            "clients": "Clientes",
+            "failed": "Con fallos",
+            "scope": "Alcance",
+            "succeeded": "Correctos",
+            "trigger": "Desencadenante",
+            "when": "Cuándo"
+          },
+          "empty": "Ninguna ejecución coincide con estos filtros.",
+          "export": "Exportar CSV",
+          "includePreviews": "Incluir previsualizaciones",
+          "next": "Siguiente",
+          "onlyFailures": "Solo fallos",
+          "page": "Página {{page}} de {{pages}}",
+          "previewBadge": "previsualización",
+          "previous": "Anterior",
+          "triggers": {
+            "all": "Todas las ejecuciones",
+            "manual": "Manuales",
+            "scheduled": "Programadas"
+          }
+        },
+        "lastRun": {
+          "columns": {
+            "client": "Cliente",
+            "created": "Creados",
+            "inactivated": "Desactivados",
+            "linked": "Vinculados",
+            "result": "Resultado",
+            "updated": "Cambiado"
+          },
+          "empty": "Todavía no se ha ejecutado ninguna sincronización.",
+          "progress": "{{processed}} de {{total}} clientes completados hasta ahora.",
+          "results": {
+            "done": "Hecho",
+            "failed": "Con fallos",
+            "partlyFailed": "Parcialmente fallido",
+            "running": "Sincronizando",
+            "toReview": "{{count}} por revisar"
+          },
+          "showAll": "Ver los {{count}} clientes de esta ejecución",
+          "stats": {
+            "created": "Creados",
+            "createdSub": "contactos nuevos",
+            "failed": "Con fallos",
+            "failedSub": "clientes",
+            "inactivated": "Marcados inactivos",
+            "inactivatedSub": "cuentas deshabilitadas",
+            "linked": "Vinculados",
+            "linkedSub": "contactos existentes",
+            "updated": "Cambiados",
+            "updatedSub": "donde usted lo permitió"
+          },
+          "summaries": {
+            "completed": "Finalizó {{time}}.",
+            "failed": "Falló {{time}}.",
+            "partial": "Finalizó {{time}}, con errores.",
+            "running": "Comenzó {{time}} y sigue en curso.",
+            "unknown": "Última ejecución {{time}}."
+          },
+          "title": "Última sincronización",
+          "unavailable": "No se pudo leer el historial de ejecuciones."
+        },
+        "lead": "{{clients}} clientes asociados · conectado mediante {{method}}",
+        "overwrites": {
+          "change": "Cambiar reglas de campos",
+          "inactivateOff": "Las cuentas de Microsoft deshabilitadas se dejan como están.",
+          "inactivateOn": "Las cuentas de Microsoft deshabilitadas se marcan como inactivas.",
+          "none": "No se sobrescribe nada.",
+          "title": "Sobrescrituras permitidas"
+        },
+        "schedule": {
+          "cadence": {
+            "10080": "cada semana",
+            "1440": "cada día",
+            "240": "cada 4 horas",
+            "60": "cada hora",
+            "720": "cada 12 horas"
+          },
+          "changeAction": "Cambiar programación",
+          "description": "Cuando está activada, Alga sincroniza cada cliente asignado con esta cadencia. Al desactivarla se detienen las ejecuciones programadas; puede seguir sincronizando manualmente.",
+          "enablePrompt": "El piloto funcionó. Active la sincronización automática para mantener los contactos al día sin ejecutarla a mano.",
+          "intervalLabel": "Ejecutar cada",
+          "intervals": {
+            "10080": "Semana",
+            "1440": "Día",
+            "240": "4 horas",
+            "60": "Hora",
+            "720": "12 horas"
+          },
+          "pause": "Pausar",
+          "pauseHint": "En pausa. Guarde para aplicar.",
+          "paused": "Sincronización automática pausada.",
+          "resumed": "Sincronización automática reanudada.",
+          "save": "Guardar programación",
+          "saveFailed": "No se pudo guardar la programación.",
+          "saved": "Programación guardada.",
+          "savedPending": "Ajuste guardado. La programación se actualizará cuando el worker vuelva a reconciliar.",
+          "saving": "Guardando…",
+          "title": "Sincronización automática"
+        },
+        "sideRail": {
+          "runs": "Se ejecuta {{cadence}}",
+          "runsMinutes": "Se ejecuta cada {{minutes}} minutos",
+          "scheduleOff": "Desactivado"
+        },
+        "syncStarted": "Sincronización iniciada para todos los clientes asignados.",
+        "tabs": {
+          "clients": "Clientes",
+          "connection": "Conexión",
+          "fieldRules": "Reglas de campo",
+          "history": "Historial",
+          "overview": "Resumen",
+          "reviewQueue": "Cola de revisión",
+          "schedule": "Sincronización y programación"
+        }
+      },
+      "pilot": {
+        "actions": {
+          "createAndSync": "Crear clientes aprobados y sincronizar",
+          "preview": "Previsualizar cambios",
+          "previewing": "Previsualizando…",
+          "syncOne": "Sincronizar este cliente",
+          "syncOneNamed": "Sincronizar solo {{client}}",
+          "syncRemaining": "Sincronizar los {{count}} restantes",
+          "syncingOne": "Iniciando…",
+          "syncingRemaining": "Iniciando…"
+        },
+        "clientLabel": "Cliente piloto",
+        "empty": "Confirme primero una asignación de inquilino a cliente; todavía no hay nada que pilotar.",
+        "errors": {
+          "loadMappings": "No se pudieron cargar los clientes asignados.",
+          "preflightFailed": "No se pudo completar la previsualización.",
+          "syncFailed": "No se pudo iniciar la sincronización."
+        },
+        "gateNote": "Sincronice un cliente primero. El resto se desbloquea cuando termine su ejecución.",
+        "pendingCreate": "Los nuevos clientes aprobados ({{count}}) se crearán mediante esta sincronización explícita. Las sincronizaciones programadas no pueden crearlos.",
+        "previewPrompt": "Previsualice los cambios de este cliente antes de escribir nada.",
+        "remainingStarted": "Sincronización iniciada para los {{count}} clientes restantes.",
+        "started": "Sincronización iniciada para {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "Ningún contacto de este cliente coincide con el correo, así que se crearía uno.",
+            "label": "Contactos nuevos"
+          },
+          "link": {
+            "description": "Un contacto existente coincide por correo y se vincularía, y se actualizaría donde sus reglas de campo lo permitan.",
+            "label": "Vinculados a contactos existentes"
+          },
+          "markInactive": {
+            "description": "La cuenta de Microsoft está deshabilitada, así que el contacto vinculado se marcaría inactivo. No se elimina nada.",
+            "label": "Marcados como inactivos"
+          },
+          "needsDecision": {
+            "description": "Coincide más de un contacto, así que la sincronización no adivina. Estos van a la cola de revisión.",
+            "label": "Necesita una decisión"
+          },
+          "noChange": {
+            "description": "Ya vinculado, y nada de lo que sus reglas sincronizan ha cambiado.",
+            "label": "Sin cambios"
+          }
+        },
+        "checkAgain": "Comprobar de nuevo",
+        "checkedLabel": "Comprobado",
+        "hideNames": "Ocultar nombres",
+        "moreNames": "y {{count}} más",
+        "nothingWritten": "Todavía no se ha escrito nada",
+        "showNames": "Mostrar nombres",
+        "summary": "{{count}} identidades comprobadas a las {{time}}. No se cambió nada.",
+        "summaryNoTime": "{{count}} identidades comprobadas. No se cambió nada.",
+        "title": "Qué haría esta sincronización"
+      },
+      "reconciliation": {
+        "actions": {
+          "dismiss": "Descartar",
+          "refresh": "Actualizar",
+          "resolveExisting": "Resolver en existente",
+          "resolveNew": "Resolver en nuevo"
+        },
+        "candidate": {
+          "fallback": "candidato",
+          "label": "Contactos candidatos: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Contacto existente",
+          "placeholder": "Seleccionar contacto existente..."
+        },
+        "empty": "No hay coincidencias ambiguas en espera de revisión.",
+        "errors": {
+          "enterContactId": "Introduzca un ID de contacto para resolverlo en un contacto existente.",
+          "loadQueue": "No se pudo cargar la cola de conciliación.",
+          "resolveFailed": "No se pudo resolver el elemento de la cola."
+        },
+        "loading": "Cargando cola…",
+        "noEmailIdentity": "Sin identidad de correo",
+        "queuedAt": "{{identity}} · en cola {{time}}",
+        "scopedToMappedClient": "Las opciones de contacto existente están limitadas a este cliente asignado.",
+        "success": {
+          "dismissed": "{{identity}} descartado. No volverá en la próxima sincronización.",
+          "resolvedExisting": "Elemento de cola {{queueItemId}} resuelto en el contacto existente {{contactNameId}}.",
+          "resolvedNew": "Elemento de cola {{queueItemId}} resuelto creando el contacto {{contactNameId}}."
+        },
+        "title": "Cola de coincidencias ambiguas"
+      },
       "settings": {
         "actions": {
+          "cancel": "Cancelar",
           "disconnect": "Desconectar",
-          "reconnect": "Reconectar",
+          "hideReviewRemap": "Ocultar revisión / reasignación",
+          "reconnect": "Volver a conectar {{connectionType}}",
           "reconnecting": "Reconectando…",
           "refresh": "Actualizar",
           "resetFieldSync": "Restablecer",
           "reviewMappings": "Revisar asignaciones",
           "reviewRemap": "Revisar / Reasignar",
-          "hideReviewRemap": "Ocultar revisión / reasignación",
           "runDiscovery": "Ejecutar descubrimiento",
           "runDiscoveryAgain": "Volver a ejecutar descubrimiento",
           "runDiscoveryRunning": "Ejecutando descubrimiento…",
@@ -367,21 +714,30 @@
           "syncAllStarting": "Iniciando…"
         },
         "badges": {
-          "enterprise": "Enterprise",
+          "pro": "Pro",
           "reviewBeforeInitialSync": "Revisar antes de la sincronización inicial"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft inició su sesión, pero denegó el acceso a su lista de inquilinos gestionados. Un administrador global debe conceder el consentimiento de administrador para los permisos solicitados. No se guardó nada: inténtelo de nuevo cuando se conceda el consentimiento.",
+            "expired": "El intento de conexión caducó antes de completarse. No se guardó nada: inicie la conexión de nuevo.",
+            "generic": "Microsoft Entra no se conectó y no se guardó nada. Inténtelo de nuevo.",
+            "validationFailed": "Microsoft inició su sesión, pero no se pudo leer su lista de inquilinos gestionados, por lo que no se guardó nada. Revise los permisos de la conexión e inténtelo de nuevo."
+          },
+          "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": " (Conectando...)",
           "details": "Detalles de conexión",
           "directCredentialSourceLabel": "Origen de credenciales:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Microsoft Tenant:",
-          "cippServerLabel": "Servidor CIPP:",
+          "directTenantLabel": "Inquilino de Microsoft",
           "notAvailable": "No disponible",
           "notConfigured": "No configurado",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Opciones de conexión",
-          "promptDetails": "Conecte Entra para completar los detalles del proveedor."
+          "promptDetails": "Conecte Entra para completar los detalles del proveedor.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Directo"
+          }
         },
         "currentStep": {
           "connect": {
@@ -408,6 +764,12 @@
           "description": "La interfaz de integración con Entra está actualmente deshabilitada para este inquilino.",
           "title": "Integración con Microsoft Entra"
         },
+        "disconnectConfirm": {
+          "keeps": "Los contactos, las asignaciones de clientes y el historial de sincronización se conservan tal cual. No se elimina nada.",
+          "reconnect": "Volver a conectar más adelante restaura la sincronización sin rehacer las asignaciones.",
+          "stops": "Las sincronizaciones programadas y manuales se detienen y se elimina la credencial almacenada.",
+          "title": "¿Desconectar Microsoft Entra?"
+        },
         "discovery": {
           "completed": "Descubrimiento completado. Se descubrieron {{count}} inquilinos.",
           "completedOne": "Descubrimiento completado. Se descubrió {{count}} inquilino.",
@@ -426,11 +788,15 @@
           "options": {
             "displayName": {
               "description": "Permitir que el nombre visible de Entra sobrescriba el nombre completo en los contactos vinculados.",
-              "label": "Nombre visible"
+              "label": "Nombre para mostrar"
             },
             "email": {
               "description": "Permitir que el correo/UPN de Entra sobrescriba el correo del contacto en los contactos vinculados.",
               "label": "Correo electrónico"
+            },
+            "markInactiveWhenDisabled": {
+              "description": "Los contactos vinculados se marcan como inactivos, nunca se eliminan. Desactive esto para no tocar los contactos cuando se deshabilite su cuenta.",
+              "label": "Marcar contactos como inactivos cuando la cuenta de Microsoft esté deshabilitada"
             },
             "phone": {
               "description": "Permitir que los valores de teléfono de Entra sobrescriban el número de teléfono del contacto en los contactos vinculados.",
@@ -445,11 +811,22 @@
               "label": "UPN"
             }
           },
-          "title": "Controles de sincronización de campos"
+          "preview": "Previsualizar efecto",
+          "previewClientEmpty": "Ningún cliente asignado coincide con esa búsqueda.",
+          "previewClientLabel": "Cliente",
+          "previewClientSearch": "Buscar clientes asignados",
+          "previewDescription": "Aplica las reglas tal como están editadas a un cliente y no escribe nada, para ver el efecto antes de que afecte a todos.",
+          "previewTitle": "Pruebe las reglas antes de guardarlas",
+          "previewing": "Previsualizando…",
+          "save": "Guardar reglas",
+          "saveFailed": "No se pudieron guardar las reglas de campo.",
+          "saved": "Reglas de campo guardadas.",
+          "saving": "Guardando…",
+          "title": "Reglas de campos"
         },
         "guidedStep": {
-          "current": "actual",
           "complete": "completo",
+          "current": "actual",
           "locked": "bloqueado",
           "stepLabel": "Paso {{number}}",
           "thisIsCurrent": "Este es su paso actual de incorporación."
@@ -483,12 +860,9 @@
           "title": "Operaciones continuas"
         },
         "overview": {
-          "connectionLabel": "Conexión:",
           "connectionTypeLabel": "Tipo de conexión:",
           "label": "Resumen",
-          "mappedTenantsLabel": "Inquilinos asignados:",
-          "nextSyncIntervalEvery": "Cada {{minutes}} minutos",
-          "nextSyncIntervalLabel": "Próximo intervalo de sincronización:"
+          "mappedTenantsLabel": "Inquilinos asignados:"
         },
         "skipped": {
           "empty": "Actualmente no hay inquilinos marcados como omitidos.",
@@ -498,7 +872,14 @@
         },
         "status": {
           "connectionHealth": "Estado de la conexión",
-          "label": "Estado"
+          "label": "Estado",
+          "values": {
+            "connected": "Conectado",
+            "disconnected": "Desconectado",
+            "not_connected": "No conectado",
+            "unknown": "Desconocido",
+            "validation_failed": "Conectado, pero la validación falla"
+          }
         },
         "syncAll": {
           "failed": "No se pudo iniciar la sincronización completa de Entra.",
@@ -506,10 +887,14 @@
           "startedNoId": "Solicitud de inicio de sincronización aceptada."
         },
         "title": "Integración con Microsoft Entra",
+        "unmapConfirm": {
+          "body": "Esto elimina la decisión de asignación guardada para {{tenant}}, de modo que vuelva a aparecer en la tabla de asignaciones. Los contactos ya sincronizados no se modifican.",
+          "title": "¿Reasignar este inquilino?"
+        },
         "validation": {
           "label": "Validación y descubrimiento",
           "lastDiscoveryLabel": "Último descubrimiento:",
-          "lastValidatedLabel": "Última validación:",
+          "lastValidatedLabel": "Última comprobación",
           "neverFormatted": "Nunca",
           "noneValidationError": "Ninguno",
           "validationErrorLabel": "Error de validación:"
@@ -533,8 +918,143 @@
           }
         }
       },
+      "setup": {
+        "backToCurrentStep": "Volver a {{step}}",
+        "chooser": {
+          "cipp": {
+            "description": "Alga lee los inquilinos a través de la instancia de CIPP que ya ejecuta.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "El host de la function app CIPP-API, no el frontend de CIPP.",
+              "apiKey": "Una clave de API de CIPP con acceso a la lista de inquilinos.",
+              "instance": "Una instancia de CIPP en funcionamiento."
+            }
+          },
+          "cippReassurance": "Alga probará la conexión antes de guardarla.",
+          "continue": "Continuar",
+          "continueCipp": "Configurar la conexión CIPP",
+          "continueDirect": "Continuar con Directo",
+          "continuing": "Continuando…",
+          "direct": {
+            "description": "Alga habla con Microsoft Graph mediante su relación de partner.",
+            "label": "Partner directo de Microsoft",
+            "prerequisites": {
+              "appRegistration": "Credenciales OAuth de Microsoft configuradas para este inquilino.",
+              "globalAdmin": "Un administrador global que pueda aprobar los permisos.",
+              "partnerRelationship": "Una relación de partner (GDAP) con los inquilinos que gestiona."
+            }
+          },
+          "directReassurance": "Revisará la solicitud de permisos antes de conceder nada.",
+          "prerequisitesTitle": "Necesitará",
+          "recommendation": "La mayoría de los MSP deberían elegir Directo. Elija CIPP solo si ya tiene una instancia.",
+          "recommendedBadge": "Recomendado",
+          "title": "Elija cómo conectarse"
+        },
+        "connectedVia": "Conectado mediante {{method}}",
+        "description": "Traiga a Alga como contactos de cliente a las personas de los inquilinos de Microsoft que gestiona. No se escribe nada en sus contactos hasta que haya visto una vista previa y la haya aprobado.",
+        "directConsent": {
+          "adminNote": "Un administrador global debe aprobar estos permisos. Si no lo es, el inicio de sesión se completará pero la conexión será rechazada y no se guardará nada.",
+          "cancel": "Cancelar",
+          "continue": "Continuar a Microsoft",
+          "intro": "Va a salir de Alga e iniciar sesión en Microsoft. Estos son los permisos que se solicitarán.",
+          "redirecting": "Redirigiendo…",
+          "servicePrincipalNote": "Después la conexión funciona como entidad de servicio, no con su inicio de sesión, por lo que sigue activa cuando usted no está.",
+          "title": "Antes de continuar a Microsoft"
+        },
+        "disclosure": {
+          "capabilities": {
+            "noMailbox": "Nunca lee correo, archivos, calendarios ni mensajes de Teams",
+            "noWrite": "Nunca escribe nada de vuelta en Microsoft",
+            "readTenants": "Leer la lista de inquilinos de Microsoft que gestiona",
+            "readUsers": "Leer los usuarios de esos inquilinos: nombre, correo, teléfono, puesto"
+          },
+          "capabilitiesTitle": "Lo que Alga podrá hacer",
+          "contacts": {
+            "ambiguous": "¿Dos contactos comparten un correo? Se aparta para que usted decida: nunca se adivina.",
+            "creation": "Una identidad sin coincidencia se convierte en un contacto nuevo de ese cliente.",
+            "deletion": "Nunca se elimina nada.",
+            "matching": "Los contactos se emparejan por dirección de correo dentro del cliente al que asigne el inquilino.",
+            "overwrite": "Los nombres, correos, teléfonos y cargos existentes no se sobrescriben salvo que lo active."
+          },
+          "contactsTitle": "Qué ocurre con sus contactos",
+          "copied": "Copiado",
+          "copy": "Copiar para un registro de cambios",
+          "description": "Léalo antes de autorizar. Puede copiarlo en un registro de cambios.",
+          "inactiveNote": "Una cuenta de Microsoft deshabilitada marca el contacto como inactivo. Puede desactivarlo en el paso 4.",
+          "recordGeneratedAt": "Preparado {{time}}",
+          "recordHeading": "Integración de Microsoft Entra — registro de cambios",
+          "scopes": {
+            "directory": "Lee datos de directorio de su propio inquilino. Solo lo usa el modo de prueba de inquilino propio.",
+            "managedTenants": "Enumera los inquilinos de cliente que cubre su relación de partner y sus usuarios. Así se detectan clientes y contactos.",
+            "offlineAccess": "Mantiene la conexión activa tras cerrar el navegador, para que las sincronizaciones programadas puedan ejecutarse.",
+            "unknown": "Solicitado por la conexión.",
+            "userRead": "Confirma quién inicia sesión. Solo lee su propio perfil."
+          },
+          "scopesAllReadOnly": "Todos de solo lectura.",
+          "scopesTitle": "Permisos solicitados",
+          "title": "Qué leerá Alga y qué cambiará"
+        },
+        "stepLabel": "Paso {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Elija cómo llega Alga a Microsoft y autorícelo.",
+            "short": "Conectar",
+            "title": "Conectar Microsoft Entra"
+          },
+          "discover": {
+            "description": "Pregunte a Microsoft qué inquilinos de cliente cubre su relación de partner.",
+            "short": "Buscar inquilinos",
+            "title": "Detectar inquilinos gestionados"
+          },
+          "map": {
+            "description": "Decida a qué cliente de Alga pertenece cada inquilino de Microsoft. No se sincroniza nada hasta confirmarlo.",
+            "short": "Asociar a clientes",
+            "title": "Asignar inquilinos a clientes"
+          },
+          "sync": {
+            "description": "Incorpore los contactos de los clientes asignados.",
+            "short": "Vista previa y piloto",
+            "title": "Ejecutar la primera sincronización"
+          }
+        },
+        "title": "Configurar Microsoft Entra"
+      },
+      "summary": {
+        "backToIntegrations": "Volver a integraciones",
+        "description": "Detecte los inquilinos que gestiona, asígnelos a clientes y mantenga los contactos al día.",
+        "open": "Abrir",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Ocultar detalles",
+          "refresh": "Actualizar",
+          "viewDetails": "Ver detalles"
+        },
+        "details": {
+          "noResults": "No se registraron resultados de inquilino.",
+          "stats": "creados {{created}}, vinculados {{linked}}, actualizados {{updated}}, ambiguos {{ambiguous}}, inactivados {{inactivated}}",
+          "tenantHeader": "Inquilino {{tenant}} · {{status}}",
+          "unknownTenant": "desconocido"
+        },
+        "empty": "Aún no se encontraron ejecuciones de sincronización.",
+        "errors": {
+          "loadDetailFailed": "No se pudo cargar el detalle de la ejecución.",
+          "loadFailed": "No se pudo cargar el historial de sincronización.",
+          "loadRunFailed": "No se pudo cargar la ejecución {{runId}}."
+        },
+        "loading": "Cargando historial de sincronización…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "En progreso",
+          "tenants": "Inquilinos: {{processed}}/{{total}} · Éxito: {{success}} · Fallidos: {{failed}}",
+          "timing": "Iniciado {{started}} · Completado {{completed}}"
+        },
+        "title": "Ejecuciones de sincronización recientes"
+      },
       "tenantMapping": {
         "actions": {
+          "cancel": "Cancelar",
           "confirmSelected": "Confirmar asignaciones seleccionadas",
           "confirming": "Confirmando…",
           "import": "Importar como nuevo cliente",
@@ -565,6 +1085,11 @@
           "confirmed": "Se confirmaron {{count}} asignaciones.",
           "confirmedOne": "Se confirmó {{count}} asignación."
         },
+        "importConfirm": {
+          "body": "Se creará un nuevo cliente a partir del inquilino de Entra {{tenant}} y el inquilino se asignará a él.",
+          "similarWarning": "Estos clientes existentes tienen nombres similares: asigne a uno de ellos si se trata de la misma organización:",
+          "title": "¿Importar como nuevo cliente?"
+        },
         "noSuggestion": "Sin sugerencia",
         "picker": {
           "placeholder": "Seleccionar cliente...",
@@ -583,82 +1108,6 @@
           "unmatched": "Sin coincidencia"
         },
         "title": "Vista previa de asignación de inquilinos"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Cancelar",
-          "connect": "Conectar",
-          "connecting": "Conectando..."
-        },
-        "description": "Introduzca la URL de su instancia CIPP y un token de API para permitir que Alga descubra y sincronice los datos de Entra.",
-        "errors": {
-          "missingFields": "Se requieren tanto la URL base como el token de API.",
-          "unknown": "Se produjo un error desconocido."
-        },
-        "fields": {
-          "apiToken": "Token de API",
-          "apiTokenPlaceholder": "Introduzca el token...",
-          "baseUrl": "URL base de CIPP",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
-        },
-        "title": "Conectar CIPP"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Actualizar",
-          "resolveExisting": "Resolver en existente",
-          "resolveNew": "Resolver en nuevo"
-        },
-        "candidate": {
-          "fallback": "candidato",
-          "label": "Contactos candidatos: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Contacto existente",
-          "placeholder": "Seleccionar contacto existente..."
-        },
-        "errors": {
-          "enterContactId": "Introduzca un ID de contacto para resolverlo en un contacto existente.",
-          "loadQueue": "No se pudo cargar la cola de conciliación.",
-          "resolveFailed": "No se pudo resolver el elemento de la cola."
-        },
-        "empty": "No hay coincidencias ambiguas en espera de revisión.",
-        "loading": "Cargando cola…",
-        "noEmailIdentity": "Sin identidad de correo",
-        "queuedAt": "{{identity}} · en cola {{time}}",
-        "scopedToMappedClient": "Las opciones de contacto existente están limitadas a este cliente asignado.",
-        "success": {
-          "resolvedExisting": "Elemento de cola {{queueItemId}} resuelto en el contacto existente {{contactNameId}}.",
-          "resolvedNew": "Elemento de cola {{queueItemId}} resuelto creando el contacto {{contactNameId}}."
-        },
-        "title": "Cola de coincidencias ambiguas"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Ocultar detalles",
-          "refresh": "Actualizar",
-          "viewDetails": "Ver detalles"
-        },
-        "details": {
-          "noResults": "No se registraron resultados de inquilino.",
-          "stats": "creados {{created}}, vinculados {{linked}}, actualizados {{updated}}, ambiguos {{ambiguous}}, inactivados {{inactivated}}",
-          "tenantHeader": "Inquilino {{tenant}} · {{status}}",
-          "unknownTenant": "desconocido"
-        },
-        "empty": "Aún no se encontraron ejecuciones de sincronización.",
-        "errors": {
-          "loadDetailFailed": "No se pudo cargar el detalle de la ejecución.",
-          "loadFailed": "No se pudo cargar el historial de sincronización.",
-          "loadRunFailed": "No se pudo cargar la ejecución {{runId}}."
-        },
-        "loading": "Cargando historial de sincronización…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "En progreso",
-          "tenants": "Inquilinos: {{processed}}/{{total}} · Éxito: {{success}} · Fallidos: {{failed}}",
-          "timing": "Iniciado {{started}} · Completado {{completed}}"
-        },
-        "title": "Ejecuciones de sincronización recientes"
       }
     },
     "google": {
@@ -668,7 +1117,8 @@
           "resetProviders": "Restablecer proveedores de Google",
           "resetting": "Restableciendo…",
           "save": "Guardar",
-          "saving": "Guardando…"
+          "saving": "Guardando…",
+          "disconnectProviders": "Disconnect Google providers"
         },
         "afterSaveNotice": "Después de guardar, vaya a las integraciones de correo entrante y calendario y vuelva a autorizar los proveedores. Los proveedores de Google existentes no se migran.",
         "consoleLink": "Google Cloud Console",
@@ -693,7 +1143,8 @@
           "sectionTitle": "Aplicación OAuth",
           "shareApp": "Usar la misma aplicación OAuth para Gmail y Calendar",
           "shareAppHelp": "Recomendado. Aún puede autorizar cuentas de Google distintas por integración.",
-          "storedSecret": "Secret almacenado: {{secret}}"
+          "storedSecret": "Secret almacenado: {{secret}}",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
         },
         "redirectUrisLabel": "URIs de redirección (copie en el cliente OAuth de Google)",
         "scopes": "Scopes",
@@ -702,7 +1153,8 @@
         "serviceAccount": {
           "alreadyStored": "Ya hay una clave de cuenta de servicio almacenada (no se muestra).",
           "description": "Pegue el JSON de la clave de la cuenta de servicio propia del inquilino utilizada para aprovisionar Pub/Sub.",
-          "title": "Cuenta de servicio de Pub/Sub (requerido para Gmail)"
+          "title": "Cuenta de servicio de Pub/Sub (requerido para Gmail)",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
         },
         "setupGuide": "Guía de configuración",
         "title": "Google",
@@ -714,7 +1166,16 @@
           "savedDescription": "La configuración de Google del inquilino se actualizó correctamente.",
           "savedTitle": "Configuración de Google guardada",
           "unknownError": "Error desconocido"
-        }
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
+        "oauthValues": {
+          "title": "Google OAuth app values"
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
       }
     },
     "hudu": {
@@ -1017,6 +1478,27 @@
         },
         "toasts": {
           "errorTitle": "Error de conexión de Hudu"
+        },
+        "sync": {
+          "title": "Sincronización y automatización",
+          "description": "Importe activos de todos los clientes asignados a la vez y manténgalos actualizados automáticamente. Asignar una empresa o un diseño solo configura la integración: los activos aparecen únicamente tras una importación.",
+          "summary": "{{created}} creados · {{updated}} actualizados · {{skipped}} omitidos · {{failed}} con error",
+          "toastErrorTitle": "Error de sincronización de Hudu",
+          "importDoneTitle": "Importación de Hudu finalizada",
+          "syncDoneTitle": "Sincronización de Hudu finalizada",
+          "importing": "Importando…",
+          "importAll": "Importar todos los clientes asignados",
+          "syncing2": "Sincronizando…",
+          "syncAll": "Sincronizar todo",
+          "autoSyncLabel": "Sincronización automática diaria",
+          "autoSyncHint": "Importa automáticamente activos nuevos y actualiza los existentes una vez al día para cada cliente asignado.",
+          "neverRun": "Aún no hay ninguna ejecución para todo el inquilino.",
+          "lastRun": "Última ejecución {{at}}: {{created}} creados · {{updated}} actualizados · {{skipped}} omitidos · {{failed}} con error",
+          "status": {
+            "syncing": "En ejecución…",
+            "completed": "Completada",
+            "error": "Error"
+          }
         }
       }
     },
@@ -1028,7 +1510,8 @@
           "openTeamsSetup": "Abrir configuración de Teams",
           "refresh": "Actualizar",
           "resetProviders": "Restablecer proveedores de Microsoft",
-          "resetting": "Restableciendo…"
+          "resetting": "Restableciendo…",
+          "disconnectProviders": "Disconnect Microsoft providers"
         },
         "archiveDialog": {
           "archiving": "Archivando…",
@@ -1044,19 +1527,21 @@
           "needsAttention": "Requiere atención",
           "saving": "Guardando…",
           "selectProfile": "Seleccionar un perfil",
-          "unbound": "Sin enlazar"
+          "unbound": "Sin enlazar",
+          "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "{{consumer}} está enlazado a {{profile}}.",
+          "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Actualmente no hay ningún perfil de Microsoft enlazado a {{consumer}}.",
           "summaryUnavailable": "{{consumer}} está enlazado a un perfil no disponible.",
-          "warningArchived": "{{consumer}} sigue enlazado a un perfil archivado. Vuelva a enlazarlo a un perfil activo.",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Aún no se ha configurado ningún enlace de {{consumer}}.",
           "warningNotReady": "{{consumer}} está enlazado a {{profile}}, pero ese perfil aún necesita configuración.",
-          "warningProfileMissing": "{{consumer}} está enlazado a un perfil que ya no está disponible. Vuelva a enlazarlo a un perfil activo."
+          "warningProfileMissing": "{{consumer}} está enlazado a un perfil que ya no está disponible. Vuelva a enlazarlo a un perfil activo.",
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
         },
-        "bindingsAlertCe": "Los enlaces explícitos son la fuente de verdad para la selección de perfil de MSP SSO. Configure los dominios de inicio de sesión por separado después de elegir el perfil enlazado.",
-        "bindingsAlertEe": "Los enlaces explícitos son la fuente de verdad para la selección de perfiles de MSP SSO, correo, calendario y Teams.",
         "consumerBindings": {
           "descriptionCe": "Enlace un perfil de Microsoft a MSP SSO para el inicio de sesión y el uso del dominio de inicio de sesión.",
           "descriptionEe": "Enlace un perfil de Microsoft por cada consumidor compatible. Reasignar un consumidor no cambia los demás.",
@@ -1102,7 +1587,9 @@
           "setDefault": "Establecer este perfil como perfil de Microsoft predeterminado",
           "setDefaultHelp": "Los perfiles predeterminados siguen disponibles para los flujos de gestión de perfiles y los metadatos seguros en la migración, no para el enrutamiento de consumidores.",
           "storedSecretHint": "Secret almacenado: {{secret}}. Deje este campo vacío para mantenerlo sin cambios.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Crear perfil de Microsoft",
@@ -1156,7 +1643,9 @@
           "storedSecret": "Secret almacenado",
           "teamsAppIdUri": "Application ID URI de Teams",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Actualizando…"
+          "updating": "Actualizando…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Utilice esto si rota credenciales o enlaza intencionalmente el correo de Outlook o el calendario a un perfil de Microsoft diferente.",
@@ -1199,6 +1688,15 @@
           "clientSecretRequired": "El Microsoft OAuth Client Secret es obligatorio",
           "displayNameRequired": "El nombre visible del perfil de Microsoft es obligatorio",
           "tenantIdRequired": "El Microsoft Tenant ID es obligatorio"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
+        "profileLibrary": {
+          "description": "Named Microsoft app registrations that services can bind to.",
+          "title": "Profile library"
         }
       }
     },
@@ -1299,6 +1797,8 @@
         "refreshTokenExpiry": "El token de QuickBooks caduca el {{date}}",
         "refreshTokenExpired": "El token de QuickBooks ha caducado: vuelva a conectarse para reanudar la sincronización.",
         "autoSyncLabel": "Sincronización automática activada",
+        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
+        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
         "syncNowButton": "Sincronizar ahora",
         "syncNowRunning": "Sincronizando…",
         "syncNowSuccess": "Sincronización completada correctamente.",
@@ -1315,7 +1815,8 @@
         "makeDefault": "Establecer como predeterminado",
         "noDefault": "Sin valor predeterminado",
         "saving": "Guardando…",
-        "undepositedFunds": "Fondos sin depositar (predeterminado)"
+        "undepositedFunds": "Fondos sin depositar (predeterminado)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
@@ -1334,6 +1835,8 @@
           },
           "connected": "Connected to NinjaOne",
           "connectedWithErrors": "NinjaOne connected with sync errors",
+          "reconnectRequired": "Se requiere volver a conectar NinjaOne",
+          "reconnectRequiredDescription": "La autorización de NinjaOne ya no se puede actualizar (token caducado o revocado). Vuelve a conectar para restaurar la sincronización de dispositivos, las alertas y el acceso remoto.",
           "instanceLabel": "Instance:",
           "organizations": "{{count}} organizations",
           "devices": "{{count}} devices",
@@ -1584,6 +2087,14 @@
           "unavailable": "Información del webhook no disponible. (Requiere permiso de lectura de configuración.)",
           "url": "URL del webhook",
           "urlCopied": "URL del webhook copiada al portapapeles."
+        },
+        "mappings": {
+          "org": "Organización de Tactical",
+          "client": "Cliente de Alga",
+          "defaultContact": "Contacto predeterminado"
+        },
+        "contact": {
+          "select": "Seleccionar contacto"
         }
       },
       "tanium": {
@@ -1635,7 +2146,9 @@
           "mappedClient": "Cliente asignado",
           "noScopes": "Aún no se han descubierto ámbitos de Tanium.",
           "scopeIdLabel": "ID: {{id}}",
-          "unmapped": "Sin asignar"
+          "unmapped": "Sin asignar",
+          "defaultContact": "Contacto predeterminado",
+          "selectContact": "Seleccionar contacto"
         },
         "status": {
           "connected": "Conectado",
@@ -1701,7 +2214,9 @@
           "loading": "Cargando…",
           "mappedClient": "Cliente asignado",
           "noGroups": "Aún no se han descubierto grupos. Ejecute primero Descubrir grupos.",
-          "unmapped": "Sin asignar"
+          "unmapped": "Sin asignar",
+          "defaultContact": "Contacto predeterminado",
+          "selectContact": "Seleccionar contacto"
         },
         "status": {
           "connected": "Conectado",
@@ -1733,6 +2248,76 @@
           "title": "Webhook de alertas",
           "url": "URL del webhook"
         }
+      },
+      "huntress": {
+        "columns": {
+          "organization": "Organización de Huntress",
+          "client": "Cliente de Alga",
+          "defaultContact": "Contacto predeterminado",
+          "createTickets": "Crear tickets",
+          "status": "Estado"
+        },
+        "selectContact": "Seleccionar contacto",
+        "status": {
+          "autoMatched": "Coincidencia automática",
+          "mapped": "Asignado",
+          "unmapped": "Sin asignar → triaje"
+        },
+        "title": "Asignación de organizaciones",
+        "description": "Asigna organizaciones de Huntress a clientes. Las incidencias de organizaciones sin asignar van al cliente de reserva y al tablero de triaje.",
+        "unmappedSuffix": "({{count}} sin asignar)",
+        "syncButton": "Sincronizar organizaciones",
+        "loading": "Cargando…",
+        "empty": "Aún no hay organizaciones: haz clic en «Sincronizar organizaciones».",
+        "errors": {
+          "load": "No se pudieron cargar las asignaciones de organizaciones",
+          "sync": "Error de sincronización",
+          "updateMapping": "No se pudo actualizar la asignación",
+          "updateContact": "No se pudo actualizar el contacto predeterminado"
+        }
+      },
+      "ninjaone": {
+        "columns": {
+          "organization": "Organización de NinjaOne",
+          "company": "Empresa de Alga",
+          "defaultContact": "Contacto predeterminado",
+          "autoSync": "Sincronización automática",
+          "status": "Estado"
+        },
+        "orgFallback": "Org. {{id}}",
+        "idLabel": "ID: {{id}}",
+        "selectCompany": "Seleccionar empresa",
+        "selectContact": "Seleccionar contacto",
+        "status": {
+          "mapped": "Asignado",
+          "unmapped": "Sin asignar"
+        },
+        "title": "Asignaciones de organizaciones",
+        "description": "Asigna organizaciones de NinjaOne a empresas de Alga para habilitar la sincronización de dispositivos.",
+        "loading": "Cargando asignaciones de organizaciones...",
+        "syncing": "Sincronizando...",
+        "refreshButton": "Actualizar organizaciones",
+        "summary": {
+          "mapped": "{{count}} asignadas",
+          "unmapped": "{{count}} sin asignar"
+        },
+        "empty": {
+          "title": "Aún no se han sincronizado organizaciones.",
+          "hint": "Haz clic en «Actualizar organizaciones» para obtener organizaciones de NinjaOne."
+        },
+        "unmappedNote": "Los dispositivos de organizaciones sin asignar no se sincronizarán. Asigna cada organización a una empresa de Alga para habilitar la sincronización de dispositivos.",
+        "success": {
+          "synced": "Se sincronizaron {{processed}} organizaciones ({{created}} nuevas, {{updated}} actualizadas)",
+          "mappingUpdated": "Asignación actualizada correctamente",
+          "contactUpdated": "Contacto predeterminado actualizado correctamente"
+        },
+        "errors": {
+          "load": "No se pudieron cargar las asignaciones de organizaciones",
+          "sync": "No se pudieron sincronizar las organizaciones",
+          "updateMapping": "No se pudo actualizar la asignación",
+          "updateContact": "No se pudo actualizar el contacto predeterminado",
+          "updateAutoSync": "No se pudo actualizar la configuración de sincronización automática"
+        }
       }
     },
     "sso": {
@@ -1759,6 +2344,11 @@
         },
         "descriptionCe": "Registre dominios consultivos para el descubrimiento de SSO de inicio de sesión de MSP. La verificación de propiedad no se aplica en Community Edition, y los dominios no gestionados recurren a los proveedores de aplicación de Nine Minds.",
         "descriptionEe": "Gestione el ciclo de vida de las reclamaciones de dominio para el descubrimiento de proveedores de SSO de inicio de sesión de MSP. Los dominios no reclamados o no elegibles recurren a los proveedores de aplicación de Nine Minds.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Añada el registro DNS TXT y luego haga clic en Verificar:",
         "dnsValue": "Valor:",
@@ -1908,6 +2498,12 @@
             "description": "Notificar a los técnicos cuando se les asigne trabajo.",
             "label": "Eventos de asignación"
           },
+          "channel": {
+            "activityFeed": "Feed de actividad",
+            "botDm": "Mensaje directo del bot",
+            "both": "Ambos",
+            "label": "Canal de entrega"
+          },
           "customerReply": {
             "description": "Notificar a los técnicos cuando los clientes respondan.",
             "label": "Respuestas de clientes"
@@ -2036,6 +2632,10 @@
             "help": "Al guardar se resuelve y almacena el ID de objeto de Microsoft Entra usado para las llamadas de reunión de Graph.",
             "resolved": "ID de objeto resuelto: {{objectId}}"
           },
+          "sendMeetingInvites": {
+            "label": "Enviar invitaciones de calendario a los participantes",
+            "description": "Los asistentes reciben invitaciones de calendario nativas de Outlook/Teams para las reuniones generadas."
+          },
           "downloadRecordings": {
             "label": "Descargar grabaciones al almacenamiento interno",
             "description": "Cuando está habilitado, los blobs de grabación se copian en el almacenamiento del inquilino, además del proxy de Graph autenticado."
@@ -2044,6 +2644,218 @@
             "label": "Mostrar grabaciones y transcripciones en el portal del cliente",
             "description": "Desactivado de forma predeterminada; los usuarios de MSP aún pueden ver los artefactos desde los detalles de interacción y de cita."
           }
+        },
+        "botCredentialsBanner": {
+          "hint": "Ejecute el diagnóstico a continuación para obtener más detalles.",
+          "message": "El bot de Teams no puede responder: las credenciales del conector del bot (TEAMS_BOT_APP_ID / TEAMS_BOT_APP_TENANT_ID / TEAMS_BOT_APP_PASSWORD) no están configuradas en el servidor."
+        },
+        "wizard": {
+          "title": "Configuración guiada de Teams",
+          "description": "Complete cada paso para que Microsoft Teams funcione en este inquilino.",
+          "status": {
+            "complete": "Completado",
+            "current": "Actual",
+            "incomplete": "Incompleto"
+          },
+          "validate": {
+            "error": "Error de validación",
+            "validating": "Validando...",
+            "profile": "Validar perfil de Microsoft",
+            "profileOk": "Las credenciales del perfil de Microsoft son válidas.",
+            "permissions": "Comprobar permisos de Graph",
+            "permissionsOk": "Se han concedido todos los permisos de Graph requeridos.",
+            "permissionGranted": "Concedido",
+            "permissionMissing": "Faltante",
+            "bot": "Validar conector de Bot Framework",
+            "botOk": "Las credenciales de Bot Framework son válidas ({{appId}})."
+          },
+          "activationBlocked": "Valide el perfil de Microsoft anterior antes de activar Teams.",
+          "step": {
+            "microsoftProfile": {
+              "title": "Perfil de Microsoft",
+              "description": "Seleccione el perfil de Microsoft para Teams y valide sus credenciales de Graph."
+            },
+            "graphPermissions": {
+              "title": "Permisos de Graph",
+              "description": "Confirme que los permisos de aplicación de Microsoft Graph requeridos están concedidos y consentidos."
+            },
+            "botFramework": {
+              "title": "Registro de Bot Framework",
+              "description": "Registre el Azure Bot y valide las credenciales del conector del bot de implementación."
+            },
+            "activate": {
+              "title": "Activar Teams",
+              "description": "Active la integración de Teams una vez validado el perfil de Microsoft."
+            },
+            "package": {
+              "title": "Generar y descargar el paquete",
+              "description": "Cree el paquete de la aplicación de Teams para el perfil seleccionado y la base URL de implementación.",
+              "hint": "Use la tarjeta Paquete de Teams a continuación para generar y descargar el paquete de la aplicación."
+            },
+            "sideload": {
+              "title": "Cargar la aplicación de forma lateral",
+              "description": "Suba el paquete de la aplicación a Teams para que los usuarios puedan instalarla.",
+              "body": "Suba el paquete descargado al centro de administración de Teams (Administrar aplicaciones y luego Cargar nueva aplicación) o cárguelo de forma lateral desde el cliente de Teams."
+            },
+            "verify": {
+              "title": "Verificar",
+              "description": "Ejecute diagnósticos y envíe un mensaje de prueba para confirmar que la integración funciona de principio a fin.",
+              "hint": "Use la tarjeta Diagnóstico y mensaje de prueba a continuación para verificar la configuración de principio a fin."
+            }
+          }
+        },
+        "runbook": {
+          "viewGuide": "Ver guía de configuración"
+        },
+        "deliveryLog": {
+          "title": "Registro de entregas de Teams",
+          "description": "Cada intento de entrega de notificaciones de Teams registrado para este inquilino.",
+          "error": "No se pudo cargar el registro de entregas de Teams",
+          "forbidden": "No tiene permiso para ver el registro de entregas de Teams.",
+          "empty": "Aún no se han registrado entregas de Teams.",
+          "refresh": "Actualizar",
+          "loadMore": "Cargar más",
+          "loading": "Cargando...",
+          "filter": {
+            "statusLabel": "Estado",
+            "statusAll": "Todos los estados",
+            "categoryLabel": "Categoría",
+            "categoryAll": "Todas las categorías"
+          },
+          "columns": {
+            "createdAt": "Hora",
+            "category": "Categoría",
+            "destination": "Destino",
+            "status": "Estado",
+            "errorCode": "Código de error",
+            "errorMessage": "Mensaje de error"
+          },
+          "status": {
+            "delivered": "Entregado",
+            "sent": "Enviado",
+            "failed": "Fallido",
+            "skipped": "Omitido"
+          },
+          "category": {
+            "assignment": "Asignación",
+            "customer_reply": "Respuesta del cliente",
+            "approval_request": "Solicitud de aprobación",
+            "escalation": "Escalación",
+            "sla_risk": "Riesgo de SLA"
+          }
+        },
+        "auditLog": {
+          "title": "Registro de auditoría de Teams",
+          "description": "Mutaciones ejecutadas desde el bot de Teams, la extensión de mensajería y las superficies de acciones rápidas.",
+          "error": "No se pudo cargar el registro de auditoría de Teams",
+          "forbidden": "No tiene permiso para ver el registro de auditoría de Teams.",
+          "empty": "Aún no se han registrado eventos de auditoría de Teams.",
+          "refresh": "Actualizar",
+          "loadMore": "Cargar más",
+          "loading": "Cargando...",
+          "filter": {
+            "surfaceLabel": "Superficie",
+            "surfaceAll": "Todas las superficies",
+            "actionLabel": "Id. de acción",
+            "actionPlaceholder": "p. ej. assign_ticket"
+          },
+          "surface": {
+            "bot": "Bot",
+            "message_extension": "Extensión de mensajería",
+            "quick_action": "Acción rápida",
+            "tab": "Pestaña"
+          },
+          "columns": {
+            "createdAt": "Hora",
+            "surface": "Superficie",
+            "action": "Acción",
+            "target": "Objetivo",
+            "result": "Resultado",
+            "errorCode": "Código de error"
+          },
+          "result": {
+            "success": "Correcto",
+            "failure": "Error"
+          }
+        },
+        "troubleshooting": {
+          "title": "Referencia de errores de entrega",
+          "description": "Qué significa cada código de error de entrega de Teams y cómo resolverlo.",
+          "show": "Mostrar referencia de errores",
+          "hide": "Ocultar referencia de errores",
+          "columns": {
+            "code": "Código de error",
+            "cause": "Causa",
+            "remedy": "Solución"
+          },
+          "codes": {
+            "graph_unauthorized": {
+              "cause": "Microsoft Graph rechazó el token de la aplicación (401/403); no se ha consentido un permiso de aplicación de Graph requerido.",
+              "remedy": "Conceda el consentimiento de administrador para los permisos de Graph requeridos (por ejemplo TeamsActivity.Send) en el registro de la aplicación de Azure."
+            },
+            "user_not_mapped": {
+              "cause": "El destinatario no ha iniciado sesión en Alga PSA con Microsoft, por lo que no existe ninguna asignación de cuenta.",
+              "remedy": "Haga que el usuario inicie sesión con Microsoft (SSO del portal MSP o la pestaña de Teams) para que su cuenta quede asignada."
+            },
+            "addon_inactive": {
+              "cause": "El complemento de Teams ha caducado o no está presente, por lo que los envíos se omiten mientras se conserva la configuración.",
+              "remedy": "Renueve el complemento de Teams para este inquilino."
+            },
+            "integration_inactive": {
+              "cause": "La integración de Teams no está activa para este inquilino.",
+              "remedy": "Active la integración de Teams en la configuración."
+            },
+            "package_misconfigured": {
+              "cause": "El paquete de la aplicación nunca se generó, o faltan los requisitos previos de entrega (app ID, base URL).",
+              "remedy": "Genere el paquete de la aplicación de Teams en la configuración y vuelva a intentarlo."
+            },
+            "graph_not_found": {
+              "cause": "La aplicación de Teams no está instalada para el destinatario, por lo que Microsoft Graph no puede dirigirse a él (404).",
+              "remedy": "Instale o permita a nivel de organización la aplicación de Alga PSA para ese usuario."
+            },
+            "graph_throttled": {
+              "cause": "Microsoft Graph limitó la solicitud (429).",
+              "remedy": "Transitorio; Alga PSA reintenta con retroceso. Investigue solo si persiste."
+            },
+            "graph_server_error": {
+              "cause": "Microsoft Graph devolvió un error del servidor (5xx).",
+              "remedy": "Interrupción transitoria de Graph; Alga PSA reintenta. Espere y compruebe el estado del servicio de Microsoft si persiste."
+            },
+            "transient": {
+              "cause": "Un error temporal (red o tiempo de espera) interrumpió la entrega.",
+              "remedy": "Se reintenta automáticamente; no se requiere ninguna acción a menos que los errores persistan."
+            },
+            "unknown": {
+              "cause": "El error no se correspondió con ninguna causa conocida.",
+              "remedy": "Consulte los registros del servidor para ver el detalle del error de entrega y vuelva a ejecutar los diagnósticos."
+            }
+          }
+        },
+        "paywall": {
+          "title": "Complemento de Microsoft Teams",
+          "description": "La integración de Microsoft Teams requiere el complemento de Teams para este inquilino.",
+          "includedTitle": "Qué incluye",
+          "feature": {
+            "tab": "Pestaña personal: abra Alga PSA dentro de Microsoft Teams.",
+            "bot": "Bot personal y de chat de grupo para tickets, aprobaciones, tiempos y notas.",
+            "messageExtension": "Extensión de mensajería y acciones rápidas para actuar sobre registros de PSA desde cualquier mensaje.",
+            "meetings": "Reuniones de Teams en las aprobaciones de citas con invitaciones de calendario reales de Outlook/Teams.",
+            "recordings": "Captura automática de grabaciones y transcripciones de reuniones en las interacciones.",
+            "notifications": "Notificaciones de fuente de actividad y de mensaje directo del bot para asignaciones, respuestas, aprobaciones y riesgo de SLA."
+          },
+          "cta": "Comprar complemento de Teams",
+          "nonBilling": "Póngase en contacto con un administrador de facturación para comprar el complemento de Teams para este inquilino."
+        },
+        "addonExpiredBanner": {
+          "title": "Complemento de Microsoft Teams caducado",
+          "message": "El complemento de Microsoft Teams ha caducado. Su configuración y su historial de entregas se conservan, pero las notificaciones de Teams se omiten hasta que se renueve el complemento.",
+          "cta": "Renovar complemento de Teams"
+        },
+        "staleManifest": {
+          "title": "El paquete de la aplicación de Teams está desactualizado",
+          "warning": "Su paquete de la aplicación de Teams está desactualizado — vuelva a generarlo y a subirlo.",
+          "regenerate": "Regenerar paquete",
+          "regenerating": "Regenerando..."
         }
       }
     },
@@ -2320,9 +3132,29 @@
         "secretKeyFormat": "Secret key should start with sk_",
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
+      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Gmail inbound email and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selectorLabel": "Provider credential paths",
+      "title": "Provider Credentials"
     }
-  },
-  "ninjaone": {
-    "selectCompany": "Seleccionar empresa"
   }
 }

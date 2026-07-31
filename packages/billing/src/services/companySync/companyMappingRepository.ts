@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   AccountingAdapterType,
   CompanyMappingLookupResult,
@@ -67,7 +68,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
       };
 
       try {
-        await trx(TABLE_NAME).insert(payload);
+        await tenantDb(trx, record.tenantId).table(TABLE_NAME).insert(payload);
       } catch (error: any) {
         if (error?.code !== '23505') {
           throw error;
@@ -85,9 +86,8 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
     },
     executor: Knex | Knex.Transaction = this.knex
   ) {
-    const query = executor(TABLE_NAME)
+    const query = tenantDb(executor, params.tenantId).table(TABLE_NAME)
       .where({
-        tenant: params.tenantId,
         integration_type: params.adapterType,
         alga_entity_type: 'client',
         alga_entity_id: params.companyId

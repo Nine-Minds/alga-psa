@@ -12,7 +12,7 @@ describe('TicketInfo rich-text description contract', () => {
     const source = readTicketInfoSource();
 
     expect(source).toContain("import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';");
-    expect(source).toContain('parseTicketRichTextContent(ticket.attributes?.description as string | undefined)');
+    expect(source).toContain('parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined)');
     expect(source).toContain('serializeTicketRichTextContent(descriptionContent)');
     expect(source).toContain('return onUpdateDescription(serializeTicketRichTextContent(descriptionContent));');
   });

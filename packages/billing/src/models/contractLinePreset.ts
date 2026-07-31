@@ -1,5 +1,6 @@
 // server/src/lib/models/contractLinePreset.ts
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IContractLinePreset } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -14,11 +15,17 @@ function normalizeContractLinePreset<T extends Partial<IContractLinePreset>>(
   return normalizePresetRecurringStorage(preset);
 }
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string
+): Knex.QueryBuilder<IContractLinePreset, IContractLinePreset[]> {
+  return tenantDb(conn, tenant).table<IContractLinePreset>('contract_line_presets');
+}
+
 const ContractLinePreset = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string): Promise<IContractLinePreset[]> => {
     try {
-      const presets = await knexOrTrx<IContractLinePreset>('contract_line_presets')
-        .where({ tenant })
+      const presets = await tenantScopedTable(knexOrTrx, tenant)
         .select('*')
         .orderBy('created_at', 'desc');
 
@@ -32,10 +39,9 @@ const ContractLinePreset = {
 
   findById: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, presetId: string): Promise<IContractLinePreset | null> => {
     try {
-      const preset = await knexOrTrx<IContractLinePreset>('contract_line_presets')
+      const preset = await tenantScopedTable(knexOrTrx, tenant)
         .where({
-          preset_id: presetId,
-          tenant: tenant
+          preset_id: presetId
         })
         .first();
 
@@ -70,7 +76,7 @@ const ContractLinePreset = {
       tenant
     };
 
-    const [createdPreset] = await knexOrTrx<IContractLinePreset>('contract_line_presets')
+    const [createdPreset] = await tenantScopedTable(knexOrTrx, tenant)
       .insert(presetWithId)
       .returning('*');
 
@@ -84,10 +90,9 @@ const ContractLinePreset = {
     updateData: Partial<IContractLinePreset>
   ): Promise<IContractLinePreset> => {
     try {
-      const existingPreset = await knexOrTrx<IContractLinePreset>('contract_line_presets')
+      const existingPreset = await tenantScopedTable(knexOrTrx, tenant)
         .where({
-          preset_id: presetId,
-          tenant
+          preset_id: presetId
         })
         .first();
 
@@ -109,10 +114,9 @@ const ContractLinePreset = {
         billing_timing: recurringAuthoringPolicy.billingTiming,
       };
 
-      const [updatedPreset] = await knexOrTrx<IContractLinePreset>('contract_line_presets')
+      const [updatedPreset] = await tenantScopedTable(knexOrTrx, tenant)
         .where({
-          preset_id: presetId,
-          tenant
+          preset_id: presetId
         })
         .update(updatePayload)
         .returning('*');
@@ -130,10 +134,9 @@ const ContractLinePreset = {
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, presetId: string): Promise<void> => {
     try {
-      const deletedCount = await knexOrTrx('contract_line_presets')
+      const deletedCount = await tenantScopedTable(knexOrTrx, tenant)
         .where({
-          preset_id: presetId,
-          tenant
+          preset_id: presetId
         })
         .delete();
 

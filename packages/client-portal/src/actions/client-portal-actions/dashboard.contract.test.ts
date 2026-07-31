@@ -18,7 +18,7 @@ describe('dashboard action contract', () => {
     // Pending is a transient state on the default provider, so a pending-only
     // count would always read 0. Counting all submissions is the meaningful number.
     expect(source).toContain('serviceRequests:');
-    expect(source).toContain("trx('service_request_submissions')");
+    expect(source).toContain("scopedDb.table('service_request_submissions')");
     expect(source).not.toMatch(/'execution_status':\s*['"]pending['"]/);
   });
 

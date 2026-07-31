@@ -70,9 +70,11 @@ implementation progresses; update earlier entries when something changes.
   fail validation.
 - (2026-05-05) Existing distribution pattern for tenant-scoped tables:
   `notification_settings` is in `20250805000019_distribute_final_tables.cjs`.
-  Migration extension is `.cjs`, not `.ts`. Citus distribution lives in
-  `ee/server/migrations/citus/`, separate from the create migration in
-  `server/migrations/`.
+  Migration extension is `.cjs`, not `.ts`. Correction: that file lived in
+  `ee/server/migrations/citus/`, a folder nothing ever ran migrations from;
+  it has since been removed. Citus distribution now lives inline (guarded
+  `create_distributed_table` call) in the same CE creation migration in
+  `server/migrations/`, per `docs/architecture/citus-migration-best-practices.md`.
 - (2026-05-05) PostgreSQL `UNIQUE (tenant, api_key_id)` would allow multiple
   `(tenant, NULL)` tenant-default rows. The migration needs a separate unique
   partial index on `tenant WHERE api_key_id IS NULL` to make the null fallback
@@ -291,7 +293,8 @@ implementation progresses; update earlier entries when something changes.
   `cd packages/email && npx vitest run src/__tests__/TokenBucketRateLimiter*`
 - (2026-05-05) Apply migrations against a local dev database — see existing
   migrate flow in `server/package.json` (knex CLI driven by `migrations/`
-  and `ee/server/migrations/citus/`).
+  and `ee/server/migrations/`; correction: `ee/server/migrations/citus/`
+  was never wired into any migrate flow and has since been removed).
 - (2026-05-05) Toggle observation mode locally: `RATE_LIMIT_ENFORCE=false`
   in `server/.env`. Toggle SSRF bypass for staging:
   `WEBHOOK_SSRF_ALLOW_PRIVATE=true`.
@@ -433,6 +436,10 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F009 complete.** Added
   `ee/server/migrations/citus/20260505123100_distribute_api_rate_limit_settings.cjs`
   so the new settings table is distributed on `tenant` when Citus is present.
+  Correction (2026-07-24): that folder was never executed by anything and has
+  since been removed; the actual fix is the guarded inline
+  `create_distributed_table` call in
+  `server/migrations/20260505123000_create_api_rate_limit_settings.cjs`.
 - (2026-05-05) **F010 complete.** Added
   `server/src/lib/api/rateLimit/apiRateLimitSettingsModel.ts` with exact-row
   reads/writes plus a fallback resolver that checks `(tenant, apiKeyId)`,
@@ -528,6 +535,9 @@ implementation progresses; update earlier entries when something changes.
   to distribute both `webhooks` and `webhook_deliveries` on `tenant`, with
   the same Citus-enabled / already-distributed guards used by the earlier
   rate-limit distribution migration.
+  Correction (2026-07-24): that folder was never executed by anything and
+  has since been removed; distribution for these tables must instead be
+  guarded inline in their CE creation migration.
 - (2026-05-05) **F027 complete.** Added
   `server/src/lib/webhooks/webhookModel.ts` as the first non-mock webhook
   foundation: public reads omit `signing_secret_vault_path`, inserts persist

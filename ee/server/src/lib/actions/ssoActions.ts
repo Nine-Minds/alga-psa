@@ -3,6 +3,7 @@
 import type { Knex } from 'knex';
 
 import { analytics } from '@/lib/analytics/posthog';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { ensureSsoSettingsPermission } from '@ee/lib/actions/auth/ssoPermissions';
 import type { OAuthLinkProvider } from '@ee/lib/auth/oauthAccountLinks';
@@ -215,21 +216,20 @@ async function performBulkSsoAssignment(
   }
 
   const adminDb = options.adminDb ?? (await getAdminConnection());
+  const db = tenantDb(adminDb, options.tenant);
 
-  const userQuery = adminDb<CandidateUser>(USER_TABLE)
+  const userQuery = db.table<CandidateUser>(USER_TABLE)
     .select('tenant', 'user_id', 'email', 'is_inactive')
     .where({ user_type: userType })
     .whereIn('user_id', userIds);
-  userQuery.andWhere({ tenant: options.tenant });
 
   const candidates = await userQuery;
   const candidateUserIds = candidates.map((candidate) => candidate.user_id);
 
   const existingLinks = candidateUserIds.length
-    ? await adminDb(ACCOUNT_TABLE)
+    ? await db.table(ACCOUNT_TABLE)
         .select('tenant', 'user_id', 'provider', 'provider_email')
         .whereIn('user_id', candidateUserIds)
-        .andWhere({ tenant: options.tenant })
         .whereIn('provider', providers)
     : [];
 
@@ -347,7 +347,7 @@ async function performBulkSsoAssignment(
 
   if (!preview) {
     if (mode === 'link' && inserts.length > 0) {
-      await adminDb(ACCOUNT_TABLE)
+      await db.table(ACCOUNT_TABLE)
         .insert(inserts)
         .onConflict(['tenant', 'user_id', 'provider'])
         .merge({
@@ -358,8 +358,8 @@ async function performBulkSsoAssignment(
           updated_at: new Date().toISOString(),
         });
     } else if (mode === 'unlink' && deleteTuples.length > 0) {
-      await adminDb(ACCOUNT_TABLE)
-        .whereIn(['tenant', 'user_id', 'provider'], deleteTuples)
+      await db.table(ACCOUNT_TABLE)
+        .whereIn(['user_id', 'provider'], deleteTuples.map(([, userId, provider]) => [userId, provider]))
         .delete();
     }
   }
@@ -392,12 +392,13 @@ async function listSsoAssignableUsersForTenant(
   params: ListAssignableUsersInternalRequest,
 ): Promise<{ users: SsoAssignableUser[]; pagination: NonNullable<ListSsoAssignableUsersResponse['pagination']> }> {
   const adminDb = await getAdminConnection();
+  const db = tenantDb(adminDb, params.tenant);
   const pageSize = Math.min(Math.max(params.pageSize, 1), MAX_PAGE_SIZE);
   const page = Math.max(params.page, 1);
   const searchTerm = params.search?.trim();
 
-  const baseQuery = adminDb(USER_TABLE)
-    .where({ tenant: params.tenant, user_type: 'internal', is_inactive: false });
+  const baseQuery = db.table(USER_TABLE)
+    .where({ user_type: 'internal', is_inactive: false });
 
   if (searchTerm) {
     const pattern = `%${searchTerm}%`;
@@ -423,10 +424,9 @@ async function listSsoAssignableUsersForTenant(
 
   const userIds = rows.map((row) => row.user_id);
   const links = userIds.length
-    ? await adminDb(ACCOUNT_TABLE)
+    ? await db.table(ACCOUNT_TABLE)
         .select('user_id', 'provider')
         .whereIn('user_id', userIds)
-        .andWhere({ tenant: params.tenant })
     : [];
 
   const linkMap = new Map<string, OAuthLinkProvider[]>();

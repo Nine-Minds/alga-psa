@@ -143,7 +143,21 @@
       "title": "55555",
       "toggleDoneError": "55555"
     },
-    "enterpriseOnly": "55555"
+    "enterpriseOnly": "55555",
+    "nextAction": "55555",
+    "overdueSince": "55555 {{date}} 55555",
+    "dueOn": "55555 {{date}} 55555",
+    "stage": "55555",
+    "confidence": "55555",
+    "owner": "55555",
+    "expectedClose": "55555",
+    "mrr": "55555",
+    "nrr": "55555",
+    "hardware": "55555",
+    "contact": "55555",
+    "linkedQuotes": "55555",
+    "openOpportunity": "55555",
+    "opportunityNotFound": "55555"
   },
   "groupedView": {
     "addGroup": "55555",
@@ -209,12 +223,14 @@
           "priorityPlaceholder": "55555",
           "allPriorities": "55555",
           "dueDateRange": "55555",
+          "createdDateRange": "55555",
           "showClosedTasks": "55555"
         },
         "actions": {
           "reset": "55555",
           "cancel": "55555",
-          "apply": "55555"
+          "apply": "55555",
+          "clearDates": "55555"
         }
       }
     },
@@ -252,12 +268,14 @@
           "priorityPlaceholder": "55555",
           "allPriorities": "55555",
           "dueDateRange": "55555",
+          "createdDateRange": "55555",
           "showClosedTickets": "55555"
         },
         "actions": {
           "reset": "55555",
           "cancel": "55555",
-          "apply": "55555"
+          "apply": "55555",
+          "clearDates": "55555"
         }
       }
     },
@@ -297,13 +315,15 @@
           "priorityMedium": "55555",
           "priorityLow": "55555",
           "dueDateRange": "55555",
+          "createdDateRange": "55555",
           "showClosedTasks": "55555",
           "includeHiddenTasks": "55555"
         },
         "actions": {
           "reset": "55555",
           "cancel": "55555",
-          "apply": "55555"
+          "apply": "55555",
+          "clearDates": "55555"
         }
       },
       "listDrawer": {
@@ -441,6 +461,7 @@
       "showClosed": "55555",
       "client": "55555",
       "dueDateShort": "55555",
+      "createdShort": "55555",
       "tags": "55555",
       "tagsSelected": "55555 {{count}} 55555",
       "tasksCompact": "55555",
@@ -470,7 +491,9 @@
     },
     "actions": {
       "reset": "55555",
-      "clearClient": "55555"
+      "clearClient": "55555",
+      "clearDueDate": "55555",
+      "clearCreatedDate": "55555"
     },
     "statusClosedSuffix": "55555",
     "summary": {

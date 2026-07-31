@@ -3,7 +3,9 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 function readTicketCompositionSource(): string {
-  return fs.readFileSync(path.resolve(process.cwd(), '../packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx'), 'utf8');
+  // Resolve from this file, not cwd, so the suite passes under both the package
+  // and the server vitest configs.
+  return fs.readFileSync(path.resolve(__dirname, '../MspTicketDetailsContainerClient.tsx'), 'utf8');
 }
 
 describe('MspTicketDetailsContainerClient static contracts', () => {

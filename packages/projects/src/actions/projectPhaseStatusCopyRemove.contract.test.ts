@@ -10,8 +10,8 @@ const source = readFileSync(
 describe('phase status copy/remove action contracts', () => {
   it('T019/T020/T021: copyProjectStatusesToPhase clones default mappings into the target phase with preserved fields', () => {
     expect(source).toContain('export const copyProjectStatusesToPhase = withAuth(async (');
-    expect(source).toContain(".where({ tenant, project_id: projectId, phase_id: phaseId })");
-    expect(source).toContain(".where({ tenant, project_id: projectId })");
+    expect(source).toContain(".where({ project_id: projectId, phase_id: phaseId })");
+    expect(source).toContain(".where({ project_id: projectId })");
     expect(source).toContain(".whereNull('phase_id')");
     expect(source).toContain('const inserts = defaultMappings.map((mapping) => ({');
     expect(source).toContain('phase_id: phaseId,');
@@ -23,7 +23,8 @@ describe('phase status copy/remove action contracts', () => {
     // Task reassignment: existing phase tasks are moved from default to new phase mappings
     expect(source).toContain("const updatesByReplacement = new Map<string, string[]>();");
     expect(source).toContain("(m) => m.status_id === defaultMapping.status_id");
-    expect(source).toContain(".where({ tenant, phase_id: phaseId })");
+    expect(source).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
+    expect(source).toContain(".where({ phase_id: phaseId })");
     expect(source).toContain(".whereIn('project_status_mapping_id', oldIds)");
     expect(source).toContain("{ project_status_mapping_id: newId }");
   });
@@ -39,10 +40,10 @@ describe('phase status copy/remove action contracts', () => {
     expect(source).toContain(
       'const replacementMapping = resolveReplacementStatusMapping(phaseMapping, defaultMappings);'
     );
-    expect(source).toContain("await trx('project_tasks')");
+    expect(source).toContain("await tenantScopedTable(trx, 'project_tasks', tenant)");
     expect(source).toContain('replacementMapping.project_status_mapping_id');
     expect(source).toContain('phaseMapping.project_status_mapping_id');
-    expect(source).toContain(".where({ tenant, phase_id: phaseId })");
+    expect(source).toContain(".where({ phase_id: phaseId })");
     expect(source).toContain('.del();');
   });
 });

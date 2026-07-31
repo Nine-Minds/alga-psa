@@ -1,7 +1,8 @@
 'use client';
 
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent, DialogTitle } from "@alga-psa/ui/components/Dialog";
@@ -11,13 +12,14 @@ import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
-import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle, Send } from "lucide-react";
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle, Send, BookOpen } from "lucide-react";
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getTemplatesAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction,
+  isNotificationActionError,
   sendTestEmailAction
 } from "../../actions";
 import {
@@ -32,6 +34,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@alga-psa/ui/components/DropdownMenu";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { getErrorMessage } from "@alga-psa/ui/lib/errorHandling";
+import { templateVariableRegistry, type VariableDef } from "../../lib/templateVariables";
+import {
+  getTemplateVariableCompletions,
+  getTemplateVariableToken,
+  TemplateVariablePanel,
+  VariableReferenceDialog,
+} from "./TemplateVariableReference";
+import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
 
 // Language names mapping (shared across component)
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -41,7 +53,8 @@ const LANGUAGE_NAMES: Record<string, string> = {
   'de': 'German',
   'nl': 'Dutch',
   'it': 'Italian',
-  'pl': 'Polish'
+  'pl': 'Polish',
+  'pt': 'Portuguese'
 };
 
 // Row types for flat list
@@ -105,6 +118,7 @@ function EmailTemplatePreview({
   templateName: string;
   subject?: string;
 }) {
+  const { t } = useTranslation('msp/settings');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const sampleData = useMemo(
     () => getSampleDataForPreview(templateName, htmlContent, subject),
@@ -145,7 +159,7 @@ function EmailTemplatePreview({
     <div className="space-y-2">
       {renderedSubject && (
         <div>
-          <Label className="text-xs text-gray-500">Subject Preview</Label>
+          <Label className="text-xs text-gray-500">{t('notifications.emailTemplatesUi.preview.subjectLabel', 'Subject Preview')}</Label>
           <div className="p-2 bg-gray-50 rounded border text-sm">
             {renderedSubject}
           </div>
@@ -156,19 +170,20 @@ function EmailTemplatePreview({
           ref={iframeRef}
           srcDoc={renderedHtml}
           sandbox="allow-same-origin"
-          title="Email template preview"
+          title={t('notifications.emailTemplatesUi.preview.iframeTitle', 'Email template preview')}
           className="w-full min-h-[200px] bg-white"
           style={{ border: 'none' }}
         />
       </div>
       <p className="text-xs text-gray-400">
-        Preview uses sample data. Actual emails will contain real values.
+        {t('notifications.emailTemplatesUi.preview.sampleDataNote', 'Preview uses sample data. Actual emails will contain real values.')}
       </p>
     </div>
   );
 }
 
 export function EmailTemplates() {
+  const { t } = useTranslation('msp/settings');
   const { data: session } = useSession();
   const [templates, setTemplates] = useState<{
     systemTemplates: (SystemEmailTemplate & { category: string })[];
@@ -179,6 +194,7 @@ export function EmailTemplates() {
   const [isCloning, setIsCloning] = useState(false);
   const [viewingTemplate, setViewingTemplate] = useState<SystemEmailTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<TenantEmailTemplate | null>(null);
+  const [isVariableReferenceOpen, setIsVariableReferenceOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Language filter state - empty means show all languages
@@ -242,7 +258,8 @@ export function EmailTemplates() {
         const currentTemplates = await getTemplatesAction(currentTenant);
         setTemplates(currentTemplates);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load templates');
+        console.error('Failed to load email templates:', err);
+        setError(t('notifications.emailTemplatesUi.errors.loadFailed', 'Failed to load templates'));
       }
     }
     init();
@@ -268,7 +285,11 @@ export function EmailTemplates() {
 
     try {
       setIsCloning(true);
-      await cloneSystemTemplateAction(tenant, template.id);
+      const result = await cloneSystemTemplateAction(tenant, template.id);
+      if (isNotificationActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
 
       // Refresh templates
       const currentTemplates = await getTemplatesAction(tenant);
@@ -301,7 +322,7 @@ export function EmailTemplates() {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
           layout="stacked"
-          text="Loading email templates..."
+          text={t('notifications.emailTemplatesUi.list.loading', 'Loading email templates...')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -375,7 +396,7 @@ export function EmailTemplates() {
             tenantTemplate,
             activeTemplate,
             isCustom: !!tenantTemplate,
-            language: LANGUAGE_NAMES[activeTemplate.language_code] || activeTemplate.language_code.toUpperCase(),
+            language: t(`notifications.emailTemplatesUi.languages.${activeTemplate.language_code}`, LANGUAGE_NAMES[activeTemplate.language_code] || activeTemplate.language_code.toUpperCase()),
             subject: activeTemplate.subject,
           });
         });
@@ -389,7 +410,7 @@ export function EmailTemplates() {
 
   const columns: ColumnDefinition<EmailTemplateRow>[] = [
     {
-      title: 'Name',
+      title: t('notifications.emailTemplatesUi.columns.name', 'Name'),
       dataIndex: 'name',
       render: (value: string, record: EmailTemplateRow) => {
         if (record.type === 'category') {
@@ -410,7 +431,7 @@ export function EmailTemplates() {
                 {value}
               </span>
               <span className="ml-2 text-sm text-gray-500">
-                ({(record as CategoryRow).templateCount} templates)
+                {t('notifications.emailTemplatesUi.list.templateCount', { defaultValue: '({{templateCount}} templates)', templateCount: (record as CategoryRow).templateCount })}
               </span>
             </div>
           );
@@ -422,8 +443,13 @@ export function EmailTemplates() {
               <div>
                 <span className="font-medium text-gray-700">{tplRecord.displayName}</span>
                 <div className="text-xs text-gray-500">
-                  {tplRecord.isCustom ? 'Using custom template' : 'Using standard template'}
+                  {tplRecord.isCustom ? t('notifications.emailTemplatesUi.list.usingCustom', 'Using custom template') : t('notifications.emailTemplatesUi.list.usingStandard', 'Using standard template')}
                 </div>
+                {templateVariableRegistry[tplRecord.name]?.contractInferred && (
+                  <div className="mt-1 text-xs text-[rgb(var(--badge-warning-text))]">
+                    Not currently sent
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -431,7 +457,7 @@ export function EmailTemplates() {
       },
     },
     {
-      title: 'Language',
+      title: t('notifications.emailTemplatesUi.fields.language', 'Language'),
       dataIndex: 'language',
       width: '100px',
       render: (value: string, record: EmailTemplateRow) => {
@@ -440,7 +466,7 @@ export function EmailTemplates() {
       },
     },
     {
-      title: 'Subject',
+      title: t('notifications.emailTemplatesUi.fields.subject', 'Subject'),
       dataIndex: 'subject',
       render: (value: string, record: EmailTemplateRow) => {
         if (record.type === 'category') return null;
@@ -448,7 +474,7 @@ export function EmailTemplates() {
       },
     },
     {
-      title: 'Actions',
+      title: t('notifications.emailTemplatesUi.columns.actions', 'Actions'),
       dataIndex: 'id',
       width: '15%',
       render: (value: string, record: EmailTemplateRow) => {
@@ -466,7 +492,7 @@ export function EmailTemplates() {
                     id={`expand-all-${value}`}
                     onClick={() => handleToggleExpand(record.name)}
                   >
-                    {expandedCategories.has(record.name) ? 'Collapse' : 'Expand'}
+                    {expandedCategories.has(record.name) ? t('notifications.emailTemplatesUi.actions.collapse', 'Collapse') : t('notifications.emailTemplatesUi.actions.expand', 'Expand')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -483,7 +509,7 @@ export function EmailTemplates() {
                 size="sm"
                 onClick={() => setEditingTemplate(tplRecord.tenantTemplate!)}
               >
-                Edit
+                {t('notifications.emailTemplatesUi.actions.edit', 'Edit')}
               </Button>
               <Button
                 id={`use-standard-${tplRecord.systemTemplate.id}`}
@@ -491,7 +517,7 @@ export function EmailTemplates() {
                 size="sm"
                 onClick={() => handleUseStandard(tplRecord.systemTemplate.name)}
               >
-                Use Standard
+                {t('notifications.emailTemplatesUi.actions.useStandard', 'Use Standard')}
               </Button>
             </div>
           );
@@ -504,7 +530,7 @@ export function EmailTemplates() {
                 size="sm"
                 onClick={() => setViewingTemplate(tplRecord.systemTemplate)}
               >
-                View
+                {t('notifications.emailTemplatesUi.actions.view', 'View')}
               </Button>
               <Button
                 id={`customize-template-${tplRecord.systemTemplate.id}`}
@@ -513,7 +539,7 @@ export function EmailTemplates() {
                 onClick={() => handleCreateCustom(tplRecord.systemTemplate)}
                 disabled={isCloning}
               >
-                Customize
+                {t('notifications.emailTemplatesUi.actions.customize', 'Customize')}
               </Button>
             </div>
           );
@@ -526,21 +552,32 @@ export function EmailTemplates() {
     <div className="space-y-4">
       <div className="flex items-start justify-between">
         <p className="text-sm text-gray-600">
-          Each event type has a standard template that can be customized.
-          You can either use the standard template or create a custom version.
+          {t('notifications.emailTemplatesUi.description', 'Each event type has a standard template that can be customized. You can either use the standard template or create a custom version.')}
         </p>
 
-        {/* Language Filter */}
-        <DropdownMenu>
+        <div className="ml-4 flex shrink-0 items-center gap-2">
+          <Button
+            id="open-email-template-variable-reference"
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 whitespace-nowrap"
+            onClick={() => setIsVariableReferenceOpen(true)}
+          >
+            <BookOpen className="h-4 w-4" />
+            Variable reference
+          </Button>
+
+          {/* Language Filter */}
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               id="language-filter-btn"
               variant="outline"
               size="sm"
-              className="ml-4 flex items-center gap-2 whitespace-nowrap"
+              className="flex items-center gap-2 whitespace-nowrap"
             >
               <Filter className="h-4 w-4" />
-              Languages
+              {t('notifications.emailTemplatesUi.filter.languages', 'Languages')}
               {selectedLanguages.size > 0 && (
                 <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary-100 text-primary-700 rounded-full">
                   {selectedLanguages.size}
@@ -559,7 +596,7 @@ export function EmailTemplates() {
                 }}
                 className="flex items-center justify-between cursor-pointer"
               >
-                <span>{LANGUAGE_NAMES[langCode] || langCode.toUpperCase()}</span>
+                <span>{t(`notifications.emailTemplatesUi.languages.${langCode}`, LANGUAGE_NAMES[langCode] || langCode.toUpperCase())}</span>
                 {selectedLanguages.has(langCode) && (
                   <Check className="h-4 w-4 text-primary-600" />
                 )}
@@ -577,12 +614,13 @@ export function EmailTemplates() {
                   className="flex items-center gap-2 text-gray-600 cursor-pointer"
                 >
                   <XCircle className="h-4 w-4" />
-                  Reset
+                  {t('notifications.emailTemplatesUi.filter.reset', 'Reset')}
                 </DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        </div>
       </div>
 
       <DataTable
@@ -614,6 +652,11 @@ export function EmailTemplates() {
         tenant={tenant}
         onTemplatesChange={setTemplates}
       />
+
+      <VariableReferenceDialog
+        isOpen={isVariableReferenceOpen}
+        onClose={() => setIsVariableReferenceOpen(false)}
+      />
     </div>
   );
 }
@@ -625,6 +668,7 @@ function ViewTemplateDialog({
   template: SystemEmailTemplate | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('msp/settings');
   const [htmlTab, setHtmlTab] = useState<string>('preview');
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -644,12 +688,12 @@ function ViewTemplateDialog({
     try {
       const result = await sendTestEmailAction(template.id, 'system');
       if (result.success) {
-        setTestResult({ success: true, message: `Test email sent to ${result.sentTo}` });
+        setTestResult({ success: true, message: t('notifications.emailTemplatesUi.test.sentTo', { defaultValue: 'Test email sent to {{recipient}}', recipient: result.sentTo }) });
       } else {
-        setTestResult({ success: false, message: result.error || 'Failed to send test email.' });
+        setTestResult({ success: false, message: result.error || t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
       }
-    } catch (err) {
-      setTestResult({ success: false, message: err instanceof Error ? err.message : 'Failed to send test email.' });
+    } catch {
+      setTestResult({ success: false, message: t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
     } finally {
       setSendingTest(false);
     }
@@ -668,33 +712,34 @@ function ViewTemplateDialog({
         className="mr-auto flex items-center gap-2"
       >
         <Send className="h-4 w-4" />
-        {sendingTest ? "Sending..." : "Send Test Email"}
+        {sendingTest ? t('notifications.emailTemplatesUi.actions.sending', 'Sending...') : t('notifications.emailTemplatesUi.actions.sendTest', 'Send Test Email')}
       </Button>
       <Button id="close-view-dialog-btn" type="button" onClick={onClose}>
-        Close
+        {t('notifications.emailTemplatesUi.actions.close', 'Close')}
       </Button>
     </div>
   );
 
   return (
-    <Dialog isOpen={!!template} onClose={onClose} footer={footer}>
-      <DialogTitle>Standard Template: {formatTemplateName(template.name)}</DialogTitle>
+    <Dialog isOpen={!!template} onClose={onClose} className="max-w-6xl" footer={footer}>
+      <DialogTitle>{t('notifications.emailTemplatesUi.view.title', { defaultValue: 'Standard Template: {{name}}', name: formatTemplateName(template.name) })}</DialogTitle>
 
-      <DialogContent className="space-y-4 px-6">
+      <DialogContent className="grid gap-5 px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-4">
         <div>
-          <Label>Language</Label>
+          <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
           <div className="p-2 bg-gray-50 rounded border">
-            {LANGUAGE_NAMES[template.language_code] || template.language_code.toUpperCase()}
+            {t(`notifications.emailTemplatesUi.languages.${template.language_code}`, LANGUAGE_NAMES[template.language_code] || template.language_code.toUpperCase())}
           </div>
         </div>
 
         <div>
-          <Label>Subject</Label>
+          <Label>{t('notifications.emailTemplatesUi.fields.subject', 'Subject')}</Label>
           <div className="p-2 bg-gray-50 rounded border">{template.subject}</div>
         </div>
 
         <div>
-          <Label>HTML Content</Label>
+          <Label>{t('notifications.emailTemplatesUi.fields.htmlContent', 'HTML Content')}</Label>
           <Tabs value={htmlTab} onValueChange={setHtmlTab}>
             <TabsList>
               <TabsTrigger value="source">Source</TabsTrigger>
@@ -719,7 +764,7 @@ function ViewTemplateDialog({
 
         {htmlTab !== 'preview' && (
           <div>
-            <Label>Text Content</Label>
+            <Label>{t('notifications.emailTemplatesUi.fields.textContent', 'Text Content')}</Label>
             <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto">
               {template.text_content}
             </div>
@@ -731,6 +776,8 @@ function ViewTemplateDialog({
             {testResult.message}
           </div>
         )}
+        </div>
+        <TemplateVariablePanel templateName={template.name} />
       </DialogContent>
     </Dialog>
   );
@@ -749,6 +796,8 @@ function EditTemplateDialog({
   tenant: string;
   onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
 }) {
+  type EditableField = 'subject' | 'html_content' | 'text_content';
+  const { t } = useTranslation('msp/settings');
   const [formData, setFormData] = useState<Partial<TenantEmailTemplate>>({
     name: template?.name ?? "",
     subject: template?.subject ?? "",
@@ -759,6 +808,17 @@ function EditTemplateDialog({
   const [htmlTab, setHtmlTab] = useState<string>('source');
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const htmlRef = useRef<HTMLTextAreaElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const lastFocusedField = useRef<EditableField>('html_content');
+  const pendingCaret = useRef<{ field: EditableField; offset: number } | null>(null);
+  const [autocomplete, setAutocomplete] = useState<{
+    field: EditableField;
+    query: string;
+    opening: number;
+    position: CaretMenuPosition;
+  } | null>(null);
 
   // Update form data when template changes
   useEffect(() => {
@@ -772,9 +832,122 @@ function EditTemplateDialog({
       });
       setHtmlTab('source');
       setTestResult(null);
+      setAutocomplete(null);
     }
   }, [template]);
   const [isSaving, setIsSaving] = useState(false);
+
+  const getFieldRef = (field: EditableField) => {
+    if (field === 'subject') return subjectRef.current;
+    if (field === 'html_content') return htmlRef.current;
+    return textRef.current;
+  };
+
+  useLayoutEffect(() => {
+    if (!pendingCaret.current) return;
+    const { field, offset } = pendingCaret.current;
+    pendingCaret.current = null;
+    const timeout = window.setTimeout(() => {
+      const element = getFieldRef(field);
+      element?.focus();
+      element?.setSelectionRange(offset, offset);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [formData.subject, formData.html_content, formData.text_content]);
+
+  const replaceSelection = (
+    field: EditableField,
+    replacement: string,
+    replacementStart?: number,
+  ) => {
+    const element = getFieldRef(field);
+    const currentValue = String(formData[field] ?? '');
+    const selectionStart = replacementStart ?? element?.selectionStart ?? currentValue.length;
+    const selectionEnd = element?.selectionEnd ?? selectionStart;
+    const nextValue = `${currentValue.slice(0, selectionStart)}${replacement}${currentValue.slice(selectionEnd)}`;
+    pendingCaret.current = { field, offset: selectionStart + replacement.length };
+    setFormData((previous) => ({ ...previous, [field]: nextValue }));
+    lastFocusedField.current = field;
+    setAutocomplete(null);
+  };
+
+  const insertVariable = (token: string) => replaceSelection(lastFocusedField.current, token);
+
+  const detectAutocomplete = (
+    field: EditableField,
+    element: HTMLInputElement | HTMLTextAreaElement,
+  ) => {
+    lastFocusedField.current = field;
+    const caret = element.selectionStart ?? element.value.length;
+    const match = element.value.slice(0, caret).match(/\{\{([a-zA-Z0-9._]*)$/);
+    setAutocomplete(match ? {
+      field,
+      query: match[1],
+      opening: caret - match[0].length,
+      position: measureCaretMenuPosition(element, caret),
+    } : null);
+  };
+
+  const repositionAutocomplete = (
+    field: EditableField,
+    element: HTMLInputElement | HTMLTextAreaElement,
+  ) => {
+    setAutocomplete((current) => current?.field === field ? {
+      ...current,
+      position: measureCaretMenuPosition(
+        element,
+        element.selectionStart ?? element.value.length,
+      ),
+    } : current);
+  };
+
+  const completeVariable = (field: EditableField, variable: VariableDef) => {
+    const element = getFieldRef(field);
+    const value = String(formData[field] ?? '');
+    const caret = element?.selectionStart ?? value.length;
+    const opening = autocomplete?.field === field
+      ? autocomplete.opening
+      : value.slice(0, caret).lastIndexOf('{{');
+    replaceSelection(field, getTemplateVariableToken(variable), opening >= 0 ? opening : caret);
+  };
+
+  const autocompleteChoices = autocomplete && template
+    ? getTemplateVariableCompletions(template.name, autocomplete.query)
+    : [];
+
+  const handleAutocompleteKeyDown = (event: React.KeyboardEvent, field: EditableField) => {
+    if (autocomplete?.field !== field || autocompleteChoices.length === 0) return;
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault();
+      completeVariable(field, autocompleteChoices[0]);
+    } else if (event.key === 'Escape') {
+      setAutocomplete(null);
+    }
+  };
+
+  const autocompleteMenu = (field: EditableField) => typeof document !== 'undefined' && autocomplete?.field === field && autocompleteChoices.length > 0 ? createPortal(
+    <div
+      className="fixed z-[100] max-h-64 w-80 overflow-y-auto rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-1 shadow-lg"
+      style={{ left: autocomplete.position.left, top: autocomplete.position.top }}
+      role="listbox"
+      aria-label="Template variable suggestions"
+    >
+      {autocompleteChoices.map((variable) => (
+        <button
+          id={`autocomplete-${field}-${variable.path.replace(/[^a-zA-Z0-9]+/g, '-')}`}
+          key={variable.path}
+          type="button"
+          className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs hover:bg-[rgb(var(--color-primary-50))] dark:hover:bg-[rgb(var(--color-primary-400)/0.2)]"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => completeVariable(field, variable)}
+        >
+          <code>{variable.path}</code>
+          <span className="text-[rgb(var(--color-text-500))]">{variable.type}</span>
+        </button>
+      ))}
+    </div>,
+    document.body,
+  ) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -804,12 +977,12 @@ function EditTemplateDialog({
         text_content: formData.text_content,
       });
       if (result.success) {
-        setTestResult({ success: true, message: `Test email sent to ${result.sentTo}` });
+        setTestResult({ success: true, message: t('notifications.emailTemplatesUi.test.sentTo', { defaultValue: 'Test email sent to {{recipient}}', recipient: result.sentTo }) });
       } else {
-        setTestResult({ success: false, message: result.error || 'Failed to send test email.' });
+        setTestResult({ success: false, message: result.error || t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
       }
-    } catch (err) {
-      setTestResult({ success: false, message: err instanceof Error ? err.message : 'Failed to send test email.' });
+    } catch {
+      setTestResult({ success: false, message: t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
     } finally {
       setSendingTest(false);
     }
@@ -826,10 +999,10 @@ function EditTemplateDialog({
         className="mr-auto flex items-center gap-2"
       >
         <Send className="h-4 w-4" />
-        {sendingTest ? "Sending..." : "Send Test Email"}
+        {sendingTest ? t('notifications.emailTemplatesUi.actions.sending', 'Sending...') : t('notifications.emailTemplatesUi.actions.sendTest', 'Send Test Email')}
       </Button>
       <Button id="cancel-edit-dialog-btn" type="button" onClick={onClose} variant="outline">
-        Cancel
+        {t('notifications.emailTemplatesUi.actions.cancel', 'Cancel')}
       </Button>
       <Button
         id="save-template-btn"
@@ -837,50 +1010,67 @@ function EditTemplateDialog({
         disabled={isSaving}
         onClick={() => (document.getElementById('edit-template-form') as HTMLFormElement | null)?.requestSubmit()}
       >
-        {isSaving ? "Saving..." : "Save"}
+        {isSaving ? t('notifications.emailTemplatesUi.actions.saving', 'Saving...') : t('notifications.emailTemplatesUi.actions.save', 'Save')}
       </Button>
     </div>
   );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} footer={footer}>
+    <Dialog isOpen={isOpen} onClose={onClose} className="max-w-6xl" footer={footer}>
       <form id="edit-template-form" onSubmit={handleSubmit}>
-        <DialogTitle>Edit Custom Template: {formatTemplateName(template?.name ?? '')}</DialogTitle>
+        <DialogTitle>{t('notifications.emailTemplatesUi.edit.title', { defaultValue: 'Edit Custom Template: {{name}}', name: formatTemplateName(template?.name ?? '') })}</DialogTitle>
 
-        <DialogContent className="space-y-4 px-6">
+        <DialogContent className="grid gap-5 px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="min-w-0 space-y-4">
           <div>
-            <Label>Language</Label>
+            <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
             <div className="p-2 bg-gray-50 rounded border text-gray-700">
-              {formData.language_code ? (LANGUAGE_NAMES[formData.language_code] || formData.language_code.toUpperCase()) : 'N/A'}
+              {formData.language_code ? t(`notifications.emailTemplatesUi.languages.${formData.language_code}`, LANGUAGE_NAMES[formData.language_code] || formData.language_code.toUpperCase()) : t('notifications.emailTemplatesUi.common.notAvailable', 'N/A')}
             </div>
           </div>
 
           <div>
-            <Label htmlFor="subject">Subject</Label>
+            <Label htmlFor="subject">{t('notifications.emailTemplatesUi.fields.subject', 'Subject')}</Label>
             <Input
               id="subject"
+              ref={subjectRef}
               value={formData.subject}
-              onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+              onFocus={() => { lastFocusedField.current = 'subject'; }}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, subject: e.target.value }));
+                detectAutocomplete('subject', e.currentTarget);
+              }}
+              onScroll={(event) => repositionAutocomplete('subject', event.currentTarget)}
+              onKeyDown={(event) => handleAutocompleteKeyDown(event, 'subject')}
               required
             />
+            {autocompleteMenu('subject')}
           </div>
 
           <div>
-            <Label htmlFor="html-content">HTML Content</Label>
+            <Label htmlFor="html-content">{t('notifications.emailTemplatesUi.fields.htmlContent', 'HTML Content')}</Label>
             <Tabs value={htmlTab} onValueChange={setHtmlTab}>
               <TabsList>
-                <TabsTrigger value="source">Source</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
+                <TabsTrigger value="source">{t('notifications.emailTemplatesUi.tabs.source', 'Source')}</TabsTrigger>
+                <TabsTrigger value="preview">{t('notifications.emailTemplatesUi.tabs.preview', 'Preview')}</TabsTrigger>
               </TabsList>
               <TabsContent value="source">
                 <TextArea
                   id="html-content"
+                  ref={htmlRef}
                   value={formData.html_content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                  onFocus={() => { lastFocusedField.current = 'html_content'; }}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, html_content: e.target.value }));
+                    detectAutocomplete('html_content', e.currentTarget);
+                  }}
+                  onScroll={() => setAutocomplete(null)}
+                  onKeyDown={(event) => handleAutocompleteKeyDown(event, 'html_content')}
                   required
                   rows={10}
                   className="mt-2"
                 />
+                {autocompleteMenu('html_content')}
               </TabsContent>
               <TabsContent value="preview">
                 <div className="mt-2">
@@ -896,14 +1086,22 @@ function EditTemplateDialog({
 
           {htmlTab !== 'preview' && (
             <div>
-              <Label htmlFor="text-content">Text Content</Label>
+              <Label htmlFor="text-content">{t('notifications.emailTemplatesUi.fields.textContent', 'Text Content')}</Label>
               <TextArea
                 id="text-content"
+                ref={textRef}
                 value={formData.text_content}
-                onChange={(e) => setFormData(prev => ({ ...prev, text_content: e.target.value }))}
+                onFocus={() => { lastFocusedField.current = 'text_content'; }}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, text_content: e.target.value }));
+                  detectAutocomplete('text_content', e.currentTarget);
+                }}
+                onScroll={() => setAutocomplete(null)}
+                onKeyDown={(event) => handleAutocompleteKeyDown(event, 'text_content')}
                 required
                 rows={10}
               />
+              {autocompleteMenu('text_content')}
             </div>
           )}
 
@@ -912,6 +1110,11 @@ function EditTemplateDialog({
               {testResult.message}
             </div>
           )}
+          </div>
+          <TemplateVariablePanel
+            templateName={template?.name ?? ''}
+            onInsert={insertVariable}
+          />
         </DialogContent>
       </form>
     </Dialog>

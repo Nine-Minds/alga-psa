@@ -33,11 +33,9 @@ export class PriorityService extends BaseService<IPriority> {
     } = options;
 
     // Build base query
-    let dataQuery = knex('priorities')
-      .where('tenant', context.tenant);
+    let dataQuery = this.buildTenantScopedQuery(knex, context);
 
-    let countQuery = knex('priorities')
-      .where('tenant', context.tenant);
+    let countQuery = this.buildTenantScopedQuery(knex, context);
 
     // Apply item_type filter
     if (filters.item_type) {
@@ -100,11 +98,8 @@ export class PriorityService extends BaseService<IPriority> {
   async getById(id: string, context: ServiceContext): Promise<IPriority | null> {
     const { knex } = await this.getKnex();
 
-    const priority = await knex('priorities')
-      .where({
-        priority_id: id,
-        tenant: context.tenant
-      })
+    const priority = await this.buildTenantScopedQuery(knex, context)
+      .where('priority_id', id)
       .first();
 
     return priority as IPriority | null;

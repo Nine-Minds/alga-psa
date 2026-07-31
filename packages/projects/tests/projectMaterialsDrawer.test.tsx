@@ -12,6 +12,29 @@ let mockMaterials: IProjectMaterial[] = [];
 let mockProducts: CatalogPickerItem[] = [];
 let mockPrices: IServicePrice[] = [];
 
+// No I18nextProvider in this test; give useTranslation a defaultValue-honoring
+// stable t (a fresh t per call would re-fire effects keyed on it).
+vi.mock('react-i18next', () => {
+  const t = (
+    key: string,
+    options?: string | { defaultValue?: string; [k: string]: unknown },
+    params?: { [k: string]: unknown }
+  ) => {
+    const template = typeof options === 'string' ? options : (options?.defaultValue ?? key);
+    const vars = typeof options === 'string' ? params : options;
+    return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+      const value = vars?.[name];
+      return value === undefined ? match : String(value);
+    });
+  };
+  const translation = { t, i18n: { language: 'en' } };
+  return {
+    useTranslation: () => translation,
+    initReactI18next: { type: '3rdParty', init: () => undefined },
+    Trans: ({ children }: { children?: unknown }) => children ?? null,
+  };
+});
+
 vi.mock('react-hot-toast', () => ({
   toast: {
     success: vi.fn(),
@@ -72,8 +95,14 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
-  useAutomationIdAndRegister: (_config: any, _actions: any, dataAutomationId?: string) => ({
-    automationIdProps: dataAutomationId ? { 'data-automation-id': dataAutomationId } : {},
+  useAutomationIdAndRegister: (config: any, _actions: any, dataAutomationId?: string) => ({
+    automationIdProps: {
+      // Keep the DOM id: label htmlFor association (findByLabelText) needs it.
+      ...(config?.id ? { id: config.id } : {}),
+      ...(dataAutomationId || config?.id
+        ? { 'data-automation-id': dataAutomationId ?? config.id }
+        : {}),
+    },
     updateMetadata: vi.fn(),
   }),
 }));
@@ -84,6 +113,12 @@ vi.mock('../src/actions/materialCatalogActions', () => ({
   getServicePrices: vi.fn(async () => mockPrices),
   addProjectMaterial: vi.fn(async () => undefined),
   deleteProjectMaterial: vi.fn(async () => undefined),
+  // The drawer calls these in fire-and-forget effects/handlers; missing
+  // exports surface as unhandled vi.mock errors that nondeterministically
+  // mark the FILE failed even with every test passing.
+  getProjectMaterialBillingOptions: vi.fn(async () => ({ project_currency: null, entries: [] })),
+  listAvailableStockUnitsForMaterial: vi.fn(async () => []),
+  updateProjectMaterial: vi.fn(async () => undefined),
 }));
 
 describe('ProjectMaterialsDrawer', () => {
@@ -293,7 +328,7 @@ describe('ProjectMaterialsDrawer', () => {
     const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
-    await screen.findByText('Materials');
+    await screen.findByText('Project Materials');
     await screen.findByRole('button', { name: 'Add' }).then((button) => button.click());
 
     expect(await screen.findByText('Widget (W-1)')).toBeInTheDocument();
@@ -338,7 +373,7 @@ describe('ProjectMaterialsDrawer', () => {
     const addButton = await screen.findByRole('button', { name: 'Add' });
     addButton.click();
 
-    const quantityInput = await screen.findByRole('spinbutton');
+    const quantityInput = await screen.findByLabelText('Quantity');
     expect(quantityInput).toHaveValue(1);
 
     fireEvent.change(quantityInput, { target: { value: '0' } });
@@ -366,7 +401,7 @@ describe('ProjectMaterialsDrawer', () => {
     const initialTotal = formatCurrencyFromMinorUnits(1000, 'en-US', 'USD');
     expect(await screen.findByText(initialTotal)).toBeInTheDocument();
 
-    const quantityInput = await screen.findByRole('spinbutton');
+    const quantityInput = await screen.findByLabelText('Quantity');
     fireEvent.change(quantityInput, { target: { value: '2' } });
 
     const updatedTotal = formatCurrencyFromMinorUnits(2000, 'en-US', 'USD');
@@ -397,7 +432,7 @@ describe('ProjectMaterialsDrawer', () => {
     const productSelect = await screen.findByTestId('async-searchable-select');
     fireEvent.change(productSelect, { target: { value: 'service-1' } });
 
-    const quantityInput = await screen.findByRole('spinbutton');
+    const quantityInput = await screen.findByLabelText('Quantity');
     fireEvent.change(quantityInput, { target: { value: '2' } });
 
     const descriptionInput = await screen.findByPlaceholderText('Additional notes...');
@@ -415,6 +450,9 @@ describe('ProjectMaterialsDrawer', () => {
         rate: 1500,
         currency_code: 'USD',
         description: 'Install notes',
+        unit_id: null,
+        billing_destination: 'next_project_invoice',
+        billing_schedule_entry_id: null,
       });
     });
 
@@ -524,9 +562,11 @@ describe('ProjectMaterialsDrawer', () => {
       expect(actions.deleteProjectMaterial).toHaveBeenCalledWith('material-1');
     });
 
+    // Deletion is optimistic: the row disappears locally, no refetch.
     await waitFor(() => {
-      expect(actions.listProjectMaterials).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText('Widget')).not.toBeInTheDocument();
     });
+    expect(actions.listProjectMaterials).toHaveBeenCalledTimes(1);
   });
 
   it('shows no-client warning and hides add button (T017)', async () => {

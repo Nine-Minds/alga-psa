@@ -1,7 +1,7 @@
 'use server';
 
 import { getSession } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { isLicenseDistributionTenant } from '@alga-psa/licensing';
 import Stripe from 'stripe';
@@ -162,8 +162,8 @@ export async function purchaseApplianceLicense(
     transport: input.transport,
   });
 
-  await knex('service_request_submissions')
-    .where({ submission_id: input.submissionId, tenant })
+  await tenantDb(knex, tenant).table('service_request_submissions')
+    .where({ submission_id: input.submissionId })
     .update({ workflow_execution_id: `stripe_session_${checkoutSessionId}`, updated_at: knex.fn.now() });
 
   return { checkoutUrl };

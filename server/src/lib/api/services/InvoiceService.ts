@@ -7,13 +7,14 @@
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
 import { publishEvent, publishWorkflowEvent } from '../../eventBus/publishers';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import {
   buildInvoiceDueDateChangedPayload,
   buildInvoiceOverduePayload,
@@ -33,10 +34,11 @@ import {
   previewInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
+import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
-import { StorageService } from '../../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import InvoiceModel from '@alga-psa/billing/models/invoice';
 
 // Import schemas and interfaces
@@ -89,6 +91,84 @@ async function publishDeferredEvents(events: DeferredEvent[]): Promise<void> {
   for (const publish of events) {
     await publish();
   }
+}
+
+function throwRecurringInvoiceApiError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+
+  const message = error.message;
+
+  if (message === 'Permission denied: invoice create or generate required') {
+    throw new ForbiddenError(message);
+  }
+
+  if (message === 'Invoice already exists for this recurring execution window') {
+    throw new ConflictError(message, {
+      code: (error as { code?: unknown }).code,
+      executionIdentityKey: (error as { executionIdentityKey?: unknown }).executionIdentityKey,
+      invoiceId: (error as { invoiceId?: unknown }).invoiceId,
+    });
+  }
+
+  if (
+    message === 'No billing settings found' ||
+    message === 'Nothing to bill' ||
+    message === 'No active contract lines found for this client in the selected billing period.' ||
+    message.startsWith('Recurring service periods were not materialized') ||
+    message.startsWith('Cannot generate invoice: No billing email address for ') ||
+    message.startsWith('Blocked until approval: ') ||
+    /^Service ".+" has an undefined rate$/.test(message) ||
+    /^Client '.+' does not have a default tax region configured\. Please set one before generating invoices\.$/.test(message) ||
+    message === 'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.'
+  ) {
+    throw new ConflictError(message);
+  }
+
+  if (
+    message === 'Recurring selector input execution window kind is not supported.' ||
+    message === 'Recurring selector input is missing client-cadence assignment identity (schedule key).' ||
+    message === 'Recurring selector input is missing contract-cadence assignment identity (contract line).' ||
+    message === 'No recurring execution windows selected' ||
+    message === 'Grouped recurring selection inputs must share the same client and invoice window.' ||
+    message === 'Invalid billing cycle dates'
+  ) {
+    throw new ValidationError(message);
+  }
+
+  if (/^Billing cycle .+ not found for client .+$/.test(message)) {
+    throw new NotFoundError('Billing cycle not found');
+  }
+
+  if (/^Billing cycle .+ has invalid dates/.test(message)) {
+    throw new ValidationError('Billing cycle has invalid dates');
+  }
+
+  if (/^Client .+ not found in tenant .+$/.test(message)) {
+    throw new NotFoundError('Client not found');
+  }
+
+  if (/^Billing Error: Client .+ has active contracts in multiple currencies \(.+\)\. Mixed currency billing is not supported\.$/.test(message)) {
+    throw new ConflictError('This client has active contracts in multiple currencies. Mixed currency billing is not supported.');
+  }
+
+  throw error;
+}
+
+function isReturnedActionError(value: unknown): value is { readonly actionError: string } | { readonly permissionError: string } {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (
+        typeof (value as { actionError?: unknown }).actionError === 'string' ||
+        typeof (value as { permissionError?: unknown }).permissionError === 'string'
+      ),
+  );
+}
+
+function throwReturnedActionError(error: { readonly actionError: string } | { readonly permissionError: string }): never {
+  throwRecurringInvoiceApiError(new Error('permissionError' in error ? error.permissionError : error.actionError));
 }
 
 export interface InvoiceServiceContext extends ServiceContext {
@@ -179,11 +259,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceAmountDue(trx: Knex.Transaction, params: { invoiceId: string; totalAmount: number; creditApplied: number; tenantId: string }) {
-    const payments = await trx('invoice_payments')
-      .where({ invoice_id: params.invoiceId, tenant: params.tenantId })
+    const payments = await tenantDb(trx, params.tenantId).table('invoice_payments')
+      .where({ invoice_id: params.invoiceId })
       .sum('amount as total_paid');
 
-    const totalPayments = Number(payments[0]?.total_paid || 0);
+    const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
     const amountDue = params.totalAmount - (params.creditApplied + totalPayments);
     return Math.max(0, amountDue);
   }
@@ -206,8 +286,8 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
-    const client = await trx('clients')
-      .where({ client_id: clientId, tenant })
+    const client = await tenantDb(trx, tenant).table('clients')
+      .where({ client_id: clientId })
       .select('payment_terms')
       .first();
 
@@ -218,8 +298,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private buildRecurringInvoiceSummaryQuery(trx: Knex.Transaction, context: ServiceContext) {
-    return trx('recurring_service_periods as rsp')
-      .where('rsp.tenant', context.tenant)
+    return tenantDb(trx, context.tenant).table('recurring_service_periods as rsp')
       .whereNotNull('rsp.invoice_id')
       .select('rsp.invoice_id')
       .min('rsp.service_period_start as recurring_service_period_start')
@@ -248,6 +327,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, context.tenant);
       let query = this.buildBaseQuery(trx, context);
 
       // Apply filters
@@ -258,7 +338,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Add joins based on include options
       if ((options as any).include_client) {
         // Use a subquery to get the billing address to avoid aggregate issues with Citus
-        const billingAddressSubquery = trx('client_locations as cl')
+        const billingAddressSubquery = db.table('client_locations as cl')
           .select(
             'cl.client_id',
             'cl.tenant',
@@ -279,12 +359,8 @@ export class InvoiceService extends BaseService<IInvoice> {
           .limit(1)
           .as('billing_loc');
 
-        query = query
-          .leftJoin('clients', 'invoices.client_id', 'clients.client_id')
-          .leftJoin(billingAddressSubquery, function() {
-            this.on('clients.client_id', '=', 'billing_loc.client_id')
-                .andOn('clients.tenant', '=', 'billing_loc.tenant');
-          })
+        query = db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id', { type: 'left' })
+          .leftJoin(billingAddressSubquery, 'clients.client_id', 'billing_loc.client_id')
           .select(
             'clients.client_name',
             trx.raw('COALESCE(billing_loc.formatted_address, \'\') as billing_address')
@@ -292,8 +368,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_billing_cycle) {
-        query = query
-          .leftJoin('client_billing_cycles', 'invoices.billing_cycle_id', 'client_billing_cycles.billing_cycle_id')
+        query = db.tenantJoin(
+          query,
+          'client_billing_cycles',
+          'invoices.billing_cycle_id',
+          'client_billing_cycles.billing_cycle_id',
+          { type: 'left' }
+        )
           .select(
             'client_billing_cycles.period_start_date as period_start',
             'client_billing_cycles.period_end_date as period_end',
@@ -301,7 +382,13 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       if ((options as any).include_tax_details) {
-        query = query.leftJoin('tax_rates', 'invoices.tax_rate_id', 'tax_rates.tax_rate_id')
+        query = db.tenantJoin(
+          query,
+          'tax_rates',
+          'invoices.tax_rate_id',
+          'tax_rates.tax_rate_id',
+          { type: 'left' }
+        )
           .select('tax_rates.rate_percentage', 'tax_rates.tax_name');
       }
 
@@ -461,7 +548,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       };
 
       // Insert invoice
-      const [invoice] = await trx('invoices').insert(invoiceData).returning('*');
+      const [invoice] = await tenantDb(trx, context.tenant).table('invoices').insert(invoiceData).returning('*');
 
       // Create line items if provided
       if (data.items?.length) {
@@ -509,17 +596,17 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const existing = await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      const existing = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: id })
         .first();
 
       if (!existing) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       // Validate business rules
       if (existing.status === 'paid' && data.status && data.status !== 'paid') {
-        throw new Error('Cannot modify paid invoice status');
+        throw new ConflictError('Cannot modify paid invoice status');
       }
 
       // Prepare update data
@@ -537,18 +624,18 @@ export class InvoiceService extends BaseService<IInvoice> {
       });
 
       // Update invoice
-      await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: id })
         .update(updateData);
 
       // Update line items if provided
       if (data.items) {
-        const replacedItemIds = await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        const replacedItemIds = await tenantDb(trx, context.tenant).table('invoice_line_items')
+          .where({ invoice_id: id })
           .pluck('item_id');
 
-        await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('invoice_line_items')
+          .where({ invoice_id: id })
           .del();
 
         for (const itemId of replacedItemIds) {
@@ -723,12 +810,12 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
     
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: id })
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
@@ -737,34 +824,34 @@ export class InvoiceService extends BaseService<IInvoice> {
         (recurringProvenance.detailPeriodCount ?? 0) > 0;
 
       // Check if invoice has payments
-	      const hasPayments = await trx('invoice_payments')
-	        .where({ invoice_id: id, tenant: context.tenant })
-	        .first();
+      const hasPayments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: id })
+        .first();
 
-	      const occurredAt = new Date().toISOString();
-	      const softCancelled = Boolean(
-          hasPayments ||
-          invoice.status === 'paid' ||
-          hasCanonicalRecurringDetailPeriods
-        );
+      const occurredAt = new Date().toISOString();
+      const softCancelled = Boolean(
+        hasPayments ||
+        invoice.status === 'paid' ||
+        hasCanonicalRecurringDetailPeriods
+      );
 
-	      if (softCancelled) {
-	        // Soft delete - mark as cancelled
-	        await trx('invoices')
-	          .where({ invoice_id: id, tenant: context.tenant })
-	          .update({
-	            status: 'cancelled',
-	            updated_by: context.userId,
-	            updated_at: new Date()
-	          });
-	      } else {
+      if (softCancelled) {
+        // Soft delete - mark as cancelled
+        await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: id })
+          .update({
+            status: 'cancelled',
+            updated_by: context.userId,
+            updated_at: new Date()
+          });
+      } else {
         // Hard delete if no payments
-        await trx('invoice_line_items')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('invoice_line_items')
+          .where({ invoice_id: id })
           .del();
         
-        await trx('invoices')
-          .where({ invoice_id: id, tenant: context.tenant })
+        await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: id })
           .del();
       }
 
@@ -828,27 +915,27 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       if (invoice.status !== 'draft') {
-        throw new Error('Only draft invoices can be finalized');
+        throw new ConflictError('Only draft invoices can be finalized');
       }
 
       // Validate invoice has required data
       const hasInvoiceChargesTable = await trx.schema.hasTable('invoice_charges');
       const lineItems = hasInvoiceChargesTable
         ? await InvoiceModel.getInvoiceCharges(trx, context.tenant, data.invoice_id)
-        : await trx('invoice_line_items')
-          .where({ invoice_id: data.invoice_id, tenant: context.tenant });
+        : await tenantDb(trx, context.tenant).table('invoice_line_items')
+          .where({ invoice_id: data.invoice_id });
 
       if (!lineItems.length) {
-        throw new Error('Invoice must have line items to be finalized');
+        throw new ConflictError('Invoice must have line items to be finalized');
       }
 
       // Calculate final amounts
@@ -870,8 +957,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Update invoice status and amounts
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update(invoiceUpdate);
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
@@ -892,13 +979,18 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Publish event
       deferredEvents.push(() => publishEvent({
         eventType: 'INVOICE_FINALIZED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: data.invoice_id,
-          totalAmount,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
+        payload: (() => {
+          const occurredAt = new Date().toISOString();
+          return {
+            tenantId: context.tenant,
+            occurredAt,
+            invoiceId: data.invoice_id,
+            // payload.InvoiceFinalized.v1 types totalAmount as a string
+            totalAmount: String(totalAmount),
+            userId: context.userId,
+            timestamp: occurredAt
+          };
+        })()
       }));
 
       deferredEvents.push(() => publishWorkflowEvent({
@@ -934,16 +1026,16 @@ export class InvoiceService extends BaseService<IInvoice> {
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       if (!['sent', 'draft'].includes(invoice.status)) {
-        throw new Error('Only draft invoices can be sent');
+        throw new ConflictError('Only draft invoices can be sent');
       }
 
       // Generate PDF if requested
@@ -955,8 +1047,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Update invoice status
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update({
           status: 'sent',
           updated_by: context.userId,
@@ -1050,16 +1142,16 @@ export class InvoiceService extends BaseService<IInvoice> {
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       if (invoice.status === 'cancelled') {
-        throw new Error('Cannot record payment for cancelled invoice');
+        throw new ConflictError('Cannot record payment for cancelled invoice');
       }
 
       // Insert payment record
@@ -1076,7 +1168,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         created_at: new Date()
       };
 
-      await trx('invoice_payments').insert(paymentData);
+      await tenantDb(trx, context.tenant).table('invoice_payments').insert(paymentData);
 
       deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_RECORDED',
@@ -1115,11 +1207,11 @@ export class InvoiceService extends BaseService<IInvoice> {
       }));
 
       // Calculate total payments
-      const payments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
 
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       // Include credits in total paid calculation
       const creditApplied = Number(invoice.credit_applied || 0);
@@ -1133,8 +1225,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update({
           status: newStatus,
           updated_by: context.userId,
@@ -1199,7 +1291,15 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   /**
-   * Apply credit to an invoice
+   * Apply credit to an invoice.
+   *
+   * Delegates to the canonical apply-credit engine
+   * (creditActions.applyCreditToInvoiceInternal), which draws down
+   * credit_tracking, writes the credit_application transaction and
+   * credit_allocations row, and moves the derived credit balance — identical
+   * ledger state to the financial REST path and the UI server action.
+   * Invoice status derivation (paid / partially_applied) stays here, as it
+   * is this endpoint's contract rather than part of the credit ledger.
    */
   async applyCredit(data: ApplyCredit, context: ServiceContext): Promise<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'credit');
@@ -1207,129 +1307,125 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
 
-    await withTransaction(knex, async (trx) => {
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
-        .first();
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where({ invoice_id: data.invoice_id })
+      .first();
 
-      if (!invoice) {
-        throw new Error('Invoice not found');
-      }
+    if (!invoice) {
+      throw new NotFoundError('Invoice not found');
+    }
 
-      // Validate credit amount
-      if (data.credit_amount <= 0) {
-        throw new Error('Credit amount must be positive');
-      }
+    // Validate credit amount
+    if (data.credit_amount <= 0) {
+      throw new BadRequestError('Credit amount must be positive');
+    }
 
-      if (data.credit_amount > invoice.total_amount - (invoice.credit_applied ?? 0)) {
-        throw new Error('Credit amount cannot exceed invoice balance due');
-      }
+    if (data.credit_amount > invoice.total_amount - (invoice.credit_applied ?? 0)) {
+      throw new BadRequestError('Credit amount cannot exceed invoice balance due');
+    }
 
-      // Insert credit record
-      const creditData = {
-        credit_id: uuidv4(),
-        invoice_id: data.invoice_id,
-        credit_amount: data.credit_amount,
-        transaction_id: data.transaction_id,
-        applied_date: new Date(),
-        created_by: context.userId,
-        tenant: context.tenant,
-        created_at: new Date()
-      };
+    const { appliedAmount } = await applyCreditToInvoiceInternal(
+      context.tenant,
+      context.userId,
+      invoice.client_id,
+      data.invoice_id,
+      data.credit_amount
+    );
 
-      await trx('invoice_credits').insert(creditData);
+    if (appliedAmount > 0) {
+      await withTransaction(knex, async (trx) => {
+        const updatedInvoice = await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: data.invoice_id })
+          .select('credit_applied', 'total_amount', 'status')
+          .first();
 
-      // Update invoice credit applied
-      const newCreditApplied = (invoice.credit_applied || 0) + data.credit_amount;
+        const newCreditApplied = Number(updatedInvoice?.credit_applied || 0);
 
-      // Calculate total payments to determine correct status
-      const payments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
-        .sum('amount as total_paid');
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+        // Calculate total payments to determine correct status
+        const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
+          .where({ invoice_id: data.invoice_id })
+          .sum('amount as total_paid');
+        const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
-      // Total paid includes both credits and payments
-      const totalPaid = newCreditApplied + totalPayments;
+        // Total paid includes both credits and payments
+        const totalPaid = newCreditApplied + totalPayments;
 
-      // Update invoice status based on total paid
-      let newStatus = invoice.status;
-      if (totalPaid >= invoice.total_amount) {
-        newStatus = 'paid';
-      } else if (totalPaid > 0 && invoice.status !== 'cancelled') {
-        newStatus = 'partially_applied';
-      }
+        // Update invoice status based on total paid
+        let newStatus = invoice.status;
+        if (totalPaid >= invoice.total_amount) {
+          newStatus = 'paid';
+        } else if (totalPaid > 0 && invoice.status !== 'cancelled') {
+          newStatus = 'partially_applied';
+        }
 
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
-        .update({
-          credit_applied: newCreditApplied,
-          status: newStatus,
-          updated_by: context.userId,
-          updated_at: new Date()
-        });
+        await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: data.invoice_id })
+          .update({
+            status: newStatus,
+            updated_by: context.userId,
+            updated_at: new Date()
+          });
 
-      // Calculate remaining balance after credit application
-      const remainingBalance = invoice.total_amount - totalPaid;
+        // Calculate remaining balance after credit application
+        const remainingBalance = invoice.total_amount - totalPaid;
 
-      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+        const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
 
-	      // Audit log
-	      await auditLog(trx, {
-	        userId: context.userId,
-	        operation: 'UPDATE',
-	        tableName: 'invoices',
-	        recordId: data.invoice_id,
-	        changedData: { 
-	          credit_applied: newCreditApplied,
-	          status: newStatus
-	        },
-	        details: {
+        // Audit log
+        await auditLog(trx, {
+          userId: context.userId,
+          operation: 'UPDATE',
+          tableName: 'invoices',
+          recordId: data.invoice_id,
+          changedData: {
+            credit_applied: newCreditApplied,
+            status: newStatus
+          },
+          details: {
             action: 'invoice.credit_applied',
-            credit_amount: data.credit_amount,
+            credit_amount: appliedAmount,
             ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
           }
-	      });
+        });
 
-	      if (String(newStatus) !== String(invoice.status)) {
-	        const occurredAt = new Date().toISOString();
-	        deferredEvents.push(() => publishWorkflowEvent({
-	          eventType: 'INVOICE_STATUS_CHANGED',
-	          payload: buildInvoiceStatusChangedPayload({
-	            invoiceId: data.invoice_id,
-	            previousStatus: String(invoice.status),
-	            newStatus: String(newStatus),
-	            changedAt: occurredAt,
+        if (String(newStatus) !== String(invoice.status)) {
+          const occurredAt = new Date().toISOString();
+          deferredEvents.push(() => publishWorkflowEvent({
+            eventType: 'INVOICE_STATUS_CHANGED',
+            payload: buildInvoiceStatusChangedPayload({
+              invoiceId: data.invoice_id,
+              previousStatus: String(invoice.status),
+              newStatus: String(newStatus),
+              changedAt: occurredAt,
               recurringProvenance,
-	          }),
-	          ctx: {
-	            tenantId: context.tenant,
-	            occurredAt,
-	            actor: { actorType: 'USER', actorUserId: context.userId },
-	          },
-	        }));
-	      }
+            }),
+            ctx: {
+              tenantId: context.tenant,
+              occurredAt,
+              actor: { actorType: 'USER', actorUserId: context.userId },
+            },
+          }));
+        }
 
-	      // Publish event
-	      deferredEvents.push(() => publishEvent({
-	        eventType: 'INVOICE_CREDIT_APPLIED',
-	        payload: {
-	          tenantId: context.tenant,
-	          invoiceId: data.invoice_id,
-	          creditAmount: data.credit_amount,
-	          newCreditApplied,
-	          remainingBalance,
-	          newStatus,
-	          userId: context.userId,
-	          timestamp: new Date().toISOString()
-	        }
-	      }));
-
-    });
+        // Publish event
+        deferredEvents.push(() => publishEvent({
+          eventType: 'INVOICE_CREDIT_APPLIED',
+          payload: {
+            tenantId: context.tenant,
+            invoiceId: data.invoice_id,
+            creditAmount: appliedAmount,
+            newCreditApplied,
+            remainingBalance,
+            newStatus,
+            userId: context.userId,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      });
+    }
 
     await publishDeferredEvents(deferredEvents);
 
-    // Re-fetch after commit: getById runs on a pooled (non-transaction)
-    // connection, so it must read the row only after the tx commits.
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
@@ -1346,27 +1442,27 @@ export class InvoiceService extends BaseService<IInvoice> {
     await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
-      const invoice = await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const invoice = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       // Validate refund amount
       if (data.refund_amount <= 0) {
-        throw new Error('Refund amount must be positive');
+        throw new BadRequestError('Refund amount must be positive');
       }
 
       // Calculate current payments
-      const payments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
-      const totalPayments = Number(payments[0]?.total_paid || 0);
+      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       if (data.refund_amount > totalPayments) {
-        throw new Error('Refund amount cannot exceed total payments');
+        throw new BadRequestError('Refund amount cannot exceed total payments');
       }
 
       // Insert refund as negative payment
@@ -1384,7 +1480,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         created_at: new Date()
       };
 
-      await trx('invoice_payments').insert(refundData);
+      await tenantDb(trx, context.tenant).table('invoice_payments').insert(refundData);
 
       deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_REFUNDED',
@@ -1405,10 +1501,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       }));
 
       // Calculate net payments after refund
-      const netPayments = await trx('invoice_payments')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      const netPayments = await tenantDb(trx, context.tenant).table('invoice_payments')
+        .where({ invoice_id: data.invoice_id })
         .sum('amount as total_paid');
-      const netPaid = Number(netPayments[0]?.total_paid || 0);
+      const netPaid = Number((netPayments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       // Include credits in total paid
       const creditApplied = Number(invoice.credit_applied || 0);
@@ -1424,8 +1520,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         newStatus = 'partially_applied';
       }
 
-      await trx('invoices')
-        .where({ invoice_id: data.invoice_id, tenant: context.tenant })
+      await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: data.invoice_id })
         .update({
           status: newStatus,
           updated_by: context.userId,
@@ -1508,8 +1604,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       for (const invoiceId of data.invoice_ids) {
         try {
-          const invoice = await trx('invoices')
-            .where({ invoice_id: invoiceId, tenant: context.tenant })
+          const invoice = await tenantDb(trx, context.tenant).table('invoices')
+            .where({ invoice_id: invoiceId })
             .first();
 
           if (!invoice) {
@@ -1523,17 +1619,17 @@ export class InvoiceService extends BaseService<IInvoice> {
             continue;
           }
 
-	          await trx('invoices')
-	            .where({ invoice_id: invoiceId, tenant: context.tenant })
-	            .update({
-	              status: data.status,
+          await tenantDb(trx, context.tenant).table('invoices')
+            .where({ invoice_id: invoiceId })
+            .update({
+              status: data.status,
               finalized_at: data.finalized_at,
               updated_by: context.userId,
               updated_at: new Date()
             });
 
-	          results.updated_count++;
-            const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
+          results.updated_count++;
+          const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, invoiceId);
 
 	          // Audit log
 	          await auditLog(trx, {
@@ -1625,9 +1721,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            }
 	          }
 
-	        } catch (error) {
-	          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-	          results.errors.push(`Error updating invoice ${invoiceId}: ${errorMessage}`);
+	        } catch {
+	          results.errors.push(`Error updating invoice ${invoiceId}: update failed.`);
 	        }
       }
 
@@ -1669,9 +1764,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         }, context);
 
         results.sent_count++;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        results.errors.push(`Error sending invoice ${invoiceId}: ${errorMessage}`);
+      } catch {
+        results.errors.push(`Error sending invoice ${invoiceId}: send failed.`);
       }
     }
 
@@ -1690,9 +1784,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       try {
         await this.delete(invoiceId, context);
         results.deleted_count++;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        results.errors.push(`Error deleting invoice ${invoiceId}: ${errorMessage}`);
+      } catch {
+        results.errors.push(`Error deleting invoice ${invoiceId}: delete failed.`);
       }
     }
 
@@ -1750,7 +1843,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      let baseQuery = trx('invoices').where('tenant', context.tenant);
+      let baseQuery = tenantDb(trx, context.tenant).table('invoices');
 
       // Apply filters if provided
       if (filters) {
@@ -1760,7 +1853,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const [statusStats, monthlyStats, topClients] = await Promise.all([
         this.getStatusStatistics(baseQuery.clone(), trx),
         this.getMonthlyStatistics(baseQuery.clone(), trx),
-        this.getTopClientsByRevenue(baseQuery.clone(), trx)
+        this.getTopClientsByRevenue(baseQuery.clone(), trx, context.tenant)
       ]);
 
       return {
@@ -1781,7 +1874,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     action: 'generate' | 'preview',
   ) {
     if (!data.selector_input) {
-      throw new Error(`Recurring invoice ${action} requires selector_input.`);
+      throw new ValidationError(`Recurring invoice ${action} requires selector_input.`);
     }
 
     return data.selector_input;
@@ -1791,10 +1884,13 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'create');
 
     const selectorInput = this.requireRecurringSelectorInput(data, 'generate');
-    const invoice = await generateInvoiceForSelectionInput(selectorInput);
+    const invoice = await generateInvoiceForSelectionInput(selectorInput).catch(throwRecurringInvoiceApiError);
+    if (isReturnedActionError(invoice)) {
+      throwReturnedActionError(invoice);
+    }
 
     if (!invoice) {
-      throw new Error('Failed to generate invoice');
+      throw new ConflictError('No invoice was generated for the selected recurring period. Zero-dollar invoices may be suppressed by billing settings.');
     }
 
     return invoice as unknown as IInvoice;
@@ -1812,145 +1908,162 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     let createdInvoice: InvoiceViewModel | null = null;
 
-    await withTransaction(knex, async (trx) => {
-      const client = await getClientDetails(trx, tenant, data.clientId);
-      const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
+    try {
+      await withTransaction(knex, async (trx) => {
+        const client = await getClientDetails(trx, tenant, data.clientId);
+        const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
 
-      await trx('invoices').insert({
-        invoice_id: invoiceId,
-        tenant,
-        client_id: data.clientId,
-        invoice_number: invoiceNumber,
-        invoice_date: currentDate,
-        due_date: computedDueDate,
-        status: 'draft',
-        subtotal: 0,
-        tax: 0,
-        total_amount: 0,
-        credit_applied: 0,
-        is_manual: true,
-        is_prepayment: data.isPrepayment ?? false
-      });
-
-      await persistManualInvoiceCharges(
-        trx,
-        invoiceId,
-        data.items.map((item) => ({
-          ...item,
-          rate: Math.round(item.rate)
-        })),
-        client,
-        sessionLike as any,
-        tenant
-      );
-
-      await calculateAndDistributeTax(trx, invoiceId, client, this.taxService, tenant);
-
-      await updateInvoiceTotalsAndRecordTransaction(
-        trx,
-        invoiceId,
-        client,
-        tenant,
-        invoiceNumber,
-        data.expirationDate,
-        {
-          transactionType: 'invoice_generated',
-          description: `Generated manual invoice ${invoiceNumber}`
-        }
-      );
-
-      const invoiceRecord = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant })
-        .first();
-
-      const updatedItems = await trx('invoice_charges')
-        .where({ invoice_id: invoiceId, tenant })
-        .orderBy('created_at', 'asc');
-
-      if (!invoiceRecord) {
-        throw new Error('Failed to load created invoice record');
-      }
-
-      const invoiceDate = typeof invoiceRecord.invoice_date === 'string'
-        ? Temporal.PlainDate.from(invoiceRecord.invoice_date)
-        : Temporal.PlainDate.from(invoiceRecord.invoice_date.toISOString().split('T')[0]);
-
-      const dueDate = typeof invoiceRecord.due_date === 'string'
-        ? Temporal.PlainDate.from(invoiceRecord.due_date)
-        : Temporal.PlainDate.from(invoiceRecord.due_date.toISOString().split('T')[0]);
-
-      createdInvoice = {
-        invoice_id: invoiceId,
-        invoice_number: invoiceNumber,
-        client_id: data.clientId,
-        client: {
-          name: client.client_name,
-          logo: client.logoUrl || '',
-          address: client.location_address || ''
-        },
-        contact: {
-          name: '',
-          address: ''
-        },
-        invoice_date: invoiceDate,
-        due_date: dueDate,
-        status: invoiceRecord.status,
-        subtotal: Number(invoiceRecord.subtotal ?? 0),
-        tax: Number(invoiceRecord.tax ?? 0),
-        total: Number(invoiceRecord.total_amount ?? 0),
-        total_amount: Number(invoiceRecord.total_amount ?? 0),
-        currencyCode: invoiceRecord.currency_code || 'USD',
-        invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
-          item_id: item.item_id,
+        await tenantDb(trx, tenant).table('invoices').insert({
           invoice_id: invoiceId,
-          service_id: item.service_id,
-          description: item.description,
-          quantity: Number(item.quantity),
-          unit_price: Number(item.unit_price),
-          total_price: Number(item.total_price),
-          tax_amount: Number(item.tax_amount),
-          net_amount: Number(item.net_amount),
           tenant,
+          client_id: data.clientId,
+          invoice_number: invoiceNumber,
+          invoice_date: currentDate,
+          due_date: computedDueDate,
+          status: 'draft',
+          subtotal: 0,
+          tax: 0,
+          total_amount: 0,
+          credit_applied: 0,
           is_manual: true,
-          is_discount: item.is_discount || false,
-          discount_type: item.discount_type,
-          applies_to_item_id: item.applies_to_item_id,
-          applies_to_service_id: item.applies_to_service_id,
-          created_by: item.created_by,
-          created_at: item.created_at,
-          rate: Number(item.unit_price)
-        })),
-        credit_applied: Number(invoiceRecord.credit_applied ?? 0),
-        is_manual: true
-      };
-    });
+          is_prepayment: data.isPrepayment ?? false
+        });
+
+        await persistManualInvoiceCharges(
+          trx,
+          invoiceId,
+          data.items.map((item) => ({
+            ...item,
+            rate: Math.round(item.rate)
+          })),
+          client,
+          sessionLike as any,
+          tenant
+        );
+
+        await calculateAndDistributeTax(trx, invoiceId, client, this.taxService, tenant);
+
+        await updateInvoiceTotalsAndRecordTransaction(
+          trx,
+          invoiceId,
+          client,
+          tenant,
+          invoiceNumber,
+          data.expirationDate,
+          {
+            transactionType: 'invoice_generated',
+            description: `Generated manual invoice ${invoiceNumber}`
+          }
+        );
+
+        const invoiceRecord = await tenantDb(trx, tenant).table('invoices')
+          .where({ invoice_id: invoiceId })
+          .first();
+
+        const updatedItems = await tenantDb(trx, tenant).table('invoice_charges')
+          .where({ invoice_id: invoiceId })
+          .orderBy('created_at', 'asc');
+
+        if (!invoiceRecord) {
+          throw new Error('Created invoice could not be reloaded after insert.');
+        }
+
+        const invoiceDate = typeof invoiceRecord.invoice_date === 'string'
+          ? Temporal.PlainDate.from(invoiceRecord.invoice_date)
+          : Temporal.PlainDate.from(invoiceRecord.invoice_date.toISOString().split('T')[0]);
+
+        const dueDate = typeof invoiceRecord.due_date === 'string'
+          ? Temporal.PlainDate.from(invoiceRecord.due_date)
+          : Temporal.PlainDate.from(invoiceRecord.due_date.toISOString().split('T')[0]);
+
+        createdInvoice = {
+          invoice_id: invoiceId,
+          invoice_number: invoiceNumber,
+          client_id: data.clientId,
+          client: {
+            name: client.client_name,
+            logo: client.logoUrl || '',
+            address: client.location_address || ''
+          },
+          contact: {
+            name: '',
+            address: ''
+          },
+          invoice_date: invoiceDate,
+          due_date: dueDate,
+          status: invoiceRecord.status,
+          subtotal: Number(invoiceRecord.subtotal ?? 0),
+          tax: Number(invoiceRecord.tax ?? 0),
+          total: Number(invoiceRecord.total_amount ?? 0),
+          total_amount: Number(invoiceRecord.total_amount ?? 0),
+          currencyCode: invoiceRecord.currency_code || 'USD',
+          invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
+            item_id: item.item_id,
+            invoice_id: invoiceId,
+            service_id: item.service_id,
+            description: item.description,
+            quantity: Number(item.quantity),
+            unit_price: Number(item.unit_price),
+            total_price: Number(item.total_price),
+            tax_amount: Number(item.tax_amount),
+            net_amount: Number(item.net_amount),
+            tenant,
+            is_manual: true,
+            is_discount: item.is_discount || false,
+            discount_type: item.discount_type,
+            applies_to_item_id: item.applies_to_item_id,
+            applies_to_service_id: item.applies_to_service_id,
+            created_by: item.created_by,
+            created_at: item.created_at,
+            rate: Number(item.unit_price)
+          })),
+          credit_applied: Number(invoiceRecord.credit_applied ?? 0),
+          is_manual: true
+        };
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.startsWith('Client not found')) {
+        throw new NotFoundError('Client not found');
+      }
+      if (message.startsWith('Service not found:')) {
+        throw new NotFoundError('Service not found');
+      }
+      if (message.startsWith('Could not find invoice item for service:')) {
+        throw new ValidationError('Discount applies_to_service_id must reference an invoice item');
+      }
+      if (message === 'Quantity must be greater than 0') {
+        throw new ValidationError('Quantity must be greater than 0');
+      }
+      throw error;
+    }
 
     if (!createdInvoice) {
-      throw new Error('Failed to create manual invoice');
+      throw new Error('Manual invoice creation completed without returning an invoice.');
     }
 
     return createdInvoice;
   }
 
   async approve(id: string, context: InvoiceServiceContext, executionId?: string): Promise<IInvoice> {
-    throw new Error('approve not yet implemented');
+    throw new NotImplementedError('approve not yet implemented');
   }
 
   async reject(id: string, reason: string, context: InvoiceServiceContext, executionId?: string): Promise<IInvoice> {
-    throw new Error('reject not yet implemented');
+    throw new NotImplementedError('reject not yet implemented');
   }
 
   async generatePDF(id: string, context: InvoiceServiceContext): Promise<any> {
     await this.validatePermissions(context, 'invoice', 'read');
 
     const { knex } = await this.getKnex();
-    const invoice = await knex('invoices')
-      .where({ invoice_id: id, tenant: context.tenant })
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where({ invoice_id: id })
       .select('invoice_id', 'invoice_number')
       .first();
 
     if (!invoice) {
-      throw new Error('Invoice not found');
+      throw new NotFoundError('Invoice not found');
     }
 
     const buffer = await this.getPdfService(context.tenant).generatePDF({
@@ -1969,11 +2082,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   async search(query: any, context: InvoiceServiceContext, options?: any): Promise<{ data: IInvoice[]; total: number }> {
-    throw new Error('search not yet implemented');
+    throw new NotImplementedError('search not yet implemented');
   }
 
   async createRecurringTemplate(data: CreateRecurringInvoiceTemplate, context: InvoiceServiceContext): Promise<RecurringInvoiceTemplate> {
-    throw new Error('createRecurringTemplate not yet implemented');
+    throw new NotImplementedError('createRecurringTemplate not yet implemented');
   }
 
   // ============================================================================
@@ -1998,9 +2111,8 @@ export class InvoiceService extends BaseService<IInvoice> {
   protected buildBaseQuery(trx: Knex.Transaction, context: ServiceContext): Knex.QueryBuilder {
     const recurringInvoiceSummary = this.buildRecurringInvoiceSummaryQuery(trx, context);
 
-    return trx('invoices')
+    return tenantDb(trx, context.tenant).table('invoices')
       .leftJoin(recurringInvoiceSummary, 'recurring_invoice_summary.invoice_id', 'invoices.invoice_id')
-      .where('invoices.tenant', context.tenant)
       .select(
         'invoices.*',
         trx.raw('COALESCE(invoices.credit_applied, 0) as credit_applied'),
@@ -2125,7 +2237,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     // Permission validation would typically be handled at the middleware level
     // For now, we'll do a basic check that the user ID exists
     if (!context.userId) {
-      throw new Error(`Permission denied: ${action} - No user ID provided`);
+      throw new ForbiddenError(`Permission denied: ${action} - No user ID provided`);
     }
     // TODO: Implement proper permission checking when user object is available in context
   }
@@ -2159,13 +2271,13 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'read');
     const { knex } = await this.getKnex();
     return withTransaction(knex, async (trx) => {
-      const exists = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant: context.tenant })
+      const exists = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
         .select('invoice_id')
         .first();
 
       if (!exists) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       return InvoiceModel.getInvoiceCharges(trx, context.tenant, invoiceId);
@@ -2173,16 +2285,24 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceClient(clientId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('clients as c')
-      .leftJoin('client_locations as cl', function() {
-        this.on('c.client_id', '=', 'cl.client_id')
-          .andOn('c.tenant', '=', 'cl.tenant')
-          .andOn(function() {
+    const db = tenantDb(trx, context.tenant);
+
+    return db.tenantJoin(
+      db.table('clients as c'),
+      'client_locations as cl',
+      'c.client_id',
+      'cl.client_id',
+      {
+        type: 'left',
+        on(join) {
+          join.andOn(function() {
             this.on('cl.is_billing_address', '=', trx.raw('true'))
               .orOn('cl.is_default', '=', trx.raw('true'));
           });
-      })
-      .where({ 'c.client_id': clientId, 'c.tenant': context.tenant })
+        },
+      }
+    )
+      .where({ 'c.client_id': clientId })
       .select(
         'c.client_id',
         'c.client_name',
@@ -2195,14 +2315,14 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getBillingCycle(cycleId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('client_billing_cycles')
-      .where({ billing_cycle_id: cycleId, tenant: context.tenant })
+    return tenantDb(trx, context.tenant).table('client_billing_cycles')
+      .where({ billing_cycle_id: cycleId })
       .first();
   }
 
   private async getTaxDetails(taxRateId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any> {
-    return trx('tax_rates')
-      .where({ tax_rate_id: taxRateId, tenant: context.tenant })
+    return tenantDb(trx, context.tenant).table('tax_rates')
+      .where({ tax_rate_id: taxRateId })
       .first();
   }
 
@@ -2211,13 +2331,13 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const exists = await trx('invoices')
-        .where({ invoice_id: invoiceId, tenant: context.tenant })
+      const exists = await tenantDb(trx, context.tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
         .select('invoice_id')
         .first();
 
       if (!exists) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       const [payments, credits] = await Promise.all([
@@ -2239,20 +2359,17 @@ export class InvoiceService extends BaseService<IInvoice> {
       return [];
     }
 
-    return trx('invoice_payments')
-      .where({ invoice_id: invoiceId, tenant: context.tenant })
+    return tenantDb(trx, context.tenant).table('invoice_payments')
+      .where({ invoice_id: invoiceId })
       .orderBy('payment_date', 'desc');
   }
 
   private async getInvoiceCredits(invoiceId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any[]> {
-    const hasTable = await trx.schema.hasTable('invoice_credits');
-    if (!hasTable) {
-      return [];
-    }
-
-    return trx('invoice_credits')
-      .where({ invoice_id: invoiceId, tenant: context.tenant })
-      .orderBy('applied_date', 'desc');
+    // Credit applications live in credit_allocations (written by the canonical
+    // apply-credit engine), not the phantom invoice_credits table.
+    return tenantDb(trx, context.tenant).table('credit_allocations')
+      .where({ invoice_id: invoiceId })
+      .orderBy('created_at', 'desc');
   }
 
   private async createInvoiceLineItems(invoiceId: string, lineItems: any[], trx: Knex.Transaction, context: ServiceContext): Promise<void> {
@@ -2285,7 +2402,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       created_at: new Date()
     }));
 
-    await trx('invoice_line_items').insert(lineItemsData);
+    await tenantDb(trx, context.tenant).table('invoice_line_items').insert(lineItemsData);
 
     for (const item of lineItemsData) {
       await publishEvent({
@@ -2338,9 +2455,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       .limit(12);
   }
 
-  private async getTopClientsByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction): Promise<any[]> {
-    return query
-      .join('clients', 'invoices.client_id', 'clients.client_id')
+  private async getTopClientsByRevenue(query: Knex.QueryBuilder, trx: Knex.Transaction, tenant: string): Promise<any[]> {
+    return tenantDb(trx, tenant).tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id')
       .groupBy('clients.client_id', 'clients.client_name')
       .select(
         'clients.client_id',
@@ -2389,7 +2505,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   // ============================================================================
 
   async bulkDelete(ids: string[], context: ServiceContext): Promise<void> {
-    throw new Error('bulkDelete not yet implemented');
+    throw new NotImplementedError('bulkDelete not yet implemented');
   }
 
 

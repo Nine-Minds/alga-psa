@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, Flex, Text, Heading } from '@radix-ui/themes';
 import type { Asset, AssetMaintenanceReport, AssetRelationship, NetworkDeviceAsset } from '@alga-psa/types';
 import { getAssetMaintenanceReport } from '../actions/assetActions';
+import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import Link from 'next/link';
@@ -88,7 +89,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
 
     const loadMaintenanceReport = async () => {
       try {
-        const report = await getAssetMaintenanceReport(asset.asset_id);
+        const report = unwrapAssetActionResult(await getAssetMaintenanceReport(asset.asset_id));
         setMaintenanceReport(report);
       } catch (error) {
         console.error('Error loading maintenance report:', error);

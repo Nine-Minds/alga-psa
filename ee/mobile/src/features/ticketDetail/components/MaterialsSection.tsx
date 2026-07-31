@@ -9,6 +9,7 @@ import {
   type ProductListItem,
   type TicketMaterial,
 } from "../../../api/materials";
+import { sanitizeNumericText } from "../../../ui/components/TextInput";
 import { Badge } from "../../../ui/components/Badge";
 import { Card } from "../../../ui/components/Card";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
@@ -345,7 +346,7 @@ export function MaterialsSection({
             </Text>
             <TextInput
               value={quantityInput}
-              onChangeText={setQuantityInput}
+              onChangeText={(text) => setQuantityInput(sanitizeNumericText(text, "integer"))}
               accessibilityLabel={t("materials.quantityLabel")}
               keyboardType="number-pad"
               editable={!submitting}
@@ -404,7 +405,7 @@ export function MaterialsSection({
             </Text>
             <TextInput
               value={rateInput}
-              onChangeText={setRateInput}
+              onChangeText={(text) => setRateInput(sanitizeNumericText(text, "decimal"))}
               accessibilityLabel={t("materials.rateLabel")}
               keyboardType="decimal-pad"
               editable={!submitting}

@@ -37,8 +37,13 @@ describe('ManualInvoices i18n wiring contract', () => {
       'manualInvoices.fields.client',
       'manualInvoices.fields.invoiceNumber',
       'manualInvoices.fields.invoiceNumberOptional',
+      'manualInvoices.fields.sourceSalesOrder',
       'manualInvoices.placeholders.selectClient',
       'manualInvoices.placeholders.invoiceNumberOptional',
+      'manualInvoices.placeholders.sourceSalesOrder',
+      'manualInvoices.placeholders.searchSalesOrders',
+      'manualInvoices.placeholders.noInvoiceableSalesOrders',
+      'manualInvoices.salesOrderContext.summary',
       'manualInvoices.automatedItems.title',
       'manualInvoices.automatedItems.service',
       'manualInvoices.automatedItems.total',
@@ -69,6 +74,8 @@ describe('ManualInvoices i18n wiring contract', () => {
       'manualInvoices.actions.addDiscount',
       'manualInvoices.actions.saveChanges',
       'manualInvoices.actions.generate',
+      'manualInvoices.actions.generateSalesOrderInvoice',
+      'manualInvoices.actions.clearSalesOrderSource',
       'manualInvoices.actions.processing',
       'manualInvoices.prepayment.label',
       'manualInvoices.prepayment.description',
@@ -81,12 +88,30 @@ describe('ManualInvoices i18n wiring contract', () => {
       'manualInvoices.errors.cannotModify',
       'manualInvoices.errors.loadItems',
       'manualInvoices.errors.refresh',
+      'manualInvoices.errors.salesOrderGenerateFailed',
+      'manualInvoices.errors.salesOrderNothingToInvoice',
+      'manualInvoices.errors.salesOrderNotInvoiceable',
+      'manualInvoices.warnings.noBillingEmail',
       'manualInvoices.automatedItems.unknownService',
     ];
     const dynamicLocaleChecks = [
       'manualInvoices.errors.updateFailed',
       'manualInvoices.errors.generateFailed',
     ];
+    const structuredErrorKeys = [
+      'NO_BILLING_EMAIL',
+      'CLIENT_NOT_FOUND',
+      'SERVICE_NOT_FOUND',
+      'INVALID_QUANTITY',
+      'NO_TAX_RATE',
+      'DISCOUNT_TARGET_NOT_FOUND',
+      'INVOICE_NUMBER_CONFLICT',
+      'PERMISSION_DENIED',
+      'UNEXPECTED',
+    ];
+    const translationSource = read(
+      '../src/components/billing-dashboard/manualInvoiceErrorTranslation.ts',
+    );
 
     expect(source).toContain('translateManualInvoiceError');
     expect(source).toContain("mode === 'update' ? 'updateFailed' : 'generateFailed'");
@@ -100,6 +125,11 @@ describe('ManualInvoices i18n wiring contract', () => {
 
     for (const key of dynamicLocaleChecks) {
       expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    for (const code of structuredErrorKeys) {
+      expect(translationSource).toContain(`'${code}'`);
+      expect(getLeaf(en, `manualInvoices.errors.${code}`)).toBeDefined();
     }
   });
 

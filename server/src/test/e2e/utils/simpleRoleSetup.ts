@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 /**
  * Simple role setup for testing - creates a basic user with permissions
@@ -9,16 +10,18 @@ export async function setupTestUserWithPermissions(
   userId: string, 
   tenantId: string
 ): Promise<void> {
+  const tenantTable = (table: string) => tenantDb(db, tenantId).table(table);
+
   // Check if user already has roles
-  const existingRole = await db('user_roles')
-    .where({ user_id: userId, tenant: tenantId })
+  const existingRole = await tenantTable('user_roles')
+    .where({ user_id: userId })
     .first<{ role_id: string }>();
 
   let roleId = existingRole?.role_id ?? null;
 
   if (!roleId) {
     roleId = require('crypto').randomUUID();
-    await db('roles').insert({
+    await tenantTable('roles').insert({
       role_id: roleId,
       role_name: 'Test Admin',
       description: 'Test role with all permissions',
@@ -27,7 +30,7 @@ export async function setupTestUserWithPermissions(
       updated_at: new Date()
     });
 
-    await db('user_roles').insert({
+    await tenantTable('user_roles').insert({
       user_id: userId,
       role_id: roleId,
       tenant: tenantId
@@ -55,14 +58,14 @@ export async function setupTestUserWithPermissions(
       // Create tenant-specific permission
       const permissionId = require('crypto').randomUUID();
       
-      const existingPermission = await db('permissions')
-        .where({ resource, action, tenant: tenantId })
+      const existingPermission = await tenantTable('permissions')
+        .where({ resource, action })
         .first<{ permission_id: string }>();
 
       const targetPermissionId = existingPermission?.permission_id ?? permissionId;
 
       if (!existingPermission) {
-        await db('permissions').insert({
+        await tenantTable('permissions').insert({
           permission_id: targetPermissionId,
           resource,
           action,
@@ -70,7 +73,7 @@ export async function setupTestUserWithPermissions(
         });
       }
 
-      await db('role_permissions')
+      await tenantTable('role_permissions')
         .insert({
           role_id: roleId!,
           permission_id: targetPermissionId,

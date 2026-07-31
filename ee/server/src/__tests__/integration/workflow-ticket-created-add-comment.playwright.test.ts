@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { createHash } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +18,16 @@ applyPlaywrightAuthEnvDefaults();
 const TEST_CONFIG = {
   baseUrl: resolvePlaywrightBaseUrl(),
 };
+
+const WORKFLOW_TICKET_TEST_BOUNDARY_TENANT = '__workflow_ticket_created_test_boundary__';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function unscopedTestTable(db: Knex, table: string, reason: string) {
+  return tenantDb(db, WORKFLOW_TICKET_TEST_BOUNDARY_TENANT).unscoped(table, reason);
+}
 
 const ADMIN_PERMISSIONS = [
   {
@@ -64,17 +75,21 @@ async function getTenantTicketDefaults(
 }> {
   const tenantId = opts.tenantId;
   const createdByUserId = opts.createdByUserId;
-  const statusColumns = await db('statuses').columnInfo();
+  const statusColumns = await unscopedTestTable(
+    db,
+    'statuses',
+    'workflow ticket created test inspects status table columns for optional board scoping'
+  ).columnInfo();
 
   const ensureDefaultBoard = async (): Promise<string> => {
-    const board = await db('boards')
+    const board = await tenantTable(db, tenantId, 'boards')
       .where({ tenant: tenantId })
       .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'display_order', order: 'asc' }])
       .first(['board_id', 'is_default']);
 
     if (board?.board_id) {
       if (!board.is_default) {
-        await db('boards')
+        await tenantTable(db, tenantId, 'boards')
           .where({ tenant: tenantId, board_id: board.board_id })
           .update({ is_default: true });
       }
@@ -82,7 +97,7 @@ async function getTenantTicketDefaults(
     }
 
     const boardId = uuidv4();
-    await db('boards').insert({
+    await tenantTable(db, tenantId, 'boards').insert({
       tenant: tenantId,
       board_id: boardId,
       board_name: 'Default',
@@ -105,14 +120,14 @@ async function getTenantTicketDefaults(
       });
     };
 
-    const status = await db('statuses')
+    const status = await tenantTable(db, tenantId, 'statuses')
       .modify(scopeTicketStatuses)
       .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'order_number', order: 'asc' }])
       .first(['status_id', 'is_default']);
 
     if (status?.status_id) {
       if (!status.is_default) {
-        await db('statuses')
+        await tenantTable(db, tenantId, 'statuses')
           .where({ tenant: tenantId, status_id: status.status_id })
           .update({ is_default: true });
       }
@@ -127,7 +142,7 @@ async function getTenantTicketDefaults(
       { name: 'Closed', order_number: 4, is_default: false, is_closed: true },
     ];
 
-    const inserted = await db('statuses')
+    const inserted = await tenantTable(db, tenantId, 'statuses')
       .insert(
         statuses.map((s) => ({
           status_id: uuidv4(),
@@ -153,7 +168,7 @@ async function getTenantTicketDefaults(
   };
 
   const ensureDefaultTicketPriority = async (): Promise<string> => {
-    const priority = await db('priorities')
+    const priority = await tenantTable(db, tenantId, 'priorities')
       .where({ tenant: tenantId, item_type: 'ticket' })
       .orderBy([{ column: 'order_number', order: 'asc' }])
       .first(['priority_id']);
@@ -166,7 +181,7 @@ async function getTenantTicketDefaults(
       { priority_name: 'High', order_number: 3, color: '#EF4444' },
     ];
 
-    const inserted = await db('priorities')
+    const inserted = await tenantTable(db, tenantId, 'priorities')
       .insert(
         priorities.map((p) => ({
           priority_id: uuidv4(),
@@ -234,7 +249,7 @@ async function createApiKeyForTenant(
   if (await db.schema.hasColumn('api_keys', 'usage_count')) row.usage_count = 0;
   if (await db.schema.hasColumn('api_keys', 'metadata')) row.metadata = { test: 'workflow-ticket-created-add-comment' };
 
-  await db('api_keys').insert(row);
+  await tenantTable(db, opts.tenantId, 'api_keys').insert(row);
 
   // Return plaintext key to be used in x-api-key header.
   return plaintext;
@@ -374,7 +389,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     await expect(workflowPage.publishButton).toHaveText(/Publish/, { timeout: 90_000 });
     await waitForCondition(
       async () => {
-        const row = await db('workflow_definition_versions')
+        const row = await tenantTable(db, tenantId, 'workflow_definition_versions')
           .where({ workflow_id: workflowId, version: 1 })
           .first(['published_at']);
         return row?.published_at ? row : null;
@@ -424,7 +439,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     // Wait for workflow runtime event + run linkage
     const eventRecord = await waitForCondition(
       async () => {
-        const row = await db('workflow_runtime_events')
+        const row = await tenantTable(db, tenantId, 'workflow_runtime_events')
           .where({ tenant: tenantId, event_name: 'TICKET_CREATED' })
           .andWhereRaw(`payload->>'ticketId' = ?`, [ticketId])
           .orderBy('created_at', 'desc')
@@ -437,12 +452,12 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     const runId = await waitForCondition(
       async () => {
         // Prefer a direct linkage if present, but fall back to finding the run by workflow + tenant + event type.
-        const direct = await db('workflow_runtime_events')
+        const direct = await tenantTable(db, tenantId, 'workflow_runtime_events')
           .where({ event_id: eventRecord.event_id })
           .first(['matched_run_id']);
         if (direct?.matched_run_id) return direct.matched_run_id as string;
 
-        const run = await db('workflow_runs')
+        const run = await tenantTable(db, tenantId, 'workflow_runs')
           .where({ tenant: tenantId, workflow_id: workflowId, event_type: 'TICKET_CREATED' })
           .orderBy('started_at', 'desc')
           .first(['run_id']);
@@ -453,7 +468,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
 
     const terminalRun = await waitForCondition(
       async () => {
-        const run = await db('workflow_runs').where({ run_id: runId }).first(['status', 'error_json', 'resume_error', 'node_path']);
+        const run = await tenantTable(db, tenantId, 'workflow_runs').where({ run_id: runId }).first(['status', 'error_json', 'resume_error', 'node_path']);
         if (!run?.status) return null;
         if (['SUCCEEDED', 'FAILED', 'CANCELED'].includes(String(run.status))) return run as any;
         return null;
@@ -462,12 +477,12 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     );
 
     if (terminalRun.status !== 'SUCCEEDED') {
-      const lastInvocation = await db('workflow_action_invocations')
+      const lastInvocation = await tenantTable(db, tenantId, 'workflow_action_invocations')
         .where({ run_id: runId })
         .orderBy('created_at', 'desc')
         .first(['action_id', 'status', 'error_message']);
 
-      const recentLogs = await db('workflow_run_logs')
+      const recentLogs = await tenantTable(db, tenantId, 'workflow_run_logs')
         .where({ run_id: runId })
         .orderBy('created_at', 'desc')
         .limit(10)
@@ -490,7 +505,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
 
     await waitForCondition(
       async () => {
-        const invocation = await db('workflow_action_invocations')
+        const invocation = await tenantTable(db, tenantId, 'workflow_action_invocations')
           .where({ run_id: runId, action_id: 'tickets.add_comment' })
           .orderBy('created_at', 'desc')
           .first(['status', 'error_message']);
@@ -507,7 +522,7 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     // Verify side effect in DB
     await waitForCondition(
       async () => {
-        const comment = await db('comments')
+        const comment = await tenantTable(db, tenantId, 'comments')
           .where({ tenant: tenantId, ticket_id: ticketId })
           .andWhere({ note: commentBody })
           .first(['comment_id', 'is_internal', 'is_resolution', 'note']);
@@ -518,9 +533,10 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
       { timeoutMs: 60_000, intervalMs: 500, label: 'ticket comment created' }
     );
   } finally {
-    await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
     if (tenantData) {
-      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      const tenantId = tenantData.tenant.tenantId;
+      await tenantTable(db, tenantId, 'workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await rollbackTenant(db, tenantId).catch(() => undefined);
     }
     await db.destroy().catch(() => undefined);
   }

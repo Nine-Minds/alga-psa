@@ -31,7 +31,7 @@ export function getVisibleIntegrationCategoryIds(isEnterpriseEdition = isCalenda
     ? [
         ...BASE_INTEGRATION_CATEGORY_IDS.slice(0, 2),
         // EE-only: the category itself is rendered only when the Hudu gate
-        // (EE + `hudu-integration` flag) is enabled.
+        // (EE edition) is enabled.
         IT_DOCUMENTATION_SETTINGS_CATEGORY,
         BASE_INTEGRATION_CATEGORY_IDS[2],
         CALENDAR_SETTINGS_CATEGORY,

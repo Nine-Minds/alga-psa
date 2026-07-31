@@ -115,7 +115,8 @@ export abstract class ApiBaseController {
     // Get a connection within the current tenant context
     const knex = await getConnection(req.context.tenant);
     
-    const hasAccess = await hasPermission(req.context.user, this.options.resource, action, knex);
+    const permissionResource = this.options.permissionResource ?? this.options.resource;
+    const hasAccess = await hasPermission(req.context.user, permissionResource, action, knex);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} ${this.options.resource}`);
     }
@@ -267,6 +268,9 @@ export abstract class ApiBaseController {
           );
         });
       } catch (error) {
+        if (error instanceof Error && error.message === 'Resource not found or permission denied') {
+          return handleApiError(new NotFoundError(`${this.options.resource} not found`));
+        }
         return handleApiError(error);
       }
     };
@@ -295,6 +299,9 @@ export abstract class ApiBaseController {
           return createSuccessResponse(resource, 200, undefined, apiRequest);
         });
       } catch (error) {
+        if (error instanceof Error && error.message === 'Resource not found or permission denied') {
+          return handleApiError(new NotFoundError(`${this.options.resource} not found`));
+        }
         return handleApiError(error);
       }
     };
@@ -332,6 +339,9 @@ export abstract class ApiBaseController {
           }
         });
       } catch (error) {
+        if (error instanceof Error && error.message === 'Resource not found or permission denied') {
+          return handleApiError(new NotFoundError(`${this.options.resource} not found`));
+        }
         return handleApiError(error);
       }
     };
@@ -369,6 +379,9 @@ export abstract class ApiBaseController {
           return createSuccessResponse(updated, 200, undefined, apiRequest);
         });
       } catch (error) {
+        if (error instanceof Error && error.message === 'Resource not found or permission denied') {
+          return handleApiError(new NotFoundError(`${this.options.resource} not found`));
+        }
         return handleApiError(error);
       }
     };

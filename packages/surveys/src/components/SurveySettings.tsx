@@ -14,8 +14,17 @@ import {
   getSurveyTriggers,
 } from '@alga-psa/surveys/actions/surveyActions';
 import type { SurveyTemplate, SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const DEFAULT_TAB = 'templates';
+const isSurveyActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const SurveySettings = (): React.JSX.Element => {
   const { t } = useTranslation('msp/surveys');
@@ -79,6 +88,11 @@ const SurveySettings = (): React.JSX.Element => {
     setTemplatesLoading(true);
     try {
       const data = await getSurveyTemplates();
+      if (isSurveyActionError(data)) {
+        setTemplates([]);
+        setTemplatesError(getErrorMessage(data));
+        return;
+      }
       setTemplates(data);
       setTemplatesError(null);
     } catch (error) {
@@ -95,6 +109,11 @@ const SurveySettings = (): React.JSX.Element => {
     setTriggersLoading(true);
     try {
       const data = await getSurveyTriggers();
+      if (isSurveyActionError(data)) {
+        setTriggers([]);
+        setTriggersError(getErrorMessage(data));
+        return;
+      }
       setTriggers(data);
       setTriggersError(null);
     } catch (error) {

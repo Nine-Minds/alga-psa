@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "Dirección del remitente",
         "placeholder": "noreply@example.com"
+      },
+      "authHint": "Deje el nombre de usuario y la contraseña en blanco si su retransmisor acepta correo sin autenticación.",
+      "security": {
+        "title": "Seguridad de la conexión",
+        "secure": "Usar TLS implícito (SSL al conectar, normalmente el puerto 465)",
+        "requireTls": "Requerir actualización STARTTLS (puertos 587 / 25)",
+        "verifyCert": "Verificar el certificado del servidor",
+        "verifyCertHint": "Desactive esto solo para un retransmisor de confianza en su propia red que use un certificado autofirmado."
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "No se pudo cargar la configuración de correo",
       "saveSettings": "No se pudo guardar la configuración",
       "addDomain": "No se pudo agregar el dominio",
-      "verifyDomain": "No se pudo verificar el dominio"
+      "verifyDomain": "No se pudo verificar el dominio",
+      "testOutbound": "Error al probar el correo saliente"
+    },
+    "test": {
+      "title": "Probar correo saliente",
+      "description": "Guarda la configuración actual y luego verifica la conexión con el proveedor. Introduzca una dirección para enviar también un mensaje de prueba.",
+      "recipientLabel": "Enviar prueba a (opcional)",
+      "recipientPlaceholder": "tu@ejemplo.com",
+      "run": "Probar conexión",
+      "testing": "Probando..."
     }
   },
   "microsoft365": {

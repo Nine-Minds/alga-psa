@@ -16,7 +16,12 @@ describe('online meeting recording proxy route contract', () => {
     expect(source).toContain('getCurrentUser');
     expect(source).toContain("return new NextResponse('Unauthorized', { status: 401 })");
     expect(source).toContain("createTenantKnex(tenant)");
-    expect(source).toContain("'artifact.tenant': tenant");
+    // tenant scoping of the artifact lookup now lives in the tenantDb facade
+    expect(source).toContain('const db = tenantDb(knex, tenant);');
+    expect(source).toContain("db.table('online_meeting_artifacts as artifact')");
+    expect(source).toContain(
+      "db.tenantJoin(artifactQuery, 'online_meetings as meeting', 'artifact.meeting_id', 'meeting.meeting_id');",
+    );
     // Portal visibility must be enforced from the server-known user type, never a
     // client-supplied query parameter.
     expect(source).toContain("(user as any).user_type === 'client'");

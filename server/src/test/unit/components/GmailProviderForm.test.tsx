@@ -44,6 +44,7 @@ describe('GmailProviderForm', () => {
     vi.clearAllMocks();
     // Mock window.location
     Object.defineProperty(window, 'location', {
+      configurable: true,
       value: {
         origin: 'http://localhost:3000',
         href: 'http://localhost:3000',
@@ -133,7 +134,7 @@ describe('GmailProviderForm', () => {
     await user.click(screen.getByRole('button', { name: /add provider/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('API Error')).toBeInTheDocument();
+      expect(screen.getByText('Failed to configure Gmail provider')).toBeInTheDocument();
     });
   });
 

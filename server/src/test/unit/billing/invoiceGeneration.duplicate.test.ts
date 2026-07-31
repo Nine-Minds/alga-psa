@@ -179,6 +179,12 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: mocks.withTransaction,
   requireTenantId: vi.fn(),
   auditLog: vi.fn(),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+  }),
 }));
 
 vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
@@ -239,11 +245,8 @@ describe('invoice generation duplicate prevention', () => {
       windowEnd: '2025-03-01',
     });
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message: 'Invoice already exists for this recurring execution window',
-      code: DUPLICATE_RECURRING_INVOICE_CODE,
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
-      invoiceId: 'invoice-1',
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
+      actionError: 'Invoice already exists for this recurring execution window',
     });
   });
 });

@@ -30,7 +30,7 @@
     "title": "Assistant d'intégration",
     "description": "Interface d'assistant pour la configuration du tenant MSP avec présentation en dialogue/page complète, progression, validation et flux de finalisation",
     "steps": {
-      "clientInfo": "Informations client",
+      "clientInfo": "Votre entreprise",
       "teamMembers": "Membres de l'équipe",
       "addClient": "Ajouter un client",
       "clientContact": "Contact client",
@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "Le client sera créé avec les paramètres fiscaux par défaut non imposables (0 %). Vous pourrez configurer les taux de taxe plus tard dans les paramètres client.",
-      "optional": "Vous pouvez ignorer cette étape et ajouter des clients plus tard depuis votre tableau de bord."
+      "optional": "Vous pouvez ignorer cette étape et ajouter ou modifier des clients à tout moment depuis votre tableau de bord."
     }
   },
   "billingSetupStep": {
@@ -141,7 +141,7 @@
         "confirmAdd": "Ajouter le type de service"
       },
       "noteLabel": "Note :",
-      "description": "Les types de service sont des étiquettes taxonomiques pour l'organisation et le filtrage. Le mode de facturation est configuré séparément sur chaque service.",
+      "description": "Les types de service sont des étiquettes taxonomiques pour l'organisation et le filtrage. Le mode de facturation est configuré séparément sur chaque service. Vous pouvez renommer, ajouter ou supprimer des types à tout moment depuis les paramètres.",
       "addForm": {
         "title": "Ajouter un nouveau type de service",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Importer les types de service standard",
-        "description": "Sélectionnez les types de service standard à importer dans votre système :",
+        "title": "Types de service suggérés",
+        "description": "Ceux-ci sont standard pour la plupart des MSP. Décochez ceux que vous ne voulez pas, puis confirmez pour ajouter le reste. Vous pourrez les renommer ou les supprimer plus tard.",
         "success": {
           "titleOne": "Type de service importé avec succès !",
           "titleOther": "Types de service importés avec succès !",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} ignoré(s)."
         },
         "actions": {
-          "importing": "Importation...",
-          "importSelected": "Importer la sélection ({{count}})"
+          "importing": "Ajout...",
+          "importSelected": "Confirmer et ajouter ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Créez votre premier service",
-      "description": "Ajoutez un service et choisissez comment il doit être facturé. Le type de service identifie la catégorie du service, tandis que le mode de facturation contrôle le comportement tarifaire.",
+      "title": "Configuration de la facturation",
+      "description": "Définissez votre devise par défaut et créez votre premier service.",
       "serviceTitle": "Créez votre premier service",
       "serviceDescription": "Ajoutez un service et choisissez comment il doit être facturé. Le type de service identifie la catégorie de service, tandis que le mode de facturation contrôle le comportement de tarification."
     },
@@ -215,7 +215,7 @@
         "required": "(Obligatoire)",
         "emptyPlaceholder": "Créer ou importer des types de service",
         "placeholder": "Sélectionnez un type de service",
-        "emptyHelp": "Cliquez sur « Gérer les types de service » pour créer ou importer des types de service"
+        "emptyHelp": "Confirmez un type de service suggéré ci-dessous, ou ajoutez le vôtre. Vous pourrez les modifier plus tard."
       },
       "billingMode": {
         "label": "Mode de facturation"
@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Devise par défaut *",
-        "description": "Cette devise sera utilisée par défaut pour toute la facturation — services, contrats, devis et factures. Vous pourrez la remplacer par client ultérieurement."
+        "description": "Cette devise sera utilisée par défaut pour toute la facturation : services, contrats, devis et factures. Vous pourrez la remplacer par client ultérieurement."
       }
     },
     "billingMethods": {
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Action requise :",
-      "actionRequiredDescription": "Cliquez sur « Gérer les types de service » ci-dessus pour créer ou importer au moins un type de service avant de créer un service."
+      "actionRequiredDescription": "Confirmez un type de service suggéré ci-dessus, ou ajoutez le vôtre, avant de créer un service."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Optionnel :"
     },
     "footer": {
-      "optional": "Vous pouvez ignorer cette étape et ajouter des contacts plus tard depuis le profil du client."
+      "optional": "Vous pouvez ignorer cette étape et ajouter ou modifier des contacts à tout moment depuis le profil du client."
     }
   },
   "clientInfoStep": {
@@ -302,8 +302,8 @@
       "noteLabel": "Note :"
     },
     "header": {
-      "title": "Informations client",
-      "description": "Commençons par configurer le profil de votre client."
+      "title": "Votre entreprise et compte administrateur",
+      "description": "Commençons par les informations de votre propre entreprise MSP et votre identifiant administrateur, pas celles d'un client que vous accompagnez."
     },
     "fields": {
       "firstName": {
@@ -326,7 +326,7 @@
       "language": {
         "label": "Langue",
         "placeholder": "Sélectionnez une langue",
-        "help": "Devient la valeur par défaut de l'organisation pour tout le monde — personnel MSP et utilisateurs du portail client. Les utilisateurs individuels et les clients peuvent la remplacer plus tard."
+        "help": "Devient la valeur par défaut de l'organisation pour tout le monde : personnel MSP et utilisateurs du portail client. Les utilisateurs individuels et les clients peuvent la remplacer plus tard."
       }
     },
     "password": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Veuillez remplir tous les champs obligatoires, y compris le mot de passe",
+      "requiredFieldsNoPassword": "Veuillez remplir tous les champs obligatoires",
       "invalidEmail": "Veuillez saisir une adresse e-mail valide",
       "passwordLength": "Le mot de passe doit contenir au moins 8 caractères",
       "saveFailed": "Impossible d'enregistrer le membre de l'équipe",
+      "inviteFailed": "Impossible d'envoyer l'invitation",
+      "roleRequired": "Veuillez sélectionner un rôle",
       "generic": "Une erreur s'est produite"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "{{count}} membres de l'équipe créés avec succès !",
       "users": "Utilisateurs créés : {{users}}"
     },
+    "invited": {
+      "titleOne": "1 invitation envoyée avec succès !",
+      "titleOther": "{{count}} invitations envoyées avec succès !",
+      "users": "Invités : {{users}}. Ils recevront un e-mail avec un lien pour définir leur propre mot de passe."
+    },
     "member": {
       "title": "Membre de l'équipe {{index}}",
       "createdBadge": "Créé",
+      "invitedBadge": "Invité",
       "actions": {
         "saving": "Enregistrement...",
-        "save": "Enregistrer"
+        "save": "Enregistrer",
+        "sending": "Envoi...",
+        "sendInvite": "Envoyer l'invitation"
       }
     },
     "fields": {
@@ -416,10 +427,17 @@
       },
       "email": {
         "label": "E-mail",
-        "placeholder": "jane@client.com"
+        "placeholder": "jane@votreentreprise.com"
       },
       "role": {
         "label": "Rôle"
+      },
+      "setupMethod": {
+        "label": "Comment doivent-ils obtenir l'accès ?",
+        "email": "Envoyer une invitation par e-mail",
+        "password": "Définir un mot de passe moi-même",
+        "emailHelp": "Ils recevront un e-mail avec un lien pour définir leur propre mot de passe. Aucun mot de passe à partager.",
+        "passwordHelp": "Vous définissez un mot de passe temporaire maintenant et le communiquez directement."
       },
       "password": {
         "label": "Mot de passe temporaire",
@@ -447,7 +465,7 @@
     },
     "optional": {
       "label": "Optionnel :",
-      "description": "Vous pouvez ignorer cette étape et inviter des membres de l'équipe plus tard depuis la page des paramètres."
+      "description": "Vous pouvez ignorer cette étape et inviter ou gérer des membres de l'équipe à tout moment depuis Paramètres > Utilisateurs."
     }
   },
   "ticketingConfigStep": {
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "Ordre d'affichage",
             "placeholder": "Laisser vide pour générer automatiquement",
-            "help": "Contrôle l'ordre dans lequel les statuts apparaissent dans les menus déroulants de la plateforme. Les nombres les plus faibles apparaissent en premier."
+            "help": "Contrôle l'ordre dans lequel les statuts apparaissent dans les menus déroulants de la plateforme. Les nombres les plus faibles apparaissent en premier.",
+            "reassigned": "L'ordre d'affichage {{requested}} est déjà utilisé sur ce tableau, donc {{assigned}} a été utilisé à la place."
           },
           "state": {
+            "label": "Type de statut",
             "closedLabel": "Statut fermé",
             "openLabel": "Statut ouvert",
             "closedHelp": "Ce statut indique que le ticket est résolu et fermé",
@@ -860,12 +880,50 @@
     },
     "supportEmail": {
       "label": "E-mail de support",
-      "placeholder": "support@yourclient.com",
-      "help": "Cette adresse e-mail sera utilisée pour créer des tickets de support. Les e-mails envoyés à cette adresse généreront automatiquement des tickets dans votre système."
+      "placeholder": "support@votreentreprise.com",
+      "help": "Enregistrée comme adresse de contact du support — visible par vos clients dans le portail et utilisée dans les e-mails de rendez-vous. Pour transformer automatiquement les e-mails entrants en tickets, connectez une boîte aux lettres plus tard dans Paramètres > E-mail."
     },
     "finalRequirement": {
       "label": "Obligatoire :",
       "description": "Veuillez configurer au moins un tableau et une priorité pour terminer la configuration. Importez les configurations standard pour mettre rapidement en place votre système de tickets."
+    }
+  },
+  "teamSetup": {
+    "title": "Configurez votre compte",
+    "subtitle": "Terminez la configuration de votre compte de membre d'équipe",
+    "accountInformation": "Informations sur le compte",
+    "name": "Nom :",
+    "email": "E-mail :",
+    "role": "Rôle :",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Saisissez votre mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
+    "passwordRequirements": "Exigences du mot de passe",
+    "requirements": {
+      "minLength": "Au moins 8 caractères",
+      "hasUppercase": "Une lettre majuscule",
+      "hasLowercase": "Une lettre minuscule",
+      "hasNumber": "Un chiffre",
+      "hasSpecialChar": "Un caractère spécial",
+      "passwordsMatch": "Les mots de passe correspondent"
+    },
+    "creatingAccount": "Création du compte...",
+    "createAccount": "Créer le compte",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "signIn": "Se connecter",
+    "invalidInvitation": "Invitation non valide",
+    "invalidInvitationDescription": "Un problème est survenu avec votre invitation d'équipe",
+    "invalidTokenMessage": "Le lien d'invitation n'est pas valide ou a expiré. Demandez à votre administrateur de renvoyer l'invitation.",
+    "goToSignIn": "Aller à la connexion",
+    "accountReady": "Compte prêt. Veuillez vous connecter.",
+    "welcome": "Bienvenue dans l'équipe !",
+    "errors": {
+      "noToken": "Aucun jeton d'invitation fourni",
+      "invalidOrExpired": "Jeton d'invitation invalide ou expiré",
+      "verificationFailed": "Échec de la vérification du jeton d'invitation",
+      "requirementsNotMet": "Veuillez vous assurer que toutes les exigences du mot de passe sont respectées",
+      "createFailed": "Échec de la création du compte"
     }
   }
 }

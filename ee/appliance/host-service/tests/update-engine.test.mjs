@@ -25,6 +25,7 @@ test('runAppChannelUpdate applies channel update and persists history without OS
   }));
 
   const valueYaml = `image:\n  tag: latest\n`;
+  const temporalWorkerYaml = `applicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: latest\n`;
   const coreYaml = `appUrl: https://alga.local\nhost: alga.local\ndomainSuffix: alga.local\nbootstrap:\n  mode: recover\nsetup:\n  image:\n    tag: latest\nserver:\n  image:\n    tag: latest\n`;
   const originalPath = process.env.PATH;
   process.env.PATH = `${fakeBin}:${originalPath}`;
@@ -52,10 +53,11 @@ test('runAppChannelUpdate applies channel update and persists history without OS
         'temporal.test-profile.yaml': valueYaml,
         'workflow-worker.test-profile.yaml': valueYaml,
         'email-service.test-profile.yaml': valueYaml,
-        'temporal-worker.test-profile.yaml': valueYaml
+        'temporal-worker.test-profile.yaml': temporalWorkerYaml
       }
     },
     tokenFile: path.join(tmp, 'setup-token'),
+    storageInstallCommand: 'true',
     fluxSourceApplyCommand: `cat > ${fluxManifestPath}`,
     reconcileSourceCommand: 'true',
     reconcileHelmCommand: 'true',
@@ -83,4 +85,123 @@ test('runAppChannelUpdate applies channel update and persists history without OS
 
   const fluxManifest = fs.readFileSync(fluxManifestPath, 'utf8');
   assert.match(fluxManifest, /kind: OCIRepository/);
+});
+
+// Build the common runAppChannelUpdate fixture so the reconcile-outcome tests
+// below only vary the reconcile/readiness commands.
+function makeUpdateFixture() {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-update-reconcile-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(path.join(fakeBin, 'kubectl'), '#!/usr/bin/env bash\ncat >/dev/null || true\nexit 0\n');
+  fs.chmodSync(path.join(fakeBin, 'kubectl'), 0o755);
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({
+    registryHost: 'ghcr.io',
+    repository: 'nine-minds/alga-appliance-release',
+    manifestDigest: 'sha256:previous',
+    runtime: { appHostname: 'psa.example.com', dnsMode: 'system', dnsServers: '' }
+  }));
+  const valueYaml = `image:\n  tag: latest\n`;
+  const temporalWorkerYaml = `applicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: latest\n`;
+  const coreYaml = `appUrl: https://alga.local\nhost: alga.local\ndomainSuffix: alga.local\nbootstrap:\n  mode: recover\nsetup:\n  image:\n    tag: latest\nserver:\n  image:\n    tag: latest\n`;
+  const options = {
+    stateFile,
+    releaseSelectionFile,
+    updateHistoryFile: path.join(tmp, 'update-history.json'),
+    releaseManifestOverride: {
+      schema: 'alga.appliance.release/v1',
+      version: '2.0.0-nightly.1',
+      valuesProfile: 'test-profile',
+      images: { algaCore: 'core1234', workflowWorker: 'worker1234', emailService: 'email1234', temporalWorker: 'temporal1234' },
+      controlPlane: 'cp1234',
+      config: { repository: 'ghcr.io/nine-minds/alga-appliance-config', tag: '2.0.0-nightly.1', digest: 'sha256:feedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface' },
+      charts: { sebastian: '0.0.1' },
+      profileValues: {
+        'alga-core.test-profile.yaml': coreYaml,
+        'pgbouncer.test-profile.yaml': valueYaml,
+        'temporal.test-profile.yaml': valueYaml,
+        'workflow-worker.test-profile.yaml': valueYaml,
+        'email-service.test-profile.yaml': valueYaml,
+        'temporal-worker.test-profile.yaml': temporalWorkerYaml
+      }
+    },
+    tokenFile: path.join(tmp, 'setup-token'),
+    storageInstallCommand: 'true',
+    fluxSourceApplyCommand: `cat > ${path.join(tmp, 'flux-source.yaml')}`,
+    reconcileSourceCommand: 'true',
+    reconcileHelmCommand: 'true',
+    metadataFile: path.join(tmp, 'maintenance-metadata.json'),
+    osReleaseFile: path.join(tmp, 'os-release'),
+    k3sVersionCommand: "printf 'k3s version v1.31.4+k3s1'"
+  };
+  return { stateFile, fakeBin, options };
+}
+
+function readyJson(status, reason, message = '') {
+  return `printf '%s' '${JSON.stringify({ status: { conditions: [{ type: 'Ready', status, reason, message }] } })}'`;
+}
+
+async function runWithReconcileOutcome(readHelmReleaseCommand) {
+  const { stateFile, fakeBin, options } = makeUpdateFixture();
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const result = await runAppChannelUpdate({ channel: 'nightly' }, {
+      ...options,
+      reconcileHelmCommand: 'false', // simulate the flux CLI exiting non-zero
+      readHelmReleaseCommand
+    });
+    const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    return { result, state };
+  } finally {
+    process.env.PATH = originalPath;
+  }
+}
+
+test('app update: helm reconcile exits non-zero but HelmRelease is Ready -> complete, not blocked', async () => {
+  const { result, state } = await runWithReconcileOutcome(readyJson('True', 'ReconciliationSucceeded'));
+  assert.equal(result.ok, true);
+  assert.equal(state.status, 'update-complete');
+});
+
+test('app update: helm reconcile exits non-zero while HelmRelease still progressing -> applied/pending, not blocked', async () => {
+  const { result, state } = await runWithReconcileOutcome(readyJson('False', 'Progressing', 'reconciliation in progress'));
+  assert.equal(result.ok, true);
+  assert.equal(state.status, 'update-complete');
+  assert.match(result.message, /reconciling in the background/);
+});
+
+test('app update: helm reconcile exits non-zero and HelmRelease genuinely failed -> blocked', async () => {
+  const { result, state } = await runWithReconcileOutcome(readyJson('False', 'UpgradeFailed', 'upgrade retries exhausted'));
+  assert.equal(result.ok, false);
+  assert.equal(state.status, 'update-blocked');
+});
+
+test('app update: helm reconcile exits non-zero and HelmRelease is unreadable -> blocked (conservative)', async () => {
+  const { result, state } = await runWithReconcileOutcome('false'); // kubectl read itself fails
+  assert.equal(result.ok, false);
+  assert.equal(state.status, 'update-blocked');
+});
+
+test('app update stops before release reconciliation when storage repair fails', async () => {
+  const { stateFile, fakeBin, options } = makeUpdateFixture();
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const result = await runAppChannelUpdate({ channel: 'nightly' }, {
+      ...options,
+      storageInstallCommand: "printf 'storage unavailable' >&2; exit 1"
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.phase, 'storage');
+    assert.equal(result.step, 'install-local-path-storage');
+
+    const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.equal(state.status, 'update-blocked');
+    assert.equal(state.phase, 'storage');
+  } finally {
+    process.env.PATH = originalPath;
+  }
 });

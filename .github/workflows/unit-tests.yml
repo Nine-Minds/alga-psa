@@ -59,6 +59,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # A few contract tests shell out to ripgrep (execFileSync('rg', ...)) to
+      # assert on source layout; it isn't on the runner by default.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      # Build the shared infra libraries' dist before testing. Most package
+      # vitest configs alias @alga-psa/<lib> to src, but a handful (auth, sla,
+      # reporting, onboarding, reference-data) resolve @alga-psa/db et al. via the
+      # package "exports" -> dist, which nothing else builds in this job (the nx
+      # `test` target has no `dependsOn: ^build`). Without this their suites die at
+      # collection with `Failed to resolve entry for package "@alga-psa/db"`.
+      # `dependsOn: ^build` cascades to each lib's own deps, so this set covers the
+      # horizontal libs real-import tests pull in.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
       - name: Determine Nx base/head
         shell: bash
         run: |
@@ -78,15 +97,12 @@ jobs:
       # 71 tests fail without them) and its clients reconnect forever, so the
       # vitest process never exits and hangs the job. It has no place in a
       # unit-test gate until its tests stub their connections.
-      # Non-blocking until the runner layer is repaired: the @nx/vite:test
-      # executor is broken under vitest 4 (fails even fully-green suites, and
-      # reports "Unable to load test config from config file undefined" for
-      # the ~20 projects with no vitest.config), so a red step here measures
-      # the executor, not the tests. Past green runs were Nx cache replays.
-      # Restore blocking once the executor is fixed and a real failure
-      # baseline exists.
+      # Blocking since 2026-07-17: the known-red package suites were burned down
+      # and the runner layer is sound (test targets resolve via nx:run-script —
+      # each package's own `npm run test` -> vitest — not the broken
+      # @nx/vite:test executor). A red step here is a real test failure; fix the
+      # cause, never re-add continue-on-error.
       - name: Nx affected tests (libraries, parallel)
-        continue-on-error: true
         run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
         env:
           NX_DAEMON: 'false'
@@ -100,21 +116,24 @@ jobs:
       # before that was fixed). Excluded until the suite gets a bounded
       # unit-test target that fits a PR gate.
       - name: Nx affected tests (apps, isolated & serial)
-        continue-on-error: true
         run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1 --exclude=temporal-workflows,sebastian-ee
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=14336'
           VITEST_SEED: '20260610'
 
-  # Informational coverage report for the server unit suite. Push-to-main only
-  # (it re-runs the whole suite with instrumentation, too slow for every PR) and
-  # non-blocking while baselines are established.
+  # Coverage report for the full server unit suite. This is the only gate that
+  # runs the entire server suite, so it fails loudly on PRs and protected-branch
+  # pushes rather than leaving a required check in the skipped state.
+  # Scope: src/test/unit plus the workspace package/shared unit tests the
+  # server vitest config already includes — running them here is what gets
+  # package sources into the coverage report (the v8 provider only measures
+  # loaded files, and its untested-file crawl never leaves server/).
+  # src/test/infrastructure is DB-backed and runs in its own job below with a
+  # Postgres service.
   coverage-report:
-    name: Server unit coverage (informational)
-    if: github.event_name == 'push'
+    name: Server unit suite + coverage
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -125,15 +144,54 @@ jobs:
         run: npm install -g npm@11
       - name: Install dependencies
         run: npm ci
+      # A few contract tests shell out to ripgrep; it isn't on the runner by default.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+      # Package suites that real-import @alga-psa/* through native Node
+      # resolution (onboarding seeds are .cjs) need the dists on disk; same
+      # project set the nx job builds.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Run server unit tests with coverage
         working-directory: ./server
-        run: npx vitest run src/test/unit src/test/infrastructure --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov
+        run: npx vitest run src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
         env:
           NODE_OPTIONS: '--max-old-space-size=14336'
+          # This job has no database; *.db.test.* suites are DB-backed
+          # integration tests (see the exclude block in server/vitest.config.ts).
+          SKIP_DB_TESTS: '1'
+          # Root .env.localtest is committed and dotenv-loaded by
+          # vitest.globalSetup.js, so it would hand DB admin credentials to
+          # opt-in DB suites (packages/inventory) that then dial a database
+          # this job does not run. Blank them so those suites self-skip.
+          DB_USER_ADMIN: ''
+          DB_PASSWORD_ADMIN: ''
           VITEST_SEED: '20260610'
+      # `if: always()`: a red run is exactly the data point the coverage
+      # artifact and metrics sheet exist to capture.
       - name: Upload lcov artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: server-unit-coverage
           path: server/coverage/lcov.info
           retention-days: 30
+      # Appends pass/coverage numbers to the shared metrics sheet
+      # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
+      - name: Record metrics to Google Sheet
+        if: always()
+        continue-on-error: true
+        run: node scripts/record-test-metrics.mjs
+        env:
+          TEST_METRICS_SUITE: unit-coverage
+          TEST_METRICS_RESULTS: server/test-results.json
+          TEST_METRICS_COVERAGE: server/coverage/coverage-summary.json
+          TEST_METRICS_DETAIL: '1'
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
+  # DB-backed infrastructure tests run inside integration-tests.yml (sharing its
+  # Postgres job): Tier-1 subset on PRs, full suite nightly — both non-blocking.

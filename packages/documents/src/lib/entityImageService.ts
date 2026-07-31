@@ -1,4 +1,4 @@
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrl, EntityType } from '@alga-psa/formatting/avatarUtils';
@@ -59,9 +59,8 @@ async function ensureImageFolder(
 ): Promise<string> {
   const folderPath = getImageFolderPath(entityType);
 
-  const existing = await trx('document_folders')
+  const existing = await tenantDb(trx, tenant).table('document_folders')
     .where({
-      tenant,
       folder_path: folderPath,
       entity_id: entityId,
       entity_type: entityType,
@@ -69,7 +68,7 @@ async function ensureImageFolder(
     .first();
 
   if (!existing) {
-    await trx('document_folders').insert({
+    await tenantDb(trx, tenant).table('document_folders').insert({
       tenant,
       folder_id: uuidv4(),
       folder_path: folderPath,
@@ -152,7 +151,7 @@ export async function uploadEntityImage(
         // Best-effort: if folder creation fails, document still lands in root
       }
 
-      const [document] = await trx('documents')
+      const [document] = await tenantDb(trx, tenant).table('documents')
         .insert({ ...documentData, folder_path: folderPath })
         .returning(['document_id']);
 
@@ -161,17 +160,16 @@ export async function uploadEntityImage(
       }
 
       if (isLogoUpload) {
-        await trx('document_associations')
+        await tenantDb(trx, tenant).table('document_associations')
           .where({
             entity_id: entityId,
             entity_type: entityType,
-            tenant,
             is_entity_logo: true,
           })
           .update({ is_entity_logo: false });
       }
 
-      await trx('document_associations').insert({
+      await tenantDb(trx, tenant).table('document_associations').insert({
         document_id: document.document_id,
         entity_id: entityId,
         entity_type: entityType,
@@ -230,25 +228,25 @@ export async function deleteEntityImage(
   const { knex } = await createTenantKnex(tenant);
 
   try {
+    const tenantScopedTable = (table: string) => tenantDb(knex, tenant).table(table);
+
     let associationToDelete;
 
     if (documentIdToDelete) {
-      associationToDelete = await knex('document_associations')
+      associationToDelete = await tenantScopedTable('document_associations')
         .select('association_id', 'document_id')
         .where({
           document_id: documentIdToDelete,
           entity_id: entityId,
           entity_type: entityType,
-          tenant
         })
         .first();
     } else {
-      associationToDelete = await knex('document_associations')
+      associationToDelete = await tenantScopedTable('document_associations')
         .select('association_id', 'document_id')
         .where({
           entity_id: entityId,
           entity_type: entityType,
-          tenant,
           is_entity_logo: true
         })
         .first();
@@ -307,8 +305,8 @@ export async function linkExistingDocumentAsEntityImage(
 
   try {
     // Verify the document exists and is an image
-    const document = await knex('documents')
-      .where({ document_id: documentId, tenant })
+    const document = await tenantDb(knex, tenant).table('documents')
+      .where({ document_id: documentId })
       .first();
 
     if (!document) {
@@ -320,34 +318,34 @@ export async function linkExistingDocumentAsEntityImage(
     }
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
+
       // Step 1: Unmark any existing logo/avatar for this entity
-      await trx('document_associations')
+      await tenantScopedTable('document_associations')
         .where({
           entity_id: entityId,
           entity_type: entityType,
-          tenant: tenant,
           is_entity_logo: true,
         })
         .update({ is_entity_logo: false });
 
       // Step 2: Check if an association already exists
-      const existingAssociation = await trx('document_associations')
+      const existingAssociation = await tenantScopedTable('document_associations')
         .where({
           document_id: documentId,
           entity_id: entityId,
           entity_type: entityType,
-          tenant,
         })
         .first();
 
       if (existingAssociation) {
         // Update existing association to mark as logo
-        await trx('document_associations')
+        await tenantScopedTable('document_associations')
           .where({ association_id: existingAssociation.association_id })
           .update({ is_entity_logo: true });
       } else {
         // Create new association
-        await trx('document_associations').insert({
+        await tenantDb(trx, tenant).table('document_associations').insert({
           document_id: documentId,
           entity_id: entityId,
           entity_type: entityType,

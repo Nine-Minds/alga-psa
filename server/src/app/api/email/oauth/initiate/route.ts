@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     if (!clientId) {
       return NextResponse.json({ 
         error: `${provider} OAuth client ID not configured` 
-      }, { status: 500 });
+      }, { status: 409 });
     }
 
     // Generate OAuth state
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error initiating OAuth:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to initiate OAuth' },
+      { error: 'Failed to initiate OAuth. Please try again.' },
       { status: 500 }
     );
   }

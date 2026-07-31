@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
@@ -28,12 +28,11 @@ async function canManageContactAvatar(
   }
 
   const linkedUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('users')
+    return await tenantDb(trx, tenant).table('users')
       .select('user_id')
       .where({
         contact_id: contactId,
         user_id: currentUser.user_id,
-        tenant
       })
       .first();
   });
@@ -65,8 +64,8 @@ export const uploadContactAvatar = withAuth(async (
   }
 
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
+    return await tenantDb(trx, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .first();
   });
   if (!contact) {
@@ -95,8 +94,7 @@ export const uploadContactAvatar = withAuth(async (
     return { success: true, imageUrl: uploadResult.imageUrl };
   } catch (error) {
     console.error('[contactAvatarActions] Failed to upload contact avatar:', error);
-    const message = error instanceof Error ? error.message : 'Failed to upload contact avatar';
-    return { success: false, message };
+    return { success: false, message: 'Failed to upload contact avatar' };
   }
 });
 
@@ -115,8 +113,8 @@ export const deleteContactAvatar = withAuth(async (
   }
 
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('contacts')
-      .where({ contact_name_id: contactId, tenant })
+    return await tenantDb(trx, tenant).table('contacts')
+      .where({ contact_name_id: contactId })
       .first();
   });
   if (!contact) {
@@ -133,7 +131,6 @@ export const deleteContactAvatar = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('[contactAvatarActions] Failed to delete contact avatar:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
-    return { success: false, message };
+    return { success: false, message: 'Failed to delete contact avatar' };
   }
 });

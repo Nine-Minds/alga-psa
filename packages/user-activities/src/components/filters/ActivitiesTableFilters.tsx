@@ -16,7 +16,7 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { SearchInput } from "@alga-psa/ui/components/SearchInput";
-import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
+import { StringDateRangePicker, parseLocalYMD, formatLocalYMD } from "@alga-psa/ui/components/DateRangePicker";
 import { ClientPicker } from "@alga-psa/ui/components/ClientPicker";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import TreeSelect, { TreeSelectOption, TreeSelectMode } from "@alga-psa/ui/components/TreeSelect";
@@ -165,8 +165,10 @@ export function ActivitiesTableFilters({
 
   const handleDateRangeChange = useCallback(
     (range: { from: string; to: string }) => {
-      const startDate = range.from ? new Date(range.from) : undefined;
-      const endDate = range.to ? new Date(range.to) : undefined;
+      // Parse the picker's 'YYYY-MM-DD' as a LOCAL day (parseLocalYMD), not via
+      // `new Date(str)` which parses UTC and shifts the day in non-UTC timezones.
+      const startDate = range.from ? parseLocalYMD(range.from) : undefined;
+      const endDate = range.to ? parseLocalYMD(range.to) : undefined;
       const effectiveStartDate = !startDate && endDate ? new Date() : startDate;
       if (effectiveStartDate) effectiveStartDate.setHours(0, 0, 0, 0);
       if (endDate) endDate.setHours(23, 59, 59, 999);
@@ -180,6 +182,39 @@ export function ActivitiesTableFilters({
     },
     [filters, onChange]
   );
+
+  const handleCreatedDateRangeChange = useCallback(
+    (range: { from: string; to: string }) => {
+      // Unlike the due-date picker, we do NOT default an empty `from` to "now":
+      // created dates live in the past, so a "created before X" query needs an open
+      // lower bound. Both bounds are optional and independent.
+      // parseLocalYMD keeps the picked day in the user's local zone (see handleDateRangeChange).
+      const startDate = range.from ? parseLocalYMD(range.from) : undefined;
+      const endDate = range.to ? parseLocalYMD(range.to) : undefined;
+      if (startDate) startDate.setHours(0, 0, 0, 0);
+      if (endDate) endDate.setHours(23, 59, 59, 999);
+      onChange({
+        ...filters,
+        createdAtStart: startDate ? (startDate.toISOString() as any) : undefined,
+        createdAtEnd: endDate ? (endDate.toISOString() as any) : undefined,
+      });
+    },
+    [filters, onChange]
+  );
+
+  const handleClearDueDate = useCallback(() => {
+    const next: ActivityFiltersType = { ...filters };
+    delete next.dueDateStart;
+    delete next.dueDateEnd;
+    onChange(next);
+  }, [filters, onChange]);
+
+  const handleClearCreatedDate = useCallback(() => {
+    const next: ActivityFiltersType = { ...filters };
+    delete next.createdAtStart;
+    delete next.createdAtEnd;
+    onChange(next);
+  }, [filters, onChange]);
 
   const handleClosedToggle = useCallback(
     (e: boolean | React.ChangeEvent<HTMLInputElement>) => {
@@ -585,7 +620,6 @@ export function ActivitiesTableFilters({
               label={option.label}
               checked={selectedTypes.includes(option.value)}
               onChange={() => toggleType(option.value)}
-              containerClassName="mb-0"
               size="sm"
             />
           ))}
@@ -597,7 +631,7 @@ export function ActivitiesTableFilters({
             label={t('filters.labels.showClosed', { defaultValue: 'Show closed' })}
             checked={filters.isClosed}
             onChange={handleClosedToggle}
-            containerClassName="mb-0 whitespace-nowrap"
+            containerClassName="whitespace-nowrap"
             size="sm"
           />
           <Button
@@ -814,10 +848,10 @@ export function ActivitiesTableFilters({
             id="activities-due-date-range"
             value={{
               from: filters.dueDateStart
-                ? new Date(filters.dueDateStart).toISOString().split('T')[0]
+                ? formatLocalYMD(new Date(filters.dueDateStart))
                 : '',
               to: filters.dueDateEnd
-                ? new Date(filters.dueDateEnd).toISOString().split('T')[0]
+                ? formatLocalYMD(new Date(filters.dueDateEnd))
                 : '',
             }}
             onChange={handleDateRangeChange}
@@ -827,6 +861,55 @@ export function ActivitiesTableFilters({
             fromPlaceholder={t('filters.placeholders.fromDateShort', { defaultValue: 'From' })}
             toPlaceholder={t('filters.placeholders.toDateShort', { defaultValue: 'To' })}
           />
+          {(filters.dueDateStart || filters.dueDateEnd) && (
+            <Button
+              id="clear-due-date-filter-button"
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearDueDate}
+              aria-label={t('filters.actions.clearDueDate', { defaultValue: 'Clear due date filter' })}
+              className="shrink-0 px-1.5"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-1">
+          <Label htmlFor="activities-created-date-range-from" className="text-xs font-semibold text-[rgb(var(--color-text-600))] whitespace-nowrap">
+            {t('filters.labels.createdShort', { defaultValue: 'Created' })}
+          </Label>
+          <StringDateRangePicker
+            id="activities-created-date-range"
+            value={{
+              from: filters.createdAtStart
+                ? formatLocalYMD(new Date(filters.createdAtStart))
+                : '',
+              to: filters.createdAtEnd
+                ? formatLocalYMD(new Date(filters.createdAtEnd))
+                : '',
+            }}
+            onChange={handleCreatedDateRangeChange}
+            containerClassName="space-y-0"
+            rangeClassName="flex gap-1"
+            datePickerClassName="w-[128px]"
+            fromPlaceholder={t('filters.placeholders.fromDateShort', { defaultValue: 'From' })}
+            toPlaceholder={t('filters.placeholders.toDateShort', { defaultValue: 'To' })}
+          />
+          {(filters.createdAtStart || filters.createdAtEnd) && (
+            <Button
+              id="clear-created-date-filter-button"
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearCreatedDate}
+              aria-label={t('filters.actions.clearCreatedDate', { defaultValue: 'Clear created date filter' })}
+              className="shrink-0 px-1.5"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -1,3 +1,5 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 function buildPeriodTimestamp(periodStart, dayOffset, hour) {
     const timestamp = new Date(periodStart);
     timestamp.setUTCDate(timestamp.getUTCDate() + dayOffset);
@@ -17,41 +19,38 @@ function buildEntryWindow(periodStart, dayOffset, startHour, endHour) {
 }
 
 exports.seed = async function (knex) {
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
 
-    const glinda = await knex('users')
+    const { db, tenantId } = context;
+
+    const glinda = await db.table('users')
         .where({
-            tenant: tenant.tenant,
             username: 'glinda'
         })
         .select('user_id')
         .first();
 
-    const submittedTimeSheet = await knex('time_sheets as ts')
-        .join('time_periods as tp', function joinPeriods() {
-            this.on('ts.period_id', '=', 'tp.period_id')
-                .andOn('ts.tenant', '=', 'tp.tenant');
-        })
+    const submittedTimeSheetQuery = db.table('time_sheets as ts');
+    db.tenantJoin(submittedTimeSheetQuery, 'time_periods as tp', 'ts.period_id', 'tp.period_id');
+
+    const submittedTimeSheet = await submittedTimeSheetQuery
         .where({
-            'ts.tenant': tenant.tenant,
             'ts.approval_status': 'SUBMITTED'
         })
         .orderBy('tp.start_date', 'desc')
         .select('ts.id', 'tp.start_date', 'tp.end_date')
         .first();
 
-    const whiteRabbitTicket = await knex('tickets')
+    const whiteRabbitTicket = await db.table('tickets')
         .where({
-            tenant: tenant.tenant,
             title: 'Missing White Rabbit'
         })
         .select('ticket_id')
         .first();
 
-    const emeraldCityTicket = await knex('tickets')
+    const emeraldCityTicket = await db.table('tickets')
         .where({
-            tenant: tenant.tenant,
             title: 'Enhance Emerald City Gardens'
         })
         .select('ticket_id')
@@ -66,9 +65,9 @@ exports.seed = async function (knex) {
     const dayFive = buildEntryWindow(submittedTimeSheet.start_date, 4, 9, 12);
     const secondEntryDayOne = buildEntryWindow(submittedTimeSheet.start_date, 4, 10, 13);
 
-    return knex('time_entries').insert([
+    return db.table('time_entries').insert([
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             user_id: glinda.user_id,
             ...dayOne,
             work_timezone: 'UTC',
@@ -80,7 +79,7 @@ exports.seed = async function (knex) {
             time_sheet_id: submittedTimeSheet.id
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             user_id: glinda.user_id,
             ...dayTwo,
             work_timezone: 'UTC',
@@ -92,7 +91,7 @@ exports.seed = async function (knex) {
             time_sheet_id: submittedTimeSheet.id
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             user_id: glinda.user_id,
             ...dayThree,
             work_timezone: 'UTC',
@@ -104,7 +103,7 @@ exports.seed = async function (knex) {
             time_sheet_id: submittedTimeSheet.id
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             user_id: glinda.user_id,
             ...dayFour,
             work_timezone: 'UTC',
@@ -116,7 +115,7 @@ exports.seed = async function (knex) {
             time_sheet_id: submittedTimeSheet.id
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             user_id: glinda.user_id,
             ...dayFive,
             work_timezone: 'UTC',
@@ -128,7 +127,7 @@ exports.seed = async function (knex) {
             time_sheet_id: submittedTimeSheet.id
         },
         {
-            tenant: tenant.tenant,
+            tenant: tenantId,
             user_id: glinda.user_id,
             ...secondEntryDayOne,
             work_timezone: 'UTC',

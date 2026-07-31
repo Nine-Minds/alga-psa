@@ -1,11 +1,68 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { OrderingService } from '../lib/orderingUtils';
 import type { IProjectPhase, IProjectTask } from '@alga-psa/types';
 import { Knex } from 'knex';
+import {
+  actionError,
+  permissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
+  isProjectOrderKeyActionError,
+  type ProjectOrderKeyActionError,
+} from './projectOrderKeyActionErrors';
+
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string,
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
+function projectOrderKeyActionErrorFrom(error: unknown): ProjectOrderKeyActionError | null {
+  if (isProjectOrderKeyActionError(error)) {
+    return error;
+  }
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (
+      error.message.includes('not found') ||
+      error.message.includes('No valid') ||
+      error.message.includes('Missing order key')
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected project, phase, task, or status values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required project ordering field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected project ordering records no longer exists. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withProjectOrderKeyErrors<T>(operation: () => Promise<T>): Promise<T | ProjectOrderKeyActionError> {
+  try {
+    return await operation();
+  } catch (error) {
+    const expected = projectOrderKeyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
 
 /**
  * Regenerates order keys for all tasks in a phase/status to ensure they follow proper fractional indexing
@@ -15,7 +72,7 @@ export const regenerateOrderKeysForStatus = withAuth(async (
   { tenant },
   phaseId: string,
   statusId: string
-): Promise<void> => {
+): Promise<void | ProjectOrderKeyActionError> => withProjectOrderKeyErrors(async () => {
   const { knex: db } = await createTenantKnex();
 
   await db.transaction(async (trx: Knex.Transaction) => {
@@ -23,11 +80,10 @@ export const regenerateOrderKeysForStatus = withAuth(async (
       throw new Error('Permission denied: Cannot update project');
     }
     // Get all tasks in this status, ordered by current order_key
-    const tasks = await trx<IProjectTask>('project_tasks')
+    const tasks = await tenantScopedTable(trx, 'project_tasks', tenant)
       .where('phase_id', phaseId)
       .where('project_status_mapping_id', statusId)
-      .where('tenant', tenant)
-      .orderBy('order_key', 'asc');
+      .orderBy('order_key', 'asc') as IProjectTask[];
 
     if (tasks.length === 0) return;
 
@@ -36,9 +92,8 @@ export const regenerateOrderKeysForStatus = withAuth(async (
 
     // Update each task with its new order key
     for (let i = 0; i < tasks.length; i++) {
-      await trx('project_tasks')
+      await tenantScopedTable(trx, 'project_tasks', tenant)
         .where('task_id', tasks[i].task_id)
-        .where('tenant', tenant)
         .update({
           order_key: newKeys[i],
           updated_at: trx.fn.now()
@@ -47,7 +102,7 @@ export const regenerateOrderKeysForStatus = withAuth(async (
 
     console.log(`Regenerated order keys for ${tasks.length} tasks in status ${statusId}`);
   });
-});
+}));
 
 /**
  * Checks if order keys in a status are valid and regenerates them if needed
@@ -57,19 +112,18 @@ export const validateAndFixOrderKeys = withAuth(async (
   { tenant },
   phaseId: string,
   statusId: string
-): Promise<boolean> => {
+): Promise<boolean | ProjectOrderKeyActionError> => withProjectOrderKeyErrors(async () => {
   const { knex: db } = await createTenantKnex();
 
   if (!await hasPermission(user, 'project', 'update', db)) {
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const tasks = await db<IProjectTask>('project_tasks')
+  const tasks = await tenantScopedTable(db, 'project_tasks', tenant)
     .where('phase_id', phaseId)
     .where('project_status_mapping_id', statusId)
-    .where('tenant', tenant)
     .orderBy('order_key', 'asc')
-    .select('task_id', 'order_key', 'task_name');
+    .select('task_id', 'order_key', 'task_name') as Pick<IProjectTask, 'task_id' | 'order_key' | 'task_name'>[];
 
   // Check for issues
   let needsRegeneration = false;
@@ -100,12 +154,15 @@ export const validateAndFixOrderKeys = withAuth(async (
 
   if (needsRegeneration) {
     console.log('Order keys need regeneration for status', statusId);
-    await regenerateOrderKeysForStatus(phaseId, statusId);
+    const result = await regenerateOrderKeysForStatus(phaseId, statusId);
+    if (isProjectOrderKeyActionError(result)) {
+      return result;
+    }
     return true;
   }
 
   return false;
-});
+}));
 
 /**
  * Regenerates order keys for all phases in a project to ensure they follow proper fractional indexing
@@ -114,7 +171,7 @@ export const regenerateOrderKeysForPhases = withAuth(async (
   user,
   { tenant },
   projectId: string
-): Promise<void> => {
+): Promise<void | ProjectOrderKeyActionError> => withProjectOrderKeyErrors(async () => {
   const { knex: db } = await createTenantKnex();
 
   await db.transaction(async (trx: Knex.Transaction) => {
@@ -122,9 +179,8 @@ export const regenerateOrderKeysForPhases = withAuth(async (
       throw new Error('Permission denied: Cannot update project');
     }
     // Get all phases in this project, ordered by current order_key (or fallback to end_date)
-    const phases = await trx<IProjectPhase>('project_phases')
+    const phases = await tenantScopedTable(trx, 'project_phases', tenant)
       .where('project_id', projectId)
-      .where('tenant', tenant)
       .orderByRaw(`
         CASE
           WHEN order_key IS NULL THEN 1
@@ -132,7 +188,7 @@ export const regenerateOrderKeysForPhases = withAuth(async (
         END,
         order_key ASC,
         end_date ASC
-      `);
+      `) as IProjectPhase[];
 
     if (phases.length === 0) return;
 
@@ -141,9 +197,8 @@ export const regenerateOrderKeysForPhases = withAuth(async (
 
     // Update each phase with its new order key
     for (let i = 0; i < phases.length; i++) {
-      await trx('project_phases')
+      await tenantScopedTable(trx, 'project_phases', tenant)
         .where('phase_id', phases[i].phase_id)
-        .where('tenant', tenant)
         .update({
           order_key: newKeys[i],
           updated_at: trx.fn.now()
@@ -152,7 +207,7 @@ export const regenerateOrderKeysForPhases = withAuth(async (
 
     console.log(`Regenerated order keys for ${phases.length} phases in project ${projectId}`);
   });
-});
+}));
 
 /**
  * Validates and fixes order keys for phases if needed
@@ -161,18 +216,17 @@ export const validateAndFixPhaseOrderKeys = withAuth(async (
   user,
   { tenant },
   projectId: string
-): Promise<boolean> => {
+): Promise<boolean | ProjectOrderKeyActionError> => withProjectOrderKeyErrors(async () => {
   const { knex: db } = await createTenantKnex();
 
   if (!await hasPermission(user, 'project', 'update', db)) {
     throw new Error('Permission denied: Cannot update project');
   }
 
-  const phases = await db<IProjectPhase>('project_phases')
+  const phases = await tenantScopedTable(db, 'project_phases', tenant)
     .where('project_id', projectId)
-    .where('tenant', tenant)
     .orderBy('order_key', 'asc')
-    .select('phase_id', 'order_key', 'phase_name');
+    .select('phase_id', 'order_key', 'phase_name') as Pick<IProjectPhase, 'phase_id' | 'order_key' | 'phase_name'>[];
 
   // Check for issues
   let needsRegeneration = false;
@@ -203,9 +257,12 @@ export const validateAndFixPhaseOrderKeys = withAuth(async (
 
   if (needsRegeneration) {
     console.log('Phase order keys need regeneration for project', projectId);
-    await regenerateOrderKeysForPhases(projectId);
+    const result = await regenerateOrderKeysForPhases(projectId);
+    if (isProjectOrderKeyActionError(result)) {
+      return result;
+    }
     return true;
   }
 
   return false;
-});
+}));

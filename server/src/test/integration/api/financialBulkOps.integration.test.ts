@@ -10,6 +10,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { FinancialService } from '@/lib/api/services/FinancialService';
 
@@ -27,6 +28,20 @@ function hasColumn(columns: ColumnInfoMap, name: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, name);
 }
 
+function tenantTable(tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
+function tenantRows() {
+  return tenantDb(db, '__test_tenant_fixture__')
+    .unscoped('tenants', 'test fixture creates and removes tenant rows');
+}
+
+function schemaTable(table: string) {
+  return tenantDb(db, '__test_schema__')
+    .unscoped(table, 'columnInfo reads schema metadata, not tenant rows');
+}
+
 function newService(tenantId: string): FinancialService {
   const svc = new FinancialService();
   vi.spyOn(svc as any, 'getKnex').mockResolvedValue({ knex: db, tenant: tenantId });
@@ -35,11 +50,11 @@ function newService(tenantId: string): FinancialService {
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
-  await db('credit_tracking').where({ tenant: tenantId }).del();
-  await db('transactions').where({ tenant: tenantId }).del();
-  await db('clients').where({ tenant: tenantId }).del();
-  await db('users').where({ tenant: tenantId }).del();
-  await db('tenants').where({ tenant: tenantId }).del();
+  await tenantTable(tenantId, 'credit_tracking').del();
+  await tenantTable(tenantId, 'transactions').del();
+  await tenantTable(tenantId, 'clients').del();
+  await tenantTable(tenantId, 'users').del();
+  await tenantRows().where({ tenant: tenantId }).del();
 }
 
 type Fixture = { tenantId: string; userId: string; clientA: string; clientB: string };
@@ -51,7 +66,7 @@ async function createFixture(): Promise<Fixture> {
   const clientB = uuidv4();
   tenantsToCleanup.add(tenantId);
 
-  await db('tenants').insert({
+  await tenantRows().insert({
     tenant: tenantId,
     ...(hasColumn(tenantColumns, 'company_name')
       ? { company_name: `Tenant ${tenantId.slice(0, 8)}` }
@@ -61,7 +76,7 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(tenantColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await db('users').insert({
+  await tenantTable(tenantId, 'users').insert({
     tenant: tenantId,
     user_id: userId,
     username: `fin-${tenantId.slice(0, 8)}`,
@@ -71,12 +86,11 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  for (const [id, balance] of [[clientA, 30], [clientB, 0]] as Array<[string, number]>) {
-    await db('clients').insert({
+  for (const id of [clientA, clientB]) {
+    await tenantTable(tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: id,
       client_name: `Client ${id.slice(0, 8)}`,
-      credit_balance: balance,
       ...(hasColumn(clientColumns, 'billing_cycle') ? { billing_cycle: 'monthly' } : {}),
       ...(hasColumn(clientColumns, 'is_tax_exempt') ? { is_tax_exempt: false } : {}),
       ...(hasColumn(clientColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
@@ -89,7 +103,7 @@ async function createFixture(): Promise<Fixture> {
 
 async function seedTransaction(tenantId: string, clientId: string, overrides: Record<string, unknown> = {}): Promise<string> {
   const id = uuidv4();
-  await db('transactions').insert({
+  await tenantTable(tenantId, 'transactions').insert({
     transaction_id: id,
     tenant: tenantId,
     client_id: clientId,
@@ -108,7 +122,7 @@ async function seedCredit(tenantId: string, clientId: string, remaining: number)
   const creditId = uuidv4();
   const txnId = uuidv4();
   const now = new Date().toISOString();
-  await db('transactions').insert({
+  await tenantTable(tenantId, 'transactions').insert({
     transaction_id: txnId,
     tenant: tenantId,
     client_id: clientId,
@@ -119,7 +133,7 @@ async function seedCredit(tenantId: string, clientId: string, remaining: number)
     created_at: now,
     balance_after: remaining,
   });
-  await db('credit_tracking').insert({
+  await tenantTable(tenantId, 'credit_tracking').insert({
     credit_id: creditId,
     tenant: tenantId,
     client_id: clientId,
@@ -137,9 +151,9 @@ describe('financial bulk operations integration', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     db = await createTestDbConnection({ runSeeds: false });
-    tenantColumns = await db('tenants').columnInfo();
-    userColumns = await db('users').columnInfo();
-    clientColumns = await db('clients').columnInfo();
+    tenantColumns = await schemaTable('tenants').columnInfo();
+    userColumns = await schemaTable('users').columnInfo();
+    clientColumns = await schemaTable('clients').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -170,8 +184,8 @@ describe('financial bulk operations integration', () => {
     );
     expect(rej.data.successful).toBe(1);
 
-    const approved = await db('transactions').where({ transaction_id: approveId }).first();
-    const rejected = await db('transactions').where({ transaction_id: rejectId }).first();
+    const approved = await tenantTable(f.tenantId, 'transactions').where({ transaction_id: approveId }).first();
+    const rejected = await tenantTable(f.tenantId, 'transactions').where({ transaction_id: rejectId }).first();
     expect(approved.status).toBe('completed');
     expect(rejected.status).toBe('rejected');
   }, HOOK_TIMEOUT);
@@ -187,11 +201,11 @@ describe('financial bulk operations integration', () => {
     );
     expect(res.data.successful).toBe(1);
 
-    const original = await db('transactions').where({ transaction_id: txnId }).first();
+    const original = await tenantTable(f.tenantId, 'transactions').where({ transaction_id: txnId }).first();
     expect(original.status).toBe('reversed');
 
-    const reversal = await db('transactions')
-      .where({ tenant: f.tenantId, related_transaction_id: txnId })
+    const reversal = await tenantTable(f.tenantId, 'transactions')
+      .where({ related_transaction_id: txnId })
       .first();
     expect(reversal).toBeDefined();
     expect(Number(reversal.amount)).toBe(-100);
@@ -199,11 +213,9 @@ describe('financial bulk operations integration', () => {
     expect(Number(reversal.balance_after)).toBe(0);
   }, HOOK_TIMEOUT);
 
-  it('expires a credit and reduces the client balance', async () => {
+  it('expires a credit and reduces the derived client balance', async () => {
     const f = await createFixture();
     const svc = newService(f.tenantId);
-    // clientB starts at 0; give it a credit of 50.
-    await db('clients').where({ tenant: f.tenantId, client_id: f.clientB }).update({ credit_balance: 50 });
     const creditId = await seedCredit(f.tenantId, f.clientB, 50);
 
     const res = await svc.bulkCreditOperation(
@@ -212,24 +224,26 @@ describe('financial bulk operations integration', () => {
     );
     expect(res.data.successful).toBe(1);
 
-    const credit = await db('credit_tracking').where({ credit_id: creditId }).first();
+    const credit = await tenantTable(f.tenantId, 'credit_tracking').where({ credit_id: creditId }).first();
     expect(credit.is_expired).toBe(true);
     expect(Number(credit.remaining_amount)).toBe(0);
 
-    const expirationTxn = await db('transactions')
-      .where({ tenant: f.tenantId, type: 'credit_expiration' })
+    const expirationTxn = await tenantTable(f.tenantId, 'transactions')
+      .where({ type: 'credit_expiration' })
       .first();
     expect(expirationTxn).toBeDefined();
     expect(Number(expirationTxn.amount)).toBe(-50);
 
-    const client = await db('clients').where({ tenant: f.tenantId, client_id: f.clientB }).first();
-    expect(Number(client.credit_balance)).toBe(0);
+    const available = await tenantTable(f.tenantId, 'credit_tracking')
+      .where({ client_id: f.clientB, is_expired: false })
+      .sum('remaining_amount as total')
+      .first();
+    expect(Number(available?.total ?? 0)).toBe(0);
   }, HOOK_TIMEOUT);
 
   it('transfers a credit to another client', async () => {
     const f = await createFixture();
     const svc = newService(f.tenantId);
-    // clientA has credit_balance 30 from the fixture; back it with a credit.
     const creditId = await seedCredit(f.tenantId, f.clientA, 30);
 
     const res = await svc.bulkCreditOperation(
@@ -238,17 +252,20 @@ describe('financial bulk operations integration', () => {
     );
     expect(res.data.successful).toBe(1);
 
-    const source = await db('credit_tracking').where({ credit_id: creditId }).first();
+    const source = await tenantTable(f.tenantId, 'credit_tracking').where({ credit_id: creditId }).first();
     expect(Number(source.remaining_amount)).toBe(0);
 
-    const targetCredit = await db('credit_tracking')
-      .where({ tenant: f.tenantId, client_id: f.clientB })
+    const targetCredit = await tenantTable(f.tenantId, 'credit_tracking')
+      .where({ client_id: f.clientB })
       .first();
     expect(targetCredit).toBeDefined();
     expect(Number(targetCredit.remaining_amount)).toBe(30);
 
-    const clientB = await db('clients').where({ tenant: f.tenantId, client_id: f.clientB }).first();
-    expect(Number(clientB.credit_balance)).toBe(30);
+    const targetAvailable = await tenantTable(f.tenantId, 'credit_tracking')
+      .where({ client_id: f.clientB, is_expired: false })
+      .sum('remaining_amount as total')
+      .first();
+    expect(Number(targetAvailable?.total ?? 0)).toBe(30);
   }, HOOK_TIMEOUT);
 
   it('reports per-id failures without aborting the batch', async () => {

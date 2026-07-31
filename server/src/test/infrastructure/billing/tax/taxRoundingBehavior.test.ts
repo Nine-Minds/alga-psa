@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateManualInvoice } from '@alga-psa/billing/actions';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,24 +10,29 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+
+// generateManualInvoice returns { success, invoice } | { success: false, error }
+// (ManualInvoiceResult); these tests predate that shape. Unwrap success and
+// surface failures as throws so downstream assertions keep reading the invoice.
+async function generateManualInvoiceOrThrow(request: any): Promise<any> {
+  const result: any = await generateManualInvoice(request);
+  if (!result || result.success !== true) {
+    throw new Error(result?.error ?? 'generateManualInvoice failed');
+  }
+  return result.invoice;
+}
+
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
-let mockedTenantId = '11111111-1111-1111-1111-111111111111';
-let mockedUserId = 'mock-user-id';
 
-vi.mock('@alga-psa/auth', () => ({
-  getSession: vi.fn(async () => ({
-    user: {
-      id: mockedUserId,
-      tenant: mockedTenantId
-    }
-  }))
-}));
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
+  return createAuthModuleMock();
+});
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
   analytics: {
@@ -81,26 +87,22 @@ describe('Tax Allocation Strategy', () => {
       userType: 'internal'
     });
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
 
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
   }, 120000);
 
   beforeEach(async () => {
     context = await resetContext();
 
-    const mockContext = setupCommonMocks({
+    setupCommonMocks({
       tenantId: context.tenantId,
       userId: context.userId,
       permissionCheck: () => true
     });
-    mockedTenantId = mockContext.tenantId;
-    mockedUserId = mockContext.userId;
 
     // Create a default service for testing
     // NOTE: Do NOT set tax_region here - each test configures its own tax
@@ -135,7 +137,7 @@ describe('Tax Allocation Strategy', () => {
       await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with mixed positive and negative amounts
-      const invoice = await generateManualInvoice({
+      const invoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [
           {
@@ -191,7 +193,7 @@ describe('Tax Allocation Strategy', () => {
       await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with amounts that will produce fractional tax cents
-      const invoice = await generateManualInvoice({
+      const invoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [
           {
@@ -246,7 +248,7 @@ describe('Tax Allocation Strategy', () => {
       await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with small amounts
-      const invoice = await generateManualInvoice({
+      const invoice = await generateManualInvoiceOrThrow({
         clientId: context.clientId,
         items: [
           {

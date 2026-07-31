@@ -25,9 +25,10 @@ export type TeamsIntegrationContext = {
 
 const TEAMS_PERSONAL_TAB_ENTITY_ID = 'alga-psa-personal-tab';
 
-// Bot Framework service URLs all live under trusted Microsoft suffixes;
-// never send a bot token anywhere else.
-const TRUSTED_SERVICE_URL_SUFFIXES = ['.botframework.com', '.trafficmanager.net', '.botplatform.cloudes.microsoft.com'];
+// Bot Framework service URLs use known Microsoft-operated hosts; never send a
+// bot token to broad cloud-hosting suffixes that non-Microsoft tenants can own.
+const TRUSTED_SERVICE_URL_HOSTS = new Set(['smba.trafficmanager.net']);
+const TRUSTED_SERVICE_URL_SUFFIXES = ['.botframework.com', '.botplatform.cloudes.microsoft.com'];
 const TOKEN_EXPIRY_BUFFER_MS = 60_000;
 
 let cachedBotToken: { accessToken: string; expiresAt: number } | null = null;
@@ -39,7 +40,10 @@ export function isTrustedServiceUrl(serviceUrl: string): boolean {
     const url = new URL(serviceUrl);
     if (url.protocol !== 'https:') return false;
     const host = url.hostname.toLowerCase();
-    return TRUSTED_SERVICE_URL_SUFFIXES.some((suffix) => host.endsWith(suffix));
+    return (
+      TRUSTED_SERVICE_URL_HOSTS.has(host) ||
+      TRUSTED_SERVICE_URL_SUFFIXES.some((suffix) => host.endsWith(suffix))
+    );
   } catch {
     return false;
   }

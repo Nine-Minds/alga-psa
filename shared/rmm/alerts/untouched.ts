@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
 
 /**
@@ -14,8 +15,9 @@ export async function isTicketUntouched(
   tenantId: string,
   ticketId: string
 ): Promise<boolean> {
-  const ticket = await trx('tickets')
-    .where({ tenant: tenantId, ticket_id: ticketId })
+  const db = tenantDb(trx, tenantId);
+  const ticket = await db.table('tickets')
+    .where({ ticket_id: ticketId })
     .first('status_id', 'board_id');
   if (!ticket) return false;
 
@@ -30,14 +32,14 @@ export async function isTicketUntouched(
     return false;
   }
 
-  const humanComment = await trx('comments')
-    .where({ tenant: tenantId, ticket_id: ticketId })
+  const humanComment = await db.table('comments')
+    .where({ ticket_id: ticketId })
     .andWhere((qb) => qb.where('is_system_generated', false).orWhereNull('is_system_generated'))
     .first('comment_id');
   if (humanComment) return false;
 
-  const timeEntry = await trx('time_entries')
-    .where({ tenant: tenantId, work_item_id: ticketId, work_item_type: 'ticket' })
+  const timeEntry = await db.table('time_entries')
+    .where({ work_item_id: ticketId, work_item_type: 'ticket' })
     .first('entry_id');
   if (timeEntry) return false;
 

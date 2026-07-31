@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { BookOpen, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getHuduCompanyArticles } from '../../../lib/actions/integrations/huduDataActions';
-import type { HuduCompanyDataResult } from '../../../lib/actions/integrations/huduDataActions';
+import type { HuduCompanyDataResult } from '../../../lib/integrations/hudu/huduDataTypes';
 import type { HuduArticle } from '../../../lib/integrations/hudu/contracts';
 
 export interface HuduClientDocumentsSectionProps {

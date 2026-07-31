@@ -1,17 +1,30 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { generateManualInvoice } from '@alga-psa/billing/actions';
-import { updateInvoiceManualItems } from '@alga-psa/billing/actions/invoiceModification';
+import {
+  generateManualInvoice,
+  getClientBillingEmailStatus,
+} from '@alga-psa/billing/actions/manualInvoiceActions';
+import { generateInvoiceForSalesOrder, type InvoiceableSalesOrderForBilling } from '@alga-psa/billing/actions/salesOrderInvoicingActions';
+import {
+  updateInvoiceManualItems,
+  type InvoiceManualItemsUpdateActionResult,
+} from '@alga-psa/billing/actions/invoiceModification';
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
-import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions'; // Import and alias
+import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions/manualInvoiceActions'; // Import and alias
+import type {
+  ManualInvoiceFailure,
+} from '../../errors/manualInvoiceErrors';
+import { translateManualInvoiceFailure } from './manualInvoiceErrorTranslation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card } from '@alga-psa/ui/components/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import type { IClient } from '@alga-psa/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import type { IService } from '@alga-psa/types';
@@ -22,6 +35,12 @@ import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRouter } from 'next/navigation';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
@@ -37,7 +56,22 @@ interface ManualInvoicesProps {
   services: IService[];
   onGenerateSuccess: () => void;
   invoice?: InvoiceViewModel;
+  invoiceableSalesOrders?: InvoiceableSalesOrderForBilling[];
+  sourceSalesOrderId?: string | null;
 }
+
+const isLegacyManualItemsUpdateError = (
+  result: InvoiceManualItemsUpdateActionResult,
+): result is Exclude<InvoiceManualItemsUpdateActionResult, InvoiceViewModel | ManualInvoiceFailure> => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
+
+const isManualInvoiceFailure = (result: unknown): result is ManualInvoiceFailure => (
+  Boolean(result) &&
+  typeof result === 'object' &&
+  (result as Partial<ManualInvoiceFailure>).success === false &&
+  typeof (result as Partial<ManualInvoiceFailure>).code === 'string'
+);
 
 // This is the primary state type for manual items within this component
 // Reverted: Keep is_taxable, remove tax_rate_id
@@ -149,14 +183,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   services,
   onGenerateSuccess,
   invoice, // This is the initial invoice prop
+  invoiceableSalesOrders = [],
+  sourceSalesOrderId,
 }) => {
   const { t } = useTranslation('msp/invoicing');
+  const router = useRouter();
   const { formatCurrency } = useFormatters();
   const { renderQuickAddClient } = useQuickAddClient();
   const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClient, setSelectedClient] = useState<string | null>(
     invoice?.client_id || null
   );
+  const [selectedSalesOrderId, setSelectedSalesOrderId] = useState<string>('');
   // State to hold the full invoice data, initialized from prop but updated locally after fetch/changes
   const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceViewModel | undefined>(invoice);
   // State specifically for the manual items being edited
@@ -209,7 +247,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [isPrepayment, setIsPrepayment] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string>('');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
-  const translateManualInvoiceError = (message: string, mode: 'update' | 'generate'): string => {
+  const [hasSelectedClientBillingEmail, setHasSelectedClientBillingEmail] = useState<boolean | null>(null);
+  const translateManualInvoiceError = (result: ManualInvoiceFailure): string => (
+    translateManualInvoiceFailure(t, result)
+  );
+  const translateLegacyManualInvoiceError = (message: string, mode: 'update' | 'generate'): string => {
     if (message === 'Invoice number must be unique') {
       return t('manualInvoices.errors.invoiceNumberUnique', {
         defaultValue: 'This invoice number is already in use.',
@@ -255,6 +297,62 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     setClientOptions(clients);
   }, [clients]);
 
+  useEffect(() => {
+    if (sourceSalesOrderId && invoiceableSalesOrders.some((so) => so.so_id === sourceSalesOrderId)) {
+      setSelectedSalesOrderId(sourceSalesOrderId);
+    }
+  }, [invoiceableSalesOrders, sourceSalesOrderId]);
+
+  const selectedSalesOrder = useMemo(
+    () => invoiceableSalesOrders.find((so) => so.so_id === selectedSalesOrderId) ?? null,
+    [invoiceableSalesOrders, selectedSalesOrderId],
+  );
+
+  useEffect(() => {
+    if (selectedSalesOrder) {
+      setSelectedClient(selectedSalesOrder.client_id);
+    }
+  }, [selectedSalesOrder]);
+
+  useEffect(() => {
+    if (currentInvoiceData || selectedSalesOrder || !selectedClient) {
+      setHasSelectedClientBillingEmail(null);
+      return;
+    }
+
+    let active = true;
+    setHasSelectedClientBillingEmail(null);
+    void getClientBillingEmailStatus(selectedClient)
+      .then(({ hasBillingEmail }) => {
+        if (active) {
+          setHasSelectedClientBillingEmail(hasBillingEmail);
+        }
+      })
+      .catch((statusError: unknown) => {
+        if (IS_DEVELOPMENT) {
+          console.error('Unable to check client billing email status:', statusError);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentInvoiceData, selectedClient, selectedSalesOrder]);
+
+  const salesOrderOptions = useMemo(
+    () =>
+      invoiceableSalesOrders.map((so) => ({
+        value: so.so_id,
+        label: [
+          so.so_number,
+          so.client_name ?? so.client_id,
+          formatCurrency(so.billable_amount / 100, so.currency_code || 'USD'),
+        ].join(' · '),
+      })),
+    [formatCurrency, invoiceableSalesOrders],
+  );
+  const hasSalesOrderSource = !currentInvoiceData && Boolean(selectedSalesOrder);
+
   // Effect to fetch items when the invoice prop initially changes
   useEffect(() => {
     const fetchItems = async () => {
@@ -265,6 +363,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           console.log('[Effect] Fetching items for:', invoiceIdToFetch);
           setLoading(true);
           const fetchedItems = await getInvoiceLineItems(invoiceIdToFetch);
+          if (isActionMessageError(fetchedItems) || isActionPermissionError(fetchedItems)) {
+            setError(getErrorMessage(fetchedItems));
+            return;
+          }
           const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
           const normalizeHeaderAlias = (it: any) => ({
             ...it,
@@ -424,7 +526,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentInvoiceData && selectedClient === null) {
+    if (!currentInvoiceData && selectedClient === null && !selectedSalesOrder) {
       setError(t('manualInvoices.errors.selectClient', {
         defaultValue: 'Please select a client',
       }));
@@ -435,6 +537,37 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     setError(null);
 
     try {
+      if (!currentInvoiceData && selectedSalesOrderId && !selectedSalesOrder) {
+        setError(t('manualInvoices.errors.salesOrderNotInvoiceable', {
+          defaultValue: 'That sales order is no longer available to invoice.',
+        }));
+        return;
+      }
+
+      if (!currentInvoiceData && selectedSalesOrder) {
+        const result = await generateInvoiceForSalesOrder(selectedSalesOrderId);
+
+        if (!result.success) {
+          setError(result.error || t('manualInvoices.errors.salesOrderGenerateFailed', {
+            defaultValue: 'Could not generate the sales order invoice.',
+          }));
+          return;
+        }
+
+        if (result.invoiced <= 0) {
+          setError(t('manualInvoices.errors.salesOrderNothingToInvoice', {
+            defaultValue: 'Nothing remains to invoice for this sales order.',
+          }));
+          return;
+        }
+
+        onGenerateSuccess();
+        if (result.invoiceId) {
+          router.push(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${result.invoiceId}`);
+        }
+        return;
+      }
+
       // Updating an existing invoice
       if (currentInvoiceData) {
         console.log('[Submit] Updating invoice items:', {
@@ -494,12 +627,22 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // tax_rate_id: item.tax_rate_id, // Removed
         });
 
-        await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
+        const updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
           invoice_number: currentInvoiceData.invoice_number,
           newItems: newItemsToSave.map(mapToNewItemSaveFormat),
           updatedItems: updatedItemsToSave.map(mapToUpdateSaveFormat),
           removedItemIds
         });
+
+        if (isManualInvoiceFailure(updateResult)) {
+          setError(translateManualInvoiceError(updateResult));
+          return;
+        }
+
+        if (isLegacyManualItemsUpdateError(updateResult)) {
+          setError(translateLegacyManualInvoiceError(getErrorMessage(updateResult), 'update'));
+          return;
+        }
 
         setExpandedItems(new Set());
 
@@ -513,6 +656,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         }
         // Refresh items from server
         const refreshedItems = await getInvoiceLineItems(currentInvoiceData.invoice_id);
+        if (isActionMessageError(refreshedItems) || isActionPermissionError(refreshedItems)) {
+          setError(getErrorMessage(refreshedItems));
+          return;
+        }
         console.log('[Submit] Refreshed items after update:', refreshedItems.length);
         
         // Fetch the updated invoice data from the server
@@ -580,17 +727,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           clientId: selectedClient || '',
           // invoiceNumber: newInvoiceNumber, // Remove - ManualInvoiceRequest doesn't have this
           isPrepayment,
-          expirationDate: isPrepayment ? expirationDate : undefined,
+          expirationDate: isPrepayment && expirationDate ? expirationDate : undefined,
           items: itemsToSave
         });
 
         if (!result.success) {
-          setError(
-            translateManualInvoiceError(
-              (result as { success: false; error: string }).error,
-              'generate',
-            ),
-          );
+          setError(translateManualInvoiceError(result));
           return;
         }
 
@@ -604,7 +746,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
          defaultValue: `Error ${errorMode === 'update' ? 'updating' : 'generating'} invoice`,
        });
        if (err instanceof Error) {
-         errorMessage = translateManualInvoiceError(err.message, errorMode);
+         errorMessage = translateLegacyManualInvoiceError(err.message, errorMode);
        }
        setError(errorMessage);
     } finally {
@@ -633,6 +775,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const getButtonText = () => {
     if (isGenerating) {
       return t('manualInvoices.actions.processing', { defaultValue: 'Processing...' });
+    }
+
+    if (!currentInvoiceData && selectedSalesOrder) {
+      return t('manualInvoices.actions.generateSalesOrderInvoice', {
+        defaultValue: 'Generate Sales Order Invoice',
+      });
     }
 
     return currentInvoiceData
@@ -784,38 +932,122 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {!invoice && !currentInvoiceData && invoiceableSalesOrders.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                    {t('manualInvoices.fields.sourceSalesOrder', { defaultValue: 'Source sales order (optional)' })}
+                  </label>
+                  <SearchableSelect
+                    id="manual-invoice-sales-order-source"
+                    options={salesOrderOptions}
+                    value={selectedSalesOrderId}
+                    onChange={setSelectedSalesOrderId}
+                    placeholder={t('manualInvoices.placeholders.sourceSalesOrder', {
+                      defaultValue: 'Select a fulfilled or manually billable sales order',
+                    })}
+                    searchPlaceholder={t('manualInvoices.placeholders.searchSalesOrders', {
+                      defaultValue: 'Search sales orders...',
+                    })}
+                    emptyMessage={t('manualInvoices.placeholders.noInvoiceableSalesOrders', {
+                      defaultValue: 'No invoiceable sales orders found.',
+                    })}
+                    dropdownMode="overlay"
+                    maxListHeight="250px"
+                  />
+                  {selectedSalesOrder && (
+                    <div
+                      id="manual-invoice-sales-order-context"
+                      className="mt-3 rounded-md border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-primary-50))] p-3 text-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div className="font-medium text-[rgb(var(--color-text-900))]">
+                            {selectedSalesOrder.so_number} · {selectedSalesOrder.client_name ?? selectedSalesOrder.client_id}
+                          </div>
+                          <div className="mt-1 text-[rgb(var(--color-text-600))]">
+                            {t('manualInvoices.salesOrderContext.summary', {
+                              defaultValue:
+                                '{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order.',
+                              quantity: selectedSalesOrder.billable_quantity_total,
+                              lineCount: selectedSalesOrder.line_count,
+                            })}
+                          </div>
+                        </div>
+                        <div className="text-right font-semibold text-[rgb(var(--color-text-900))]">
+                          {formatCurrency(
+                            selectedSalesOrder.billable_amount / 100,
+                            selectedSalesOrder.currency_code || 'USD',
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        id="manual-invoice-clear-sales-order-source"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 px-0"
+                        onClick={() => setSelectedSalesOrderId('')}
+                      >
+                        {t('manualInvoices.actions.clearSalesOrderSource', { defaultValue: 'Clear sales order source' })}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {!invoice && !currentInvoiceData && (
                 <div>
                   <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                     {t('manualInvoices.fields.client', { defaultValue: 'Client' })}
                   </label>
-                  <ClientPicker
-                    id='client-picker'
-                    clients={clientOptions}
-                    selectedClientId={selectedClient}
-                    onSelect={setSelectedClient}
-                    filterState={filterState}
-                    onFilterStateChange={setFilterState}
-                    clientTypeFilter={clientTypeFilter}
-                    onClientTypeFilterChange={setClientTypeFilter}
-                    onAddNew={() => setIsQuickAddClientOpen(true)}
-                    placeholder={t('manualInvoices.placeholders.selectClient', {
-                      defaultValue: 'Select a client',
-                    })}
-                  />
-                  {renderQuickAddClient({
-                    open: isQuickAddClientOpen,
-                    onOpenChange: setIsQuickAddClientOpen,
-                    onClientAdded: (newClient) => {
-                      setClientOptions(prev => [...prev, newClient]);
-                      setSelectedClient(newClient.client_id);
-                    },
-                    skipSuccessDialog: true,
-                  })}
+                  {selectedSalesOrder ? (
+                    <div
+                      id="manual-invoice-sales-order-client"
+                      className="rounded-md border border-[rgb(var(--color-border-300))] px-3 py-2 text-sm text-[rgb(var(--color-text-900))]"
+                    >
+                      {selectedSalesOrder.client_name ?? selectedSalesOrder.client_id}
+                    </div>
+                  ) : (
+                    <>
+                      <ClientPicker
+                        id='client-picker'
+                        clients={clientOptions}
+                        selectedClientId={selectedClient}
+                        onSelect={setSelectedClient}
+                        filterState={filterState}
+                        onFilterStateChange={setFilterState}
+                        clientTypeFilter={clientTypeFilter}
+                        onClientTypeFilterChange={setClientTypeFilter}
+                        onAddNew={() => setIsQuickAddClientOpen(true)}
+                        placeholder={t('manualInvoices.placeholders.selectClient', {
+                          defaultValue: 'Select a client',
+                        })}
+                      />
+                      {renderQuickAddClient({
+                        open: isQuickAddClientOpen,
+                        onOpenChange: setIsQuickAddClientOpen,
+                        onClientAdded: (newClient) => {
+                          setClientOptions(prev => [...prev, newClient]);
+                          setSelectedClient(newClient.client_id);
+                        },
+                        skipSuccessDialog: true,
+                      })}
+                    </>
+                  )}
                 </div>
               )}
 
-              {!invoice && !currentInvoiceData && (
+              {!invoice && !currentInvoiceData && !hasSalesOrderSource && hasSelectedClientBillingEmail === false && (
+                <Alert id="manual-invoice-no-billing-email-warning" variant="warning">
+                  <AlertDescription>
+                    {t('manualInvoices.warnings.noBillingEmail', {
+                      defaultValue: 'This client has no billing email. Set an email address on the client\'s billing location before generating the invoice.',
+                    })}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!invoice && !currentInvoiceData && !hasSalesOrderSource && (
                 <div className="mb-6">
                   <label htmlFor="new-invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                     {t('manualInvoices.fields.invoiceNumberOptional', {
@@ -853,7 +1085,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 />
               )}
 
-              {!invoice && !currentInvoiceData && (
+              {!invoice && !currentInvoiceData && !hasSalesOrderSource && (
                 <div className="mb-6 space-y-4">
                   <div className="flex items-center">
                     <Checkbox
@@ -878,12 +1110,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         })}
                       </label>
                       <div className="flex items-center">
-                        <input
+                        <DatePicker
                           id="expiration-date-input"
-                          type="date"
-                          value={expirationDate}
-                          onChange={(e) => setExpirationDate(e.target.value)}
-                          className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          label={t('manualInvoices.creditExpiration.label', {
+                            defaultValue: 'Credit Expiration Date',
+                          })}
+                          placeholder={t('manualInvoices.creditExpiration.label', {
+                            defaultValue: 'Credit Expiration Date',
+                          })}
+                          clearable
+                          className="w-full max-w-xs"
+                          value={dateFromString(expirationDate)}
+                          onChange={(date) => setExpirationDate(dateToString(date))}
                         />
                         <div className="ml-2 text-sm text-muted-foreground">
                           {t('manualInvoices.creditExpiration.helpText', {
@@ -896,7 +1134,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 </div>
               )}
 
-              <div>
+              {!hasSalesOrderSource && (
+                <div>
                 <h3 className="text-sm font-medium mb-2">
                   {currentInvoiceData && !currentInvoiceData.is_manual
                     ? t('manualInvoices.lineItems.manual', { defaultValue: 'Manual Line Items' })
@@ -930,8 +1169,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                   ))}
                 </div>
               </div>
+              )}
 
-              <div className="flex justify-between items-center">
+              {!hasSalesOrderSource && (
+                <div className="flex justify-between items-center">
                 <div className="flex gap-2">
                   <Button id='add-line-item-button' type="button" onClick={() => handleAddItem(false)} variant="secondary" disabled={isGenerating || expandedItems.size > 0}>
                     <PlusIcon className="w-4 h-4 mr-2" />
@@ -949,11 +1190,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                   </>
                 </div>
               </div>
+              )}
 
               <Button
                 id='save-changes-button'
                 type="submit"
-                disabled={isGenerating || (!currentInvoiceData && !selectedClient)}
+                disabled={isGenerating || (!currentInvoiceData && !selectedClient && !selectedSalesOrder)}
                 className="px-4"
               >
                 {getButtonText()}

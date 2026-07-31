@@ -21,7 +21,7 @@
       "status": "Stato",
       "duration": "Durata",
       "started": "Iniziato",
-      "completed": "Completato"
+      "completed": "Terminato"
     },
     "time": {
       "justNow": "Proprio adesso",
@@ -45,7 +45,7 @@
         "status": "Stato",
         "duration": "Durata",
         "started": "Avviato",
-        "completed": "Completato"
+        "completed": "Terminato"
       },
       "optionsDialog": {
         "title": "Opzioni di stampa",
@@ -63,9 +63,12 @@
       "pending": "In attesa di",
       "processing": "Elaborazione",
       "pgboss": "Capo PG",
-      "temporal": "Temporale"
+      "temporal": "Temporale",
+      "queued": "In coda",
+      "running": "In esecuzione"
     },
-    "successRate": "Tasso di successo del {{count}}%."
+    "successRate": "Tasso di successo del {{count}}%.",
+    "successRateNone": "Ancora nessun lavoro completato"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,36 @@
   "actions": {
     "print": "Stampa",
     "printOptions": "Opzioni di stampa"
+  },
+  "clearHistory": {
+    "button": "Cancella cronologia",
+    "dialog": {
+      "title": "Cancella la cronologia dei lavori",
+      "warning": "Questa operazione rimuove definitivamente la cronologia dei lavori da questo elenco e non può essere annullata. Non interrompe né annulla i lavori ancora in esecuzione.",
+      "daysLabel": "Età in giorni",
+      "daysError": "Inserisci un numero intero di giorni (1 o più).",
+      "cancel": "Annulla",
+      "clearing": "Cancellazione…",
+      "confirm": "Cancella cronologia"
+    },
+    "scope": {
+      "finished": {
+        "label": "Solo completati",
+        "description": "Lavori completati e non riusciti. I lavori in attesa, in coda e in esecuzione vengono mantenuti."
+      },
+      "all": {
+        "label": "Tutti gli stati",
+        "description": "Tutti i lavori, inclusi quelli in attesa, in coda e ancora in esecuzione."
+      }
+    },
+    "age": {
+      "toggle": "Elimina solo i lavori più vecchi di un'età stabilita"
+    },
+    "toast": {
+      "none": "Nessun lavoro corrispondente da cancellare.",
+      "error": "Impossibile cancellare la cronologia dei lavori. Riprova.",
+      "success_one": "{{count}} lavoro cancellato dalla cronologia.",
+      "success_other": "{{count}} lavori cancellati dalla cronologia."
+    }
   }
 }

@@ -90,11 +90,11 @@ describe('tickets modal route infrastructure', () => {
 
   it('routes all extracted bulk dialogs through plain and intercepted entries', () => {
     const cases = [
-      ['bulk-assign', 'BulkAssignTicketsRouteContent', 'BulkAssignTicketsDialog', "bulkAssignTickets(selectedTicketIdsArray, selection)"],
+      ['bulk-assign', 'BulkAssignTicketsRouteContent', 'BulkAssignTicketsDialog', 'bulkAssignTickets'],
       ['bulk-tags', 'BulkAddTagsRouteClient', 'BulkAddTagsDialog', 'bulkAddTagsToTickets(selectedTicketIdsArray, tagTexts)'],
-      ['bulk-due-date', 'BulkSetDueDateRouteClient', 'BulkSetDueDateDialog', 'bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso)'],
-      ['bulk-status', 'BulkChangeStatusRouteClient', 'BulkChangeStatusDialog', 'bulkUpdateTicketStatus(selectedTicketIdsArray, statusId)'],
-      ['bulk-priority', 'BulkChangePriorityRouteClient', 'BulkChangePriorityDialog', 'bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId)'],
+      ['bulk-due-date', 'BulkSetDueDateRouteClient', 'BulkSetDueDateDialog', 'bulkUpdateTicketDueDate'],
+      ['bulk-status', 'BulkChangeStatusRouteClient', 'BulkChangeStatusDialog', 'bulkUpdateTicketStatus'],
+      ['bulk-priority', 'BulkChangePriorityRouteClient', 'BulkChangePriorityDialog', 'bulkUpdateTicketPriority'],
     ] as const;
 
     for (const [segment, routeComponent, dialogName, actionCall] of cases) {
@@ -135,6 +135,46 @@ describe('tickets modal route infrastructure', () => {
     expect(dashboard).toContain("router.push('/msp/tickets/bulk-due-date')");
     expect(dashboard).toContain("router.push('/msp/tickets/bulk-status')");
     expect(dashboard).toContain("router.push('/msp/tickets/bulk-priority')");
+  });
+
+  it('threads optional notification suppression through eligible bulk dialogs and excludes tag writes', () => {
+    const routedBulkClients = [
+      ['server/src/app/msp/tickets/_components/BulkAssignTicketsRouteClient.tsx', 'bulkAssignTickets(selectedTicketIdsArray, selection, options)'],
+      ['server/src/app/msp/tickets/_components/BulkSetDueDateRouteClient.tsx', 'bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso, options)'],
+      ['server/src/app/msp/tickets/_components/BulkChangeStatusRouteClient.tsx', 'bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)'],
+      ['server/src/app/msp/tickets/_components/BulkChangePriorityRouteClient.tsx', 'bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId, options)'],
+    ] as const;
+
+    for (const [routeClientPath, silentCall] of routedBulkClients) {
+      const routeClient = read(routeClientPath);
+
+      expect(routeClient).toContain('type TicketNotificationSuppressionOptions');
+      expect(routeClient).toContain('options?: TicketNotificationSuppressionOptions');
+      expect(routeClient).toContain(silentCall);
+    }
+
+    for (const dialogPath of [
+      'packages/tickets/src/components/BulkAssignTicketsDialog.tsx',
+      'packages/tickets/src/components/BulkSetDueDateDialog.tsx',
+      'packages/tickets/src/components/BulkChangeStatusDialog.tsx',
+      'packages/tickets/src/components/BulkChangePriorityDialog.tsx',
+    ]) {
+      const dialog = read(dialogPath);
+
+      expect(dialog).toContain('TicketNotificationSuppressionControl');
+      expect(dialog).toContain('suppressContactNotifications: false');
+      expect(dialog).toContain('setNotificationSuppression');
+    }
+
+    const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
+    expect(dashboard).toContain('TicketNotificationSuppressionControl');
+    expect(dashboard).toContain('bulkMoveNotificationSuppression.suppressContactNotifications');
+    expect(dashboard).toContain('moveTicketsToBoard(');
+
+    const tagRoute = read('server/src/app/msp/tickets/_components/BulkAddTagsRouteClient.tsx');
+    const tagDialog = read('packages/tickets/src/components/BulkAddTagsDialog.tsx');
+    expect(tagRoute).not.toContain('TicketNotificationSuppressionOptions');
+    expect(tagDialog).not.toContain('TicketNotificationSuppressionControl');
   });
 
   it('keeps select-all-matching selections in the shared selected id set for routed bulk actions', () => {

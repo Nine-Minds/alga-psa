@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 
 export interface ICountry {
@@ -19,7 +19,7 @@ export const getAllCountries = withAuth(async (
 
   try {
     // Fetch active countries from reference table (shared across all tenants)
-    const countries = await knex('countries')
+    const countries = await tenantDb(knex, tenant).table<ICountry>('countries')
       .select('code', 'name', 'phone_code')
       .where('is_active', true)
       .orderBy('name');

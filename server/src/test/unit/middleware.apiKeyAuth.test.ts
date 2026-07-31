@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { shouldSkipApiKeyAuth } from 'server/src/middleware';
 
 describe('shouldSkipApiKeyAuth', () => {
+  it('allows SCIM routes to perform Bearer authentication in the route handler', () => {
+    expect(shouldSkipApiKeyAuth('/api/scim/v2/connection-id/Users')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/scim-malicious/v2/connection-id/Users')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });
@@ -14,6 +19,15 @@ describe('shouldSkipApiKeyAuth', () => {
   it('allows document preview routes to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/documents/123/preview')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/documents/123/thumbnail')).toBe(true);
+  });
+
+  it('allows document download/content routes to use session auth (e.g. meeting transcripts)', () => {
+    expect(shouldSkipApiKeyAuth('/api/documents/123/download')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/documents/123/content')).toBe(true);
+  });
+
+  it('allows the Teams online-meeting recording proxy to use session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/recordings/artifact-123')).toBe(true);
   });
 
   it('allows public appointment calendar downloads from email links', () => {

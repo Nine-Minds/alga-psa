@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // collection phase instead of counting against the 5s timeout of whichever
 // test happens to run first. vi.mock factories below are hoisted above this
 // import by vitest.
-import { getTicketById, getTicketsForList } from './ticketActions';
+import { getTicketById, getTicketsForList, updateTicket } from './ticketActions';
 
 let currentUser: any;
 let currentBundleRules: Array<Record<string, unknown>> = [];
@@ -30,6 +30,13 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
+  tenantDb: (conn: any) => ({
+    table: (table: string) => conn(table),
+    subquery: (table: string) => conn(table),
+    tenantJoin: (query: any) => query.join?.() ?? query,
+    unscoped: (table: string) => conn(table),
+    scoped: (table: string) => ({ builder: conn(table) }),
+  }),
 }));
 
 vi.mock('next/cache', () => ({
@@ -99,7 +106,7 @@ vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageEnteredEvent: vi.fn(() => null),
 }));
 
-vi.mock('../lib/clientPortalVisibility', () => ({
+vi.mock('../lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getClientContactVisibilityContextMock(...args),
 }));
 
@@ -227,7 +234,7 @@ function buildTrx(params: {
   listTickets: Record<string, unknown>[];
   detailTicketsById: Record<string, Record<string, unknown>>;
 }) {
-  return ((table: string) => {
+  const trx = ((table: string) => {
     if (table === 'tickets as t') {
       const whereClauses: Array<Record<string, unknown>> = [];
       const queryBuilder: any = {
@@ -236,6 +243,8 @@ function buildTrx(params: {
         where: vi.fn((...args: any[]) => {
           if (args.length > 0 && args[0] && typeof args[0] === 'object') {
             whereClauses.push(args[0]);
+          } else if (args.length >= 2 && typeof args[0] === 'string') {
+            whereClauses.push({ [args[0]]: args[1] });
           }
           return queryBuilder;
         }),
@@ -277,13 +286,32 @@ function buildTrx(params: {
       };
     }
 
+    if (table === 'statuses') {
+      const builder: any = {
+        select: vi.fn(() => builder),
+        whereRaw: vi.fn(() => builder),
+        andWhere: vi.fn(() => builder),
+      };
+      return builder;
+    }
+
     if (table === 'users') {
       return {
+        orderBy: vi.fn().mockResolvedValue([]),
         where: vi.fn().mockReturnValue({
           select: vi.fn().mockResolvedValue([]),
           orderBy: vi.fn().mockResolvedValue([]),
         }),
       };
+    }
+
+    if (table === 'statuses') {
+      const builder: any = {
+        select: vi.fn(() => builder),
+        whereRaw: vi.fn(() => builder),
+        andWhere: vi.fn(() => builder),
+      };
+      return builder;
     }
 
     if (table === 'ticket_resources') {
@@ -301,6 +329,8 @@ function buildTrx(params: {
 
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
+  trx.raw = vi.fn((value: string) => value);
+  return trx;
 }
 
 describe('ticket authorization narrowing for migrated list/detail paths', () => {
@@ -356,7 +386,9 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     const tickets = await getTicketsForList({ boardFilterState: 'all' } as any);
     expect(tickets.map((ticket) => ticket.ticket_id)).toEqual(['ticket-allow']);
 
-    await expect(getTicketById('ticket-deny-board')).rejects.toThrow('Failed to fetch ticket');
+    await expect(getTicketById('ticket-deny-board')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot view ticket',
+    });
     const allowed = await getTicketById('ticket-allow');
     expect(allowed.ticket_id).toBe('ticket-allow');
   });
@@ -400,8 +432,12 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     const tickets = await getTicketsForList({ boardFilterState: 'all' } as any);
     expect(tickets.map((ticket) => ticket.ticket_id)).toEqual(['ticket-allow']);
 
-    await expect(getTicketById('ticket-deny-client')).rejects.toThrow('Failed to fetch ticket');
-    await expect(getTicketById('ticket-deny-board')).rejects.toThrow('Failed to fetch ticket');
+    await expect(getTicketById('ticket-deny-client')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot view ticket',
+    });
+    await expect(getTicketById('ticket-deny-board')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot view ticket',
+    });
     const allowed = await getTicketById('ticket-allow');
     expect(allowed.ticket_id).toBe('ticket-allow');
   });
@@ -478,5 +514,17 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     }
 
     expect(apiAllowedIds.sort()).toEqual(uiAllowedIds);
+  });
+
+  it('rejects internal notification suppression unless contact suppression is set on the mirror update path', async () => {
+    await expect(
+      updateTicket(
+        'ticket-1',
+        { title: 'Invalid silent update' } as any,
+        { suppressInternalNotifications: true }
+      )
+    ).rejects.toThrow('suppressInternalNotifications requires suppressContactNotifications');
+
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 });

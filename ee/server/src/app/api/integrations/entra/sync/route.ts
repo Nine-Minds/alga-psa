@@ -1,5 +1,5 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../_responses';
-import { requireEntraUiFlagEnabled } from '../_guards';
+import { requireEntraAccess } from '../_guards';
 import {
   startEntraAllTenantsSyncWorkflow,
   startEntraInitialSyncWorkflow,
@@ -11,9 +11,9 @@ export { dynamic, runtime };
 const SUPPORTED_SYNC_SCOPES = new Set(['initial', 'all-tenants', 'single-client']);
 
 export async function POST(request: Request): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('update');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('update');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
   const body = await parseJsonBody(request);
@@ -23,11 +23,11 @@ export async function POST(request: Request): Promise<Response> {
     return badRequest('scope must be one of "initial", "all-tenants", or "single-client"');
   }
 
-  const actor = { userId: flagGate.userId };
+  const actor = { userId: accessGate.userId };
 
   if (scope === 'initial') {
     const result = await startEntraInitialSyncWorkflow({
-      tenantId: flagGate.tenantId,
+      tenantId: accessGate.tenantId,
       actor,
       startImmediately: true,
     });
@@ -45,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (scope === 'all-tenants') {
     const result = await startEntraAllTenantsSyncWorkflow({
-      tenantId: flagGate.tenantId,
+      tenantId: accessGate.tenantId,
       actor,
       trigger: 'manual',
     });
@@ -68,7 +68,7 @@ export async function POST(request: Request): Promise<Response> {
     return badRequest('single-client scope requires clientId and managedTenantId');
   }
   const result = await startEntraTenantSyncWorkflow({
-    tenantId: flagGate.tenantId,
+    tenantId: accessGate.tenantId,
     managedTenantId,
     clientId,
     actor,

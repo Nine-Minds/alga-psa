@@ -10,6 +10,10 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
+  tenantDb: () => ({
+    table: vi.fn(),
+    tenantJoin: vi.fn(),
+  }),
   withTransaction: vi.fn(),
 }));
 
@@ -34,7 +38,8 @@ describe('queryActions contact read permissions', () => {
     expect(hasPermissionAsyncMock).toHaveBeenCalledWith(
       { user_id: 'user-1', user_type: 'internal' },
       'contact',
-      'read'
+      'read',
+      undefined
     );
   });
 
@@ -50,7 +55,8 @@ describe('queryActions contact read permissions', () => {
     expect(hasPermissionAsyncMock).toHaveBeenCalledWith(
       { user_id: 'user-1', user_type: 'internal' },
       'contact',
-      'read'
+      'read',
+      undefined
     );
   });
 });

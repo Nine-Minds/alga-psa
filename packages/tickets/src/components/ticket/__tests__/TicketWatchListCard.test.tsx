@@ -9,6 +9,11 @@ import type { IContact, IUser } from '@alga-psa/types';
 import TicketWatchListCard from '../TicketWatchListCard';
 import { setTicketWatchListOnAttributes, type TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 
+// The server-suite setup stubs this hook with empty automationIdProps, which
+// strips data-automation-id off controls — these tests locate the quick-add
+// buttons by that attribute. No-op under this package's own config.
+vi.unmock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister');
+
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false, loading: false, error: null }),
 }));

@@ -59,7 +59,7 @@ describe('app-wide search hash-anchor contracts', () => {
   });
 
   it('T164 ticket-comment search results link to the ticket comment hash highlight target', () => {
-    const indexerSource = readRepoFile('server/src/lib/search/indexers/ticket_comment.ts');
+    const indexerSource = readRepoFile('packages/search/src/indexers/ticket_comment.ts');
     const commentItemSource = readRepoFile('packages/tickets/src/components/ticket/CommentItem.tsx');
 
     expect(indexerSource).toContain('url: `/msp/tickets/${row.ticket_id}#comment-${row.comment_id}`');

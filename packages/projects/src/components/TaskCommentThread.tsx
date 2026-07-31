@@ -16,6 +16,20 @@ import { useTranslation } from 'react-i18next';
 import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
 import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const showReturnedActionError = (result: unknown): boolean => {
+  if (isActionMessageError(result) || isActionPermissionError(result)) {
+    toast.error(getErrorMessage(result));
+    return true;
+  }
+  return false;
+};
 
 interface TaskCommentThreadProps {
   taskId: string;
@@ -43,6 +57,9 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     try {
       setIsLoading(true);
       const fetchedComments = await getTaskComments(taskId);
+      if (showReturnedActionError(fetchedComments)) {
+        return;
+      }
       setComments(fetchedComments);
       onCommentCountChange?.(taskId, fetchedComments.length);
       // Load reactions for fetched comments
@@ -166,11 +183,14 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     parentCommentId: string;
     content: any[];
   }) => {
-    await createTaskComment({
+    const result = await createTaskComment({
       taskId,
       note: JSON.stringify(params.content),
       parent_comment_id: params.parentCommentId,
     });
+    if (showReturnedActionError(result)) {
+      return;
+    }
     await loadComments();
     setOpenPanelCommentId(null);
   };

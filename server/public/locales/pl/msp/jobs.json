@@ -21,7 +21,7 @@
       "status": "Status",
       "duration": "Czas trwania",
       "started": "Rozpoczęło się",
-      "completed": "Zakończony"
+      "completed": "Zakończone"
     },
     "time": {
       "justNow": "Właśnie",
@@ -45,7 +45,7 @@
         "status": "Status",
         "duration": "Czas trwania",
         "started": "Rozpoczęto",
-        "completed": "Zakończono"
+        "completed": "Zakończone"
       },
       "optionsDialog": {
         "title": "Opcje drukowania",
@@ -63,9 +63,12 @@
       "pending": "Aż do",
       "processing": "Przetwarzanie",
       "pgboss": "Szef PG",
-      "temporal": "Czasowy"
+      "temporal": "Czasowy",
+      "queued": "W kolejce",
+      "running": "Uruchomione"
     },
-    "successRate": "{{count}}% wskaźnika sukcesu"
+    "successRate": "{{count}}% wskaźnika sukcesu",
+    "successRateNone": "Brak zakończonych zadań"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,38 @@
   "actions": {
     "print": "Drukuj",
     "printOptions": "Opcje drukowania"
+  },
+  "clearHistory": {
+    "button": "Wyczyść historię",
+    "dialog": {
+      "title": "Wyczyść historię zadań",
+      "warning": "Spowoduje to trwałe usunięcie historii zadań z tej listy i nie można tego cofnąć. Nie zatrzymuje ani nie anuluje zadań, które są nadal uruchomione.",
+      "daysLabel": "Wiek w dniach",
+      "daysError": "Wprowadź całkowitą liczbę dni (1 lub więcej).",
+      "cancel": "Anuluj",
+      "clearing": "Czyszczenie…",
+      "confirm": "Wyczyść historię"
+    },
+    "scope": {
+      "finished": {
+        "label": "Tylko zakończone",
+        "description": "Zadania zakończone i nieudane. Zadania oczekujące, w kolejce i uruchomione są zachowywane."
+      },
+      "all": {
+        "label": "Wszystkie statusy",
+        "description": "Wszystkie zadania, w tym oczekujące, w kolejce i nadal uruchomione."
+      }
+    },
+    "age": {
+      "toggle": "Usuń tylko zadania starsze niż ustalony wiek"
+    },
+    "toast": {
+      "none": "Brak pasujących zadań do wyczyszczenia.",
+      "error": "Nie udało się wyczyścić historii zadań. Spróbuj ponownie.",
+      "success_one": "Usunięto {{count}} zadanie z historii.",
+      "success_few": "Usunięto {{count}} zadania z historii.",
+      "success_many": "Usunięto {{count}} zadań z historii.",
+      "success_other": "Usunięto {{count}} zadania z historii."
+    }
   }
 }

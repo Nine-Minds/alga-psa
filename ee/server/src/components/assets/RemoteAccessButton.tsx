@@ -65,14 +65,15 @@ export function RemoteAccessButton({
         const result = await getNinjaOneRemoteAccessUrl(asset.asset_id);
 
         if (!result.success || !result.url) {
-          throw new Error(result.error || t('remoteAccess.errors.urlFetchFailed'));
+          setError(result.error || t('remoteAccess.errors.urlFetchFailed'));
+          return;
         }
 
         // Open in new window
         window.open(result.url, '_blank', 'noopener,noreferrer');
       } catch (err) {
-        const message = err instanceof Error ? err.message : t('remoteAccess.errors.initiateFailed');
-        setError(message);
+        console.error('Remote access initiation failed:', err);
+        setError(t('remoteAccess.errors.initiateFailed'));
       } finally {
         setActiveConnection(null);
       }

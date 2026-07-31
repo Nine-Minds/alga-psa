@@ -112,7 +112,7 @@ export class SMTPEmailProvider implements IEmailProvider {
         success: false,
         providerId: this.providerId,
         providerType: this.providerType,
-        error: error.message,
+        error: 'SMTP send failed. Check the SMTP host, port, credentials, and TLS settings.',
         sentAt: new Date(),
         metadata: {
           errorCode: error.code,

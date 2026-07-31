@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import TimeEntryEditForm from './TimeEntryEditForm';
 import { ITimeEntryWithNew, TimeInputs, Service } from './types';
-import { TaxRegion } from '@alga-psa/types';
+import { ITimePeriodView, TaxRegion } from '@alga-psa/types';
 
 interface SingleTimeEntryFormProps {
   id: string;
@@ -18,6 +18,7 @@ interface SingleTimeEntryFormProps {
   onDelete: (index: number) => Promise<void>;
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
+  timePeriod?: ITimePeriodView;
   date?: Date;
   isNewEntry?: boolean;
 }
@@ -35,6 +36,7 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
   onDelete,
   onUpdateEntry,
   onUpdateTimeInputs,
+  timePeriod,
   date,
   isNewEntry = false
 }: SingleTimeEntryFormProps) {
@@ -54,6 +56,7 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
         onUpdateEntry={onUpdateEntry}
         onUpdateTimeInputs={onUpdateTimeInputs}
         lastNoteInputRef={lastNoteInputRef}
+        timePeriod={timePeriod}
         date={date}
         isNewEntry={isNewEntry}
       />

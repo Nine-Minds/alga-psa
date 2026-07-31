@@ -18,10 +18,15 @@ import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
-import { findTagsByEntityId } from '@alga-psa/tags/actions';
+import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -36,6 +41,10 @@ interface ProjectDetailsEditProps {
   onSave: (updatedProject: IProject) => void;
   onCancel: () => void;
   onChange?: () => void;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
@@ -88,7 +97,12 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           return;
         }
         setStatuses(projectStatusesResult);
-        setProjectTags(projectTagsData);
+        if (isTagActionError(projectTagsData)) {
+          console.error('Error fetching project tags:', projectTagsData);
+          setProjectTags([]);
+        } else {
+          setProjectTags(projectTagsData);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -161,8 +175,8 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         budgeted_hours: budgetedHours,
         client_portal_config: project.client_portal_config,
       });
-      if (isActionPermissionError(updatedProject)) {
-        handleError(updatedProject.permissionError);
+      if (isReturnedActionError(updatedProject)) {
+        handleError(getErrorMessage(updatedProject));
         return;
       }
 
@@ -170,6 +184,11 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       console.log('Updated project with budgeted hours:', budgetedHours);
 
       toast.success(t('projectEdit.updatedSuccess', 'Project updated successfully'));
+      if ((updatedProject.products_moved_to_hold ?? 0) > 0) {
+        toast(t('materials.productsMovedToHoldOnClose', '{{count}} linked product(s) moved to On hold because their billing event was canceled.', {
+          count: updatedProject.products_moved_to_hold,
+        }), { icon: '⚠️' });
+      }
       onSave(updatedProject);
     } catch (error) {
       const errorMessage = error instanceof Error

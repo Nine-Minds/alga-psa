@@ -97,6 +97,7 @@ vi.mock('@alga-psa/tags/actions', () => ({
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: () => getCurrentUserMock(),
   getUserAvatarUrlsBatchAction: vi.fn(),
+  getCurrentUserAvatarUrl: vi.fn().mockResolvedValue(null),
   searchUsersForMentions: vi.fn().mockResolvedValue([])
 }));
 
@@ -132,6 +133,14 @@ vi.mock('../../actions/projectActions', () => ({
 
 vi.mock('@alga-psa/ui', () => ({
   useDrawer: () => ({ openDrawer: vi.fn(), closeDrawer: vi.fn() })
+}));
+
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: () => ({
+    enabled: false,
+    loading: false,
+    error: null,
+  }),
 }));
 
 vi.mock('../TaskTicketLinks', () => ({

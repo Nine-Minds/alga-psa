@@ -8,11 +8,12 @@ import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Lock } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { handleError } from "@alga-psa/ui/lib/errorHandling";
+import { getErrorMessage, handleError } from "@alga-psa/ui/lib/errorHandling";
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
+  isNotificationActionError,
   updateCategoryAction,
   updateSubtypeAction
 } from "../../actions";
@@ -30,6 +31,7 @@ import {
 } from "@alga-psa/ui/components/DropdownMenu";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { useRegisterUnsavedChanges } from "@alga-psa/ui";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 // Types for tracking pending changes
 interface PendingCategoryChange {
@@ -60,6 +62,7 @@ interface NotificationRow {
 }
 
 export function NotificationCategories() {
+  const { t } = useTranslation('msp/settings');
   const [categories, setCategories] = useState<NotificationCategory[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,11 +72,12 @@ export function NotificationCategories() {
         const currentCategories = await getCategoriesAction();
         setCategories(currentCategories);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load categories');
+        console.error('Failed to load notification categories:', err);
+        setError(t('notifications.categoriesUi.errors.loadCategories', 'Failed to load categories'));
       }
     }
     init();
-  }, []);
+  }, [t]);
 
   if (error) {
     return <div className="text-red-500">{error}</div>;
@@ -84,7 +88,7 @@ export function NotificationCategories() {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
           layout="stacked"
-          text="Loading notification categories..."
+          text={t('notifications.categoriesUi.loading', 'Loading notification categories...')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -99,6 +103,7 @@ function NotificationCategoriesContent({
 }: {
   initialCategories: NotificationCategory[];
 }) {
+  const { t } = useTranslation('msp/settings');
   // Current state (what's displayed)
   const [categories, setCategories] = useState(initialCategories);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
@@ -148,11 +153,16 @@ function NotificationCategoriesContent({
 
     setLoadingSubtypes(prev => new Set(prev).add(categoryId));
     try {
-      const { subtypes } = await getCategoryWithSubtypesAction(categoryId);
+      const result = await getCategoryWithSubtypesAction(categoryId);
+      if (isNotificationActionError(result)) {
+        handleError(result, t('notifications.categoriesUi.errors.loadSubtypes', 'Failed to load notification subtypes'));
+        return;
+      }
+      const { subtypes } = result;
       setSubtypesByCategory(prev => ({ ...prev, [categoryId]: subtypes }));
       setOriginalSubtypes(prev => ({ ...prev, [categoryId]: subtypes }));
     } catch (error) {
-      handleError(error, "Failed to load notification subtypes");
+      handleError(error, t('notifications.categoriesUi.errors.loadSubtypes', 'Failed to load notification subtypes'));
     } finally {
       setLoadingSubtypes(prev => {
         const next = new Set(prev);
@@ -160,7 +170,7 @@ function NotificationCategoriesContent({
         return next;
       });
     }
-  }, [subtypesByCategory]);
+  }, [subtypesByCategory, t]);
 
   // Toggle category expansion
   const handleToggleExpand = async (categoryId: number) => {
@@ -254,7 +264,12 @@ function NotificationCategoriesContent({
         })
       );
 
-      await Promise.all([...categoryPromises, ...subtypePromises]);
+      const results = await Promise.all([...categoryPromises, ...subtypePromises]);
+      const firstError = results.find(isNotificationActionError);
+      if (firstError) {
+        toast.error(getErrorMessage(firstError));
+        return;
+      }
 
       // Update original state to current state
       setOriginalCategories([...categories]);
@@ -264,9 +279,9 @@ function NotificationCategoriesContent({
       setPendingCategoryChanges(new Map());
       setPendingSubtypeChanges(new Map());
 
-      toast.success("Notification settings saved successfully");
+      toast.success(t('notifications.categoriesUi.toasts.saved', 'Notification settings saved successfully'));
     } catch (error) {
-      handleError(error, "Failed to save notification settings");
+      handleError(error, t('notifications.categoriesUi.errors.save', 'Failed to save notification settings'));
     } finally {
       setIsSaving(false);
     }
@@ -283,7 +298,7 @@ function NotificationCategoriesContent({
     setPendingSubtypeChanges(new Map());
 
     setShowDiscardDialog(false);
-    toast.success("Changes discarded");
+    toast.success(t('notifications.categoriesUi.toasts.discarded', 'Changes discarded'));
   };
 
   // Check if a row has pending changes
@@ -337,7 +352,7 @@ function NotificationCategoriesContent({
 
   const columns: ColumnDefinition<NotificationRow>[] = [
     {
-      title: 'Name',
+      title: t('notifications.categoriesUi.columns.name', 'Name'),
       dataIndex: 'name',
       render: (value: string, record: NotificationRow) => {
         if (record.isCategory) {
@@ -362,7 +377,7 @@ function NotificationCategoriesContent({
                 {rowHasChanges(record) && <span className="ml-1 text-xs">*</span>}
               </span>
               {record.is_locked && (
-                <span className="ml-2 flex items-center text-gray-400" title="This category cannot be disabled">
+                <span className="ml-2 flex items-center text-gray-400" title={t('notifications.categoriesUi.tooltips.cannotDisable', 'This category cannot be disabled')}>
                   <Lock className="h-3.5 w-3.5" />
                 </span>
               )}
@@ -382,21 +397,21 @@ function NotificationCategoriesContent({
       },
     },
     {
-      title: 'Description',
+      title: t('notifications.categoriesUi.columns.description', 'Description'),
       dataIndex: 'description',
       render: (value: string | null) => (
         <span className="text-gray-600">{value || '-'}</span>
       ),
     },
     {
-      title: 'Enabled',
+      title: t('notifications.categoriesUi.columns.enabled', 'Enabled'),
       dataIndex: 'is_enabled',
       render: (value: boolean, record: NotificationRow) => {
         if (record.isCategory) {
           const category = categories.find(c => c.id === record.originalId)!;
           const isLocked = record.is_locked;
           return (
-            <div onClick={(e) => e.stopPropagation()} title={isLocked ? "This category cannot be disabled" : undefined}>
+            <div onClick={(e) => e.stopPropagation()} title={isLocked ? t('notifications.categoriesUi.tooltips.cannotDisable', 'This category cannot be disabled') : undefined}>
               <Switch
                 id={`category-enabled-${record.id}`}
                 checked={isLocked ? true : value}
@@ -423,14 +438,14 @@ function NotificationCategoriesContent({
       },
     },
     {
-      title: 'Default for Users',
+      title: t('notifications.categoriesUi.columns.defaultForUsers', 'Default for Users'),
       dataIndex: 'is_default_enabled',
       render: (value: boolean, record: NotificationRow) => {
         if (record.isCategory) {
           const category = categories.find(c => c.id === record.originalId)!;
           const isLocked = record.is_locked;
           return (
-            <div onClick={(e) => e.stopPropagation()} title={isLocked ? "This category cannot be modified" : undefined}>
+            <div onClick={(e) => e.stopPropagation()} title={isLocked ? t('notifications.categoriesUi.tooltips.cannotModify', 'This category cannot be modified') : undefined}>
               <Switch
                 id={`category-default-${record.id}`}
                 checked={isLocked ? true : value}
@@ -457,7 +472,7 @@ function NotificationCategoriesContent({
       },
     },
     {
-      title: 'Actions',
+      title: t('notifications.categoriesUi.columns.actions', 'Actions'),
       dataIndex: 'id',
       width: '10%',
       render: (value: string, record: NotificationRow) => {
@@ -485,7 +500,7 @@ function NotificationCategoriesContent({
                     }}
                     disabled={!category.is_enabled}
                   >
-                    Enable all subtypes
+                    {t('notifications.categoriesUi.actions.enableAllSubtypes', 'Enable all subtypes')}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     id={`disable-all-subtypes-${value}`}
@@ -499,7 +514,7 @@ function NotificationCategoriesContent({
                       });
                     }}
                   >
-                    Disable all subtypes
+                    {t('notifications.categoriesUi.actions.disableAllSubtypes', 'Disable all subtypes')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -524,13 +539,13 @@ function NotificationCategoriesContent({
                     onClick={() => handleToggleSubtype(subtype, 'is_enabled', record.categoryId!)}
                     disabled={!category?.is_enabled}
                   >
-                    {subtype.is_enabled ? 'Disable' : 'Enable'}
+                    {subtype.is_enabled ? t('notifications.categoriesUi.actions.disable', 'Disable') : t('notifications.categoriesUi.actions.enable', 'Enable')}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     id={`toggle-subtype-default-${value}`}
                     onClick={() => handleToggleSubtype(subtype, 'is_default_enabled', record.categoryId!)}
                   >
-                    {subtype.is_default_enabled ? 'Disable default' : 'Enable default'}
+                    {subtype.is_default_enabled ? t('notifications.categoriesUi.actions.disableDefault', 'Disable default') : t('notifications.categoriesUi.actions.enableDefault', 'Enable default')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -546,11 +561,11 @@ function NotificationCategoriesContent({
       <div className="flex justify-between items-start">
         <div>
           <p className="text-sm text-gray-600">
-            Control which email notification types are available and set defaults for new users.
+            {t('notifications.categoriesUi.help.intro', 'Control which email notification types are available and set defaults for new users.')}
           </p>
           <ul className="text-sm text-gray-600 mt-2 ml-4 list-disc space-y-1">
-            <li><strong>Enabled:</strong> Controls whether this notification type is active</li>
-            <li><strong>Default for Users:</strong> Sets whether new users have this notification enabled by default</li>
+            <li><strong>{t('notifications.categoriesUi.help.enabledLabel', 'Enabled:')}</strong> {t('notifications.categoriesUi.help.enabledDescription', 'Controls whether this notification type is active')}</li>
+            <li><strong>{t('notifications.categoriesUi.help.defaultLabel', 'Default for Users:')}</strong> {t('notifications.categoriesUi.help.defaultDescription', 'Sets whether new users have this notification enabled by default')}</li>
           </ul>
         </div>
         {hasUnsavedChanges && (
@@ -561,14 +576,14 @@ function NotificationCategoriesContent({
               onClick={() => setShowDiscardDialog(true)}
               disabled={isSaving}
             >
-              Discard Changes
+              {t('notifications.categoriesUi.actions.discardChanges', 'Discard Changes')}
             </Button>
             <Button
               id="save-notification-changes"
               onClick={handleSave}
               disabled={isSaving}
             >
-              {isSaving ? "Saving..." : "Save Changes"}
+              {isSaving ? t('notifications.categoriesUi.actions.saving', 'Saving...') : t('notifications.categoriesUi.actions.saveChanges', 'Save Changes')}
             </Button>
           </div>
         )}
@@ -577,7 +592,7 @@ function NotificationCategoriesContent({
       {hasUnsavedChanges && (
         <Alert variant="info">
           <AlertDescription>
-            You have unsaved changes. Click "Save Changes" to apply them.
+            {t('notifications.categoriesUi.unsavedChangesAlert', 'You have unsaved changes. Click "Save Changes" to apply them.')}
           </AlertDescription>
         </Alert>
       )}
@@ -605,10 +620,10 @@ function NotificationCategoriesContent({
         isOpen={showDiscardDialog}
         onClose={() => setShowDiscardDialog(false)}
         onConfirm={handleDiscard}
-        title="Discard Changes?"
-        message="Are you sure you want to discard all unsaved changes? This action cannot be undone."
-        confirmLabel="Discard Changes"
-        cancelLabel="Cancel"
+        title={t('notifications.categoriesUi.discardDialog.title', 'Discard Changes?')}
+        message={t('notifications.categoriesUi.discardDialog.message', 'Are you sure you want to discard all unsaved changes? This action cannot be undone.')}
+        confirmLabel={t('notifications.categoriesUi.actions.discardChanges', 'Discard Changes')}
+        cancelLabel={t('notifications.categoriesUi.actions.cancel', 'Cancel')}
       />
     </div>
   );

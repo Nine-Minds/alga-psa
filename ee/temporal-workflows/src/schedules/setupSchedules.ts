@@ -1,15 +1,26 @@
 import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { ADD_ONS } from '@alga-psa/types';
+import { TIER_FEATURES, tierHasFeature } from '@alga-psa/types';
+import { resolveTenantTier } from '@alga-psa/licensing';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
   applianceCheckInWorkflow,
   calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
+  emailPollingReconcileWorkflow,
   entraAllTenantsSyncWorkflow,
+  maintenanceJobWorkflow,
+  marketingFanoutWorkflow,
   premiumTrialExpiryWorkflow,
 } from '../workflows';
+import {
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  type MarketingJobName,
+} from '@alga-psa/marketing/lib/marketingJobContract';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -31,6 +42,34 @@ const logger = createLogger({
 const EMAIL_WORKFLOW_TASK_QUEUE = 'email-domain-workflows';
 const ENTRA_WORKFLOW_TASK_QUEUE = 'tenant-workflows';
 const ENTRA_SCHEDULE_ID_PREFIX = 'entra-all-tenants-sync-schedule';
+const ENTRA_SCHEDULE_DISCOVERY_TENANT = '__entra_schedule_config_discovery__';
+const MARKETING_WORKFLOW_TASK_QUEUE = 'tenant-workflows';
+const LEGACY_MARKETING_SCHEDULE_PREFIXES = [
+  `${MARKETING_FLIP_DUE_POSTS_JOB}:`,
+  `${MARKETING_EXPIRE_STALE_TARGETS_JOB}:`,
+  `${MARKETING_SEND_SEQUENCE_STEPS_JOB}:`,
+] as const;
+const MARKETING_FANOUT_SCHEDULES: Array<{
+  scheduleId: string;
+  jobName: MarketingJobName;
+  cron: string;
+}> = [
+  {
+    scheduleId: 'marketing-fanout:flip-due-posts',
+    jobName: MARKETING_FLIP_DUE_POSTS_JOB,
+    cron: '*/5 * * * *',
+  },
+  {
+    scheduleId: 'marketing-fanout:send-sequence-steps',
+    jobName: MARKETING_SEND_SEQUENCE_STEPS_JOB,
+    cron: '*/5 * * * *',
+  },
+  {
+    scheduleId: 'marketing-fanout:expire-stale-targets',
+    jobName: MARKETING_EXPIRE_STALE_TARGETS_JOB,
+    cron: '11 * * * *',
+  },
+];
 // Note: RMM alert reconciliation and Huntress incident polling are NOT set up
 // here. They run as per-integration recurring jobs on the job-runner
 // abstraction (Temporal Schedules in EE via TemporalJobRunner), converged by
@@ -41,7 +80,7 @@ interface EntraScheduleConfigRow {
   syncEnabled: boolean;
   syncIntervalMinutes: number;
   hasActiveConnection: boolean;
-  hasEnterpriseAddOn: boolean;
+  hasEntraTier: boolean;
 }
 
 interface NinjaOneBackfillRow {
@@ -69,6 +108,11 @@ function normalizeIntervalMinutes(rawValue: unknown): number {
   return Math.max(5, Math.floor(parsed));
 }
 
+function microsoftEmailPollingIntervalMinutes(): number {
+  const parsed = Number(process.env.MICROSOFT_EMAIL_POLLING_INTERVAL_MINUTES || 3);
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : 3;
+}
+
 function parseSettings(value: unknown): Record<string, unknown> {
   if (!value) return {};
   if (typeof value === 'object') return value as Record<string, unknown>;
@@ -87,7 +131,11 @@ function parseSettings(value: unknown): Record<string, unknown> {
 
 async function loadNinjaOneBackfillCandidates(): Promise<NinjaOneBackfillRow[]> {
   const knex = await getAdminConnection();
-  const rows = await knex('rmm_integrations')
+  const rows = await tenantDb(knex, '__ninjaone_backfill_integration_discovery__')
+    .unscoped(
+      'rmm_integrations',
+      'NinjaOne proactive refresh backfill enumerates active integrations before tenant context is known'
+    )
     .where({ provider: 'ninjaone', is_active: true })
     .select([
       'tenant as tenantId',
@@ -187,45 +235,104 @@ async function upsertSchedule(client: Client, scheduleId: string, input: any): P
   }
 }
 
-async function deleteScheduleIfExists(client: Client, scheduleId: string): Promise<void> {
+async function deleteScheduleIfExists(client: Client, scheduleId: string): Promise<boolean> {
   try {
     const handle = client.schedule.getHandle(scheduleId);
     await handle.delete();
     logger.info(`Deleted schedule: ${scheduleId}`);
+    return true;
   } catch (error: any) {
     if (isNotFoundError(error)) {
-      return;
+      return true;
     }
     logger.warn(`Failed to delete schedule ${scheduleId}: ${error?.message || 'Unknown error'}`);
+    return false;
   }
+}
+
+async function deleteLegacyMarketingSchedules(client: Client): Promise<void> {
+  let scanned = 0;
+  let matched = 0;
+  let deleted = 0;
+  let failed = 0;
+
+  for await (const schedule of client.schedule.list()) {
+    scanned++;
+    const scheduleId = schedule.scheduleId;
+    if (!LEGACY_MARKETING_SCHEDULE_PREFIXES.some((prefix) => scheduleId.startsWith(prefix))) {
+      continue;
+    }
+
+    matched++;
+    if (await deleteScheduleIfExists(client, scheduleId)) {
+      deleted++;
+    } else {
+      failed++;
+    }
+  }
+
+  logger.info('Legacy marketing schedule cleanup completed', {
+    scanned,
+    matched,
+    deleted,
+    failed,
+  });
 }
 
 async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
   const knex = await getAdminConnection();
-  const rows = await knex('entra_sync_settings as s')
-    .leftJoin('entra_partner_connections as c', function joinConnection() {
-      this.on('s.tenant', '=', 'c.tenant').andOn(knex.raw('c.is_active = true'));
-    })
-    .leftJoin('tenant_addons as a', function joinEnterpriseAddOn() {
-      this.on('s.tenant', '=', 'a.tenant')
-        .andOn(knex.raw('a.addon_key = ?', [ADD_ONS.ENTERPRISE]))
-        .andOn(knex.raw('(a.expires_at IS NULL OR a.expires_at > now())'));
-    })
+  const db = tenantDb(knex, ENTRA_SCHEDULE_DISCOVERY_TENANT);
+  const query = db
+    .unscoped(
+      'entra_sync_settings as s',
+      'Temporal schedule setup enumerates Entra sync settings across tenants'
+    );
+
+  db.tenantJoin(query, 'entra_partner_connections as c', 's.tenant', 'c.tenant', {
+    type: 'left',
+    on: (join) => {
+      join.andOn(knex.raw('c.is_active = true'));
+    },
+  });
+  const rows = await query
+    .join('tenants as t', 's.tenant', 't.tenant')
+    .whereNull('t.suspended_at')
     .select([
       's.tenant as tenantId',
       's.sync_enabled as syncEnabled',
       's.sync_interval_minutes as syncIntervalMinutes',
       'c.connection_id as activeConnectionId',
-      'a.addon_key as activeEnterpriseAddOn',
     ]);
 
-  return rows.map((row: any) => ({
-    tenantId: String(row.tenantId),
-    syncEnabled: Boolean(row.syncEnabled),
-    syncIntervalMinutes: normalizeIntervalMinutes(row.syncIntervalMinutes),
-    hasActiveConnection: Boolean(row.activeConnectionId),
-    hasEnterpriseAddOn: Boolean(row.activeEnterpriseAddOn),
+  // Entra sync is tier-gated (Pro+), matching requireEntraAccess in the API
+  // guard. Resolving the tier here rather than joining an add-on table is the
+  // whole point: the previous add-on join silently deleted the schedules of
+  // Pro tenants that the UI and the API both let sync.
+  const configs = await Promise.all(rows.map(async (row: any) => {
+    const tenantId = String(row.tenantId);
+    let hasEntraTier: boolean;
+    try {
+      hasEntraTier = tierHasFeature(await resolveTenantTier(tenantId), TIER_FEATURES.ENTRA_SYNC);
+    } catch (error: any) {
+      // A transient tier lookup failure must not delete a working schedule, so
+      // drop the tenant from this pass entirely and retry on the next boot.
+      logger.warn(
+        `Skipping Entra schedule reconciliation for tenant: ${error?.message || 'unknown error'}`,
+        { tenantId }
+      );
+      return null;
+    }
+
+    return {
+      tenantId,
+      syncEnabled: Boolean(row.syncEnabled),
+      syncIntervalMinutes: normalizeIntervalMinutes(row.syncIntervalMinutes),
+      hasActiveConnection: Boolean(row.activeConnectionId),
+      hasEntraTier,
+    };
   }));
+
+  return configs.filter((config): config is EntraScheduleConfigRow => config !== null);
 }
 
 export async function setupSchedules() {
@@ -248,6 +355,24 @@ export async function setupSchedules() {
         type: 'startWorkflow',
         workflowType: emailWebhookMaintenanceWorkflow,
         args: [{ lookAheadMinutes: 1440 }],
+        taskQueue: EMAIL_WORKFLOW_TASK_QUEUE,
+        workflowExecutionTimeout: '10m',
+      },
+      policies: {
+        overlap: ScheduleOverlapPolicy.SKIP,
+        catchupWindow: '1m',
+      },
+    });
+
+    const pollingScheduleId = 'email-polling-reconcile-schedule';
+    await upsertSchedule(client, pollingScheduleId, {
+      spec: {
+        intervals: [{ every: `${microsoftEmailPollingIntervalMinutes()}m` }],
+      },
+      action: {
+        type: 'startWorkflow',
+        workflowType: emailPollingReconcileWorkflow,
+        args: [{}],
         taskQueue: EMAIL_WORKFLOW_TASK_QUEUE,
         workflowExecutionTimeout: '10m',
       },
@@ -333,7 +458,7 @@ export async function setupSchedules() {
     const entraConfigs = await loadEntraScheduleConfigs();
     for (const config of entraConfigs) {
       const tenantScheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${config.tenantId}`;
-      if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEnterpriseAddOn) {
+      if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEntraTier) {
         await deleteScheduleIfExists(client, tenantScheduleId);
         continue;
       }
@@ -360,6 +485,69 @@ export async function setupSchedules() {
     }
 
     await backfillNinjaOneProactiveSchedules();
+
+    // Maintenance jobs that were per-tenant pg-boss crons in CE run on EE as one
+    // global Temporal Schedule each, fanning out across tenants inside the
+    // activity. overlap=SKIP + a short catchup window prevent run pile-up and
+    // post-downtime replay storms; crons keep their original (UTC) cadence.
+    const MAINTENANCE_FANOUT_SCHEDULES: Array<{ jobName: string; cron: string }> = [
+      { jobName: 'expired-credits', cron: '0 1 * * *' },
+      { jobName: 'cleanup-temporary-workflow-forms', cron: '0 2 * * *' },
+      { jobName: 'reconcile-bucket-usage', cron: '0 3 * * *' },
+      { jobName: 'process-renewal-queue', cron: '0 5 * * *' },
+      { jobName: 'search:reconcile', cron: '0 6 * * *' },
+      { jobName: 'expiring-credits-notification', cron: '0 9 * * *' },
+      { jobName: 'auto-close-tickets', cron: '*/15 * * * *' },
+      { jobName: 'cleanup-webhook-deliveries', cron: '*/15 * * * *' },
+      { jobName: 'verify-google-calendar-pubsub', cron: '15 * * * *' },
+      { jobName: 'renew-google-gmail-watch', cron: '*/30 * * * *' },
+      { jobName: 'renew-teams-meeting-artifact-subscriptions', cron: '*/30 * * * *' },
+      { jobName: 'sweep-teams-online-meetings', cron: '*/10 * * * *' },
+      { jobName: 'cleanup-ai-session-keys', cron: '*/10 * * * *' },
+      { jobName: 'workflow-quota-resume-scan', cron: '*/5 * * * *' },
+    ];
+
+    for (const { jobName, cron } of MAINTENANCE_FANOUT_SCHEDULES) {
+      await upsertSchedule(client, `maintenance-fanout:${jobName}`, {
+        spec: {
+          cronExpressions: [cron],
+        },
+        action: {
+          type: 'startWorkflow',
+          workflowType: maintenanceJobWorkflow,
+          args: [{ jobName }],
+          taskQueue: ENTRA_WORKFLOW_TASK_QUEUE,
+          workflowExecutionTimeout: '20m',
+        },
+        policies: {
+          overlap: ScheduleOverlapPolicy.SKIP,
+          catchupWindow: '1m',
+        },
+      });
+    }
+
+    for (const { scheduleId: marketingScheduleId, jobName, cron } of MARKETING_FANOUT_SCHEDULES) {
+      await upsertSchedule(client, marketingScheduleId, {
+        spec: {
+          cronExpressions: [cron],
+        },
+        action: {
+          type: 'startWorkflow',
+          workflowType: marketingFanoutWorkflow,
+          args: [{ jobName }],
+          taskQueue: MARKETING_WORKFLOW_TASK_QUEUE,
+          workflowExecutionTimeout: '1h',
+        },
+        policies: {
+          overlap: ScheduleOverlapPolicy.SKIP,
+          catchupWindow: '1m',
+        },
+      });
+    }
+
+    // Cut over only after all global schedules converge. Listing by exact
+    // legacy prefixes cannot match the new marketing-fanout:* IDs.
+    await deleteLegacyMarketingSchedules(client);
 
   } catch (error) {
     logger.error('Failed to connect to Temporal for schedule setup', error);

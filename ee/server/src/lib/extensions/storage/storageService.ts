@@ -3,7 +3,7 @@
  * 
  * Provides extension data storage with tenant isolation
  */
-import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getRedisClient } from '@/config/redisConfig';
 import { 
@@ -332,6 +332,10 @@ export class ExtensionStorageService implements IExtensionStorageService {
   private getDbKey(key: string): string {
     return this.namespace ? `${this.namespace}:${key}` : key;
   }
+
+  private storageTable(conn: any = this.knex) {
+    return tenantDb(conn, this.tenantId).table('extension_storage');
+  }
   
   /**
    * Get a value from storage
@@ -364,7 +368,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       });
       
       // Get from database with tenant isolation
-      const result = await this.knex('extension_storage')
+      const result = await this.storageTable()
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId,
@@ -445,7 +449,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       this.metrics.dbQueries++;
       
       // Store in database with tenant isolation
-      await this.knex('extension_storage')
+      await this.storageTable()
         .insert({
           extension_id: this.extensionId,
           tenant_id: this.tenantId,
@@ -497,7 +501,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       this.metrics.dbQueries++;
       
       // Delete from database
-      const result = await this.knex('extension_storage')
+      const result = await this.storageTable()
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId,
@@ -547,7 +551,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       this.metrics.cacheMisses++;
       this.metrics.dbQueries++;
       
-      const result = await this.knex('extension_storage')
+      const result = await this.storageTable()
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId,
@@ -584,7 +588,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       
       const dbKeys = keys.map(k => this.getDbKey(k));
       
-      const dbResults = await this.knex('extension_storage')
+      const dbResults = await this.storageTable()
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId
@@ -650,7 +654,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       // Use a transaction for all database operations
       await this.knex.transaction(async (trx: any) => {
         for (const key of keysToStore) {
-          await trx('extension_storage')
+          await this.storageTable(trx)
             .insert({
               extension_id: this.extensionId,
               tenant_id: this.tenantId,
@@ -719,7 +723,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
         params.push(queryPrefix);
       }
       
-      const query = this.knex('extension_storage')
+      const query = this.storageTable()
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId
@@ -763,7 +767,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
       this.metrics.dbQueries++;
       
       // Delete from database
-      const query = this.knex('extension_storage')
+      const query = this.storageTable()
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId
@@ -859,7 +863,7 @@ export class ExtensionStorageService implements IExtensionStorageService {
    */
   private async getCurrentUsage(): Promise<number> {
     try {
-      const result = await this.knex('extension_storage')
+      const result = await this.storageTable()
         .where({
           extension_id: this.extensionId,
           tenant_id: this.tenantId

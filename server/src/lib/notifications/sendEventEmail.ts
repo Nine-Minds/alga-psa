@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/core/logger';
@@ -10,6 +11,7 @@ import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
+import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
@@ -155,7 +157,7 @@ async function persistReplyToken(
       entity_type: payload.projectId ? 'project' : 'ticket',
     };
 
-    await knex('email_reply_tokens')
+    await tenantDb(knex, tenantId).table('email_reply_tokens')
       .insert(record)
       .onConflict(['tenant', 'token'])
       .ignore();
@@ -217,6 +219,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       tenantId: params.tenantId,
       database: knex.client.config.connection.database
     });
+    const db = tenantDb(knex, params.tenantId);
 
     let templateContent;
     let emailSubject = params.subject;
@@ -230,9 +233,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     try {
       // First try to get tenant-specific template in recipient's language
-      let tenantTemplateQuery = knex('tenant_email_templates')
+      let tenantTemplateQuery = db.table('tenant_email_templates')
         .where({
-          tenant: params.tenantId,
           name: params.template,
           language_code: recipientLocale
         })
@@ -249,9 +251,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       // If no template found for recipient's locale, try English fallback
       if (!template && recipientLocale !== 'en') {
         logger.debug('[SendEventEmail] No template found for locale, trying English fallback');
-        tenantTemplateQuery = knex('tenant_email_templates')
+        tenantTemplateQuery = db.table('tenant_email_templates')
           .where({
-            tenant: params.tenantId,
             name: params.template,
             language_code: 'en'
           })
@@ -263,9 +264,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       // If still no template, try without language filter (legacy templates)
       if (!template) {
         logger.debug('[SendEventEmail] No language-specific template, trying legacy template');
-        tenantTemplateQuery = knex('tenant_email_templates')
+        tenantTemplateQuery = db.table('tenant_email_templates')
           .where({
-            tenant: params.tenantId,
             name: params.template
           })
           .whereNull('language_code')
@@ -290,7 +290,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         logger.debug('[SendEventEmail] Tenant template not found, falling back to system template');
 
         // Fall back to system template in recipient's language
-        let systemTemplateQuery = knex('system_email_templates')
+        let systemTemplateQuery = db.table('system_email_templates')
           .where({
             name: params.template,
             language_code: recipientLocale
@@ -308,7 +308,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         // If no template found for recipient's locale, try English fallback
         if (!systemTemplate && recipientLocale !== 'en') {
           logger.debug('[SendEventEmail] No system template found for locale, trying English fallback');
-          systemTemplateQuery = knex('system_email_templates')
+          systemTemplateQuery = db.table('system_email_templates')
             .where({
               name: params.template,
               language_code: 'en'
@@ -321,7 +321,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         // If still no template, try without language filter (legacy templates)
         if (!systemTemplate) {
           logger.debug('[SendEventEmail] No language-specific system template, trying legacy template');
-          systemTemplateQuery = knex('system_email_templates')
+          systemTemplateQuery = db.table('system_email_templates')
             .where({ name: params.template })
             .whereNull('language_code')
             .first();
@@ -440,7 +440,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       notificationSubtypeId: params.notificationSubtypeId,
       replyContext: effectiveReplyContext,
       templateProcessor: processor,
-      headers: params.headers,
+      // RFC 3834: mark event-driven notifications as auto-generated so compliant
+      // recipient systems do not auto-reply (caller-supplied headers win on conflict).
+      headers: { ...AUTO_GENERATED_MAIL_HEADERS, ...params.headers },
       attachments: params.attachments,
       providerId: params.providerId,
       from: params.from,
@@ -491,8 +493,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     if (result.success && outboundRfcMessageId && params.replyContext?.ticketId) {
       try {
         // We use a raw query to append to the JSONB array safely
-        await knex('tickets')
-          .where({ tenant: params.tenantId, ticket_id: params.replyContext.ticketId })
+        await db.table('tickets')
+          .where({ ticket_id: params.replyContext.ticketId })
           .update({
             email_metadata: knex.raw(
               `jsonb_set(

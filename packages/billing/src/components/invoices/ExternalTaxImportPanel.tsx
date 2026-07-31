@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -12,11 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 import { TaxSource } from '@alga-psa/types';
-import {
-  importExternalTaxForInvoice,
-  getExternalTaxImportHistory,
-  getInvoiceTaxReconciliation
-} from '@alga-psa/billing/actions';
+import { importExternalTaxForInvoice, getExternalTaxImportHistory, getInvoiceTaxReconciliation } from '@alga-psa/billing/actions/externalTaxImportActions';
 
 interface ExternalTaxImportPanelProps {
   invoiceId: string;
@@ -42,6 +39,9 @@ const ADAPTER_NAME_KEYS: Record<string, 'quickbooks' | 'xero' | 'sage'> = {
   sage: 'sage',
 };
 
+const isExternalTaxActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 export function ExternalTaxImportPanel({
   invoiceId,
   taxSource,
@@ -50,11 +50,13 @@ export function ExternalTaxImportPanel({
 }: ExternalTaxImportPanelProps) {
   const { t } = useTranslation('msp/invoicing');
   const { formatCurrency, formatDate } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [isImporting, setIsImporting] = useState(false);
   const [importHistory, setImportHistory] = useState<ImportHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [reconciliation, setReconciliation] = useState<{
+    currencyCode?: string | null;
     internalTax: number;
     externalTax: number;
     difference: number;
@@ -85,6 +87,11 @@ export function ExternalTaxImportPanel({
     setIsLoadingHistory(true);
     try {
       const history = await getExternalTaxImportHistory(invoiceId);
+      if (isExternalTaxActionError(history)) {
+        console.error('Failed to load import history:', getErrorMessage(history));
+        setImportHistory([]);
+        return;
+      }
       setImportHistory(history as ImportHistoryItem[]);
     } catch (error) {
       console.error('Failed to load import history:', error);
@@ -97,6 +104,11 @@ export function ExternalTaxImportPanel({
     if (taxSource === 'external') {
       try {
         const result = await getInvoiceTaxReconciliation(invoiceId);
+        if (isExternalTaxActionError(result)) {
+          console.error('Failed to load reconciliation:', getErrorMessage(result));
+          setReconciliation(null);
+          return;
+        }
         if (result) {
           setReconciliation({
             internalTax: result.internalTax,
@@ -125,6 +137,10 @@ export function ExternalTaxImportPanel({
     setIsImporting(true);
     try {
       const result = await importExternalTaxForInvoice(invoiceId);
+      if (isExternalTaxActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
 
       if (result.success) {
         toast.success(t('externalTax.toasts.taxImportedFromAdapter', {
@@ -154,10 +170,10 @@ export function ExternalTaxImportPanel({
     <Card id="external-tax-import-panel">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <span className="flex items-center gap-2">
             <Cloud className="h-5 w-5 text-blue-600" />
             {t('externalTax.title', { defaultValue: 'External Tax Import' })}
-          </div>
+          </span>
           <Button
             id="toggle-import-history-button"
             variant="ghost"
@@ -233,7 +249,7 @@ export function ExternalTaxImportPanel({
                         {t('externalTax.reconciliation.internal', { defaultValue: 'Internal' })}:
                       </span>
                       <span className="ml-1 font-medium">
-                        {formatCurrency(reconciliation.internalTax / 100, 'USD')}
+                        {formatCurrency(reconciliation.internalTax / 100, reconciliation.currencyCode ?? tenantCurrency)}
                       </span>
                     </div>
                     <div>
@@ -241,7 +257,7 @@ export function ExternalTaxImportPanel({
                         {t('externalTax.reconciliation.external', { defaultValue: 'External' })}:
                       </span>
                       <span className="ml-1 font-medium">
-                        {formatCurrency(reconciliation.externalTax / 100, 'USD')}
+                        {formatCurrency(reconciliation.externalTax / 100, reconciliation.currencyCode ?? tenantCurrency)}
                       </span>
                     </div>
                     <div>
@@ -249,7 +265,7 @@ export function ExternalTaxImportPanel({
                         {t('externalTax.reconciliation.difference', { defaultValue: 'Difference' })}:
                       </span>
                       <span className={`ml-1 font-medium ${reconciliation.difference !== 0 ? 'text-amber-600' : 'text-green-600'}`}>
-                        {reconciliation.difference >= 0 ? '+' : ''}{formatCurrency(reconciliation.difference / 100, 'USD')}
+                        {reconciliation.difference >= 0 ? '+' : ''}{formatCurrency(reconciliation.difference / 100, reconciliation.currencyCode ?? tenantCurrency)}
                       </span>
                     </div>
                   </div>
@@ -325,7 +341,7 @@ export function ExternalTaxImportPanel({
                       </Tooltip>
                       {item.tax_difference !== undefined && (
                         <span className={item.tax_difference !== 0 ? 'text-amber-600' : 'text-green-600'}>
-                          {item.tax_difference >= 0 ? '+' : ''}{formatCurrency(item.tax_difference / 100, 'USD')}
+                          {item.tax_difference >= 0 ? '+' : ''}{formatCurrency(item.tax_difference / 100, tenantCurrency)}
                         </span>
                       )}
                     </div>

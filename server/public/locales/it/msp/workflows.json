@@ -462,7 +462,8 @@
       "correlationKeyPlaceholder": "corr-123",
       "statusLabel": "Stato",
       "fromLabel": "Da",
-      "toLabel": "A"
+      "toLabel": "A",
+      "datePlaceholder": "Qualsiasi data"
     },
     "actions": {
       "applyFilters": "Applica filtri",

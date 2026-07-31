@@ -11,7 +11,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import {
   getContractLinePresetById,
   updateContractLinePreset,
@@ -24,6 +24,15 @@ import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEn
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface FixedPresetConfigurationProps {
   presetId: string;
@@ -49,6 +58,7 @@ export function FixedPresetConfiguration({
   className = '',
 }: FixedPresetConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [plan, setPlan] = useState<IContractLinePreset | null>(null);
   const [services, setServices] = useState<IService[]>([]);
@@ -78,6 +88,10 @@ export function FixedPresetConfiguration({
     try {
       // Fetch the basic contract line preset data
       const fetchedPlan = await getContractLinePresetById(presetId);
+      if (isReturnedActionError(fetchedPlan)) {
+        setError(getErrorMessage(fetchedPlan));
+        return;
+      }
       if (fetchedPlan && fetchedPlan.contract_line_type === 'Fixed') {
         setPlan(fetchedPlan);
 
@@ -90,6 +104,10 @@ export function FixedPresetConfiguration({
         // Fetch fixed config
         if (fetchedPlan.preset_id) {
           const cfg = await getContractLinePresetFixedConfig(fetchedPlan.preset_id);
+          if (isReturnedActionError(cfg)) {
+            setError(getErrorMessage(cfg));
+            return;
+          }
           if (cfg) {
             setBaseRate(cfg.base_rate ?? undefined);
             if (cfg.base_rate !== undefined && cfg.base_rate !== null) {
@@ -165,10 +183,14 @@ export function FixedPresetConfiguration({
       };
 
       if (plan?.preset_id) {
-        await updateContractLinePreset(plan.preset_id, planData);
+        const presetResult = await updateContractLinePreset(plan.preset_id, planData);
+        if (isReturnedActionError(presetResult)) {
+          setValidationErrors([getErrorMessage(presetResult)]);
+          return;
+        }
 
         if (planType === 'Fixed') {
-          await updateContractLinePresetFixedConfig(plan.preset_id, {
+          const fixedConfigResult = await updateContractLinePresetFixedConfig(plan.preset_id, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
             billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
@@ -176,6 +198,10 @@ export function FixedPresetConfiguration({
               enableProration: enableProration,
             }),
           });
+          if (isReturnedActionError(fixedConfigResult)) {
+            setValidationErrors([getErrorMessage(fixedConfigResult)]);
+            return;
+          }
         }
       }
 
@@ -321,7 +347,7 @@ export function FixedPresetConfiguration({
                   })}
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                   <Input
                     id="base-rate"
                     type="text"

@@ -25,6 +25,7 @@ const TEMPLATES = [
       nl: { title: 'Ticket toegewezen', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) is aan u toegewezen door {{performedByName}}' },
       it: { title: 'Ticket assegnato', message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) le \u00e8 stato assegnato da {{performedByName}}' },
       pl: { title: 'Zg\u0142oszenie przypisane', message: 'Zg\u0142oszenie #{{ticketId}} "{{ticketTitle}}" ({{priority}}) zosta\u0142o do Ciebie przypisane przez {{performedByName}}' },
+      pt: { title: 'Ticket atribuído', message: 'O ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}}) foi atribuído a você por {{performedByName}}' },
     },
   },
 
@@ -40,6 +41,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuw ticket aangemaakt', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" is aangemaakt voor {{clientName}}' },
       it: { title: 'Nuovo ticket creato', message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" \u00e8 stato creato per {{clientName}}' },
       pl: { title: 'Nowe zg\u0142oszenie utworzone', message: 'Zg\u0142oszenie #{{ticketId}} "{{ticketTitle}}" zosta\u0142o utworzone dla {{clientName}}' },
+      pt: { title: 'Novo ticket criado', message: 'O ticket #{{ticketId}} "{{ticketTitle}}" foi criado para {{clientName}}' },
     },
   },
 
@@ -55,6 +57,7 @@ const TEMPLATES = [
       nl: { title: 'Uw supportticket is aangemaakt', message: 'Uw ticket #{{ticketId}} "{{ticketTitle}}" is aangemaakt en ons team reageert spoedig' },
       it: { title: 'Il suo ticket di supporto \u00e8 stato creato', message: 'Il suo ticket #{{ticketId}} "{{ticketTitle}}" \u00e8 stato creato e il nostro team risponder\u00e0 a breve' },
       pl: { title: 'Twoje zg\u0142oszenie zosta\u0142o utworzone', message: 'Twoje zg\u0142oszenie #{{ticketId}} "{{ticketTitle}}" zosta\u0142o utworzone i nasz zesp\u00f3\u0142 wkr\u00f3tce odpowie' },
+      pt: { title: 'Seu ticket de suporte foi criado', message: 'Seu ticket #{{ticketId}} "{{ticketTitle}}" foi criado e nossa equipe responderá em breve' },
     },
   },
 
@@ -70,6 +73,7 @@ const TEMPLATES = [
       nl: { title: 'Ticket bijgewerkt', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" is bijgewerkt' },
       it: { title: 'Ticket aggiornato', message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" \u00e8 stato aggiornato' },
       pl: { title: 'Zg\u0142oszenie zaktualizowane', message: 'Zg\u0142oszenie #{{ticketId}} "{{ticketTitle}}" zosta\u0142o zaktualizowane' },
+      pt: { title: 'Ticket atualizado', message: 'O ticket #{{ticketId}} "{{ticketTitle}}" foi atualizado' },
     },
   },
 
@@ -85,6 +89,7 @@ const TEMPLATES = [
       nl: { title: 'Uw ticket is bijgewerkt', message: 'Uw ticket #{{ticketId}} "{{ticketTitle}}" is bijgewerkt' },
       it: { title: 'Il suo ticket \u00e8 stato aggiornato', message: 'Il suo ticket #{{ticketId}} "{{ticketTitle}}" \u00e8 stato aggiornato' },
       pl: { title: 'Twoje zg\u0142oszenie zosta\u0142o zaktualizowane', message: 'Twoje zg\u0142oszenie #{{ticketId}} "{{ticketTitle}}" zosta\u0142o zaktualizowane' },
+      pt: { title: 'Seu ticket foi atualizado', message: 'Seu ticket #{{ticketId}} "{{ticketTitle}}" foi atualizado' },
     },
   },
 
@@ -100,6 +105,7 @@ const TEMPLATES = [
       nl: { title: 'Ticket gesloten', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" is gesloten' },
       it: { title: 'Ticket chiuso', message: 'Il ticket #{{ticketId}} "{{ticketTitle}}" \u00e8 stato chiuso' },
       pl: { title: 'Zg\u0142oszenie zamkni\u0119te', message: 'Zg\u0142oszenie #{{ticketId}} "{{ticketTitle}}" zosta\u0142o zamkni\u0119te' },
+      pt: { title: 'Ticket fechado', message: 'O ticket #{{ticketId}} "{{ticketTitle}}" foi fechado' },
     },
   },
 
@@ -115,6 +121,7 @@ const TEMPLATES = [
       nl: { title: 'Uw ticket is gesloten', message: 'Uw ticket #{{ticketId}} "{{ticketTitle}}" is gesloten' },
       it: { title: 'Il suo ticket \u00e8 stato chiuso', message: 'Il suo ticket #{{ticketId}} "{{ticketTitle}}" \u00e8 stato chiuso' },
       pl: { title: 'Twoje zg\u0142oszenie zosta\u0142o zamkni\u0119te', message: 'Twoje zg\u0142oszenie #{{ticketId}} "{{ticketTitle}}" zosta\u0142o zamkni\u0119te' },
+      pt: { title: 'Seu ticket foi fechado', message: 'Seu ticket #{{ticketId}} "{{ticketTitle}}" foi fechado' },
     },
   },
 
@@ -130,6 +137,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuwe opmerking', message: '{{authorName}} heeft een opmerking toegevoegd aan ticket #{{ticketId}}' },
       it: { title: 'Nuovo commento', message: '{{authorName}} ha aggiunto un commento al ticket #{{ticketId}}' },
       pl: { title: 'Nowy komentarz', message: '{{authorName}} doda\u0142(a) komentarz do zg\u0142oszenia #{{ticketId}}' },
+      pt: { title: 'Novo comentário', message: '{{authorName}} comentou no ticket #{{ticketId}}: "{{commentPreview}}"' },
     },
   },
 
@@ -145,6 +153,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuwe opmerking bij uw ticket', message: '{{authorName}} heeft commentaar gegeven op uw ticket #{{ticketId}}: "{{commentPreview}}"' },
       it: { title: 'Nuovo commento sul suo ticket', message: '{{authorName}} ha commentato il suo ticket #{{ticketId}}: "{{commentPreview}}"' },
       pl: { title: 'Nowy komentarz do Twojego zg\u0142oszenia', message: '{{authorName}} skomentowa\u0142(a) Twoje zg\u0142oszenie #{{ticketId}}: "{{commentPreview}}"' },
+      pt: { title: 'Novo comentário no seu ticket', message: '{{authorName}} comentou em seu ticket #{{ticketId}}: "{{commentPreview}}"' },
     },
   },
 
@@ -160,6 +169,7 @@ const TEMPLATES = [
       nl: { title: 'Ticket status gewijzigd', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" status gewijzigd: {{oldStatus}} \u2192 {{newStatus}} door {{performedByName}}' },
       it: { title: 'Stato del ticket modificato', message: 'Stato del ticket #{{ticketId}} "{{ticketTitle}}" modificato: {{oldStatus}} \u2192 {{newStatus}} da {{performedByName}}' },
       pl: { title: 'Zmieniono status zg\u0142oszenia', message: 'Status zg\u0142oszenia #{{ticketId}} "{{ticketTitle}}" zmieniony: {{oldStatus}} \u2192 {{newStatus}} przez {{performedByName}}' },
+      pt: { title: 'Status do ticket alterado', message: 'Status do ticket #{{ticketId}} "{{ticketTitle}}" alterado: {{oldStatus}} → {{newStatus}} por {{performedByName}}' },
     },
   },
 
@@ -175,6 +185,7 @@ const TEMPLATES = [
       nl: { title: 'Ticket prioriteit gewijzigd', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" prioriteit gewijzigd: {{oldPriority}} \u2192 {{newPriority}} door {{performedByName}}' },
       it: { title: 'Priorit\u00e0 del ticket modificata', message: 'Priorit\u00e0 del ticket #{{ticketId}} "{{ticketTitle}}" modificata: {{oldPriority}} \u2192 {{newPriority}} da {{performedByName}}' },
       pl: { title: 'Zmieniono priorytet zg\u0142oszenia', message: 'Priorytet zg\u0142oszenia #{{ticketId}} "{{ticketTitle}}" zmieniony: {{oldPriority}} \u2192 {{newPriority}} przez {{performedByName}}' },
+      pt: { title: 'Prioridade do ticket alterada', message: 'Prioridade do ticket #{{ticketId}} "{{ticketTitle}}" alterada: {{oldPriority}} → {{newPriority}} por {{performedByName}}' },
     },
   },
 
@@ -190,6 +201,7 @@ const TEMPLATES = [
       nl: { title: 'Ticket opnieuw toegewezen', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" opnieuw toegewezen: {{oldAssignedTo}} \u2192 {{newAssignedTo}} door {{performedByName}}' },
       it: { title: 'Ticket riassegnato', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" riassegnato: {{oldAssignedTo}} \u2192 {{newAssignedTo}} da {{performedByName}}' },
       pl: { title: 'Zg\u0142oszenie przypisane ponownie', message: 'Zg\u0142oszenie #{{ticketId}} "{{ticketTitle}}" przypisane ponownie: {{oldAssignedTo}} \u2192 {{newAssignedTo}} przez {{performedByName}}' },
+      pt: { title: 'Ticket reatribuído', message: 'Ticket #{{ticketId}} "{{ticketTitle}}" reatribuído: {{oldAssignedTo}} → {{newAssignedTo}} por {{performedByName}}' },
     },
   },
 
@@ -205,6 +217,7 @@ const TEMPLATES = [
       nl: { title: 'Toegevoegd als extra agent', message: 'U bent toegevoegd als extra agent aan ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}})' },
       it: { title: 'Aggiunto come agente aggiuntivo', message: 'Sei stato aggiunto come agente aggiuntivo al ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}})' },
       pl: { title: 'Dodano jako dodatkowego agenta', message: 'Zosta\u0142e\u015b(a\u015b) dodany(a) jako dodatkowy agent do zg\u0142oszenia #{{ticketId}} "{{ticketTitle}}" ({{priority}})' },
+      pt: { title: 'Adicionado como agente adicional', message: 'Você foi adicionado como agente adicional no ticket #{{ticketId}} "{{ticketTitle}}" ({{priority}})' },
     },
   },
 
@@ -220,6 +233,7 @@ const TEMPLATES = [
       nl: { title: 'Extra agent toegevoegd', message: '{{additionalAgentName}} is toegevoegd als extra agent aan uw ticket #{{ticketId}} "{{ticketTitle}}"' },
       it: { title: 'Agente aggiuntivo aggiunto', message: '{{additionalAgentName}} \u00e8 stato aggiunto come agente aggiuntivo al suo ticket #{{ticketId}} "{{ticketTitle}}"' },
       pl: { title: 'Dodano dodatkowego agenta', message: '{{additionalAgentName}} zosta\u0142(a) dodany(a) jako dodatkowy agent do Twojego zg\u0142oszenia #{{ticketId}} "{{ticketTitle}}"' },
+      pt: { title: 'Agente Adicional Adicionado', message: '{{additionalAgentName}} foi adicionado como agente adicional ao seu ticket #{{ticketId}} "{{ticketTitle}}"' },
     },
   },
 
@@ -235,6 +249,7 @@ const TEMPLATES = [
       nl: { title: 'Team toegewezen aan ticket', message: "Team '{{teamName}}' is toegewezen aan ticket #{{ticketId}} '{{ticketTitle}}' door {{performedByName}}" },
       it: { title: 'Team assegnato al ticket', message: "Il team '{{teamName}}' è stato assegnato al ticket #{{ticketId}} '{{ticketTitle}}' da {{performedByName}}" },
       pl: { title: 'Zespół przypisany do zgłoszenia', message: "Zespół '{{teamName}}' został przypisany do zgłoszenia #{{ticketId}} '{{ticketTitle}}' przez {{performedByName}}" },
+      pt: { title: 'Equipe atribuída ao ticket', message: 'A equipe \'{{teamName}}\' foi designada para o ticket #{{ticketId}} \'{{ticketTitle}}\' por {{performedByName}}' },
     },
   },
 
@@ -250,6 +265,7 @@ const TEMPLATES = [
       nl: { title: 'Extra ondersteuningsagent toegewezen', message: '{{additionalAgentName}} is toegevoegd om te helpen met uw ticket #{{ticketId}} "{{ticketTitle}}"' },
       it: { title: 'Agente di supporto aggiuntivo assegnato', message: '{{additionalAgentName}} \u00e8 stato aggiunto per aiutare con il suo ticket #{{ticketId}} "{{ticketTitle}}"' },
       pl: { title: 'Przypisano dodatkowego agenta wsparcia', message: '{{additionalAgentName}} zosta\u0142(a) dodany(a) do pomocy przy Twoim zg\u0142oszeniu #{{ticketId}} "{{ticketTitle}}"' },
+      pt: { title: 'Agente de suporte adicional atribuído', message: '{{additionalAgentName}} foi adicionado para ajudar com seu ticket #{{ticketId}} "{{ticketTitle}}"' },
     },
   },
 
@@ -268,6 +284,7 @@ const TEMPLATES = [
       nl: { title: 'Uw ticket wordt behandeld', message: '{{assignedToName}} is toegewezen aan uw ticket #{{ticketId}} "{{ticketTitle}}"' },
       it: { title: 'Il suo ticket \u00e8 in lavorazione', message: '{{assignedToName}} \u00e8 stato assegnato al suo ticket #{{ticketId}} "{{ticketTitle}}"' },
       pl: { title: 'Twoje zg\u0142oszenie jest w trakcie obs\u0142ugi', message: '{{assignedToName}} zosta\u0142(a) przypisany(a) do Twojego zg\u0142oszenia #{{ticketId}} "{{ticketTitle}}"' },
+      pt: { title: 'Seu ticket está sendo trabalhado', message: '{{assignedToName}} foi atribuído ao seu ticket #{{ticketId}} "{{ticketTitle}}"' },
     },
   },
 ];

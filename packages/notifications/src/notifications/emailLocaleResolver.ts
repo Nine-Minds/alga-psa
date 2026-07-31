@@ -4,9 +4,10 @@
  * Resolves the appropriate locale for email notifications sent to users.
  */
 
-import { getConnection } from '@alga-psa/db';
+import { getConnection, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import logger from '@alga-psa/core/logger';
+import type { Knex } from 'knex';
 
 export interface EmailRecipient {
   email: string;
@@ -15,23 +16,25 @@ export interface EmailRecipient {
   clientId?: string;
 }
 
+function tenantScopedTable(knex: Knex, table: string, tenantId: string) {
+  return tenantDb(knex, tenantId).table(table);
+}
+
 async function getUserClientId(userId: string, tenantId: string): Promise<string | null> {
   try {
     const knex = await getConnection(tenantId);
 
-    const user = await knex('users')
+    const user = await tenantScopedTable(knex, 'users', tenantId)
       .where({
         user_id: userId,
-        tenant: tenantId
       })
       .first();
 
     if (!user?.contact_id) return null;
 
-    const contact = await knex('contacts')
+    const contact = await tenantScopedTable(knex, 'contacts', tenantId)
       .where({
         contact_name_id: user.contact_id,
-        tenant: tenantId
       })
       .first();
 
@@ -53,10 +56,9 @@ export async function resolveEmailLocale(
     let clientId = recipient.clientId;
 
     if (recipient.userId && !userType) {
-      const user = await knex('users')
+      const user = await tenantScopedTable(knex, 'users', tenantId)
         .where({
           user_id: recipient.userId,
-          tenant: tenantId
         })
         .first();
 
@@ -64,11 +66,10 @@ export async function resolveEmailLocale(
     }
 
     if (recipient.userId) {
-      const userPref = await knex('user_preferences')
+      const userPref = await tenantScopedTable(knex, 'user_preferences', tenantId)
         .where({
           user_id: recipient.userId,
           setting_name: 'locale',
-          tenant: tenantId
         })
         .first();
 
@@ -91,8 +92,8 @@ export async function resolveEmailLocale(
 
     // Client-specific default (client-portal users / portal invitations only)
     if ((userType === 'client' || clientId) && clientId) {
-      const client = await knex('clients')
-        .where({ client_id: clientId, tenant: tenantId })
+      const client = await tenantScopedTable(knex, 'clients', tenantId)
+        .where({ client_id: clientId })
         .first();
 
       const clientLocale = client?.properties?.defaultLocale;
@@ -104,8 +105,7 @@ export async function resolveEmailLocale(
 
     // Client-portal default (client-portal users only)
     if (userType === 'client' || clientId) {
-      const tenantSettings = await knex('tenant_settings')
-        .where({ tenant: tenantId })
+      const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenantId)
         .first();
 
       const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
@@ -132,8 +132,7 @@ export async function getTenantDefaultLocale(
 ): Promise<SupportedLocale> {
   try {
     const knex = await getConnection(tenantId);
-    const tenantSettings = await knex('tenant_settings')
-      .where({ tenant: tenantId })
+    const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenantId)
       .first();
 
     const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
@@ -176,10 +175,9 @@ export async function getUserInfoForEmail(
   try {
     const knex = await getConnection(tenantId);
 
-    const user = await knex('users')
+    const user = await tenantScopedTable(knex, 'users', tenantId)
       .where({
-        email,
-        tenant: tenantId
+        email
       })
       .first();
 
@@ -189,10 +187,9 @@ export async function getUserInfoForEmail(
 
     let clientId: string | null = null;
     if (user.user_type === 'client' && user.contact_id) {
-      const contact = await knex('contacts')
+      const contact = await tenantScopedTable(knex, 'contacts', tenantId)
         .where({
-          contact_name_id: user.contact_id,
-          tenant: tenantId
+          contact_name_id: user.contact_id
         })
         .first();
 
@@ -210,4 +207,3 @@ export async function getUserInfoForEmail(
     return { email };
   }
 }
-

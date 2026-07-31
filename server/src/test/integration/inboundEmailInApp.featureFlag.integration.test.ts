@@ -15,10 +15,9 @@ let statusId: string;
 let priorityId: string;
 let enteredByUserId: string;
 
-let gmailListMessagesSinceMock = vi.fn();
-let gmailGetMessageDetailsMock = vi.fn();
 const publishEventMock = vi.fn();
 const processInboundEmailInAppMock = vi.fn();
+const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
@@ -43,6 +42,11 @@ vi.mock('@alga-psa/shared/services/email/processInboundEmailInApp', () => ({
   processInboundEmailInApp: (...args: any[]) => processInboundEmailInAppMock(...args),
 }));
 
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
+  enqueueUnifiedInboundEmailQueueJob: (...args: any[]) =>
+    enqueueUnifiedInboundEmailQueueJobMock(...args),
+}));
+
 vi.mock('google-auth-library', () => {
   class OAuth2Client {
     async verifyIdToken(_opts: any) {
@@ -56,20 +60,6 @@ vi.mock('google-auth-library', () => {
     }
   }
   return { OAuth2Client };
-});
-
-vi.mock('../../../../packages/integrations/src/services/email/providers/GmailAdapter', () => {
-  return {
-    GmailAdapter: class GmailAdapter {
-      async connect() {}
-      async listMessagesSince() {
-        return gmailListMessagesSinceMock();
-      }
-      async getMessageDetails(messageId: string) {
-        return gmailGetMessageDetailsMock(messageId);
-      }
-    },
-  };
 });
 
 function makeFakeJwt(payload: Record<string, any>): string {
@@ -105,7 +95,6 @@ async function setupProvider(params: { providerId: string; mailbox: string; subs
     mailbox: params.mailbox,
     is_active: true,
     status: 'connected',
-    vendor_config: JSON.stringify({}),
     inbound_ticket_defaults_id: defaultsId,
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
@@ -133,6 +122,31 @@ async function setupProvider(params: { providerId: string; mailbox: string; subs
   });
 
   return { defaultsId };
+}
+
+function makeWebhookRequest(params: {
+  mailbox: string;
+  historyId: string;
+  pubsubMessageId: string;
+  subscriptionName: string;
+  token: string;
+}): NextRequest {
+  const notification = { emailAddress: params.mailbox, historyId: params.historyId };
+  return new NextRequest('http://localhost:3000/api/email/webhooks/google', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${params.token}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: {
+        data: Buffer.from(JSON.stringify(notification)).toString('base64'),
+        messageId: params.pubsubMessageId,
+        publishTime: new Date().toISOString(),
+      },
+      subscription: `projects/project/subscriptions/${params.subscriptionName}`,
+    }),
+  });
 }
 
 describeDb('Inbound email in-app processing feature flag (integration)', () => {
@@ -178,40 +192,33 @@ describeDb('Inbound email in-app processing feature flag (integration)', () => {
     process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
     publishEventMock.mockClear();
     processInboundEmailInAppMock.mockClear();
+    enqueueUnifiedInboundEmailQueueJobMock.mockClear();
   });
 
   afterAll(async () => {
     if (db) await db.destroy();
   });
 
-  it('Feature flag: toggling flag keeps old behavior when disabled and new in-app behavior when enabled', async () => {
+  // The in-app processing feature flag was removed (the email-service path is
+  // enforced unconditionally): the legacy flag env vars must no longer change
+  // behavior — the webhook always hands off to the unified pointer queue and
+  // never publishes legacy events or processes inline.
+  it('Feature flag removal: webhook always enqueues to the unified queue regardless of legacy flag values', async () => {
     const providerId = uuidv4();
     const mailbox = `support-flag-${uuidv4().slice(0, 6)}@example.com`;
     const subscriptionName = `sub-${uuidv4().slice(0, 6)}`;
     const { defaultsId } = await setupProvider({ providerId, mailbox, subscriptionName });
 
     cleanup.push(async () => {
-      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
       await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
       await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
       await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
     });
 
-    gmailListMessagesSinceMock = vi.fn().mockResolvedValue(['gmail-msg-1']);
-    gmailGetMessageDetailsMock = vi.fn().mockResolvedValue({
-      id: 'gmail-msg-1',
-      provider: 'google',
-      providerId,
-      tenant: tenantId,
-      receivedAt: new Date().toISOString(),
-      from: { email: 'sender@example.com', name: 'Sender' },
-      to: [{ email: mailbox, name: 'Support' }],
-      subject: 'Flag subject',
-      body: { text: 'Hello', html: undefined },
-      attachments: [],
+    enqueueUnifiedInboundEmailQueueJobMock.mockResolvedValue({
+      job: { jobId: 'job-flag-1' },
+      queueDepth: 1,
     });
-
-    processInboundEmailInAppMock.mockResolvedValue({ outcome: 'created', ticketId: 't', commentId: 'c' });
 
     const token = makeFakeJwt({
       aud: 'http://localhost:3000/api/email/webhooks/google',
@@ -222,52 +229,64 @@ describeDb('Inbound email in-app processing feature flag (integration)', () => {
 
     const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
 
-    // Disabled => publishEvent is used.
-    const notification1 = { emailAddress: mailbox, historyId: '100' };
-    const req1 = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${token}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: {
-          data: Buffer.from(JSON.stringify(notification1)).toString('base64'),
-          messageId: 'pubsub-msg-1',
-          publishTime: new Date().toISOString(),
-        },
-        subscription: `projects/project/subscriptions/${subscriptionName}`,
-      }),
-    });
-    const res1 = await POST(req1);
+    // Legacy flags unset => unified queue handoff.
+    const res1 = await POST(
+      makeWebhookRequest({
+        mailbox,
+        historyId: '100',
+        pubsubMessageId: 'pubsub-msg-1',
+        subscriptionName,
+        token,
+      })
+    );
     expect(res1.status).toBe(200);
-    expect(publishEventMock).toHaveBeenCalled();
+    expect(await res1.json()).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      providerId,
+      tenant: tenantId,
+    });
+    expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    expect(enqueueUnifiedInboundEmailQueueJobMock.mock.calls[0][0]).toMatchObject({
+      tenantId,
+      providerId,
+      provider: 'google',
+      pointer: { historyId: '100', emailAddress: mailbox },
+    });
+    expect(publishEventMock).not.toHaveBeenCalled();
     expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
 
-    publishEventMock.mockClear();
-    processInboundEmailInAppMock.mockClear();
+    enqueueUnifiedInboundEmailQueueJobMock.mockClear();
 
-    // Enabled => in-app processor is used.
+    // Legacy flags set => identical unified-queue behavior (flags are dead).
     process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
-    const notification2 = { emailAddress: mailbox, historyId: '101' };
-    const req2 = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${token}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: {
-          data: Buffer.from(JSON.stringify(notification2)).toString('base64'),
-          messageId: 'pubsub-msg-2',
-          publishTime: new Date().toISOString(),
-        },
-        subscription: `projects/project/subscriptions/${subscriptionName}`,
-      }),
-    });
-    const res2 = await POST(req2);
+    process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = 'true';
+    const res2 = await POST(
+      makeWebhookRequest({
+        mailbox,
+        historyId: '101',
+        pubsubMessageId: 'pubsub-msg-2',
+        subscriptionName,
+        token,
+      })
+    );
     expect(res2.status).toBe(200);
-    expect(processInboundEmailInAppMock).toHaveBeenCalled();
+    expect(await res2.json()).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      providerId,
+      tenant: tenantId,
+    });
+    expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    expect(enqueueUnifiedInboundEmailQueueJobMock.mock.calls[0][0]).toMatchObject({
+      tenantId,
+      providerId,
+      provider: 'google',
+      pointer: { historyId: '101', emailAddress: mailbox },
+    });
     expect(publishEventMock).not.toHaveBeenCalled();
+    expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
   });
 });

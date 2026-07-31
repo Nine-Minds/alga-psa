@@ -9,7 +9,14 @@
   ],
   "targets": {
     "build": {
-      "executor": "nx:noop"
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{projectRoot}/dist"
+      ],
+      "options": {
+        "command": "npm run build",
+        "cwd": "packages/email"
+      }
     },
     "lint": {
       "executor": "@nx/eslint:lint",

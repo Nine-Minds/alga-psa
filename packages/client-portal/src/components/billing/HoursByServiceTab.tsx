@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Clock } from 'lucide-react';
@@ -60,24 +61,38 @@ const HoursByServiceTab: React.FC<HoursByServiceTabProps> = React.memo(({
             <label htmlFor="hours-start-date" className="text-sm font-medium text-gray-500 mb-1">
               Start Date
             </label>
-            <input
+            <DatePicker
               id="hours-start-date"
-              type="date"
-              className="border border-gray-300 rounded-md px-3 py-2"
-              value={dateRange.startDate}
-              onChange={(e) => handleDateRangeChange(e, 'startDate')}
+              label="Start Date"
+              placeholder="Start Date"
+              clearable
+              className="w-full"
+              value={dateFromString(dateRange.startDate)}
+              onChange={(date) =>
+                handleDateRangeChange(
+                  { target: { value: dateToString(date) } } as React.ChangeEvent<HTMLInputElement>,
+                  'startDate'
+                )
+              }
             />
           </div>
           <div className="flex flex-col">
             <label htmlFor="hours-end-date" className="text-sm font-medium text-gray-500 mb-1">
               End Date
             </label>
-            <input
+            <DatePicker
               id="hours-end-date"
-              type="date"
-              className="border border-gray-300 rounded-md px-3 py-2"
-              value={dateRange.endDate}
-              onChange={(e) => handleDateRangeChange(e, 'endDate')}
+              label="End Date"
+              placeholder="End Date"
+              clearable
+              className="w-full"
+              value={dateFromString(dateRange.endDate)}
+              onChange={(date) =>
+                handleDateRangeChange(
+                  { target: { value: dateToString(date) } } as React.ChangeEvent<HTMLInputElement>,
+                  'endDate'
+                )
+              }
             />
           </div>
           <div className="flex items-end">

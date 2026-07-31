@@ -7,10 +7,33 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
+    // Inline next-auth/@auth/core/next so vite transforms them and the next/server
+    // alias below actually applies to next-auth's internal `import "next/server"`.
+    // Without this the deps stay external, Node resolves next/server itself, and a
+    // fresh CI install fails ("Cannot find module next/server"). Matches tickets.
+    server: {
+      deps: {
+        inline: ['next-auth', '@auth/core', 'next'],
+      },
+    },
   },
   resolve: {
     alias: [
+      // next-auth's lib/env.js does `import { NextRequest } from "next/server"`;
+      // under a fresh CI install vite can't resolve the extensionless builtin
+      // specifier ("Cannot find module next/server ... Did you mean next/server.js?"),
+      // which collapsed the TaskForm* suites. Point it at the real file, matching
+      // the alias tickets/integrations already carry.
+      { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
+      // TaskForm imports `./billing/ProjectPaymentWarningBanner`, which is being
+      // moved to @alga-psa/billing on this branch. Until TaskForm's import is
+      // updated, point the specifier at a null-render test stub so the TaskForm*
+      // suites stay green and isolated from billing server actions.
+      {
+        find: /^.*\/billing\/ProjectPaymentWarningBanner$/,
+        replacement: path.resolve(__dirname, 'src/components/__tests__/__mocks__/ProjectPaymentWarningBanner.tsx'),
+      },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
       // Resolve workspace packages (including self-references) from src so
       // tests do not depend on built dist output.

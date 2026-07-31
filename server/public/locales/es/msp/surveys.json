@@ -277,6 +277,7 @@
   },
   "dashboard": {
     "loadingInsights": "Cargando información de la encuesta...",
+    "printTitle": "Panel de encuestas",
     "responseMetrics": {
       "cards": {
         "sent": "Invitaciones enviadas",
@@ -422,6 +423,43 @@
     },
     "fallbacks": {
       "none": "-"
+    }
+  },
+  "print": {
+    "emptyValue": "—",
+    "columns": {
+      "date": "Fecha",
+      "averageRating": "Valoración media",
+      "responses": "Respuestas",
+      "rating": "Valoración",
+      "share": "Porcentaje",
+      "ticket": "Ticket",
+      "client": "Cliente",
+      "contact": "Contacto",
+      "agent": "Agente",
+      "technician": "Técnico",
+      "submitted": "Enviado",
+      "comment": "Comentario"
+    },
+    "metrics": {
+      "averageRating": "Valoración media",
+      "invitations": "Invitaciones",
+      "outstanding": "Pendientes",
+      "recentNegative": "Negativas recientes",
+      "responseRate": "Tasa de respuesta",
+      "responses": "Respuestas"
+    },
+    "sections": {
+      "trend": "Tendencia de respuestas",
+      "distribution": "Distribución de satisfacción",
+      "topIssues": "Principales incidencias",
+      "recentResponses": "Respuestas recientes"
+    },
+    "empty": {
+      "trend": "No hay respuestas en este periodo.",
+      "distribution": "No hay respuestas valoradas en este periodo.",
+      "topIssues": "No hay respuestas negativas en este periodo.",
+      "recentResponses": "No hay respuestas en este periodo."
     }
   }
 }

@@ -84,9 +84,8 @@ export function AdHocDetailPanel({ activityId, onClose, onActionComplete }: AdHo
       toast.success(t('drawer.adHoc.saveSuccess', { defaultValue: 'Item saved' }));
       onActionComplete?.();
     } catch (err) {
-      const message = err instanceof Error ? err.message : '';
       console.error('Error saving ad-hoc item:', err);
-      toast.error(message || t('drawer.adHoc.saveError', { defaultValue: 'Failed to save item.' }));
+      toast.error(t('drawer.adHoc.saveError', { defaultValue: 'Failed to save item.' }));
     } finally {
       setIsSaving(false);
     }

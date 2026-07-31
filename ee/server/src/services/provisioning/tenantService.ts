@@ -1,3 +1,4 @@
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { CreateTenantInput, TenantResponse } from './types/tenant.schema';
 import { Knex } from 'knex';
@@ -20,7 +21,8 @@ export class TenantService {
       // Start a transaction to ensure data consistency
       const result = await knex.transaction(async (trx: Knex.Transaction) => {
         // Create the tenant record
-        const [tenant] = await trx('tenants')
+        const [tenant] = await tenantDb(trx, '__tenant_provisioning_create__')
+          .unscoped('tenants', 'tenant provisioning creates tenant row before tenant context exists')
           .insert({
             client_name: input.client_name,
             email: input.email,

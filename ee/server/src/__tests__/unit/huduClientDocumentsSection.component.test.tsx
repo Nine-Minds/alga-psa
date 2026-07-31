@@ -16,7 +16,7 @@ import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HuduClientDocumentsSection } from '@ee/components/integrations/hudu/HuduClientDocumentsSection';
-import type { HuduCompanyDataResult } from '@ee/lib/actions/integrations/huduDataActions';
+import type { HuduCompanyDataResult } from '@ee/lib/integrations/hudu/huduDataTypes';
 import type { HuduArticle } from '@ee/lib/integrations/hudu/contracts';
 
 const { getHuduCompanyArticlesMock } = vi.hoisted(() => ({

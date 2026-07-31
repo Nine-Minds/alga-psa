@@ -50,6 +50,13 @@ services:
       TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
       TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      # Microsoft Graph / Entra. Unset means the real Microsoft endpoints; point the
+      # base URLs at test-harness/graph-emulator to walk Entra sync without a tenant.
+      # Discovery runs here, sync runs in temporal-worker — both need these.
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+      MICROSOFT_LOGIN_BASE_URL: ${MICROSOFT_LOGIN_BASE_URL:-}
+      MICROSOFT_GRAPH_BASE_URL: ${MICROSOFT_GRAPH_BASE_URL:-}
       # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
       # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
@@ -58,6 +65,9 @@ services:
       WORKFLOW_DISTRIBUTED_MODE: "true"
       WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
+      # Same override the workflow-worker gets: publish-time event.wait
+      # validation in the server must see the config the worker routes with.
+      WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON: ${WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON:-}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
       # NinjaOne Integration Configuration
       # These can be set via environment variables OR via secrets files (mounted at /run/secrets/)
@@ -203,6 +213,9 @@ services:
       dockerfile: services/workflow-worker/Dockerfile
     environment:
       EDITION: enterprise
+      # Optional override for event.wait correlation derivation paths.
+      # Unset = built-in defaults (shared/workflow/runtime/correlationDefaults.ts).
+      WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON: ${WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON:-}
       DB_NAME: server
       PGBOSS_DATABASE: server
       DB_NAME_SERVER: server
@@ -451,6 +464,7 @@ services:
       - SECRET_READ_CHAIN=filesystem,env
       - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-local-nextauth-secret}
       - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}
       - DB_HOST=${DB_HOST:-pgbouncer}
@@ -466,6 +480,13 @@ services:
       - PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE=${PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:-msp/alga-psa-vs}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
+      # Microsoft Graph / Entra. syncTenantUsersActivity runs here, so the worker needs the
+      # same endpoint overrides the server has — otherwise discovery hits the emulator and
+      # the sync silently hits real Graph.
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID:-}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET:-}
+      - MICROSOFT_LOGIN_BASE_URL=${MICROSOFT_LOGIN_BASE_URL:-}
+      - MICROSOFT_GRAPH_BASE_URL=${MICROSOFT_GRAPH_BASE_URL:-}
       # Smoke-only: defaults to unset so the worker uses the real GDAP endpoints. Override in
       # the compose invocation or shell env to test self-tenant mode without CSP/GDAP.
       - ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=${ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE:-}

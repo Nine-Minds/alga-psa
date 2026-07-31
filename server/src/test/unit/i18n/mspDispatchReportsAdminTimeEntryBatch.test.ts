@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { ROUTE_NAMESPACES } from '@alga-psa/core/i18n/config';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
-const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const;
+const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const;
 const pseudoLocales = ['xx', 'yy'] as const;
 const batchNamespaces = ['dispatch', 'reports', 'admin', 'time-entry'] as const;
 

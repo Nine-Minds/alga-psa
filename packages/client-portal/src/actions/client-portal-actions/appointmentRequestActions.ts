@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { withTransaction, normalizeIanaTimeZone, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { withTransaction, normalizeIanaTimeZone, resolveEffectiveTimeZone, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
@@ -30,13 +30,14 @@ import {
   getAvailableTimeSlots as getTimeSlotsFromService,
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
-import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
+import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
 import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
-import { isValidEmail } from '@alga-psa/core';
+import { isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { getClientPortalFeatureSettingsForTenant } from '../../lib/clientPortalFeatureSettingsDb';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -80,10 +81,49 @@ export interface OnlineMeetingPortalArtifact {
   created_date_time: Date | null;
 }
 
+function portalAppointmentRequestErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (error instanceof Error && error.name === 'ZodError') {
+    return 'Appointment request contains invalid fields. Review the details and try again.';
+  }
+
+  if (
+    message === 'Appointment request not found' ||
+    message.startsWith('Cannot cancel appointment request with status:')
+  ) {
+    return message;
+  }
+
+  return fallback;
+}
+
+type AppointmentRequestRow = IAppointmentRequest & Record<string, any>;
+
+type OnlineMeetingArtifactRow = {
+  appointment_request_id: string;
+  artifact_id: string;
+  artifact_type: OnlineMeetingPortalArtifact['artifact_type'];
+  document_id: string | null;
+  created_date_time: Date | null;
+};
+
+type ContactLookupRow = {
+  contact_name_id: string;
+  client_id?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+};
+
+type OnlineMeetingRow = {
+  provider?: string | null;
+  provider_meeting_id?: string | null;
+  provider_event_id?: string | null;
+};
+
 async function areOnlineMeetingArtifactsVisibleInPortal(trx: Knex.Transaction, tenant: string): Promise<boolean> {
   try {
-    const row = await trx('teams_integrations')
-      .where({ tenant })
+    const row = await tenantDb(trx, tenant).table('teams_integrations')
       .first('expose_recordings_in_portal');
     return row?.expose_recordings_in_portal === true;
   } catch (error) {
@@ -110,12 +150,11 @@ async function loadVisibleOnlineMeetingArtifactsForAppointments(
     return result;
   }
 
-  const rows = await trx('online_meeting_artifacts as artifact')
-    .join('online_meetings as meeting', function joinMeeting() {
-      this.on('artifact.tenant', '=', 'meeting.tenant')
-        .andOn('artifact.meeting_id', '=', 'meeting.meeting_id');
-    })
-    .where('meeting.tenant', tenant)
+  const scopedDb = tenantDb(trx, tenant);
+  const artifactsQuery = scopedDb.table('online_meeting_artifacts as artifact');
+  scopedDb.tenantJoin(artifactsQuery, 'online_meetings as meeting', 'artifact.meeting_id', 'meeting.meeting_id');
+
+  const rows = await artifactsQuery
     .whereIn('meeting.appointment_request_id', ids)
     .select(
       'meeting.appointment_request_id',
@@ -124,7 +163,7 @@ async function loadVisibleOnlineMeetingArtifactsForAppointments(
       'artifact.document_id',
       'artifact.created_date_time',
     )
-    .orderBy('artifact.created_date_time', 'desc');
+    .orderBy('artifact.created_date_time', 'desc') as unknown as OnlineMeetingArtifactRow[];
 
   for (const row of rows) {
     const appointmentRequestId = row.appointment_request_id as string;
@@ -152,12 +191,12 @@ async function getTenantSettings(tenant: string): Promise<TenantSettings> {
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx) => {
-    const settings = await trx('tenant_settings').where({ tenant }).first();
+    const settings = await tenantDb(trx, tenant).table('tenant_settings').first();
     const tenantSettings = settings?.settings || {};
 
     let tenantName = tenantSettings.branding?.clientName;
     if (!tenantName) {
-      const tenantRecord = await trx('tenants').where({ tenant }).select('client_name').first();
+      const tenantRecord = await tenantDb(trx, tenant).table('tenants').select('client_name').first();
       tenantName = tenantRecord?.client_name;
     }
     if (!tenantName) tenantName = 'Your Service Provider';
@@ -175,9 +214,8 @@ async function getClientUserIdFromContact(contactId: string, tenant: string): Pr
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx) => {
-    const user = await trx('users')
+    const user = await tenantDb(trx, tenant).table('users')
       .where({
-        tenant,
         contact_id: contactId,
         user_type: 'client',
       })
@@ -239,10 +277,9 @@ async function getClientCompanyName(clientId: string, tenant: string): Promise<s
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx) => {
-    const client = await trx('clients')
+    const client = await tenantDb(trx, tenant).table('clients')
       .where({
         client_id: clientId,
-        tenant,
       })
       .select('client_name')
       .first();
@@ -251,30 +288,27 @@ async function getClientCompanyName(clientId: string, tenant: string): Promise<s
   });
 }
 
-async function deleteTeamsMeetingIfAvailable(params: {
-  tenantId: string;
-  meetingId: string;
-  eventId?: string | null;
-  appointmentRequestId: string;
-}): Promise<boolean> {
+/**
+ * Enqueues the idempotent Graph cleanup job for a cancelled meeting (F019).
+ * The online_meetings row stays cancel_pending until the job confirms Graph
+ * deletion; the recurring Teams meeting sweep retries rows whose job was lost.
+ */
+async function enqueueTeamsMeetingCleanupJob(tenantId: string, meetingId: string): Promise<boolean> {
   if (!isEnterprise) {
     return false;
   }
 
   try {
-    const teamsModule = await import('@alga-psa/ee-microsoft-teams/lib');
-    if (typeof teamsModule.deleteTeamsMeeting !== 'function') {
-      return false;
-    }
-
-    return teamsModule.deleteTeamsMeeting({
-      tenantId: params.tenantId,
-      meetingId: params.meetingId,
-      eventId: params.eventId ?? null,
-      appointmentRequestId: params.appointmentRequestId,
-    });
+    // Enqueue via the core DI seam rather than importing @alga-psa/jobs, which
+    // would create a client-portal -> jobs cycle. The handler is idempotent
+    // (404=success) and the recurring Teams meeting sweep re-enqueues any
+    // cancel_pending row, so runner-level singletonKey de-duplication is not needed.
+    await enqueueImmediateJob('teams-meeting-cleanup', { tenantId, meetingId });
+    return true;
   } catch (error) {
-    console.warn('[ClientPortalAppointmentRequests] Failed to load Teams meeting delete implementation', {
+    console.warn('[ClientPortalAppointmentRequests] Failed to enqueue Teams meeting cleanup job; the Teams meeting sweep will retry', {
+      tenantId,
+      meetingId,
       error: error instanceof Error ? error.message : String(error),
     });
     return false;
@@ -304,15 +338,22 @@ export const createAppointmentRequest = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
 
+    const portalFeatures = await getClientPortalFeatureSettingsForTenant(db, tenant);
+    if (!portalFeatures.appointmentsEnabled) {
+      return {
+        success: false,
+        error: 'Appointment requests are not available in the client portal',
+      };
+    }
+
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, tenant).table('contacts')
         .where({
-          contact_name_id: currentUser.contact_id,
-          tenant
+          contact_name_id: currentUser.contact_id
         })
         .select('client_id', 'full_name', 'email')
-        .first();
+        .first<ContactLookupRow>();
     });
 
     if (!contact || !contact.client_id) {
@@ -330,12 +371,11 @@ export const createAppointmentRequest = withAuth(async (
 
     // Verify service exists and is active
     const service = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('service_catalog')
+      return await tenantDb(trx, tenant).table('service_catalog')
         .where({
-          service_id: validatedData.service_id,
-          tenant
+          service_id: validatedData.service_id
         })
-        .first();
+        .first<any>();
     });
 
     if (!service) {
@@ -344,13 +384,12 @@ export const createAppointmentRequest = withAuth(async (
 
     // Check if service allows booking without contract
     const serviceSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('availability_settings')
+      return await tenantDb(trx, tenant).table('availability_settings')
         .where({
-          tenant,
           setting_type: 'service_rules',
           service_id: validatedData.service_id
         })
-        .first();
+        .first<any>();
     });
 
     const allowWithoutContract = serviceSettings?.allow_without_contract ?? false;
@@ -360,18 +399,14 @@ export const createAppointmentRequest = withAuth(async (
       const hasActiveContract = await withTransaction(db, async (trx: Knex.Transaction) => {
         const now = new Date();
 
-        const contractService = await trx('contract_line_services as cls')
-          .join('contract_lines as cl', function() {
-            this.on('cls.contract_line_id', 'cl.contract_line_id')
-              .andOn('cls.tenant', 'cl.tenant');
-          })
-          .join('client_contracts as cc', function() {
-            this.on('cl.contract_id', 'cc.contract_id')
-              .andOn('cl.tenant', 'cc.tenant');
-          })
+        const scopedDb = tenantDb(trx, tenant);
+        const contractServiceQuery = scopedDb.table('contract_line_services as cls');
+        scopedDb.tenantJoin(contractServiceQuery, 'contract_lines as cl', 'cls.contract_line_id', 'cl.contract_line_id');
+        scopedDb.tenantJoin(contractServiceQuery, 'client_contracts as cc', 'cl.contract_id', 'cc.contract_id');
+
+        const contractService = await contractServiceQuery
           .where({
             'cls.service_id': validatedData.service_id,
-            'cls.tenant': tenant,
             'cc.client_id': clientId
           })
           .where('cc.start_date', '<=', now)
@@ -395,10 +430,9 @@ export const createAppointmentRequest = withAuth(async (
     // If ticket_id provided, verify it exists and belongs to the client
     if (validatedData.ticket_id) {
       const ticket = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('tickets')
+        return await tenantDb(trx, tenant).table('tickets')
           .where({
             ticket_id: validatedData.ticket_id,
-            tenant,
             client_id: clientId
           })
           .first();
@@ -445,14 +479,13 @@ export const createAppointmentRequest = withAuth(async (
         updated_at: now
       };
 
-      await trx('appointment_requests').insert(newRequest);
+      await tenantDb(trx, tenant).table('appointment_requests').insert(newRequest);
 
-      return await trx('appointment_requests')
+      return await tenantDb(trx, tenant).table('appointment_requests')
         .where({
-          appointment_request_id: requestId,
-          tenant
+          appointment_request_id: requestId
         })
-        .first();
+        .first<AppointmentRequestRow>();
     });
 
     console.log('[createAppointmentRequest] Appointment created successfully:', {
@@ -482,7 +515,7 @@ export const createAppointmentRequest = withAuth(async (
         const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
 
         // Create schedule entry
-        await trx('schedule_entries').insert({
+        await tenantDb(trx, tenant).table('schedule_entries').insert({
           entry_id: entryId,
           tenant,
           title: `[Pending Request] ${service.service_name}`,
@@ -498,7 +531,7 @@ export const createAppointmentRequest = withAuth(async (
 
         // Assign to the user if one was determined
         if (assignedUserId) {
-          await trx('schedule_entry_assignees').insert({
+          await tenantDb(trx, tenant).table('schedule_entry_assignees').insert({
             entry_id: entryId,
             user_id: assignedUserId,
             tenant,
@@ -515,10 +548,9 @@ export const createAppointmentRequest = withAuth(async (
 
       // Update the appointment request with the schedule_entry_id
       await withTransaction(db, async (trx: Knex.Transaction) => {
-        await trx('appointment_requests')
+        await tenantDb(trx, tenant).table('appointment_requests')
           .where({
-            appointment_request_id: appointmentRequest.appointment_request_id,
-            tenant
+            appointment_request_id: appointmentRequest.appointment_request_id
           })
           .update({
             schedule_entry_id: scheduleEntryId,
@@ -635,8 +667,7 @@ export const createAppointmentRequest = withAuth(async (
       // Get user details for notifications
       const staffUsers = notifyUserIds.size > 0
         ? await withTransaction(db, async (trx: Knex.Transaction) => {
-            return await trx('users')
-              .where({ tenant })
+            return await tenantDb(trx, tenant).table('users')
               .whereIn('user_id', Array.from(notifyUserIds))
               .select('user_id', 'email', 'first_name', 'last_name', 'timezone');
           })
@@ -747,18 +778,17 @@ export const createAppointmentRequest = withAuth(async (
 
     // Re-query the appointment request to get the updated version with schedule_entry_id
     const updatedAppointmentRequest = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('appointment_requests')
+      return await tenantDb(trx, tenant).table('appointment_requests')
         .where({
-          appointment_request_id: appointmentRequest.appointment_request_id,
-          tenant
+          appointment_request_id: appointmentRequest.appointment_request_id
         })
-        .first();
+        .first<AppointmentRequestRow>();
     });
 
-    return { success: true, data: updatedAppointmentRequest as IAppointmentRequest };
+    return { success: true, data: updatedAppointmentRequest as unknown as IAppointmentRequest };
   } catch (error) {
     console.error('Error creating appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create appointment request';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to create appointment request');
     return { success: false, error: message };
   }
 });
@@ -787,13 +817,12 @@ export const updateAppointmentRequest = withAuth(async (
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, tenant).table('contacts')
         .where({
-          contact_name_id: currentUser.contact_id,
-          tenant
+          contact_name_id: currentUser.contact_id
         })
         .select('client_id')
-        .first();
+        .first<ContactLookupRow>();
     });
 
     if (!contact || !contact.client_id) {
@@ -804,13 +833,12 @@ export const updateAppointmentRequest = withAuth(async (
 
     // Get existing appointment request
     const existingRequest = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('appointment_requests')
+      return await tenantDb(trx, tenant).table('appointment_requests')
         .where({
           appointment_request_id: validatedData.appointment_request_id,
-          tenant,
           client_id: clientId // Ensure user owns this request
         })
-        .first();
+        .first<AppointmentRequestRow>();
     });
 
     if (!existingRequest) {
@@ -823,24 +851,40 @@ export const updateAppointmentRequest = withAuth(async (
 
     // Verify service exists
     const service = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('service_catalog')
+      return await tenantDb(trx, tenant).table('service_catalog')
         .where({
-          service_id: validatedData.service_id,
-          tenant
+          service_id: validatedData.service_id
         })
-        .first();
+        .first<any>();
     });
 
     if (!service) {
       return { success: false, error: 'Service not found' };
     }
 
+    // If ticket_id provided, verify it exists and belongs to the client
+    // (mirrors the create-path validation — the update path previously wrote
+    // the caller-supplied ticket_id without any ownership check).
+    if (validatedData.ticket_id) {
+      const ticket = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await tenantDb(trx, tenant).table('tickets')
+          .where({
+            ticket_id: validatedData.ticket_id,
+            client_id: clientId
+          })
+          .first();
+      });
+
+      if (!ticket) {
+        return { success: false, error: 'Ticket not found or does not belong to your organization' };
+      }
+    }
+
     // Update the appointment request
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      await trx('appointment_requests')
+      await tenantDb(trx, tenant).table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .update({
           service_id: validatedData.service_id,
@@ -869,20 +913,22 @@ export const updateAppointmentRequest = withAuth(async (
       | undefined;
 
     // Update the associated schedule entry if it exists
-    if (existingRequest.schedule_entry_id) {
+    const existingScheduleEntryId = existingRequest.schedule_entry_id;
+    if (existingScheduleEntryId) {
       const beforeTz = existingRequest.requester_timezone || 'UTC';
       const afterTz = validatedData.requester_timezone ?? existingRequest.requester_timezone ?? 'UTC';
       // Normalize stored requested_date in case PG returns a Date object.
-      const beforeDateStr = existingRequest.requested_date instanceof Date
-        ? existingRequest.requested_date.toISOString().split('T')[0]
-        : String(existingRequest.requested_date).slice(0, 10);
+      const beforeDateValue = existingRequest.requested_date as unknown;
+      const beforeDateStr = beforeDateValue instanceof Date
+        ? beforeDateValue.toISOString().split('T')[0]
+        : String(beforeDateValue).slice(0, 10);
       const beforeTimeStr = String(existingRequest.requested_time).slice(0, 5);
       const beforeStart = fromZonedTime(`${beforeDateStr}T${beforeTimeStr}:00`, beforeTz);
       const beforeEnd = new Date(beforeStart.getTime() + existingRequest.requested_duration * 60000);
 
       appointmentWorkflowUpdate = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const previousAssigneeRow = await trx('schedule_entry_assignees')
-          .where({ entry_id: existingRequest.schedule_entry_id, tenant })
+        const previousAssigneeRow = await tenantDb(trx, tenant).table('schedule_entry_assignees')
+          .where({ entry_id: existingScheduleEntryId })
           .select('user_id')
           .first();
 
@@ -892,10 +938,9 @@ export const updateAppointmentRequest = withAuth(async (
         );
         const scheduledEnd = new Date(scheduledStart.getTime() + validatedData.requested_duration * 60000);
 
-        await trx('schedule_entries')
+        await tenantDb(trx, tenant).table('schedule_entries')
           .where({
-            entry_id: existingRequest.schedule_entry_id,
-            tenant,
+            entry_id: existingScheduleEntryId,
           })
           .update({
             title: `[Pending Request] ${service.service_name}`,
@@ -910,16 +955,15 @@ export const updateAppointmentRequest = withAuth(async (
         if (validatedData.preferred_assigned_user_id !== existingRequest.preferred_assigned_user_id) {
           const newAssigneeId = validatedData.preferred_assigned_user_id || null;
 
-          await trx('schedule_entry_assignees')
+          await tenantDb(trx, tenant).table('schedule_entry_assignees')
             .where({
-              entry_id: existingRequest.schedule_entry_id,
-              tenant,
+              entry_id: existingScheduleEntryId,
             })
             .delete();
 
           if (newAssigneeId) {
-            await trx('schedule_entry_assignees').insert({
-              entry_id: existingRequest.schedule_entry_id,
+            await tenantDb(trx, tenant).table('schedule_entry_assignees').insert({
+              entry_id: existingScheduleEntryId,
               user_id: newAssigneeId,
               tenant,
               created_at: new Date(),
@@ -927,13 +971,13 @@ export const updateAppointmentRequest = withAuth(async (
           }
         }
 
-        const newAssigneeRow = await trx('schedule_entry_assignees')
-          .where({ entry_id: existingRequest.schedule_entry_id, tenant })
+        const newAssigneeRow = await tenantDb(trx, tenant).table('schedule_entry_assignees')
+          .where({ entry_id: existingScheduleEntryId })
           .select('user_id')
           .first();
 
         return {
-          appointmentId: existingRequest.schedule_entry_id,
+          appointmentId: existingScheduleEntryId,
           beforeStart,
           beforeEnd,
           afterStart: scheduledStart,
@@ -998,13 +1042,16 @@ export const updateAppointmentRequest = withAuth(async (
 
     // Get updated request
     const updatedRequest = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('appointment_requests')
+      return await tenantDb(trx, tenant).table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
-        .first();
+        .first<AppointmentRequestRow>();
     });
+
+    if (!updatedRequest) {
+      return { success: false, error: 'Appointment request not found after update' };
+    }
 
     console.log('[updateAppointmentRequest] Appointment updated successfully:', {
       appointment_request_id: updatedRequest.appointment_request_id,
@@ -1014,7 +1061,7 @@ export const updateAppointmentRequest = withAuth(async (
     return { success: true, data: updatedRequest as IAppointmentRequest };
   } catch (error) {
     console.error('Error updating appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update appointment request';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to update appointment request');
     return { success: false, error: message };
   }
 });
@@ -1040,13 +1087,12 @@ export const getMyAppointmentRequests = withAuth(async (
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, tenant).table('contacts')
         .where({
-          contact_name_id: currentUser.contact_id,
-          tenant
+          contact_name_id: currentUser.contact_id
         })
         .select('client_id')
-        .first();
+        .first<AppointmentRequestRow>();
     });
 
     if (!contact || !contact.client_id) {
@@ -1066,21 +1112,14 @@ export const getMyAppointmentRequests = withAuth(async (
     const validatedFilters = filters ? appointmentRequestFilterSchema.parse(filters) : {};
 
     const { requests, artifactsByAppointmentRequestId } = await withTransaction(db, async (trx: Knex.Transaction) => {
-      let query = trx('appointment_requests as ar')
-        .leftJoin('service_catalog as sc', function() {
-          this.on('ar.service_id', 'sc.service_id')
-            .andOn('ar.tenant', 'sc.tenant');
-        })
-        .leftJoin('users as u', function() {
-          this.on('ar.preferred_assigned_user_id', 'u.user_id')
-            .andOn('ar.tenant', 'u.tenant');
-        })
-        .leftJoin('tickets as t', function() {
-          this.on('ar.ticket_id', 't.ticket_id')
-            .andOn('ar.tenant', 't.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      let query = scopedDb.table('appointment_requests as ar');
+      scopedDb.tenantJoin(query, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'users as u', 'ar.preferred_assigned_user_id', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoin(query, 'tickets as t', 'ar.ticket_id', 't.ticket_id', { type: 'left' });
+
+      query = query
         .where({
-          'ar.tenant': tenant,
           'ar.client_id': clientId
         })
         .select(
@@ -1138,7 +1177,7 @@ export const getMyAppointmentRequests = withAuth(async (
     return { success: true, data: mappedRequests as IAppointmentRequest[] };
   } catch (error) {
     console.error('Error fetching appointment requests:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch appointment requests');
     return { success: false, error: message };
   }
 });
@@ -1164,13 +1203,12 @@ export const getAppointmentRequestDetails = withAuth(async (
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, tenant).table('contacts')
         .where({
-          contact_name_id: currentUser.contact_id,
-          tenant
+          contact_name_id: currentUser.contact_id
         })
         .select('client_id')
-        .first();
+        .first<AppointmentRequestRow>();
     });
 
     if (!contact || !contact.client_id) {
@@ -1180,26 +1218,16 @@ export const getAppointmentRequestDetails = withAuth(async (
     const clientId = contact.client_id;
 
     const request = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const row = await trx('appointment_requests as ar')
-        .leftJoin('service_catalog as sc', function() {
-          this.on('ar.service_id', 'sc.service_id')
-            .andOn('ar.tenant', 'sc.tenant');
-        })
-        .leftJoin('users as u', function() {
-          this.on('ar.preferred_assigned_user_id', 'u.user_id')
-            .andOn('ar.tenant', 'u.tenant');
-        })
-        .leftJoin('users as approver', function() {
-          this.on('ar.approved_by_user_id', 'approver.user_id')
-            .andOn('ar.tenant', 'approver.tenant');
-        })
-        .leftJoin('tickets as t', function() {
-          this.on('ar.ticket_id', 't.ticket_id')
-            .andOn('ar.tenant', 't.tenant');
-        })
+      const scopedDb = tenantDb(trx, tenant);
+      const requestQuery = scopedDb.table('appointment_requests as ar');
+      scopedDb.tenantJoin(requestQuery, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+      scopedDb.tenantJoin(requestQuery, 'users as u', 'ar.preferred_assigned_user_id', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoin(requestQuery, 'users as approver', 'ar.approved_by_user_id', 'approver.user_id', { type: 'left' });
+      scopedDb.tenantJoin(requestQuery, 'tickets as t', 'ar.ticket_id', 't.ticket_id', { type: 'left' });
+
+      const row = await requestQuery
         .where({
           'ar.appointment_request_id': requestId,
-          'ar.tenant': tenant,
           'ar.client_id': clientId
         })
         .select(
@@ -1212,7 +1240,7 @@ export const getAppointmentRequestDetails = withAuth(async (
           'approver.last_name as approver_last_name',
           't.title as ticket_title'
         )
-        .first();
+        .first<AppointmentRequestRow>();
 
       if (!row) {
         return row;
@@ -1234,10 +1262,10 @@ export const getAppointmentRequestDetails = withAuth(async (
       return { success: false, error: 'Appointment request not found' };
     }
 
-    return { success: true, data: request as IAppointmentRequest };
+    return { success: true, data: request as unknown as IAppointmentRequest };
   } catch (error) {
     console.error('Error fetching appointment request details:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment request details';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch appointment request details');
     return { success: false, error: message };
   }
 });
@@ -1266,13 +1294,12 @@ export const cancelAppointmentRequest = withAuth(async (
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, tenant).table('contacts')
         .where({
-          contact_name_id: currentUser.contact_id,
-          tenant
+          contact_name_id: currentUser.contact_id
         })
-        .select('client_id', 'full_name', 'email')
-        .first();
+        .select('contact_name_id', 'client_id', 'full_name', 'email')
+        .first<ContactLookupRow>();
     });
 
     if (!contact || !contact.client_id) {
@@ -1283,13 +1310,12 @@ export const cancelAppointmentRequest = withAuth(async (
 
     const cancellationContext = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Verify request exists and belongs to this client
-      const request = await trx('appointment_requests')
+      const request = await tenantDb(trx, tenant).table('appointment_requests')
         .where({
           appointment_request_id: validatedData.appointment_request_id,
-          tenant,
           client_id: clientId
         })
-        .first();
+        .first<AppointmentRequestRow>();
 
       if (!request) {
         throw new Error('Appointment request not found');
@@ -1300,34 +1326,30 @@ export const cancelAppointmentRequest = withAuth(async (
       }
 
       const now = new Date();
-      const onlineMeeting = await trx('online_meetings')
+      const onlineMeeting = await tenantDb(trx, tenant).table('online_meetings')
         .where({
           appointment_request_id: request.appointment_request_id,
-          tenant,
         })
-        .first();
+        .first<OnlineMeetingRow>();
 
       if (request.schedule_entry_id) {
-        await trx('schedule_entry_assignees')
+        await tenantDb(trx, tenant).table('schedule_entry_assignees')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .delete();
 
-        await trx('schedule_entries')
+        await tenantDb(trx, tenant).table('schedule_entries')
           .where({
-            entry_id: request.schedule_entry_id,
-            tenant
+            entry_id: request.schedule_entry_id
           })
           .delete();
       }
 
       // Update request status to cancelled
-      await trx('appointment_requests')
+      await tenantDb(trx, tenant).table('appointment_requests')
         .where({
-          appointment_request_id: validatedData.appointment_request_id,
-          tenant
+          appointment_request_id: validatedData.appointment_request_id
         })
         .update({
           status: 'cancelled',
@@ -1339,15 +1361,29 @@ export const cancelAppointmentRequest = withAuth(async (
           updated_at: now
         });
 
-      await trx('online_meetings')
+      // Live Teams meetings move to cancel_pending until the idempotent
+      // cleanup job confirms Graph deletion (F019); rows without a provider
+      // meeting (failed creations) are cancelled directly.
+      const cleanupTargets: string[] = [];
+      const meetingRows = await tenantDb(trx, tenant).table('online_meetings')
         .where({
           appointment_request_id: request.appointment_request_id,
-          tenant,
         })
-        .update({
-          status: 'cancelled',
-          updated_at: now,
-        });
+        .whereNot({ status: 'cancelled' })
+        .select('meeting_id', 'provider', 'provider_meeting_id');
+
+      for (const meetingRow of meetingRows) {
+        const needsGraphCleanup = meetingRow.provider === 'teams' && meetingRow.provider_meeting_id;
+        await tenantDb(trx, tenant).table('online_meetings')
+          .where({ meeting_id: meetingRow.meeting_id })
+          .update({
+            status: needsGraphCleanup ? 'cancel_pending' : 'cancelled',
+            updated_at: now,
+          });
+        if (needsGraphCleanup) {
+          cleanupTargets.push(meetingRow.meeting_id);
+        }
+      }
 
       try {
         if (request.schedule_entry_id) {
@@ -1374,10 +1410,9 @@ export const cancelAppointmentRequest = withAuth(async (
         const emailService = SystemEmailService.getInstance();
 
         // Get service details for notifications
-        const service = await trx('service_catalog')
+        const service = await tenantDb(trx, tenant).table('service_catalog')
           .where({
-            service_id: request.service_id,
-            tenant
+            service_id: request.service_id
           })
           .first();
 
@@ -1460,34 +1495,33 @@ export const cancelAppointmentRequest = withAuth(async (
 
       return {
         appointmentRequestId: request.appointment_request_id,
-        meetingId: onlineMeeting?.provider === 'teams'
-          ? onlineMeeting.provider_meeting_id
-          : request.online_meeting_provider === 'teams' && request.online_meeting_id
-            ? request.online_meeting_id
-            : null,
-        eventId: onlineMeeting?.provider_event_id ?? null,
+        hadTeamsMeeting:
+          cleanupTargets.length > 0 ||
+          onlineMeeting?.provider === 'teams' ||
+          request.online_meeting_provider === 'teams',
+        cleanupTargets,
       };
     });
 
     let teamsMeetingWarning: string | undefined;
 
-    if (cancellationContext?.meetingId) {
-      const deletedMeeting = await deleteTeamsMeetingIfAvailable({
-        tenantId: tenant,
-        meetingId: cancellationContext.meetingId,
-        eventId: cancellationContext.eventId,
-        appointmentRequestId: cancellationContext.appointmentRequestId,
-      });
-
-      if (!deletedMeeting) {
-        teamsMeetingWarning = 'Appointment deleted, but the Microsoft Teams meeting could not be removed. Please remove it manually in Teams.';
+    if (cancellationContext?.cleanupTargets?.length) {
+      let allEnqueued = true;
+      for (const meetingId of cancellationContext.cleanupTargets) {
+        const enqueued = await enqueueTeamsMeetingCleanupJob(tenant, meetingId);
+        allEnqueued = allEnqueued && enqueued;
       }
+      teamsMeetingWarning = allEnqueued
+        ? 'The linked Microsoft Teams meeting is being cancelled; attendees will see it removed from their calendars shortly.'
+        : 'Appointment cancelled, but the Microsoft Teams meeting removal could not be scheduled. It will be retried automatically.';
+    } else if (cancellationContext?.hadTeamsMeeting) {
+      teamsMeetingWarning = 'Appointment cancelled, but the Microsoft Teams meeting could not be removed automatically. Please remove it manually in Teams.';
     }
 
     return { success: true, teamsMeetingWarning };
   } catch (error) {
     console.error('Error cancelling appointment request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to cancel appointment request';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to cancel appointment request');
     return { success: false, error: message };
   }
 });
@@ -1525,13 +1559,12 @@ export const getAvailableServicesAndTickets = withAuth(async (
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, tenant).table('contacts')
         .where({
-          contact_name_id: currentUser.contact_id,
-          tenant
+          contact_name_id: currentUser.contact_id
         })
         .select('client_id')
-        .first();
+        .first<ContactLookupRow>();
     });
 
     if (!contact || !contact.client_id) {
@@ -1566,9 +1599,8 @@ export const getAvailableServicesAndTickets = withAuth(async (
 
     // Get open tickets for the client
     const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('tickets')
+      return await tenantDb(trx, tenant).table('tickets')
         .where({
-          tenant,
           client_id: clientId
         })
         .whereNull('closed_at')
@@ -1596,7 +1628,7 @@ export const getAvailableServicesAndTickets = withAuth(async (
     };
   } catch (error) {
     console.error('Error fetching available services and tickets:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch data';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch appointment setup data');
     return { success: false, error: message };
   }
 });
@@ -1641,7 +1673,7 @@ export const getAvailableDatesForService = withAuth(async (
     return { success: true, data: availableDates };
   } catch (error) {
     console.error('Error fetching available dates:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch available dates';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch available dates');
     return { success: false, error: message };
   }
 });
@@ -1667,10 +1699,9 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
 
     // Get client_id from contact
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      return await tenantDb(trx, tenant).table('contacts')
         .where({
-          contact_name_id: currentUser.contact_id,
-          tenant
+          contact_name_id: currentUser.contact_id
         })
         .select('client_id')
         .first();
@@ -1684,10 +1715,9 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
 
     // Verify the ticket belongs to this client
     const ticket = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('tickets')
+      return await tenantDb(trx, tenant).table('tickets')
         .where({
           ticket_id: ticketId,
-          tenant,
           client_id: clientId
         })
         .first();
@@ -1698,24 +1728,14 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
     }
 
     const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('appointment_requests as ar')
-        .leftJoin('service_catalog as sc', function() {
-          this.on('ar.service_id', 'sc.service_id')
-            .andOn('ar.tenant', 'sc.tenant');
-        })
-        .leftJoin('users as u', function() {
-          this.on('ar.preferred_assigned_user_id', 'u.user_id')
-            .andOn('ar.tenant', 'u.tenant');
-        })
-        .leftJoin('users as approver', function() {
-          this.on('ar.approved_by_user_id', 'approver.user_id')
-            .andOn('ar.tenant', 'approver.tenant');
-        })
-        .leftJoin('tickets as t', function() {
-          this.on('ar.ticket_id', 't.ticket_id')
-            .andOn('ar.tenant', 't.tenant');
-        })
-        .where('ar.tenant', tenant)
+      const scopedDb = tenantDb(trx, tenant);
+      const requestsQuery = scopedDb.table('appointment_requests as ar');
+      scopedDb.tenantJoin(requestsQuery, 'service_catalog as sc', 'ar.service_id', 'sc.service_id', { type: 'left' });
+      scopedDb.tenantJoin(requestsQuery, 'users as u', 'ar.preferred_assigned_user_id', 'u.user_id', { type: 'left' });
+      scopedDb.tenantJoin(requestsQuery, 'users as approver', 'ar.approved_by_user_id', 'approver.user_id', { type: 'left' });
+      scopedDb.tenantJoin(requestsQuery, 'tickets as t', 'ar.ticket_id', 't.ticket_id', { type: 'left' });
+
+      return await requestsQuery
         .where('ar.ticket_id', ticketId)
         .where('ar.client_id', clientId) // Ensure client can only see their own requests
         .select(
@@ -1727,13 +1747,13 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
           'approver.last_name as approver_last_name',
           't.ticket_number'
         )
-        .orderBy('ar.created_at', 'desc');
+        .orderBy('ar.created_at', 'desc') as unknown as AppointmentRequestRow[];
     });
 
     return { success: true, data: requests as IAppointmentRequest[] };
   } catch (error) {
     console.error('Error fetching appointment requests by ticket ID:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch appointment requests');
     return { success: false, error: message };
   }
 });
@@ -1771,9 +1791,8 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
 
     // Get service-specific default duration
     const serviceSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('availability_settings')
+      return await tenantDb(trx, tenant).table('availability_settings')
         .where({
-          tenant,
           setting_type: 'service_rules',
           service_id: serviceId
         })
@@ -1813,9 +1832,8 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
 
     // Get ALL user settings for users with slots
     const allUserSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('availability_settings')
+      return await tenantDb(trx, tenant).table('availability_settings')
         .where({
-          tenant,
           setting_type: 'user_hours'
         })
         .whereIn('user_id', Array.from(userIds))
@@ -1839,8 +1857,7 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
 
     const technicians = allowedUserIds.length > 0
       ? await withTransaction(db, async (trx: Knex.Transaction) => {
-          const users = await trx('users')
-            .where({ tenant })
+          const users = await tenantDb(trx, tenant).table('users')
             .whereIn('user_id', allowedUserIds)
             .select(
               'user_id',
@@ -1885,7 +1902,7 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
     };
   } catch (error) {
     console.error('Error fetching time slots:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch time slots';
+    const message = portalAppointmentRequestErrorMessage(error, 'Failed to fetch time slots');
     return { success: false, error: message };
   }
 });

@@ -1,8 +1,12 @@
 'use server';
 
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
+
+function userPreferences(knex: any, tenant: string) {
+  return tenantDb(knex, tenant).table('user_preferences');
+}
 
 export const updateUserLocaleAction = withAuth(async (
   user,
@@ -18,11 +22,10 @@ export const updateUserLocaleAction = withAuth(async (
 
   if (locale === null) {
     // Delete the preference to clear it
-    await knex('user_preferences')
+    await userPreferences(knex, tenant)
       .where({
         user_id: user.user_id,
         setting_name: 'locale',
-        tenant: tenant
       })
       .delete();
 
@@ -30,21 +33,19 @@ export const updateUserLocaleAction = withAuth(async (
   }
 
   // Check if preference exists
-  const existing = await knex('user_preferences')
+  const existing = await userPreferences(knex, tenant)
     .where({
       user_id: user.user_id,
       setting_name: 'locale',
-      tenant: tenant
     })
     .first();
 
   if (existing) {
     // Update existing preference
-    await knex('user_preferences')
+    await userPreferences(knex, tenant)
       .where({
         user_id: user.user_id,
         setting_name: 'locale',
-        tenant: tenant
       })
       .update({
         setting_value: JSON.stringify(locale),
@@ -52,7 +53,7 @@ export const updateUserLocaleAction = withAuth(async (
       });
   } else {
     // Insert new preference
-    await knex('user_preferences').insert({
+    await userPreferences(knex, tenant).insert({
       user_id: user.user_id,
       tenant: tenant,
       setting_name: 'locale',
@@ -74,11 +75,10 @@ export const getUserLocaleAction = withOptionalAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  const userPref = await knex('user_preferences')
+  const userPref = await userPreferences(knex, ctx.tenant)
     .where({
       user_id: user.user_id,
       setting_name: 'locale',
-      tenant: ctx.tenant
     })
     .first();
 

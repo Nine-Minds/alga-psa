@@ -8,6 +8,7 @@ const getSessionMock = vi.fn();
 const isRevokedMock = vi.fn();
 const getTenantBrandingByDomainMock = vi.fn();
 const getTenantLocaleByDomainMock = vi.fn();
+const recordPortalDomainSeenMock = vi.fn();
 
 const ClientPortalSignInMock = () => null;
 const ClientPortalTenantDiscoveryMock = () => null;
@@ -45,6 +46,10 @@ vi.mock('@alga-psa/client-portal/components', () => ({
   ClientPortalTenantDiscovery: ClientPortalTenantDiscoveryMock,
 }));
 
+vi.mock('@/lib/portal-domains/portalDomainSeen', () => ({
+  recordPortalDomainSeen: recordPortalDomainSeenMock,
+}));
+
 const { default: ClientPortalSignInPage } = await import('server/src/app/auth/client-portal/signin/page');
 
 describe('ClientPortalSignInPage', () => {
@@ -57,6 +62,7 @@ describe('ClientPortalSignInPage', () => {
     isRevokedMock.mockReset();
     getTenantBrandingByDomainMock.mockReset();
     getTenantLocaleByDomainMock.mockReset();
+    recordPortalDomainSeenMock.mockReset();
 
     if (typeof originalNextAuthUrl === 'undefined') {
       delete process.env.NEXTAUTH_URL;
@@ -108,5 +114,32 @@ describe('ClientPortalSignInPage', () => {
 
     expect(redirectMock).not.toHaveBeenCalled();
     expect((result as any)?.type).toBe(PortalSwitchPromptMock);
+  });
+
+  it('passes portal branding context to the client sign-in UI', async () => {
+    const branding = {
+      logoUrl: 'https://portal.example.com/logo.png',
+      primaryColor: '#112233',
+      secondaryColor: '#445566',
+      clientName: 'Example',
+    };
+    getSessionMock.mockResolvedValue(null);
+    getTenantBrandingByDomainMock.mockResolvedValue(branding);
+
+    const result = await ClientPortalSignInPage({
+      searchParams: Promise.resolve({ portalDomain: 'portal.example.com' }),
+    });
+    const children = (result as any).props.children as Array<React.ReactElement<{
+      branding?: unknown;
+      portalDomain?: string;
+    }>>;
+    const signIn = children.find((child) => child.type === ClientPortalSignInMock);
+
+    expect(recordPortalDomainSeenMock).toHaveBeenCalledWith('portal.example.com');
+    expect(getTenantBrandingByDomainMock).toHaveBeenCalledWith('portal.example.com');
+    expect(signIn?.props).toMatchObject({
+      branding,
+      portalDomain: 'portal.example.com',
+    });
   });
 });

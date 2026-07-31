@@ -29,6 +29,16 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface OverallInteractionsFeedProps {
   users: IUser[];
@@ -64,6 +74,10 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const [allContacts, setAllContacts] = useState<IContact[]>(contacts);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const { openDrawer } = useDrawer();
+  const [interactionsLoadErrorMessage, setInteractionsLoadErrorMessage] = useState<string | null>(null);
+  const [typesLoadErrorMessage, setTypesLoadErrorMessage] = useState<string | null>(null);
+  const [statusesLoadErrorMessage, setStatusesLoadErrorMessage] = useState<string | null>(null);
+  const loadErrorMessage = interactionsLoadErrorMessage ?? typesLoadErrorMessage ?? statusesLoadErrorMessage;
 
   // UI Reflection System Integration
   const { automationIdProps: searchInputProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -122,6 +136,10 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const fetchInteractionTypes = async () => {
     try {
       const types = await getAllInteractionTypes();
+      if (isReturnedActionError(types)) {
+        setTypesLoadErrorMessage(getErrorMessage(types));
+        return;
+      }
       // Sort to ensure system types appear first
       const sortedTypes = types.sort((a, b) => {
         // If both are system types or both are tenant types, sort by name
@@ -131,29 +149,47 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
         // System types ('created_at' exists) come first
         return 'created_at' in a ? -1 : 1;
       });
+      setTypesLoadErrorMessage(null);
       setInteractionTypes(sortedTypes);
     } catch (error) {
       console.error('Error fetching interaction types:', error);
+      setTypesLoadErrorMessage(t('interactions.feed.typesLoadFailed', { defaultValue: 'Interaction types could not be loaded. Please try again.' }));
     }
   };
 
   const fetchStatuses = async () => {
     try {
       const statusList = await getInteractionStatuses();
+      if (isReturnedActionError(statusList)) {
+        setStatuses([]);
+        setStatusesLoadErrorMessage(getErrorMessage(statusList));
+        return;
+      }
+      setStatusesLoadErrorMessage(null);
       setStatuses(statusList);
     } catch (error) {
       console.error('Error fetching interaction statuses:', error);
+      setStatuses([]);
+      setStatusesLoadErrorMessage(t('interactions.overall.statusesLoadFailed', { defaultValue: 'Interaction statuses could not be loaded. Please try again.' }));
     }
   };
 
   const fetchInteractions = useCallback(async () => {
     try {
       const fetchedInteractions = await getRecentInteractions({});
+      if (isReturnedActionError(fetchedInteractions)) {
+        setInteractions([]);
+        setInteractionsLoadErrorMessage(getErrorMessage(fetchedInteractions));
+        return;
+      }
+      setInteractionsLoadErrorMessage(null);
       setInteractions(fetchedInteractions);
     } catch (error) {
       console.error('Error fetching interactions:', error);
+      setInteractions([]);
+      setInteractionsLoadErrorMessage(t('interactions.feed.loadFailed', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
     }
-  }, []);
+  }, [t]);
 
   const fetchContacts = async () => {
     try {
@@ -483,6 +519,11 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
         </DialogContent>
       </Dialog>
       
+      {loadErrorMessage ? (
+        <div role="alert" className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {loadErrorMessage}
+        </div>
+      ) : null}
       <ul className="space-y-4 overflow-y-auto max-h-[calc(100vh-300px)]">
         {filteredInteractions.map((interaction: IInteraction): React.JSX.Element => (
           <li key={interaction.interaction_id} className="flex items-start space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer" onClick={() => handleInteractionClick(interaction)}>

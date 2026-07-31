@@ -79,4 +79,28 @@ describe('materialize client cadence service periods', () => {
     expect(arrearsPlan.records[0].recordId).toContain('client:arrears');
     expect(arrearsPlan.records.at(-1)?.servicePeriod.end >= '2026-07-09').toBe(true);
   });
+
+  it('extends old regeneration anchors through the materialization date horizon', () => {
+    const sourceObligation = buildPersistedRecurringObligationRef({
+      obligationId: 'line-stale-anchor',
+      obligationType: 'contract_line',
+      chargeFamily: 'fixed',
+    });
+
+    const plan = materializeClientCadenceServicePeriods({
+      asOf: '2025-08-01T00:00:00Z',
+      materializedAt: '2026-07-06T12:00:00.000Z',
+      billingCycle: 'monthly',
+      anchorSettings: { dayOfMonth: 1 },
+      sourceObligation,
+      duePosition: 'arrears',
+      sourceRuleVersion: 'contract-line-stale-anchor:v1',
+      sourceRunKey: 'materialize-2026-07-06',
+    });
+
+    expect(plan.generationRangeEnd).toBe('2027-01-02');
+    expect(plan.coverage.asOf).toBe('2026-07-06');
+    expect(plan.records.some((record) => record.periodKey === 'period:2026-06-01:2026-07-01')).toBe(true);
+    expect(plan.records.at(-1)?.servicePeriod.end >= '2027-01-02').toBe(true);
+  });
 });

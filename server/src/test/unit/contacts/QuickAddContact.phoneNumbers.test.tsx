@@ -22,10 +22,13 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
+vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({
   addContact: addContactMock,
-  getAllCountries: vi.fn().mockResolvedValue([{ code: 'US', name: 'United States', phone_code: '+1' }]),
   listContactPhoneTypeSuggestions: vi.fn().mockResolvedValue(['Desk Line']),
+}));
+
+vi.mock('@alga-psa/clients/actions/countryActions', () => ({
+  getAllCountries: vi.fn().mockResolvedValue([{ code: 'US', name: 'United States', phone_code: '+1' }]),
 }));
 
 vi.mock('@alga-psa/ui', () => ({
@@ -115,11 +118,11 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   ClientPicker: () => <div data-testid="client-picker" />,
 }));
 
-vi.mock('@alga-psa/tags/components', () => ({
+vi.mock('@alga-psa/tags/components/QuickAddTagPicker', () => ({
   QuickAddTagPicker: () => <div data-testid="quick-add-tag-picker" />,
 }));
 
-vi.mock('@alga-psa/tags/actions', () => ({
+vi.mock('@alga-psa/tags/actions/tagActions', () => ({
   createTagsForEntity: createTagsForEntityMock,
 }));
 

@@ -110,10 +110,10 @@ describe('inbound ticket destination migrations (integration)', () => {
   });
 
   it('T005: migration down path removes added columns/indexes/constraints and up restores them', async () => {
-    const clientDestinationMigration = require('../../../../migrations/20260225120000_add_client_inbound_ticket_defaults_id.cjs');
-    const contactDestinationMigration = require('../../../../migrations/20260225120500_add_contact_inbound_ticket_defaults_id.cjs');
-    const indexMigration = require('../../../../migrations/20260225121000_add_inbound_ticket_defaults_lookup_indexes.cjs');
-    const foreignKeyMigration = require('../../../../migrations/20260225121500_add_inbound_ticket_defaults_destination_foreign_keys.cjs');
+    const clientDestinationMigration = require('../../../migrations/20260225120000_add_client_inbound_ticket_defaults_id.cjs');
+    const contactDestinationMigration = require('../../../migrations/20260225120500_add_contact_inbound_ticket_defaults_id.cjs');
+    const indexMigration = require('../../../migrations/20260225121000_add_inbound_ticket_defaults_lookup_indexes.cjs');
+    const foreignKeyMigration = require('../../../migrations/20260225121500_add_inbound_ticket_defaults_destination_foreign_keys.cjs');
 
     const trx = await knex.transaction();
     let testError: unknown = null;

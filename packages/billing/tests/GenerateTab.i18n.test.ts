@@ -24,7 +24,12 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 
 describe('GenerateTab i18n wiring contract', () => {
   it('T037: invoice-type label, option labels, descriptions, success message, and load error resolve through msp/invoicing', () => {
-    const source = read('../src/components/billing-dashboard/invoicing/GenerateTab.tsx');
+    // The data-first invoicing redesign moved the invoice-type selector out of
+    // GenerateTab and onto the InvoicingHub tab-bar row, so the type option
+    // labels now resolve through the hub while GenerateTab keeps the
+    // success/load-error copy. Every key still lives in the en namespace.
+    const generateTab = read('../src/components/billing-dashboard/invoicing/GenerateTab.tsx');
+    const hub = read('../src/components/billing-dashboard/InvoicingHub.tsx');
     const en = readJson<Record<string, unknown>>(
       '../../../server/public/locales/en/msp/invoicing.json',
     );
@@ -41,10 +46,21 @@ describe('GenerateTab i18n wiring contract', () => {
       'generateTab.messages.loadFailed',
     ];
 
-    expect(source).toContain("useTranslation('msp/invoicing')");
+    // Invoice-type option labels resolve through the hub selector.
+    expect(hub).toContain("useTranslation('msp/invoicing')");
+    for (const key of ['generateTab.types.automatic', 'generateTab.types.manual', 'generateTab.types.prepayment']) {
+      expect(hub).toContain(key);
+    }
 
+    // Success + load-error copy resolves through GenerateTab.
+    expect(generateTab).toContain("useTranslation('msp/invoicing')");
+    for (const key of ['generateTab.messages.success', 'generateTab.messages.loadFailed']) {
+      expect(generateTab).toContain(key);
+    }
+
+    // Every invoice-type key (field label, option labels, descriptions, messages)
+    // remains defined in the en namespace for translators.
     for (const key of keyChecks) {
-      expect(source).toContain(key);
       expect(getLeaf(en, key)).toBeDefined();
     }
   });

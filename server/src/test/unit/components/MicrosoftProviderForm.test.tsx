@@ -36,6 +36,7 @@ describe('MicrosoftProviderForm', () => {
     vi.clearAllMocks();
     // Mock window.location
     Object.defineProperty(window, 'location', {
+      configurable: true,
       value: {
         origin: 'http://localhost:3000',
         href: 'http://localhost:3000',

@@ -27,6 +27,13 @@ import {
 import { MoreVertical, PlusIcon, RefreshCw } from 'lucide-react';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import type { DeletionValidationResult } from '@alga-psa/types';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface TemplateListProps {
   templates: SurveyTemplate[];
@@ -34,6 +41,9 @@ interface TemplateListProps {
   onTemplatesChange: React.Dispatch<React.SetStateAction<SurveyTemplate[]>>;
   onRefresh: () => Promise<void>;
 }
+
+const isSurveyActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function TemplateList({ templates, isLoading, onTemplatesChange, onRefresh }: TemplateListProps) {
   const { t } = useTranslation('msp/surveys');
@@ -124,6 +134,9 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
     setIsToggling(template.templateId);
     try {
       const updated = await updateSurveyTemplate(template.templateId, { enabled });
+      if (isSurveyActionError(updated)) {
+        throw new Error(getErrorMessage(updated));
+      }
       onTemplatesChange((prev) =>
         prev.map((item) => (item.templateId === updated.templateId ? updated : item))
       );
@@ -151,6 +164,9 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
     setIsToggling(template.templateId);
     try {
       const updated = await updateSurveyTemplate(template.templateId, { isDefault: true });
+      if (isSurveyActionError(updated)) {
+        throw new Error(getErrorMessage(updated));
+      }
       onTemplatesChange((prev) =>
         prev.map((item) => ({
           ...item,

@@ -3,6 +3,7 @@
  * Tests T027-T053 from the feature test plan
  */
 import { test, expect, type Page } from '@playwright/test';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -22,6 +23,10 @@ const TEST_CONFIG = {
   baseUrl: getBaseUrl(),
 };
 
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
+
 // Helper to create test tickets with different response states
 async function createTestTicketsForResponseState(
   db: Knex,
@@ -32,13 +37,13 @@ async function createTestTicketsForResponseState(
   noStateTicketId: string;
 }> {
   // Get or create an open status
-  let status = await db('statuses')
+  let status = await tenantTable(db, tenantId, 'statuses')
     .where({ tenant: tenantId, is_closed: false, status_type: 'ticket' })
     .first();
 
   if (!status) {
     const statusId = uuidv4();
-    await db('statuses').insert({
+    await tenantTable(db, tenantId, 'statuses').insert({
       status_id: statusId,
       tenant: tenantId,
       name: 'Open',
@@ -50,12 +55,12 @@ async function createTestTicketsForResponseState(
   }
 
   // Get or create a priority
-  let priority = await db('priorities').where({ tenant: tenantId }).first();
+  let priority = await tenantTable(db, tenantId, 'priorities').where({ tenant: tenantId }).first();
 
   if (!priority) {
     const priorityId = uuidv4();
-    const user = await db('users').where({ tenant: tenantId }).first();
-    await db('priorities').insert({
+    const user = await tenantTable(db, tenantId, 'users').where({ tenant: tenantId }).first();
+    await tenantTable(db, tenantId, 'priorities').insert({
       priority_id: priorityId,
       tenant: tenantId,
       priority_name: 'Normal',
@@ -67,11 +72,11 @@ async function createTestTicketsForResponseState(
   }
 
   // Get or create a client
-  let client = await db('clients').where({ tenant: tenantId }).first();
+  let client = await tenantTable(db, tenantId, 'clients').where({ tenant: tenantId }).first();
 
   if (!client) {
     const clientId = uuidv4();
-    await db('clients').insert({
+    await tenantTable(db, tenantId, 'clients').insert({
       client_id: clientId,
       tenant: tenantId,
       client_name: 'Test Client',
@@ -82,11 +87,11 @@ async function createTestTicketsForResponseState(
   }
 
   // Get or create a board
-  let board = await db('boards').where({ tenant: tenantId }).first();
+  let board = await tenantTable(db, tenantId, 'boards').where({ tenant: tenantId }).first();
 
   if (!board) {
     const boardId = uuidv4();
-    await db('boards').insert({
+    await tenantTable(db, tenantId, 'boards').insert({
       board_id: boardId,
       tenant: tenantId,
       board_name: 'Test Board',
@@ -98,7 +103,7 @@ async function createTestTicketsForResponseState(
   // Create ticket awaiting client response
   const awaitingClientTicketId = uuidv4();
   const awaitingClientTicketNumber = `AWC-${Date.now().toString().slice(-6)}`;
-  await db('tickets').insert({
+  await tenantTable(db, tenantId, 'tickets').insert({
     ticket_id: awaitingClientTicketId,
     tenant: tenantId,
     ticket_number: awaitingClientTicketNumber,
@@ -115,7 +120,7 @@ async function createTestTicketsForResponseState(
   // Create ticket awaiting internal response
   const awaitingInternalTicketId = uuidv4();
   const awaitingInternalTicketNumber = `AWI-${Date.now().toString().slice(-6)}`;
-  await db('tickets').insert({
+  await tenantTable(db, tenantId, 'tickets').insert({
     ticket_id: awaitingInternalTicketId,
     tenant: tenantId,
     ticket_number: awaitingInternalTicketNumber,
@@ -132,7 +137,7 @@ async function createTestTicketsForResponseState(
   // Create ticket with no response state
   const noStateTicketId = uuidv4();
   const noStateTicketNumber = `NOS-${Date.now().toString().slice(-6)}`;
-  await db('tickets').insert({
+  await tenantTable(db, tenantId, 'tickets').insert({
     ticket_id: noStateTicketId,
     tenant: tenantId,
     ticket_number: noStateTicketNumber,
@@ -503,7 +508,7 @@ test.describe('Ticket Response State UI Tests', () => {
         // Verify the database was updated - retry a few times as the update may be async
         let ticket;
         for (let i = 0; i < 15; i++) {
-          ticket = await db('tickets').where({ ticket_id: noStateTicketId }).first();
+          ticket = await tenantTable(db, tenantId, 'tickets').where({ ticket_id: noStateTicketId }).first();
           if (ticket?.response_state === 'awaiting_client') break;
           await page.waitForTimeout(500);
         }
@@ -531,7 +536,7 @@ test.describe('Ticket Response State UI Tests', () => {
 
         // Create tickets with response states
         await createTestTicketsForResponseState(db, tenantId);
-        const clientRecord = await db('clients').where({ tenant: tenantId }).first();
+        const clientRecord = await tenantTable(db, tenantId, 'clients').where({ tenant: tenantId }).first();
 
         // Create client user with proper authentication (already linked to contact via createClientUser)
         const { userId: clientUserId, email: clientEmail } = await createClientUser(
@@ -576,7 +581,7 @@ test.describe('Ticket Response State UI Tests', () => {
 
         const tenantId = tenantData.tenant.tenantId;
         const { awaitingClientTicketId } = await createTestTicketsForResponseState(db, tenantId);
-        const clientRecord = await db('clients').where({ tenant: tenantId }).first();
+        const clientRecord = await tenantTable(db, tenantId, 'clients').where({ tenant: tenantId }).first();
 
         // Create client user with proper authentication (already linked to contact via createClientUser)
         const { userId: clientUserId, email: clientEmail } = await createClientUser(

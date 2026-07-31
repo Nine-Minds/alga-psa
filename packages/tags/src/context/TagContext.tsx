@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import type { ITag, TaggedEntityType } from '@alga-psa/types';
-import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions } from '../actions';
+import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions, isTagActionError } from '../actions';
 
 interface TagPermissions {
   canAddExisting: boolean;
@@ -55,8 +55,16 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       const allTags = await getAllTags();
+      if (isTagActionError(allTags)) {
+        console.error('Failed to refetch tags:', allTags);
+        return;
+      }
       setTags(allTags);
       setTagsLoaded(true);
+    } catch (error) {
+      // Callers fire-and-forget from effects; an escaping rejection surfaces
+      // as an unhandled rejection instead of a recoverable miss.
+      console.error('Failed to refetch tags:', error);
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +89,10 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
     });
 
     try {
-      await updateTagColor(tagId, backgroundColor, textColor);
+      const result = await updateTagColor(tagId, backgroundColor, textColor);
+      if (isTagActionError(result)) {
+        throw result;
+      }
       // Skip automatic refetch - let individual components handle their own updates
     } catch (error) {
       console.error("Failed to update tag color:", error);
@@ -107,7 +118,10 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
     });
 
     try {
-      await updateTagText(tagId, newTagText);
+      const result = await updateTagText(tagId, newTagText);
+      if (isTagActionError(result)) {
+        throw result;
+      }
       // Skip automatic refetch - let individual components handle their own updates
     } catch (error) {
       console.error("Failed to update tag text:", error);
@@ -125,7 +139,10 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
     );
 
     try {
-      await deleteAllTagsByText(tagText, taggedType);
+      const result = await deleteAllTagsByText(tagText, taggedType);
+      if (isTagActionError(result)) {
+        throw result;
+      }
       // Skip automatic refetch - let individual components handle their own updates
     } catch (error) {
       console.error("Failed to delete tags:", error);

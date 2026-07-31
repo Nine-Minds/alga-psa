@@ -8,7 +8,7 @@
 import type { IRole } from '@alga-psa/types';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 
 type DbConnection = Knex | Knex.Transaction;
 type PermissionResource = 'client' | 'contact' | 'interaction' | 'document' | 'user' | 'system_settings' | string;
@@ -57,11 +57,10 @@ export async function getContactClientId(
   tenant: string,
   contactId: string
 ): Promise<string | null> {
-  const contact = await db('contacts')
+  const contact = await tenantDb(db, tenant).table('contacts')
     .select('client_id')
     .where({
       contact_name_id: contactId,
-      tenant
     })
     .first();
 

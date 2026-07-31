@@ -47,6 +47,9 @@ vi.mock('@alga-psa/db', () => {
     runWithTenant: async (_tenant: string, fn: () => unknown) => fn(),
     withTransaction: async (knexOrTrx: unknown, fn: (trx: unknown) => unknown) => fn(knexOrTrx),
     getTenantContext: async () => 'test-tenant-id',
+    tenantDb: (conn: any, _tenant: string) => ({
+      table: (t: string) => conn(t),
+    }),
   };
 });
 

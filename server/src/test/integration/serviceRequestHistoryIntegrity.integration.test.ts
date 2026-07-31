@@ -1,12 +1,22 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { publishServiceRequestDefinition } from '../../lib/service-requests/definitionPublishing';
 import { getServiceRequestSubmissionHistoryDetail } from '../../lib/service-requests/submissionHistory';
 
 describe('service request submission history integrity', () => {
   let db: Knex;
+
+  function tenantTable(tenant: string, table: string) {
+    return tenantDb(db, tenant).table(table);
+  }
+
+  function tenantRows() {
+    return tenantDb(db, '__test_tenant_fixture__')
+      .unscoped('tenants', 'test fixture creates and removes tenant rows');
+  }
 
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
@@ -26,29 +36,28 @@ describe('service request submission history integrity', () => {
     const definitionId = uuidv4();
     const submissionId = uuidv4();
 
-    await db('tenants').insert({
+    await tenantRows().insert({
       tenant,
       client_name: `Tenant ${tenant.slice(0, 8)}`,
       email: `tenant-${tenant.slice(0, 8)}@example.com`,
     });
 
-    await db('service_categories').insert({
+    await tenantTable(tenant, 'service_categories').insert({
       tenant,
       category_id: categoryId,
       category_name: 'Onboarding',
     });
 
-    await db('service_types').insert({
+    await tenantTable(tenant, 'service_types').insert({
       id: serviceTypeId,
       tenant,
       name: `Request Type ${serviceTypeId.slice(0, 8)}`,
-      billing_method: 'fixed',
       order_number: 1,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
 
-    await db('service_catalog').insert({
+    await tenantTable(tenant, 'service_catalog').insert({
       tenant,
       service_id: serviceId,
       service_name: 'Laptop Provisioning',
@@ -57,7 +66,7 @@ describe('service request submission history integrity', () => {
       category_id: categoryId,
     });
 
-    await db('service_request_definitions').insert({
+    await tenantTable(tenant, 'service_request_definitions').insert({
       tenant,
       definition_id: definitionId,
       name: 'New Hire Setup',
@@ -79,7 +88,7 @@ describe('service request submission history integrity', () => {
       definitionId,
     });
 
-    await db('service_request_submissions').insert({
+    await tenantTable(tenant, 'service_request_submissions').insert({
       tenant,
       submission_id: submissionId,
       definition_id: definitionId,
@@ -92,11 +101,11 @@ describe('service request submission history integrity', () => {
       execution_status: 'pending',
     });
 
-    await db('service_categories').where({ tenant, category_id: categoryId }).update({
+    await tenantTable(tenant, 'service_categories').where({ tenant, category_id: categoryId }).update({
       category_name: 'User Lifecycle',
     });
 
-    await db('service_catalog').where({ tenant, service_id: serviceId }).update({
+    await tenantTable(tenant, 'service_catalog').where({ tenant, service_id: serviceId }).update({
       service_name: 'Workstation Provisioning',
     });
 

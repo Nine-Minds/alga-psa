@@ -9,6 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { getErrorMessage, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { TEMPLATE_AST_VERSION, type IQuoteDocumentTemplate } from '@alga-psa/types';
 import { getQuoteDocumentTemplate, saveQuoteDocumentTemplate } from '../../../actions/quoteDocumentTemplates';
@@ -189,8 +190,8 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
 
         if (templateId) {
           const loadedResult = await getQuoteDocumentTemplate(templateId);
-          if (loadedResult && typeof loadedResult === 'object' && 'permissionError' in loadedResult) {
-            throw new Error(loadedResult.permissionError);
+          if (isActionPermissionError(loadedResult)) {
+            throw new Error(getErrorMessage(loadedResult));
           }
           if (!loadedResult) {
             throw new Error(
@@ -353,8 +354,8 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
         templateAst: ast as any,
       });
 
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isActionPermissionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       const saveResult = result as { success: boolean; template?: IQuoteDocumentTemplate; error?: string };

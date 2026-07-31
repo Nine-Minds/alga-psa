@@ -18,6 +18,14 @@
       "import": "./src/components/index.ts",
       "types": "./src/components/index.ts"
     },
+    "./components/ActivityDrawerProvider": {
+      "import": "./src/components/ActivityDrawerProvider.tsx",
+      "types": "./src/components/ActivityDrawerProvider.tsx"
+    },
+    "./components/UserActivitiesDashboard": {
+      "import": "./src/components/UserActivitiesDashboard.tsx",
+      "types": "./src/components/UserActivitiesDashboard.tsx"
+    },
     "./hooks/useActivitiesCache": {
       "import": "./src/hooks/useActivitiesCache.ts",
       "types": "./src/hooks/useActivitiesCache.ts"
@@ -26,9 +34,17 @@
       "import": "./src/components/constants.ts",
       "types": "./src/components/constants.ts"
     },
+    "./server/activity-actions": {
+      "import": "./src/server/activity-actions.ts",
+      "types": "./src/server/activity-actions.ts"
+    },
     "./server/workflow-tasks": {
       "import": "./src/server/workflow-tasks.ts",
       "types": "./src/server/workflow-tasks.ts"
+    },
+    "./server/workflow-task-actions": {
+      "import": "./src/server/workflow-task-actions.ts",
+      "types": "./src/server/workflow-task-actions.ts"
     },
     "./client/workflow-tasks": {
       "import": "./src/client/workflow-tasks.tsx",
@@ -37,9 +53,11 @@
   },
   "dependencies": {
     "@alga-psa/auth": "*",
+    "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/notifications": "*",
+    "@alga-psa/opportunities": "*",
     "@alga-psa/reference-data": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/shared": "*",

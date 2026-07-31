@@ -17,6 +17,7 @@
    - [Time Sheets and Billing](#time-sheets-and-billing)
 4. [Interval Tracking](#interval-tracking)
    - [Automatic Ticket Time Tracking](#automatic-ticket-time-tracking)
+   - [Mobile App Time Tracking](#mobile-app-time-tracking)
    - [Interval Management](#interval-management)
    - [Converting Intervals to Time Entries](#converting-intervals-to-time-entries)
    - [Integration Points](#integration-points)
@@ -189,11 +190,11 @@ The generated time periods serve as templates or headers for **Time Sheets**. Us
 
 ## Interval Tracking
 
-The system includes a lightweight ticket time-tracking feature that automatically captures when users view tickets, providing a foundation for accurate time entries with minimal manual effort.
+The system includes time-tracking features that automatically capture when users interact with tickets, providing a foundation for accurate time entries with minimal manual effort. Two separate tracking mechanisms exist: a browser-based tracker (web app) and a server-backed tracker (mobile app).
 
 ### Automatic Ticket Time Tracking
 
-When users interact with tickets in the system, their viewing sessions are automatically tracked:
+When users interact with tickets in the **web application**, their viewing sessions are automatically tracked using the browser's IndexedDB:
 
 - **Start Time**: Recorded when a user opens a ticket
 - **End Time**: Captured when the user navigates away from the ticket
@@ -223,6 +224,37 @@ The system includes an intelligent auto-close feature for abandoned intervals:
 - Intervals from previous days with no end time are automatically closed at 5:00 PM of their start date
 - If the start time was after 5:00 PM, the interval is closed at the start time
 - Auto-closed intervals are clearly marked for user review
+
+### Mobile App Time Tracking
+
+The Alga PSA mobile app (iOS and Android) uses a different, **server-backed** time tracking mechanism. Unlike the browser tracker, mobile timer sessions are persisted to the server so they survive app kills, relaunches, and device switches.
+
+**How it works — three REST endpoints drive the full lifecycle:**
+
+| Step | Endpoint | Description |
+|------|----------|-------------|
+| Start | `POST /api/v1/time-tracking/start-tracking` | Opens a server-side session for the current user, ticket, and selected service |
+| Restore | `GET /api/v1/time-tracking/active-session` | Returns the running session on app launch or device switch |
+| Stop | `POST /api/v1/time-tracking/stop-tracking` | Closes the session and creates a time entry |
+
+**Key differences from browser interval tracking:**
+
+| | Browser (IndexedDB) | Mobile (server-backed) |
+|---|---|---|
+| Storage | Local browser storage only | Server database |
+| Survives close | No — auto-closed at 5 PM of start date | Yes — session persists until explicitly stopped |
+| Multi-device | No | Yes — active session is visible on any signed-in device |
+| Privacy | Local until converted | Persisted to server on start |
+
+**Mobile-specific UX features:**
+
+- **One-tap start chip**: Appears on the ticket detail screen. The last-used service is remembered across sessions so technicians can start billing with a single tap.
+- **App-wide timer banner**: A live banner is displayed across all screens while a timer is running, giving technicians a constant reminder and one-tap access to stop.
+- **Stop-and-review modal**: When stopping, technicians see a modal to add notes, toggle billability, and adjust the end time before the entry is recorded.
+- **Android sticky notification**: A persistent notification in the notification shade shows the running timer and lets technicians stop it without reopening the app.
+- **Still-running reminders**: Notifications fire at 1, 2, 4, and 8 hours if the timer is still active, respecting the device's hide-sensitive-notifications setting.
+
+Stopping the mobile timer creates a standard time entry subject to the same time period boundaries and approval workflow as manually entered time.
 
 ### Interval Management
 
@@ -410,7 +442,7 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
 
 **Interval Tracking Service:**
 
-The `IntervalTrackingService` class manages the storage and retrieval of ticket viewing intervals:
+The `IntervalTrackingService` class manages the storage and retrieval of ticket viewing intervals in the browser:
 
 ```typescript
 // Key methods in IntervalTrackingService
@@ -549,7 +581,7 @@ These tests cover various scenarios including:
 The Time Entry system provides a robust solution for tracking work hours, managing approvals, and generating time periods. Key features include:
 
 - Flexible time entry recording with both manual and automatic options
-- Automatic interval tracking for ticket-based work
+- Automatic interval tracking for ticket-based work — browser-based (IndexedDB) in the web app and server-backed (REST API sessions) in the mobile app
 - Intelligent interval management with merging and adjustment capabilities
 - Configurable time period settings
 - Automatic time period generation

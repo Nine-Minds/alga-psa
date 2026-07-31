@@ -28,6 +28,14 @@ import {
     upsertUserTypeRatesForConfig // Added import for user type rates action
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
+import {
     IContractLineServiceHourlyConfig,
     IContractLineServiceConfiguration,
     IUserTypeRate
@@ -164,7 +172,13 @@ export function HourlyPresetConfiguration({
     setPlanValidationErrors({});
     try {
       // Fetch base plan details
-      const fetchedPlan = await getContractLinePresetById(presetId) as HourlyPlanData;
+      const fetchedPlanResult = await getContractLinePresetById(presetId);
+      if (isReturnedActionError(fetchedPlanResult)) {
+        setError(getErrorMessage(fetchedPlanResult));
+        setLoading(false);
+        return;
+      }
+      const fetchedPlan = fetchedPlanResult as HourlyPlanData | null;
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Hourly') {
         setError(t('preset.hourly.errors.invalidPlanTypeOrNotFound', {
           defaultValue: 'Invalid plan type or plan not found.',
@@ -212,6 +226,10 @@ export function HourlyPresetConfiguration({
 
       // Fetch services and their configurations using the correct action
       const servicesWithConfigsResult = await getContractLineServicesWithConfigurations(presetId);
+      if (isReturnedActionError(servicesWithConfigsResult)) {
+        setError(getErrorMessage(servicesWithConfigsResult));
+        return;
+      }
 
       // Process results, mapping to IPlanServiceWithHourlyConfig
       const processedConfigs: IPlanServiceWithHourlyConfig[] = servicesWithConfigsResult.map((item) => {
@@ -377,7 +395,11 @@ export function HourlyPresetConfiguration({
       };
 
       if (plan?.preset_id) {
-        await updateContractLinePreset(plan.preset_id, planData);
+        const result = await updateContractLinePreset(plan.preset_id, planData);
+        if (isReturnedActionError(result)) {
+          setSaveError(getErrorMessage(result));
+          return;
+        }
       }
 
       await fetchPlanData();
@@ -441,7 +463,7 @@ export function HourlyPresetConfiguration({
                 // Check if hourly fields actually changed
                 const initialConfig = initialServiceConfigs.find(ic => ic.config_id === config.config_id);
                 if (!isEqual(config.hourly_config, initialConfig?.hourly_config)) {
-                    await upsertPlanServiceHourlyConfiguration(
+                    const hourlyConfigResult = await upsertPlanServiceHourlyConfiguration(
                         presetId,
                         config.service_id,
                         {
@@ -450,10 +472,18 @@ export function HourlyPresetConfiguration({
                             round_up_to_nearest: config.hourly_config.round_up_to_nearest ?? null,
                         }
                     );
+                    if (isReturnedActionError(hourlyConfigResult)) {
+                        setSaveError(getErrorMessage(hourlyConfigResult));
+                        serviceSaveFailed = true;
+                        break;
+                    }
                 }
             }
 
             // --- Save User Type Rates ---
+            if (serviceSaveFailed) {
+                break;
+            }
             // Check if rates changed for this config
             const initialConfigForRates = initialServiceConfigs.find(ic => ic.config_id === config.config_id);
             if (!isEqual(config.user_type_rates, initialConfigForRates?.user_type_rates)) {
@@ -463,7 +493,12 @@ export function HourlyPresetConfiguration({
                      rate: r.rate,
                  }));
                  // Call the new action
-                 await upsertUserTypeRatesForConfig(config.config_id, ratesToSave);
+                 const ratesResult = await upsertUserTypeRatesForConfig(config.config_id, ratesToSave);
+                 if (isReturnedActionError(ratesResult)) {
+                    setSaveError(getErrorMessage(ratesResult));
+                    serviceSaveFailed = true;
+                    break;
+                 }
             }
         }
         // Update initial state for services after successful save
@@ -472,14 +507,9 @@ export function HourlyPresetConfiguration({
     } catch (err: any) {
         serviceSaveFailed = true;
         console.error('Error saving service configuration:', err);
-        // Extract Zod error messages if available
-        const message = err.message?.includes("Validation Error:")
-            ? err.message
-            : t('preset.hourly.errors.failedToSaveServiceConfiguration', {
-                defaultValue: 'Failed to save service configuration: {{message}}',
-                message: err.message || t('common.tryAgain', { defaultValue: 'Please try again.' }),
-              });
-        setSaveError(message);
+        setSaveError(t('preset.hourly.errors.failedToSaveServiceConfiguration', {
+          defaultValue: 'Failed to save service configuration. Please try again.',
+        }));
         // Potentially map Zod errors back to serviceValidationErrors state here if needed
     }
 
@@ -526,7 +556,11 @@ export function HourlyPresetConfiguration({
         // }
 
         if (planChanged) {
-            await updateContractLinePreset(presetId, planUpdatePayload);
+            const result = await updateContractLinePreset(presetId, planUpdatePayload);
+            if (isReturnedActionError(result)) {
+                setSaveError(getErrorMessage(result));
+                return;
+            }
             // Update initial plan data after successful save
             setInitialPlanData(prev => ({ ...prev, ...planUpdatePayload }));
         }
@@ -538,8 +572,7 @@ export function HourlyPresetConfiguration({
     } catch (err: any) {
         console.error('Error saving plan-wide configuration:', err);
         setSaveError(t('preset.hourly.errors.failedToSavePlanWideConfiguration', {
-          defaultValue: 'Failed to save plan-wide configuration: {{message}}',
-          message: err.message || t('common.tryAgain', { defaultValue: 'Please try again.' }),
+          defaultValue: 'Failed to save plan-wide configuration. Please try again.',
         }));
     } finally {
         setSaving(false);

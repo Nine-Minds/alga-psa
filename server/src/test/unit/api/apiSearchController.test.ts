@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   getConnection: vi.fn(),
 }));
 
-vi.mock('../../../lib/search/runAppSearch', () => ({
+vi.mock('@alga-psa/search/runAppSearch', () => ({
   runAppSearch: mocks.runAppSearch,
 }));
 

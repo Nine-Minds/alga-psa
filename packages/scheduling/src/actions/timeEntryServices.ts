@@ -1,9 +1,12 @@
 'use server'
 
-import { Knex } from 'knex'; // Import Knex type
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { TaxRegion } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import {
+  timeSheetActionErrorFrom,
+  type TimeSheetActionError,
+} from './timeSheetActionErrors';
 interface DefaultTaxRateInfo {
   tax_rate_id: string;
   tax_percentage: number;
@@ -13,19 +16,26 @@ interface DefaultTaxRateInfo {
 export const fetchTaxRegions = withAuth(async (
   user,
   { tenant }
-): Promise<TaxRegion[]> => {
-  const {knex: db} = await createTenantKnex();
+): Promise<TaxRegion[] | TimeSheetActionError> => {
+  try {
+    const {knex: db} = await createTenantKnex();
+    const scopedDb = tenantDb(db, tenant) as any;
 
-  // Check permission for time entry reading (reading tax regions for time entries)
-  if (!await hasPermission(user, 'timeentry', 'read', db)) {
-    throw new Error('Permission denied: Cannot read tax regions for time entries');
+    // Check permission for time entry reading (reading tax regions for time entries)
+    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+      throw new Error('Permission denied: Cannot read tax regions for time entries');
+    }
+
+    const regions = await scopedDb.table('tax_regions')
+      .where({ is_active: true })
+      .select('region_code as id', 'region_name as name')
+      .orderBy('region_name');
+    return regions;
+  } catch (error) {
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  const regions = await db('tax_regions')
-    .where({ tenant, is_active: true })
-    .select('region_code as id', 'region_name as name')
-    .orderBy('region_name');
-  return regions;
 });
 
 // Phase 1.2: Fetch the default tax rate percentage for the client associated with the work item.
@@ -34,61 +44,43 @@ export const fetchClientTaxRateForWorkItem = withAuth(async (
   { tenant },
   workItemId: string,
   workItemType: string
-): Promise<number | undefined> => {
-  const {knex: db} = await createTenantKnex();
-
-  // Check permission for time entry reading (reading tax rates for time entries)
-  if (!await hasPermission(user, 'timeentry', 'read', db)) {
-    throw new Error('Permission denied: Cannot read tax rates for time entries');
-  }
-
-  console.log(`Fetching default tax rate percentage for work item ${workItemId} of type ${workItemType}`);
-
+): Promise<number | undefined | TimeSheetActionError> => {
   try {
+    const {knex: db} = await createTenantKnex();
+    const scopedDb = tenantDb(db, tenant) as any;
+
+    // Check permission for time entry reading (reading tax rates for time entries)
+    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+      throw new Error('Permission denied: Cannot read tax rates for time entries');
+    }
+
+    console.log(`Fetching default tax rate percentage for work item ${workItemId} of type ${workItemType}`);
+
     let query;
 
     if (workItemType === 'ticket') {
-      query = db('tickets')
+      query = scopedDb.table('tickets')
         .where({
-          'tickets.ticket_id': workItemId,
-          'tickets.tenant': tenant
-        })
-        .join('clients', function(this: Knex.JoinClause) {
-          this.on('tickets.client_id', '=', 'clients.client_id')
-              .andOn('tickets.tenant', '=', 'clients.tenant');
+          'tickets.ticket_id': workItemId
         });
+      scopedDb.tenantJoin(query, 'clients', 'tickets.client_id', 'clients.client_id');
     } else if (workItemType === 'project_task') {
-      query = db('project_tasks')
+      query = scopedDb.table('project_tasks')
         .where({
-          'project_tasks.task_id': workItemId,
-          'project_tasks.tenant': tenant
-        })
-        .join('project_phases', function(this: Knex.JoinClause) {
-          this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-              .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-        })
-        .join('projects', function(this: Knex.JoinClause) {
-          this.on('project_phases.project_id', '=', 'projects.project_id')
-              .andOn('project_phases.tenant', '=', 'projects.tenant');
-        })
-        .join('clients', function(this: Knex.JoinClause) {
-          this.on('projects.client_id', '=', 'clients.client_id')
-              .andOn('projects.tenant', '=', 'clients.tenant');
+          'project_tasks.task_id': workItemId
         });
+      scopedDb.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      scopedDb.tenantJoin(query, 'projects', 'project_phases.project_id', 'projects.project_id');
+      scopedDb.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id');
     } else {
       console.log(`Unsupported work item type: ${workItemType}`);
       return undefined;
     }
 
+    scopedDb.tenantJoin(query, 'client_tax_rates', 'clients.client_id', 'client_tax_rates.client_id');
+    scopedDb.tenantJoin(query, 'tax_rates', 'client_tax_rates.tax_rate_id', 'tax_rates.tax_rate_id');
+
     query = query
-      .join('client_tax_rates', function(this: Knex.JoinClause) {
-        this.on('clients.client_id', '=', 'client_tax_rates.client_id');
-        this.andOn('clients.tenant', '=', 'client_tax_rates.tenant');
-      })
-      .join('tax_rates', function(this: Knex.JoinClause) {
-        this.on('client_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
-            .andOn('client_tax_rates.tenant', '=', 'tax_rates.tenant');
-      })
       // Phase 1.2: Filter for the default rate AFTER the join
       .where('client_tax_rates.is_default', true)
       .whereNull('client_tax_rates.location_id')
@@ -107,6 +99,8 @@ export const fetchClientTaxRateForWorkItem = withAuth(async (
     }
   } catch (error) {
     console.error('Error fetching tax rate:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
     return undefined;
   }
 });
@@ -117,61 +111,43 @@ export const fetchDefaultClientTaxRateInfoForWorkItem = withAuth(async (
   { tenant },
   workItemId: string,
   workItemType: string
-): Promise<DefaultTaxRateInfo | null> => {
-  const {knex: db} = await createTenantKnex();
-
-  // Check permission for time entry reading (reading tax rate info for time entries)
-  if (!await hasPermission(user, 'timeentry', 'read', db)) {
-    throw new Error('Permission denied: Cannot read tax rate info for time entries');
-  }
-
-  console.log(`Fetching default tax rate info for work item ${workItemId} of type ${workItemType}`);
-
+): Promise<DefaultTaxRateInfo | null | TimeSheetActionError> => {
   try {
+    const {knex: db} = await createTenantKnex();
+    const scopedDb = tenantDb(db, tenant) as any;
+
+    // Check permission for time entry reading (reading tax rate info for time entries)
+    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+      throw new Error('Permission denied: Cannot read tax rate info for time entries');
+    }
+
+    console.log(`Fetching default tax rate info for work item ${workItemId} of type ${workItemType}`);
+
     let query;
 
     if (workItemType === 'ticket') {
-      query = db('tickets')
+      query = scopedDb.table('tickets')
         .where({
-          'tickets.ticket_id': workItemId,
-          'tickets.tenant': tenant
-        })
-        .join('clients', function(this: Knex.JoinClause) {
-          this.on('tickets.client_id', '=', 'clients.client_id')
-              .andOn('tickets.tenant', '=', 'clients.tenant');
+          'tickets.ticket_id': workItemId
         });
+      scopedDb.tenantJoin(query, 'clients', 'tickets.client_id', 'clients.client_id');
     } else if (workItemType === 'project_task') {
-      query = db('project_tasks')
+      query = scopedDb.table('project_tasks')
         .where({
-          'project_tasks.task_id': workItemId,
-          'project_tasks.tenant': tenant
-        })
-        .join('project_phases', function(this: Knex.JoinClause) {
-          this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-              .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
-        })
-        .join('projects', function(this: Knex.JoinClause) {
-          this.on('project_phases.project_id', '=', 'projects.project_id')
-              .andOn('project_phases.tenant', '=', 'projects.tenant');
-        })
-        .join('clients', function(this: Knex.JoinClause) {
-          this.on('projects.client_id', '=', 'clients.client_id')
-              .andOn('projects.tenant', '=', 'clients.tenant');
+          'project_tasks.task_id': workItemId
         });
+      scopedDb.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+      scopedDb.tenantJoin(query, 'projects', 'project_phases.project_id', 'projects.project_id');
+      scopedDb.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id');
     } else {
       console.log(`Unsupported work item type: ${workItemType}`);
       return null;
     }
 
+    scopedDb.tenantJoin(query, 'client_tax_rates', 'clients.client_id', 'client_tax_rates.client_id');
+    scopedDb.tenantJoin(query, 'tax_rates', 'client_tax_rates.tax_rate_id', 'tax_rates.tax_rate_id');
+
     query = query
-      .join('client_tax_rates', function(this: Knex.JoinClause) {
-        this.on('clients.client_id', '=', 'client_tax_rates.client_id');
-        this.andOn('clients.tenant', '=', 'client_tax_rates.tenant');
-      })
-      .join('tax_rates', function(this: Knex.JoinClause) {
-        this.on('client_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
-            .andOn('client_tax_rates.tenant', '=', 'tax_rates.tenant');
-      })
       // Filter for the default rate AFTER the join
       .where('client_tax_rates.is_default', true)
       .whereNull('client_tax_rates.location_id')
@@ -198,6 +174,8 @@ export const fetchDefaultClientTaxRateInfoForWorkItem = withAuth(async (
     }
   } catch (error) {
     console.error('Error fetching default tax rate info:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
     return null;
   }
 });
@@ -206,33 +184,38 @@ export const fetchServicesForTimeEntry = withAuth(async (
   user,
   { tenant },
   _workItemType?: string
-): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null; tax_percentage: number | null }[]> => {
-  const {knex: db} = await createTenantKnex();
+): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null; tax_percentage: number | null }[] | TimeSheetActionError> => {
+  try {
+    const {knex: db} = await createTenantKnex();
+    const scopedDb = tenantDb(db, tenant) as any;
 
-  // Check permission for time entry reading (reading services for time entries)
-  if (!await hasPermission(user, 'timeentry', 'read', db)) {
-    throw new Error('Permission denied: Cannot read services for time entries');
+    // Check permission for time entry reading (reading services for time entries)
+    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+      throw new Error('Permission denied: Cannot read services for time entries');
+    }
+
+    const servicesQuery = scopedDb.table('service_catalog as sc')
+      .where({
+        'sc.item_kind': 'service',
+        'sc.billing_method': 'hourly'
+      });
+    scopedDb.tenantJoin(servicesQuery, 'tax_rates as tr', 'sc.tax_rate_id', 'tr.tax_rate_id', { type: 'left' });
+
+    const services = await servicesQuery
+      .select(
+        'sc.service_id as id',
+        'sc.service_name as name',
+        'sc.billing_method as type',
+        'sc.tax_rate_id',
+        'tr.tax_percentage'
+      );
+
+    return services;
+  } catch (error) {
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  const services = await db('service_catalog as sc')
-    .leftJoin('tax_rates as tr', function() {
-      this.on('sc.tax_rate_id', '=', 'tr.tax_rate_id')
-          .andOn('sc.tenant', '=', 'tr.tenant');
-    })
-    .where({
-      'sc.tenant': tenant,
-      'sc.item_kind': 'service',
-      'sc.billing_method': 'hourly'
-    })
-    .select(
-      'sc.service_id as id',
-      'sc.service_name as name',
-      'sc.billing_method as type',
-      'sc.tax_rate_id',
-      'tr.tax_percentage'
-    );
-
-  return services;
 });
 
 /**
@@ -247,16 +230,17 @@ export const fetchScheduleEntryForWorkItem = withAuth(async (
 ): Promise<{
   scheduled_start: string;
   scheduled_end: string
-} | null> => {
-  const { knex } = await createTenantKnex();
-
-  // Check permission for time entry reading (reading schedule entries for time entries)
-  if (!await hasPermission(user, 'timeentry', 'read', knex)) {
-    throw new Error('Permission denied: Cannot read schedule entries for time entries');
-  }
-
+} | null | TimeSheetActionError> => {
   try {
-    const scheduleEntry = await knex('schedule_entries')
+    const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenant) as any;
+
+    // Check permission for time entry reading (reading schedule entries for time entries)
+    if (!await hasPermission(user, 'timeentry', 'read', knex)) {
+      throw new Error('Permission denied: Cannot read schedule entries for time entries');
+    }
+
+    const scheduleEntry = await scopedDb.table('schedule_entries')
       .where('entry_id', workItemId)
       .select('scheduled_start', 'scheduled_end')
       .first();
@@ -264,6 +248,8 @@ export const fetchScheduleEntryForWorkItem = withAuth(async (
     return scheduleEntry || null;
   } catch (error) {
     console.error('Error fetching schedule entry for work item:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
     return null;
   }
 });

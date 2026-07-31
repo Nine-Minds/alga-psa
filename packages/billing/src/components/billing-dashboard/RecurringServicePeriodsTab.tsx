@@ -1,7 +1,7 @@
 'use client';
 
 import React, { startTransition, useEffect, useMemo, useState } from 'react';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { type ActionPermissionErrorShape } from '@alga-psa/ui/lib/errorHandling';
 import {
   getRecurringServicePeriodManagementView,
   listRecurringServicePeriodScheduleSummaries,
@@ -15,7 +15,7 @@ import {
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-type ManagementViewResult = RecurringServicePeriodManagementView | ActionPermissionError;
+type ManagementViewResult = RecurringServicePeriodManagementView | ActionPermissionErrorShape;
 type RegenerationPreviewResult =
   | Awaited<ReturnType<typeof previewRecurringServicePeriodRegeneration>>
   | null;
@@ -23,7 +23,7 @@ type RepairResult = RepairRecurringServicePeriodMaterializationResult | null;
 type ManagementRow = RecurringServicePeriodManagementView['rows'][number];
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
-function isPermissionError(value: unknown): value is ActionPermissionError {
+function isPermissionError(value: unknown): value is ActionPermissionErrorShape {
   return Boolean(
     value
       && typeof value === 'object'

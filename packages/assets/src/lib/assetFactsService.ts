@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { AssetFact, AssetFactSourceType } from '@alga-psa/types';
 
 export interface AssetFactUpsertInput {
@@ -29,7 +30,7 @@ function toIsoOrNull(value: unknown): string | null {
 
 export async function upsertAssetFact(knex: Knex, input: AssetFactUpsertInput): Promise<void> {
   const now = new Date().toISOString();
-  await knex('asset_facts')
+  await tenantDb(knex, input.tenant).table('asset_facts')
     .insert({
       tenant: input.tenant,
       asset_id: input.assetId,
@@ -71,9 +72,8 @@ export async function listAvailableAssetFactsForAsset(knex: Knex, args: {
   tenant: string;
   assetId: string;
 }): Promise<AssetFact[]> {
-  const rows = await knex('asset_facts')
+  const rows = await tenantDb(knex, args.tenant).table('asset_facts')
     .where({
-      tenant: args.tenant,
       asset_id: args.assetId,
       is_available: true,
     })

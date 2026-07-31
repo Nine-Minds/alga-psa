@@ -58,6 +58,7 @@ const nextConfig = {
       '@alga-psa/workflows/entry': './src/workflows/entry.tsx',
       // user-activities workflow-task seam — EE app always uses the real implementations.
       '@alga-psa/user-activities/server/workflow-tasks': './src/user-activities/workflowTasks.server.ts',
+      '@alga-psa/user-activities/server/workflow-task-actions': './src/user-activities/workflowTaskActions.server.ts',
       '@alga-psa/user-activities/client/workflow-tasks': './src/user-activities/workflowTasks.client.tsx',
       '@alga-psa/product-extension-actions': '../../packages/product-extension-actions/ee/entry.ts',
       '@alga-psa/product-extension-initialization': './src/lib/extensions/initialize.ts',
@@ -143,6 +144,7 @@ const nextConfig = {
         '@alga-psa/workflows/entry': path.join(__dirname, 'src/workflows/entry.tsx'),
         // user-activities workflow-task seam — EE app always uses the real implementations.
         '@alga-psa/user-activities/server/workflow-tasks': path.join(__dirname, 'src/user-activities/workflowTasks.server.ts'),
+        '@alga-psa/user-activities/server/workflow-task-actions': path.join(__dirname, 'src/user-activities/workflowTaskActions.server.ts'),
         '@alga-psa/user-activities/client/workflow-tasks': path.join(__dirname, 'src/user-activities/workflowTasks.client.tsx'),
         '@alga-psa/product-extension-actions': path.join(__dirname, '../../packages/product-extension-actions/ee/entry.ts'),
         '@alga-psa/product-extension-initialization': path.join(__dirname, 'src/lib/extensions/initialize.ts'),

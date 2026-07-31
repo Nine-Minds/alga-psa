@@ -38,7 +38,8 @@ const DocumentPreview = ({ document, className }) => {
                 }
             }
             catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load preview');
+                console.error('Failed to load document preview:', err);
+                setError('Failed to load preview');
             }
             finally {
                 setIsLoading(false);

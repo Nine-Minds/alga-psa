@@ -112,6 +112,20 @@ const COPY = {
     textIntro: 'Nowa faktura zosta\u0142a wystawiona:',
   },
 };
+SUBJECTS.pt = 'Nova fatura #{{invoice.number}}';
+COPY.pt = {
+  headerLabel: 'Nova fatura',
+  intro: 'Uma nova fatura foi gerada para sua revisão.',
+  invoiceNumberLabel: 'Número da fatura',
+  amountLabel: 'Valor',
+  dueDateLabel: 'Data de vencimento',
+  clientLabel: 'Cliente',
+  viewButton: 'Ver fatura',
+  footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
+  textHeader: 'Fatura {{invoice.number}}',
+  textIntro: 'Uma nova fatura foi gerada para sua revisão:',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

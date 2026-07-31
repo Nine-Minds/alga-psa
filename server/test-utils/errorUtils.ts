@@ -28,6 +28,26 @@ export interface ErrorAssertionOptions {
   properties?: Record<string, unknown>;
 }
 
+function toReturnedActionError(value: unknown): Error | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const { actionError, permissionError } = value as {
+    actionError?: unknown;
+    permissionError?: unknown;
+  };
+
+  if (typeof permissionError === 'string') {
+    return new Error(permissionError);
+  }
+  if (typeof actionError === 'string') {
+    return new Error(actionError);
+  }
+
+  return null;
+}
+
 /**
  * Asserts that a function throws an error
  * @param fn Function that should throw
@@ -45,7 +65,14 @@ export async function expectError(
   } = options;
 
   try {
-    await fn();
+    // withAuth-wrapped server actions increasingly report expected failures by
+    // returning {actionError}/{permissionError} instead of throwing; treat that
+    // as the error so callers keep asserting on the message either way.
+    const returned = await fn();
+    const returnedError = toReturnedActionError(returned);
+    if (returnedError) {
+      throw returnedError;
+    }
     throw new Error('Expected function to throw an error');
   } catch (err) {
     if (!(err instanceof Error)) {

@@ -5,11 +5,32 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    include: [
+      'tests/**/*.test.ts',
+      'tests/**/*.test.tsx',
+      'src/actions/projectBillingActions.contract.test.ts',
+      'src/lib/billing/compute/**/*.test.ts',
+      'src/schemas/**/*.test.ts',
+    ],
     testTimeout: 20000,
+    // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
+    // setup work had half the budget of a test doing the same work — which is
+    // how hoisting a module compile out of a test made it fail sooner.
+    hookTimeout: 20000,
+    // Inline next-auth/@auth/core/next so vite transforms them and the next/server
+    // alias below applies to next-auth's internal `import "next/server"`. Without it
+    // the contract-wizard / automatic-invoices component suites render-crash on a
+    // fresh CI install ("Cannot find module next/server"). Matches tickets.
+    server: {
+      deps: {
+        inline: ['next-auth', '@auth/core', 'next'],
+      },
+    },
   },
   resolve: {
     alias: [
+      { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       {
         find: /^@alga-psa\/billing\/(.*)$/,
         replacement: `${path.resolve(__dirname, './src')}/$1`,

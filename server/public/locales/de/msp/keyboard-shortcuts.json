@@ -217,6 +217,10 @@
       "close": {
         "label": "Bereich schließen",
         "description": "Den aktiven Bereich oder Drawer schließen."
+      },
+      "submit": {
+        "label": "Panel speichern",
+        "description": "Das Formular im aktiven Panel oder Drawer speichern."
       }
     },
     "drawer": {

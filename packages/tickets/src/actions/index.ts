@@ -21,7 +21,12 @@ export {
   getTicketById,
   registerSlaCancellation
 } from './ticketActions';
-export { registerItilSlaConfiguration } from '../services/itilStandardsService';
+// NB: registerItilSlaConfiguration is intentionally NOT re-exported here. It is
+// an internal DI hook (not a server action) defined in services/itilStandardsService,
+// which imports @alga-psa/db. Re-exporting it from this actions barrel dragged the
+// server db/knex chain into every client component that imports the barrel (e.g.
+// BoardsSettings -> the whole client-portal ticket UI). Its only consumer imports
+// it directly from '@alga-psa/tickets/services/itilStandardsService'.
 export * from './ticketBundleActions';
 export * from './ticketBundleUtils';
 export * from './ticketDisplaySettings';

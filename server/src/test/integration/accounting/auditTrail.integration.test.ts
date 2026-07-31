@@ -27,6 +27,7 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: true,
       supportsInvoiceUpdates: true
     };
@@ -35,10 +36,10 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
     return {
       documents: context.lines.map((line) => ({
-        documentId: `invoice-${line.invoice_id}`,
+        documentId: `invoice-${line.document_id}`,
         lineIds: [line.line_id],
         payload: {
-          invoiceId: line.invoice_id,
+          invoiceId: line.document_id,
           amountCents: line.amount_cents
         }
       }))
@@ -49,7 +50,7 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
     return {
       deliveredLines: context.lines.map((line) => ({
         lineId: line.line_id,
-        externalDocumentRef: `QB-${line.invoice_id}`
+        externalDocumentRef: `QB-${line.document_id}`
       }))
     };
   }
@@ -83,6 +84,7 @@ describe('Accounting export audit trail integration', () => {
     await ctx.db('accounting_export_errors').where({ tenant: ctx.tenantId }).del();
     await ctx.db('accounting_export_lines').where({ tenant: ctx.tenantId }).del();
     await ctx.db('accounting_export_batches').where({ tenant: ctx.tenantId }).del();
+    await ctx.db('tenant_external_entity_mappings').where({ tenant: ctx.tenantId }).del();
     await ctx.db('transactions').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoice_charges').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoices').where({ tenant: ctx.tenantId }).del();
@@ -192,6 +194,20 @@ describe('Accounting export audit trail integration', () => {
       updated_at: new Date().toISOString()
     });
 
+    // Map the customer so batch validation passes; this suite exercises the
+    // audit trail, not the customer-provisioning gate.
+    await ctx.db('tenant_external_entity_mappings').insert({
+      id: uuidv4(),
+      tenant: ctx.tenantId,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'client',
+      alga_entity_id: ctx.clientId,
+      external_entity_id: 'QB-CUST-DEFAULT',
+      sync_status: 'synced',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
     return {
       filters: {
         startDate: '2025-01-01',
@@ -247,7 +263,7 @@ describe('Accounting export audit trail integration', () => {
     lines.forEach((line) => {
       const payload = line.payload as Record<string, any> | undefined;
       expect(payload).toBeTruthy();
-      const expectedTransactionId = seeded.transactionsByInvoice[line.invoice_id];
+      const expectedTransactionId = seeded.transactionsByInvoice[line.document_id];
       expect(expectedTransactionId).toBeTruthy();
       expect(payload?.transaction_ids).toContain(expectedTransactionId);
     });

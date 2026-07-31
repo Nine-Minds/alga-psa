@@ -1,321 +1,321 @@
 {
   "page": {
-    "title": "Knowledge Base",
-    "subtitle": "Create and manage knowledge base articles",
+    "title": "Base de conhecimento",
+    "subtitle": "Criar e gerenciar artigos da base de conhecimento",
     "actions": {
-      "import": "Import",
-      "newArticle": "New Article"
+      "import": "Importar",
+      "newArticle": "Novo artigo"
     },
     "tabs": {
-      "articles": "Articles",
-      "reviewDashboard": "Review Dashboard"
+      "articles": "Artigos",
+      "reviewDashboard": "Analisar painel"
     },
     "feedback": {
-      "loadError": "Failed to load articles",
-      "createError": "Failed to create article",
-      "userLoadError": "Failed to load user. Article editing is unavailable."
+      "loadError": "Falha ao carregar artigos",
+      "createError": "Falha ao criar o artigo",
+      "userLoadError": "Falha ao carregar usuário. A edição do artigo não está disponível."
     },
-    "newArticleTitle": "New Article"
+    "newArticleTitle": "Novo artigo"
   },
   "shared": {
     "statusLabels": {
       "draft": "Rascunho",
-      "review": "In Review",
-      "published": "Published",
-      "archived": "Archived"
+      "review": "Em revisão",
+      "published": "Publicado",
+      "archived": "Arquivado"
     },
     "audienceLabels": {
-      "internal": "Internal",
-      "client": "Client",
-      "public": "Public"
+      "internal": "Interno",
+      "client": "Cliente",
+      "public": "Público"
     },
     "typeLabels": {
-      "how_to": "How-To",
+      "how_to": "Como fazer",
       "faq": "FAQ",
-      "troubleshooting": "Troubleshooting",
-      "reference": "Reference"
+      "troubleshooting": "Solução de problemas",
+      "reference": "Referência"
     },
     "reviewCycleOptions": {
-      "30": "30 days",
-      "60": "60 days",
-      "90": "90 days",
-      "180": "180 days",
-      "365": "1 year",
-      "none": "No review cycle"
+      "30": "30 dias",
+      "60": "60 dias",
+      "90": "90 dias",
+      "180": "180 dias",
+      "365": "1 ano",
+      "none": "Sem ciclo de revisão"
     },
     "fallbacks": {
       "emptyDate": "-"
     }
   },
   "list": {
-    "title": "Knowledge Base Articles",
-    "countSummary": "{{count}} article(s)",
-    "itemLabel": "articles",
-    "empty": "No articles found",
-    "createFirst": "Create Your First Article",
+    "title": "Artigos da base de conhecimento",
+    "countSummary": "Artigo(s) {{count}}",
+    "itemLabel": "artigos",
+    "empty": "Nenhum artigo encontrado",
+    "createFirst": "Crie seu primeiro artigo",
     "table": {
-      "title": "Title",
-      "type": "Type",
-      "audience": "Audience",
+      "title": "Título",
+      "type": "Tipo",
+      "audience": "Público",
       "status": "Status",
-      "tags": "Tags",
-      "stats": "Stats",
-      "updated": "Updated",
-      "actions": "Actions"
+      "tags": "Etiquetas",
+      "stats": "Estatísticas",
+      "updated": "Atualizado",
+      "actions": "Ações"
     },
     "stats": {
-      "views": "Views",
-      "helpful": "Helpful",
-      "notHelpful": "Not helpful"
+      "views": "Visualizações",
+      "helpful": "Útil",
+      "notHelpful": "Não é útil"
     },
     "actions": {
-      "edit": "Edit",
-      "submitForReview": "Submit for Review",
-      "publish": "Publish",
-      "archive": "Archive",
+      "edit": "Editar",
+      "submitForReview": "Enviar para revisão",
+      "publish": "Publicar",
+      "archive": "Arquivo",
       "delete": "Excluir permanentemente"
     },
     "pagination": {
       "itemsPerPage": {
-        "10": "10 items/page",
-        "20": "20 items/page",
-        "50": "50 items/page"
+        "10": "10 itens/página",
+        "20": "20 itens/página",
+        "50": "50 itens/página"
       }
     },
     "stale": {
-      "reviewOverdue": "Review overdue"
+      "reviewOverdue": "Revisão atrasada"
     },
     "dialogs": {
       "archive": {
-        "title": "Archive Article",
-        "message": "Are you sure you want to archive \"{{title}}\"? This will remove it from client visibility."
+        "title": "Artigo de arquivo",
+        "message": "Tem certeza de que deseja arquivar \"{{title}}\"? Isso o removerá da visibilidade do cliente."
       },
       "delete": {
         "title": "Excluir artigo",
-        "message": "Tem certeza de que deseja excluir permanentemente \"{{title}}\"? Isso removerá o artigo e seu conteúdo, e não pode ser desfeito."
+        "message": "Tem certeza de que deseja excluir permanentemente \"{{title}}\"? Esta ação removerá o artigo e seu conteúdo e não poderá ser desfeita."
       }
     },
     "feedback": {
-      "archiveError": "Failed to archive article",
-      "archiveSuccess": "Article archived",
+      "archiveError": "Falha ao arquivar o artigo",
+      "archiveSuccess": "Artigo arquivado",
       "deleteError": "Falha ao excluir o artigo",
       "deleteSuccess": "Artigo excluído permanentemente"
     }
   },
   "editor": {
     "header": {
-      "untitled": "Untitled Article",
-      "back": "Back"
+      "untitled": "Artigo sem título",
+      "back": "Voltar"
     },
     "actions": {
-      "submitForReview": "Submit for Review",
-      "publish": "Publish",
-      "archive": "Archive",
-      "saveMetadata": "Save Metadata",
-      "saving": "Saving...",
+      "submitForReview": "Enviar para revisão",
+      "publish": "Publicar",
+      "archive": "Arquivo",
       "delete": "Excluir permanentemente",
+      "saveMetadata": "Salvar metadados",
+      "saving": "Salvando...",
       "saveContent": "Salvar"
     },
     "feedback": {
-      "permissionDenied": "Permission denied",
-      "notFound": "Article not found",
-      "loadError": "Failed to load article",
-      "noChanges": "No changes to save",
-      "saveError": "Failed to save article",
-      "saveSuccess": "Article metadata saved",
-      "publishError": "Failed to publish article",
-      "publishSuccess": "Article published",
-      "statusChangeError": "Failed to change article status",
-      "submitForReviewSuccess": "Article submitted for review",
-      "archiveSuccess": "Article archived",
+      "permissionDenied": "Permissão negada",
+      "notFound": "Artigo não encontrado",
+      "loadError": "Falha ao carregar o artigo",
+      "noChanges": "Nenhuma alteração para salvar",
+      "saveError": "Falha ao salvar o artigo",
+      "saveSuccess": "Metadados do artigo salvos",
+      "publishError": "Falha ao publicar o artigo",
+      "publishSuccess": "Artigo publicado",
+      "statusChangeError": "Falha ao alterar o status do artigo",
+      "submitForReviewSuccess": "Artigo enviado para revisão",
+      "archiveSuccess": "Artigo arquivado",
       "deleteError": "Falha ao excluir o artigo",
       "deleteSuccess": "Artigo excluído permanentemente"
-    },
-    "badges": {
-      "reviewOverdue": "Review Overdue"
-    },
-    "stats": {
-      "title": "Statistics",
-      "views": "Views",
-      "helpful": "Helpful",
-      "notHelpful": "Not helpful",
-      "published": "Published"
-    },
-    "metadata": {
-      "title": "Metadata",
-      "fields": {
-        "title": "Title",
-        "slug": "URL Slug",
-        "articleType": "Article Type",
-        "audience": "Audience",
-        "category": "Category",
-        "reviewCycle": "Review Cycle",
-        "nextReview": "Next review",
-        "noCategory": "No category"
-      }
-    },
-    "tags": {
-      "title": "Tags"
     },
     "dialogs": {
       "delete": {
         "title": "Excluir artigo",
-        "message": "Tem certeza de que deseja excluir permanentemente \"{{title}}\"? Isso removerá o artigo e seu conteúdo, e não pode ser desfeito."
+        "message": "Tem certeza de que deseja excluir permanentemente \"{{title}}\"? Esta ação removerá o artigo e seu conteúdo e não poderá ser desfeita."
       },
       "archive": {
-        "message": "Tem certeza de que deseja arquivar \"{{title}}\"? Os artigos arquivados ficam ocultos no portal do cliente e podem ser excluídos permanentemente mais tarde.",
-        "title": "Arquivar artigo"
+        "message": "Tem certeza de que deseja arquivar \"{{title}}\"? Os artigos arquivados ficam ocultos no portal do cliente e podem ser excluídos permanentemente posteriormente.",
+        "title": "Artigo de arquivo"
       }
+    },
+    "badges": {
+      "reviewOverdue": "Revisão atrasada"
+    },
+    "stats": {
+      "title": "Estatísticas",
+      "views": "Visualizações",
+      "helpful": "Útil",
+      "notHelpful": "Não é útil",
+      "published": "Publicado"
+    },
+    "metadata": {
+      "title": "Metadados",
+      "fields": {
+        "title": "Título",
+        "slug": "Slug de URL",
+        "articleType": "Tipo de artigo",
+        "audience": "Público",
+        "category": "Categoria",
+        "reviewCycle": "Ciclo de Revisão",
+        "nextReview": "Próxima revisão",
+        "noCategory": "Nenhuma categoria"
+      }
+    },
+    "tags": {
+      "title": "Etiquetas"
     }
   },
   "filters": {
-    "title": "Filters",
+    "title": "Filtros",
     "actions": {
-      "clear": "Clear"
+      "clear": "Limpar"
     },
     "labels": {
-      "search": "Search",
+      "search": "Procurar",
       "status": "Status",
-      "audience": "Audience",
-      "articleType": "Article Type",
-      "category": "Category",
-      "tags": "Tags"
+      "audience": "Público",
+      "articleType": "Tipo de artigo",
+      "category": "Categoria",
+      "tags": "Etiquetas"
     },
     "placeholders": {
-      "search": "Search articles...",
-      "status": "Select status...",
-      "audience": "Select audience...",
-      "articleType": "Select type...",
-      "category": "Select category...",
-      "tags": "Filter by tags..."
+      "search": "Pesquisar artigos...",
+      "status": "Selecione o estado...",
+      "audience": "Selecione o público...",
+      "articleType": "Selecione o tipo...",
+      "category": "Selecione a categoria...",
+      "tags": "Filtrar por tags..."
     },
     "options": {
       "status": {
-        "all": "All Statuses"
+        "all": "Todos os status"
       },
       "audience": {
-        "all": "All Audiences"
+        "all": "Todos os públicos"
       },
       "articleType": {
-        "all": "All Types"
+        "all": "Todos os tipos"
       },
       "category": {
-        "all": "All Categories"
+        "all": "Todas as categorias"
       }
     }
   },
   "categoryTree": {
-    "allCategories": "All Categories",
-    "empty": "No categories defined"
+    "allCategories": "Todas as categorias",
+    "empty": "Nenhuma categoria definida"
   },
   "publishing": {
-    "title": "Publishing",
-    "currentStatus": "Current Status",
+    "title": "Publicação",
+    "currentStatus": "Status atual",
     "actions": {
-      "submitForReview": "Submit for Review",
-      "publish": "Publish",
-      "approveAndPublish": "Approve & Publish",
-      "archive": "Archive",
-      "republish": "Republish",
+      "submitForReview": "Enviar para revisão",
+      "publish": "Publicar",
+      "approveAndPublish": "Aprovar e publicar",
+      "archive": "Arquivo",
+      "republish": "Republicar",
       "delete": "Excluir permanentemente"
     },
     "flow": {
       "draft": "Rascunho",
-      "review": "Review",
-      "published": "Published"
+      "review": "Análise",
+      "published": "Publicado"
     },
     "warnings": {
-      "audience": "Publishing will make this article visible to {{audience}} users."
+      "audience": "A publicação tornará este artigo visível para usuários {{audience}}."
     },
     "dialogs": {
       "publish": {
-        "title": "Publish Article",
-        "message": "Are you sure you want to publish this article?",
-        "messageWithAudience": "This will publish the article and make it visible to {{audience}} users. Are you sure?"
+        "title": "Publicar artigo",
+        "message": "Tem certeza de que deseja publicar este artigo?",
+        "messageWithAudience": "Isso publicará o artigo e o tornará visível para os usuários do {{audience}}. Tem certeza?"
       },
       "archive": {
-        "title": "Archive Article",
-        "message": "This will archive the article and remove it from client visibility. Are you sure?"
+        "title": "Artigo de arquivo",
+        "message": "Isso arquivará o artigo e o removerá da visibilidade do cliente. Tem certeza?"
       },
       "delete": {
         "title": "Excluir artigo",
-        "message": "Tem certeza de que deseja excluir permanentemente este artigo? Isso removerá o artigo e seu conteúdo, e não pode ser desfeito."
+        "message": "Tem certeza de que deseja excluir permanentemente este artigo? Esta ação removerá o artigo e seu conteúdo e não poderá ser desfeita."
       }
     },
     "feedback": {
-      "publishError": "Failed to publish article",
-      "publishSuccess": "Article published successfully",
-      "archiveError": "Failed to archive article",
-      "archiveSuccess": "Article archived",
+      "publishError": "Falha ao publicar o artigo",
+      "publishSuccess": "Artigo publicado com sucesso",
+      "archiveError": "Falha ao arquivar o artigo",
+      "archiveSuccess": "Artigo arquivado",
       "deleteError": "Falha ao excluir o artigo",
       "deleteSuccess": "Artigo excluído permanentemente"
     }
   },
   "reviewDashboard": {
     "summary": {
-      "awaitingReview": "Awaiting Review",
-      "overdueReviews": "Overdue Reviews"
+      "awaitingReview": "Aguardando revisão",
+      "overdueReviews": "Avaliações atrasadas"
     },
-    "empty": "All caught up! No articles need review.",
+    "empty": "Todos apanhados! Nenhum artigo precisa de revisão.",
     "sections": {
-      "awaitingReview": "Articles Awaiting Review",
-      "overdue": "Overdue for Review"
+      "awaitingReview": "Artigos aguardando revisão",
+      "overdue": "Atrasado para revisão"
     },
     "labels": {
-      "submitted": "Submitted",
-      "due": "Due",
-      "lastReviewed": "Last reviewed",
-      "never": "Never"
+      "submitted": "Enviado",
+      "due": "Devido",
+      "lastReviewed": "Última revisão",
+      "never": "Nunca"
     },
     "actions": {
-      "view": "View",
-      "review": "Review",
-      "reviewNow": "Review Now"
+      "view": "Visualizar",
+      "review": "Análise",
+      "reviewNow": "Revise agora"
     },
     "feedback": {
-      "loadError": "Failed to load review data"
+      "loadError": "Falha ao carregar dados de revisão"
     }
   },
   "importDialog": {
-    "title": "Import Articles",
+    "title": "Importar artigos",
     "dropzone": {
-      "title": "Drop files here or click to browse",
-      "formats": "Supports .md and .html files"
+      "title": "Solte os arquivos aqui ou clique para navegar",
+      "formats": "Suporta arquivos .md e .html"
     },
     "fields": {
-      "audience": "Audience",
-      "articleType": "Article Type"
+      "audience": "Público",
+      "articleType": "Tipo de artigo"
     },
     "actions": {
-      "import": "Import {{count}} file(s)",
-      "importing": "Importing..."
+      "import": "Importar arquivo(s) {{count}}",
+      "importing": "Importando..."
     },
     "feedback": {
-      "unsupportedFileType": "{{fileName}}: unsupported file type. Use .md or .html",
-      "permissionDenied": "Permission denied",
-      "importSuccess": "Imported {{imported}} of {{total}} article(s)",
-      "allFailed": "All imports failed",
-      "importError": "Import failed"
+      "unsupportedFileType": "{{fileName}}: tipo de arquivo não suportado. Use .md ou .html",
+      "permissionDenied": "Permissão negada",
+      "importSuccess": "{{imported}} importado de artigo(s) {{total}}",
+      "allFailed": "Todas as importações falharam",
+      "importError": "Falha na importação"
     },
     "results": {
-      "summary": "{{imported}} of {{total}} article(s) imported",
-      "failedCount": "{{count}} failed:"
+      "summary": "{{imported}} de artigos {{total}} importados",
+      "failedCount": "{{count}} falhou:"
     }
   },
   "staleness": {
     "badges": {
-      "reviewOverdue": "Review Overdue",
-      "reviewDueSoon": "Review Due Soon",
-      "overdueBy": "Overdue by {{count}} days",
-      "dueIn": "Due in {{count}} days"
+      "reviewOverdue": "Revisão atrasada",
+      "reviewDueSoon": "Revisão prevista para breve",
+      "overdueBy": "Vencido por {{count}} dias",
+      "dueIn": "Vencimento em {{count}} dias"
     },
     "tooltips": {
-      "reviewOverdue": "Review was due {{date}}",
-      "reviewDue": "Review due {{date}}"
+      "reviewOverdue": "A revisão estava prevista para {{date}}",
+      "reviewDue": "Revisão devida {{date}}"
     }
   },
   "common": {
-    "done": "Done",
+    "done": "Feito",
     "cancel": "Cancelar"
   }
 }

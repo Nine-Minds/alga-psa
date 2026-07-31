@@ -116,7 +116,7 @@ const ClientTaxRates: React.FC<ClientTaxRatesProps> = ({
 
     const handleCreateError = (error: Error) => {
         console.error("Failed to create tax rate:", error);
-        toast.error(t('clientTaxRates.taxRateCreateError', { defaultValue: 'Failed to create tax rate: {{message}}', message: error.message }));
+        toast.error(t('clientTaxRates.taxRateCreateError', { defaultValue: 'Failed to create tax rate. Please try again.' }));
     };
 
     return (

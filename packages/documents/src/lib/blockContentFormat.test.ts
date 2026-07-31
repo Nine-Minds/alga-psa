@@ -115,7 +115,7 @@ describe('detectBlockContentFormat', () => {
     });
   });
 
-  it('converts bullet list items to ProseMirror bullet_list nodes', () => {
+  it('converts bullet list items to ProseMirror bulletList nodes', () => {
     const blocknote = [
       {
         type: 'bulletListItem',
@@ -128,10 +128,10 @@ describe('detectBlockContentFormat', () => {
       type: 'doc',
       content: [
         {
-          type: 'bullet_list',
+          type: 'bulletList',
           content: [
             {
-              type: 'list_item',
+              type: 'listItem',
               content: [
                 {
                   type: 'paragraph',
@@ -145,7 +145,7 @@ describe('detectBlockContentFormat', () => {
     });
   });
 
-  it('converts numbered list items to ProseMirror ordered_list nodes', () => {
+  it('converts numbered list items to ProseMirror orderedList nodes', () => {
     const blocknote = [
       {
         type: 'numberedListItem',
@@ -158,11 +158,11 @@ describe('detectBlockContentFormat', () => {
       type: 'doc',
       content: [
         {
-          type: 'ordered_list',
+          type: 'orderedList',
           attrs: { order: 2 },
           content: [
             {
-              type: 'list_item',
+              type: 'listItem',
               content: [
                 {
                   type: 'paragraph',
@@ -233,7 +233,7 @@ describe('detectBlockContentFormat', () => {
     });
   });
 
-  it('converts code blocks to ProseMirror code_block nodes', () => {
+  it('converts code blocks to ProseMirror codeBlock nodes', () => {
     const blocknote = [
       {
         type: 'codeBlock',
@@ -246,7 +246,7 @@ describe('detectBlockContentFormat', () => {
       type: 'doc',
       content: [
         {
-          type: 'code_block',
+          type: 'codeBlock',
           content: [{ type: 'text', text: 'const x = 1;' }],
         },
       ],
@@ -313,10 +313,10 @@ describe('detectBlockContentFormat', () => {
       type: 'doc',
       content: [
         {
-          type: 'bullet_list',
+          type: 'bulletList',
           content: [
             {
-              type: 'list_item',
+              type: 'listItem',
               content: [
                 {
                   type: 'paragraph',
@@ -334,7 +334,7 @@ describe('detectBlockContentFormat', () => {
     });
   });
 
-  it('merges consecutive bullet list items into a single bullet_list', () => {
+  it('merges consecutive bullet list items into a single bulletList', () => {
     const blocknote = [
       {
         type: 'bulletListItem',
@@ -357,18 +357,18 @@ describe('detectBlockContentFormat', () => {
       type: 'doc',
       content: [
         {
-          type: 'bullet_list',
+          type: 'bulletList',
           content: [
             {
-              type: 'list_item',
+              type: 'listItem',
               content: [{ type: 'paragraph', content: [{ type: 'text', text: 'First' }] }],
             },
             {
-              type: 'list_item',
+              type: 'listItem',
               content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Second' }] }],
             },
             {
-              type: 'list_item',
+              type: 'listItem',
               content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Third' }] }],
             },
           ],
@@ -377,7 +377,7 @@ describe('detectBlockContentFormat', () => {
     });
   });
 
-  it('merges consecutive numbered list items into a single ordered_list', () => {
+  it('merges consecutive numbered list items into a single orderedList', () => {
     const blocknote = [
       {
         type: 'numberedListItem',
@@ -395,15 +395,15 @@ describe('detectBlockContentFormat', () => {
       type: 'doc',
       content: [
         {
-          type: 'ordered_list',
+          type: 'orderedList',
           attrs: { order: 1 },
           content: [
             {
-              type: 'list_item',
+              type: 'listItem',
               content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Step 1' }] }],
             },
             {
-              type: 'list_item',
+              type: 'listItem',
               content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Step 2' }] }],
             },
           ],
@@ -428,7 +428,7 @@ describe('detectBlockContentFormat', () => {
 
     const result = blockNoteJsonToProsemirrorJson(blocknote);
     expect(result.content).toHaveLength(2);
-    expect(result.content[0].type).toBe('bullet_list');
-    expect(result.content[1].type).toBe('ordered_list');
+    expect(result.content[0].type).toBe('bulletList');
+    expect(result.content[1].type).toBe('orderedList');
   });
 });

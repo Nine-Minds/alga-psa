@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
 import { TenantEmailService } from './TenantEmailService';
 import { DatabaseTemplateProcessor } from './templateProcessors';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
@@ -28,8 +28,8 @@ export async function sendVerificationEmail({
 
       // Get both client names from their respective tables
       const [registrationCompany, tenantRecord] = await Promise.all([
-        knex('clients').where({ tenant }).select('client_name').first(),
-        knex('tenants').where({ tenant }).select('client_name').first()
+        tenantDb(knex, tenant).table('clients').select('client_name').first(),
+        tenantDb(knex, tenant).table('tenants').select('client_name').first()
       ]);
 
       if (!registrationCompany || !tenantRecord) {

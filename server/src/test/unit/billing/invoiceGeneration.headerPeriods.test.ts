@@ -7,7 +7,29 @@ const mocks = vi.hoisted(() => {
     materialUpdates: [] as Array<Record<string, any>>,
   };
 
-  const createTenantKnex = vi.fn(async () => ({ knex: {} }));
+  // After the content transaction commits, invoiceGeneration queries
+  // `project_billing_schedule_entries` directly on the raw knex connection
+  // (outside withTransaction), so the mocked connection must be callable.
+  // A recurring (non-project) invoice finds no schedule rows, so `select`
+  // resolves to an empty array.
+  const createQueryBuilder = () => {
+    const builder: any = {
+      join: vi.fn(() => builder),
+      leftJoin: vi.fn(() => builder),
+      where: vi.fn(() => builder),
+      andWhere: vi.fn(() => builder),
+      orderBy: vi.fn(() => builder),
+      select: vi.fn(async () => []),
+      first: vi.fn(async () => undefined),
+      update: vi.fn(async () => 1),
+      insert: vi.fn(async () => []),
+      delete: vi.fn(async () => 0),
+      del: vi.fn(async () => 0),
+    };
+    return builder;
+  };
+  const knexStub = vi.fn((_tableName: string) => createQueryBuilder());
+  const createTenantKnex = vi.fn(async () => ({ knex: knexStub }));
   const withTransaction = vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) => {
     const trx = ((tableName: string) => {
       const queryState = {
@@ -88,6 +110,7 @@ const mocks = vi.hoisted(() => {
     state,
     createTenantKnex,
     withTransaction,
+    knexStub,
     getNextNumber,
     persistInvoiceCharges,
     calculateAndDistributeTax,
@@ -130,6 +153,33 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (tableExpr: string) => {
+      const builder = conn(tableExpr);
+      if (!builder || typeof builder.where !== 'function') {
+        return builder;
+      }
+      const aliasMatch = /\bas\s+([A-Za-z0-9_]+)\s*$/i.exec(tableExpr.trim());
+      const tenantColumn = aliasMatch ? `${aliasMatch[1]}.tenant` : 'tenant';
+      builder.where({ [tenantColumn]: tenant });
+      return {
+        ...builder,
+        where: (criteria: any, ...rest: any[]) =>
+          criteria && typeof criteria === 'object' && !Array.isArray(criteria)
+            ? builder.where({ [tenantColumn]: tenant, ...criteria })
+            : builder.where(criteria, ...rest),
+      };
+    },
+    scoped: (t: string) => conn(t),
+    subquery: (t: string) => conn(t),
+    parentScopedTable: (t: string) => conn(t),
+    unscoped: (t: string) => conn(t),
+    tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
+    tenantJoinSubquery: (q: any, sub: any, _l?: any, _r?: any, o: any = {}) =>
+      o?.type === 'left' ? (q.leftJoin?.(sub) ?? q) : (q.join?.(sub) ?? q),
+    tenantWhereColumn: (q: any) => q,
+  }),
   withTransaction: mocks.withTransaction,
   createTenantKnex: mocks.createTenantKnex,
   runWithTenant: (_tenant: string, callback: () => unknown) => callback(),
@@ -223,7 +273,7 @@ describe('invoice generation header billing periods', () => {
     mocks.state.materialUpdates.length = 0;
     vi.clearAllMocks();
 
-    mocks.createTenantKnex.mockResolvedValue({ knex: {} });
+    mocks.createTenantKnex.mockResolvedValue({ knex: mocks.knexStub });
     mocks.getNextNumber.mockResolvedValue('INV-1000');
     mocks.persistInvoiceCharges.mockResolvedValue(4200);
     mocks.calculateAndDistributeTax.mockResolvedValue(550);

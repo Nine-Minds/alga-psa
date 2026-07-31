@@ -5,7 +5,10 @@ import type { AccountingExportAdapterContext, AccountingExportDeliveryResult } f
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: createTenantKnexMock
+  createTenantKnex: createTenantKnexMock,
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (t: string) => conn(t),
+  })
 }));
 
 import { AccountingExportService } from '../../../../../packages/billing/src/services/accountingExportService';
@@ -95,7 +98,7 @@ describe('external tax consumers service-period policy', () => {
         difference: 0
       }
     ]);
-    expect(invoiceBuilder.select).toHaveBeenCalledWith('invoice_id', 'tax_source');
+    expect(invoiceBuilder.select).toHaveBeenCalledWith('invoice_id', 'tax_source', 'currency_code');
     expect(chargeBuilder.select).toHaveBeenCalledWith(
       'item_id',
       'description',
@@ -129,8 +132,8 @@ describe('external tax consumers service-period policy', () => {
         {
           line_id: 'line-1',
           batch_id: 'batch-1',
-          invoice_id: 'invoice-1',
-          invoice_charge_id: 'charge-1',
+          document_id: 'invoice-1',
+          document_line_id: 'charge-1',
           client_id: 'client-1',
           amount_cents: 10000,
           currency_code: 'USD',
@@ -158,8 +161,8 @@ describe('external tax consumers service-period policy', () => {
         {
           line_id: 'line-2',
           batch_id: 'batch-1',
-          invoice_id: 'invoice-1',
-          invoice_charge_id: 'charge-2',
+          document_id: 'invoice-1',
+          document_line_id: 'charge-2',
           client_id: 'client-1',
           amount_cents: 5000,
           currency_code: 'USD',
@@ -175,8 +178,8 @@ describe('external tax consumers service-period policy', () => {
         {
           line_id: 'line-3',
           batch_id: 'batch-1',
-          invoice_id: 'invoice-2',
-          invoice_charge_id: 'charge-3',
+          document_id: 'invoice-2',
+          document_line_id: 'charge-3',
           client_id: 'client-1',
           amount_cents: 2500,
           currency_code: 'USD',

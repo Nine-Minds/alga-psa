@@ -29,7 +29,9 @@
       "viewDetails": "View details",
       "manageTimePeriods": "Manage Time Periods",
       "selectWorkItem": "Select Work Item",
-      "clearFilter": "Clear filter"
+      "clearFilter": "Clear filter",
+      "remove": "Remove",
+      "clear": "Clear"
     },
     "states": {
       "inProgress": "In Progress",
@@ -95,6 +97,24 @@
     },
     "lastEntry": {
       "none": "No entries"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selected"
+    },
+    "delete": {
+      "success": "{{count}} time sheet(s) removed",
+      "partialFailure": "{{count}} time sheet(s) couldn't be removed",
+      "error": "Failed to remove time sheet(s)"
+    },
+    "removePeriod": {
+      "success": "{{count}} time period(s) removed",
+      "partialFailure": "{{count}} time period(s) couldn't be removed",
+      "error": "Failed to remove time period(s)"
+    },
+    "remove": {
+      "title": "Remove unused items",
+      "message": "Remove {{count}} selected period(s)? Unused pay periods are removed for the whole organization, along with any empty draft time logged in them. This cannot be undone.",
+      "timesheetMessage": "Remove {{count}} unused time sheet(s)? Only empty draft time sheets are removed and this cannot be undone."
     }
   },
   "timeEntryForm": {
@@ -148,7 +168,9 @@
     "empty": {
       "searching": "Searching...",
       "noWorkItems": "No work items found"
-    }
+    },
+    "paymentWarningTitle": "Payment prerequisite warning",
+    "paymentWarning": "Payment is required for a flagged project billing milestone and has not been confirmed. Confirm payment before continuing work."
   },
   "workItemList": {
     "meta": {
@@ -428,7 +450,8 @@
     "taskUpdated": "Task updated successfully",
     "saveChangesFailed": "Failed to save changes",
     "changesSaved": "Changes saved successfully",
-    "workItemDeleted": "Work item deleted successfully"
+    "workItemDeleted": "Work item deleted successfully",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "This ticket is bundled under {{number}}. Bundle time is usually logged on the master ticket.",

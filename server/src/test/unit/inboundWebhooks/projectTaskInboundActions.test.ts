@@ -12,6 +12,35 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  tenantDb: (conn: any, tenant: string) => {
+    const tenantColumnFor = (t: string) => {
+      const match = /\bas\s+([A-Za-z0-9_]+)\s*$/i.exec(String(t).trim());
+      return match ? `${match[1]}.tenant` : 'tenant';
+    };
+    return {
+      table: (t: string) => {
+        const builder = conn(t);
+        const col = tenantColumnFor(t);
+        const originalWhere = builder?.where ? builder.where.bind(builder) : undefined;
+        if (!originalWhere) {
+          return builder;
+        }
+        return new Proxy(builder, {
+          get(target: any, prop: string | symbol, receiver: any) {
+            if (prop === 'where') {
+              return (criteria: any, ...rest: any[]) =>
+                rest.length === 0 && criteria && typeof criteria === 'object' && !Array.isArray(criteria)
+                  ? originalWhere({ [col]: tenant, ...criteria })
+                  : originalWhere(criteria, ...rest);
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        });
+      },
+      tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
+        o?.type === 'left' ? (q.leftJoin?.(t, () => {}) ?? q) : (q.join?.(t, () => {}) ?? q),
+    };
+  },
 }));
 
 vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({
@@ -162,7 +191,6 @@ describe('project task inbound webhook actions', () => {
         description: 'Cutover task from external PM system',
         assigned_to: 'user-1',
         estimated_hours: 4,
-        actual_hours: null,
         due_date: new Date('2026-05-18T00:00:00.000Z'),
         project_status_mapping_id: 'status-1',
         priority_id: 'priority-1',

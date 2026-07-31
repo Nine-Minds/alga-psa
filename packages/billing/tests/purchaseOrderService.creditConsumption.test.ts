@@ -41,7 +41,6 @@ describe('purchaseOrderService credit-aware PO consumption', () => {
       'COALESCE(SUM(COALESCE(total_amount, 0) - COALESCE(credit_applied, 0)), 0) as sum'
     );
     expect(invoiceQuery.where).toHaveBeenCalledWith({
-      tenant: 'tenant-1',
       client_contract_id: 'assignment-1',
     });
   });

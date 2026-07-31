@@ -61,11 +61,17 @@ describe('workflowInferenceService', () => {
         required: ['category'],
         additionalProperties: false,
       },
+      tenantId: 'tenant-workflow',
       runId: 'run-1',
       stepPath: 'root.steps[0]',
     });
 
     expect(resolveChatProviderMock).toHaveBeenCalledTimes(1);
+    expect(resolveChatProviderMock).toHaveBeenCalledWith(
+      'tenant-workflow',
+      'workflow-inference',
+      undefined,
+    );
     expect(createMock).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'test-model',

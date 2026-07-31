@@ -63,7 +63,6 @@
   "features": {
     "integrations": "Integraties — verbind agenda, Teams, Entra en andere externe diensten",
     "extensions": "Uitbreidingen — installeer en beheer marketplace-uitbreidingen voor uw werkruimte",
-    "managedEmail": "Beheerde e-mail — configureer gehoste e-mailbezorging vanuit Alga PSA",
     "sso": "Single Sign-On — configureer SSO en OAuth-identiteitsproviders voor uw team",
     "advancedAssets": "Geavanceerde activa — ontgrendel RMM-gekoppelde activa-ontdekking en uitgebreide activa-bedieningselementen",
     "clientPortalAdmin": "Klantportaalbeheer — beheer geavanceerde klantportaal-branding en -administratie",
@@ -72,7 +71,8 @@
     "entraSync": "Microsoft Entra Sync — ontdek automatisch tenants en synchroniseer contacten vanuit Entra ID",
     "cipp": "CIPP-integratie — verbind uw CIPP-instantie voor multi-tenant Entra-beheer",
     "teamsIntegration": "Microsoft Teams — vergaderintegratie en Teams-bot voor ticketmeldingen",
-    "advancedAuthorizationBundles": "Geavanceerde autorisatiebundels — maak en beheer premium ABAC-inperkingsbundels"
+    "advancedAuthorizationBundles": "Geavanceerde autorisatiebundels — maak en beheer premium ABAC-inperkingsbundels",
+    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
   },
   "summary": {
     "licensesUsed": "Gebruikte licenties",
@@ -316,6 +316,45 @@
     "newSubNote": "Er wordt een nieuw abonnement gemaakt. Deze wijziging gaat direct in.",
     "perMonthSuffix": "/mnd"
   },
+  "productUpgrade": {
+    "cardTitle": "Upgraden naar AlgaPSA",
+    "cardDescription": "Zet deze werkruimte over van AlgaDesk naar het volledige AlgaPSA-platform.",
+    "currentPlanLabel": "Huidig plan",
+    "algadeskPlanName": "AlgaDesk",
+    "currentPerSeatLabel": "Huidige prijs per zitplaats",
+    "perSeatValue": "${{amount}} per zitplaats",
+    "cardCta": "Ontgrendel facturering, projecten, assets en de volledige set PSA-functies.",
+    "openButton": "Upgraden naar AlgaPSA",
+    "dialogTitle": "Upgraden naar AlgaPSA",
+    "intro": "U upgradet deze werkruimte van <strong>AlgaDesk</strong> naar <strong>AlgaPSA</strong>.",
+    "targetPerSeatLabel": "AlgaPSA-prijs per zitplaats",
+    "seatCountLabel": "Zitplaatsen",
+    "billingIntervalLabel": "Factureringsinterval",
+    "intervalMonth": "Maandelijks",
+    "intervalYear": "Jaarlijks",
+    "dueTodayLabel": "Vandaag verschuldigd evenredig bedrag",
+    "dueTodayUnknown": "Wordt bij bevestiging getoond",
+    "prorationFallback": "Het exacte evenredige bedrag wordt bij de bevestiging in Stripe getoond.",
+    "confirm": "Upgrade bevestigen",
+    "confirming": "Upgrade starten...",
+    "cancel": "Annuleren",
+    "inProgressTitle": "Upgraden naar AlgaPSA...",
+    "inProgressBody": "Dit kan een minuut duren. Houd dit venster open totdat het proces is voltooid.",
+    "currentStepLabel": "Huidige stap",
+    "preparingStep": "Voorbereiden...",
+    "completedStepsLabel": "Voltooide stappen",
+    "successTitle": "Welkom bij AlgaPSA!",
+    "successBody": "Uw werkruimte is geüpgraded en de volledige set PSA-functies is nu beschikbaar.",
+    "successReloginNotice": "Andere aangemelde gebruikers moeten zich afmelden en opnieuw aanmelden voordat ze AlgaPSA kunnen zien.",
+    "successDone": "Gereed",
+    "failedTitle": "Upgrade is niet voltooid",
+    "failedBody": "Er is iets misgegaan tijdens het upgraden. Er zijn geen wijzigingen verloren gegaan — u kunt het veilig opnieuw proberen.",
+    "retry": "Opnieuw proberen",
+    "retrying": "Opnieuw proberen...",
+    "close": "Sluiten",
+    "previewFailed": "Upgradedetails konden niet worden geladen",
+    "startFailed": "Upgrade kon niet worden gestart"
+  },
   "downgradeDialog": {
     "title": "Downgraden naar Solo",
     "downgrading": "Downgraden...",
@@ -386,6 +425,76 @@
       "switchingCompetitor": "Overstappen naar concurrent",
       "noLongerNeed": "Dienst niet langer nodig",
       "other": "Anders"
+    }
+  },
+  "aiUsage": {
+    "title": "AI-gebruik",
+    "subtitle": "Facturering op basis van credits voor Alga AI-functies",
+    "refresh": "Vernieuwen",
+    "errors": {
+      "loadSummary": "Kan AI-gebruiksdetails niet laden",
+      "loadHistory": "Kan gebruiksgeschiedenis niet laden",
+      "subscribe": "Kan het afrekenen niet starten",
+      "topup": "Kan het afrekenen van de opwaardering niet starten",
+      "autoTopup": "Kan instellingen voor automatisch opwaarderen niet opslaan",
+      "unavailable": "AI-gebruiksdetails zijn momenteel niet beschikbaar. Probeer het zo weer."
+    },
+    "upsell": {
+      "heading": "Voeg AI toe aan uw werkruimte",
+      "body": "Abonneer u op de AI-add-on om Alga AI te ontgrendelen voor chat, e-mailtriage en meer. Uw maandplan bevat een credittegoed; koop eenmalige opwaarderingen of schakel automatisch opwaarderen op elk moment in.",
+      "subscribe": "Abonneren op AI-add-on",
+      "subscribing": "Doorsturen…"
+    },
+    "grace": {
+      "title": "Credits op — respijtbuffer in gebruik",
+      "body": "AI blijft werken binnen een kleine respijtbuffer van {{grace}} credits. Waardeer op om een volledige stop te voorkomen."
+    },
+    "lowBalance": {
+      "title": "Laag creditsaldo",
+      "body": "Overweeg op te waarderen of automatisch opwaarderen in te schakelen om onderbrekingen te voorkomen."
+    },
+    "balance": {
+      "total": "Totaal saldo",
+      "creditsUnit": "credits",
+      "included": "Inbegrepen (maandelijks)",
+      "resetsMonthly": "wordt elke cyclus gereset",
+      "topup": "Opwaardering (blijft behouden)",
+      "carriesOver": "wordt meegenomen"
+    },
+    "cycle": {
+      "label": "Factureringscyclus",
+      "resetsIn": "Reset over {{days}} dagen"
+    },
+    "topup": {
+      "title": "Opwaardeercredits kopen",
+      "description": "Eenmalige creditpakketten die nooit verlopen.",
+      "noPacks": "Er zijn nog geen opwaardeerpakketten geconfigureerd.",
+      "packWithCredits": "{{label}} ({{credits}} credits)"
+    },
+    "autoTopup": {
+      "title": "Automatisch opwaarderen",
+      "description": "Koopt automatisch een pakket wanneer uw saldo onder een drempel zakt.",
+      "enable": "Automatisch opwaarderen inschakelen",
+      "enableHelp": "Gebruikt uw opgeslagen betaalmethode voor afschrijvingen buiten de sessie.",
+      "threshold": "Drempel (credits)",
+      "pack": "Aan te schaffen pakket",
+      "selectPack": "Selecteer een pakket",
+      "save": "Automatisch opwaarderen opslaan",
+      "saved": "Instellingen voor automatisch opwaarderen opgeslagen",
+      "saving": "Opslaan…"
+    },
+    "history": {
+      "title": "Gebruiksgeschiedenis",
+      "description": "Creditverbruik per aanvraag.",
+      "allFeatures": "Alle functies",
+      "date": "Datum",
+      "feature": "Functie",
+      "model": "Model",
+      "tokens": "Tokens",
+      "credits": "Credits",
+      "empty": "Nog geen gebruik geregistreerd.",
+      "loading": "Laden…",
+      "loadMore": "Meer laden"
     }
   }
 }

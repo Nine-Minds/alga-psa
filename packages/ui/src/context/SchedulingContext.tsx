@@ -7,6 +7,10 @@ import type {
   TimeEntryWorkItemContext,
   TicketTimeEntriesSummary,
 } from '@alga-psa/types';
+import type {
+  ActionMessageError,
+  ActionPermissionError,
+} from '../lib/errorHandling';
 
 export type OpenDrawerFn = (
   content: React.ReactNode,
@@ -14,6 +18,15 @@ export type OpenDrawerFn = (
   onClose?: () => void,
   width?: string
 ) => void;
+
+/** Context for launching the scheduler drawer pre-scoped to a work item (e.g. a ticket). */
+export interface ScheduleEntryLaunchContext {
+  workItemId: string;
+  workItemType: 'ticket';
+  /** Pre-fills the entry title and the selected work item label. */
+  title: string;
+  clientName?: string | null;
+}
 
 export interface SchedulingCallbacks {
   renderAgentSchedule: (agentId: string) => React.ReactNode;
@@ -24,8 +37,15 @@ export interface SchedulingCallbacks {
     onComplete?: () => void;
     existingEntryId?: string;
   }) => Promise<void>;
+  /** Opens the schedule-entry editor in the global drawer, pre-scoped to the given work item. */
+  launchScheduleEntry: (params: {
+    openDrawer: OpenDrawerFn;
+    closeDrawer: () => void;
+    context: ScheduleEntryLaunchContext;
+    onComplete?: () => void;
+  }) => Promise<void>;
   fetchTimeEntriesForTicket: (ticketId: string) => Promise<TicketTimeEntriesSummary>;
-  deleteTimeEntry: (entryId: string) => Promise<void>;
+  deleteTimeEntry: (entryId: string) => Promise<void | ActionMessageError | ActionPermissionError>;
 }
 
 const defaultSchedulingCallbacks: SchedulingCallbacks = {
@@ -40,6 +60,9 @@ const defaultSchedulingCallbacks: SchedulingCallbacks = {
   ),
   launchTimeEntry: async () => {
     toast('Time entry is managed in Scheduling.');
+  },
+  launchScheduleEntry: async () => {
+    toast('Scheduling is managed in Scheduling.');
   },
   fetchTimeEntriesForTicket: async () => ({
     entries: [],

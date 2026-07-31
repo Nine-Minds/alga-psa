@@ -1,4 +1,5 @@
 import { listAssets } from '@alga-psa/assets/actions/assetActions';
+import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import type { AssetListResponse } from '@alga-psa/types';
@@ -32,7 +33,12 @@ export default async function AssetsPage() {
   }
 
   try {
-    const assets: AssetListResponse = await listAssets({});
+    const assetsResult = await listAssets({});
+    const expected = assetActionErrorFrom(assetsResult);
+    if (expected) {
+      return <div>{assetActionErrorMessage(expected)}</div>;
+    }
+    const assets: AssetListResponse = assetsResult;
     return <MspAssetDashboardClient initialAssets={assets} />;
   } catch (error) {
     console.error('Error fetching user or assets:', error);

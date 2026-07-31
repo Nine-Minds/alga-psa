@@ -11,7 +11,8 @@
       "resyncing": "{{providerName}} wird erneut synchronisiert...",
       "resyncError": "Die Neusynchronisierung des IMAP-Anbieters ist fehlgeschlagen",
       "resyncStarted": "Neusynchronisierung für {{providerName}} gestartet.",
-      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in der Enterprise Edition verfügbar."
+      "enterpriseOnly": "Eingehende E-Mails von Microsoft 365 sind nur in der Enterprise Edition verfügbar.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "E-Mail-Anbieter bearbeiten",
@@ -143,6 +144,7 @@
     },
     "badges": {
       "disabled": "Deaktiviert",
+      "paused": "Pausiert",
       "connected": "Verbunden",
       "disconnected": "Getrennt",
       "error": "Fehler",
@@ -166,15 +168,29 @@
       "reconnectOauth": "OAuth erneut verbinden",
       "resyncing": "Neusynchronisierung…",
       "resyncMailbox": "Postfach neu synchronisieren",
+      "pause": "Eingehende E-Mails pausieren",
+      "resume": "Eingehende E-Mails fortsetzen",
       "delete": "Anbieter löschen"
     },
+    "feedback": {
+      "paused": "Eingehende E-Mails pausiert.",
+      "resumed": "Eingehende E-Mails fortgesetzt.",
+      "pauseError": "Der Pausenstatus für eingehende E-Mails konnte nicht geändert werden."
+    },
+    "pausedHelp": "Nachrichten, die eingehen, während dieses Postfach pausiert ist, werden nicht nachträglich importiert.",
     "fields": {
       "status": "Status",
       "lastSync": "Letzte Synchronisierung",
+      "lastIngested": "Zuletzt eingelesen",
+      "delivery": "Zustellung",
       "created": "Erstellt",
       "subscription": "Abonnement",
       "defaults": "Ticket-Standardeinstellungen",
       "error": "Fehler:"
+    },
+    "delivery": {
+      "polling": "Abruf alle 3 Minuten",
+      "webhook": "Echtzeit-Zustellung: aktiv"
     },
     "values": {
       "active": "Aktiv",
@@ -293,7 +309,8 @@
         "popupBlocked": "Das OAuth-Popup konnte nicht geöffnet werden. Bitte erlauben Sie Popups für diese Website.",
         "closedEarly": "Das Autorisierungsfenster wurde vor dem Abschluss geschlossen.",
         "authorizationFailed": "Die Autorisierung ist fehlgeschlagen",
-        "popupFailed": "OAuth-Popup ist fehlgeschlagen"
+        "popupFailed": "OAuth-Popup ist fehlgeschlagen",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Anbieter gespeichert, aber Einrichtung unvollständig: {{error}}",
@@ -707,7 +724,8 @@
       "refreshStatusFailed": "Domainstatus konnte nicht aktualisiert werden",
       "domainRemovalScheduled": "Domainentfernung geplant",
       "domainRemovalScheduledWithClear": "Domainentfernung geplant und Ticketing-Absenderadresse gelöscht",
-      "removeDomainFailed": "Domain konnte nicht entfernt werden"
+      "removeDomainFailed": "Domain konnte nicht entfernt werden",
+      "testOutboundFailed": "Test der ausgehenden E-Mail fehlgeschlagen"
     },
     "tabs": {
       "inboundEmail": "Eingehende E-Mail",
@@ -741,11 +759,27 @@
         "usernamePlaceholder": "ihre-email@beispiel.de",
         "passwordLabel": "Passwort",
         "passwordPlaceholder": "Passwort eingeben",
+        "authHint": "Lassen Sie Benutzername und Passwort leer, wenn Ihr Relay E-Mails ohne Authentifizierung akzeptiert.",
         "fromLabel": "Absenderadresse",
         "fromPlaceholder": "noreply@beispiel.de",
         "fromHelp": "Die Standardabsenderadresse für ausgehende E-Mails.",
+        "security": {
+          "title": "Verbindungssicherheit",
+          "secure": "Implizites TLS verwenden (SSL beim Verbinden, üblicherweise Port 465)",
+          "requireTls": "STARTTLS-Upgrade erforderlich (Ports 587 / 25)",
+          "verifyCert": "Serverzertifikat überprüfen",
+          "verifyCertHint": "Deaktivieren Sie dies nur für ein vertrauenswürdiges Relay in Ihrem eigenen Netzwerk, das ein selbstsigniertes Zertifikat verwendet."
+        },
         "savingButton": "Speichern…",
-        "saveButton": "SMTP-Einstellungen speichern"
+        "saveButton": "SMTP-Einstellungen speichern",
+        "test": {
+          "title": "Ausgehende E-Mail testen",
+          "description": "Speichert die aktuellen Einstellungen und überprüft dann die Verbindung zum Anbieter. Geben Sie eine Adresse ein, um auch eine Testnachricht zu senden.",
+          "recipientLabel": "Test senden an (optional)",
+          "recipientPlaceholder": "sie@beispiel.com",
+          "testingButton": "Wird getestet...",
+          "runButton": "Verbindung testen"
+        }
       },
       "ticketingFrom": {
         "title": "Absenderadresse für Ticketing",
@@ -764,6 +798,9 @@
         "customPlaceholder": "support@{{domain}}",
         "customSmtpHelp": "Verwenden Sie eine Domain, von der Ihr SMTP-Server senden darf. Eine nicht übereinstimmende Domain kann zu Zustellungsfehlern oder Spamfilterung führen.",
         "customManagedHelp": "Muss mit {{domain}} übereinstimmen. Wenn dies nicht eines Ihrer Eingangspostfächer ist, funktioniert die Verarbeitung eingehender Tickets möglicherweise nicht.",
+        "nameLabel": "Anzeigename des Absenders",
+        "namePlaceholder": "Support",
+        "nameHelp": "Wird als Absendername in Ticket-Benachrichtigungen angezeigt. Leer lassen, um den konfigurierten Namen des Postfachs oder den Board-Namen zu verwenden.",
         "warningTitle": "Zur Info",
         "errorTitle": "Absenderadresse korrigieren",
         "clearButton": "Absenderadresse löschen",
@@ -837,7 +874,13 @@
       "missingHelp": "Wir haben diesen Eintrag im DNS noch nicht erkannt. Prüfen Sie, ob er in Ihrem DNS-Anbieter mit dem genauen oben gezeigten Wert existiert.",
       "mismatchHelp": "Der DNS-Eintrag existiert, aber der Wert stimmt nicht mit dem überein, was Resend erwartet.",
       "matchedHelp": "Der erkannte Wert stimmt mit dem erwarteten überein.",
-      "unknownHelp": "Wir haben das DNS noch nicht geprüft. Prüfen Sie das DNS erneut, um die Verifizierung auszuführen."
+      "unknownHelp": "Wir haben das DNS noch nicht geprüft. Prüfen Sie das DNS erneut, um die Verifizierung auszuführen.",
+      "hostLabel": "Host",
+      "fqdnLabel": "Vollständiger Name",
+      "valueLabel": "Wert",
+      "copyHostAriaLabel": "Host kopieren",
+      "copyFqdnAriaLabel": "Vollständigen Namen kopieren",
+      "hostHint": "Tipp: Geben Sie bei Ihrem DNS-Anbieter nur den oben angezeigten Host ein. Die meisten Anbieter (Namecheap, GoDaddy, Cloudflare und andere) fügen „{{domain}}“ automatisch hinzu. Wenn Sie stattdessen den vollständigen Namen einfügen, wird die Domain wiederholt (…{{domain}}.{{domain}}) und der Eintrag wird nie verifiziert."
     }
   },
   "inboundRules": {

@@ -13,7 +13,6 @@ import type { EventWaitFilter, Expr, ForEachBlock, IfBlock, Step } from '@alga-p
 import type { RetryPolicy, OnErrorPolicy } from '@alga-psa/workflows/runtime/core';
 import type { TryCatchBlock, WorkflowDefinition } from '@alga-psa/workflows/runtime/core';
 import {
-  advanceWorkflowRuntimeV2InterpreterState,
   createWorkflowRuntimeV2InterpreterCheckpoint,
   buildWorkflowRuntimeV2ExpressionContext,
   getWorkflowRuntimeV2CurrentStep,
@@ -371,8 +370,7 @@ export async function workflowRuntimeV2RunWorkflow(
         const ifStep = current.step as IfBlock;
         const branchKey = await evaluateDeterministicBooleanExpression(ifStep.condition, state.scopes) ? 'then' : 'else';
         const branchSteps = branchKey === 'then' ? ifStep.then : (ifStep.else ?? []);
-        state = advanceWorkflowRuntimeV2InterpreterState(state);
-        state = pushWorkflowRuntimeV2SequenceFrame(state, {
+        state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition, {
           path: `${current.path}.${branchKey}.steps`,
           totalSteps: branchSteps.length,
         });
@@ -390,8 +388,7 @@ export async function workflowRuntimeV2RunWorkflow(
 
       if (current.step.type === 'control.tryCatch') {
         const tryCatchStep = current.step as TryCatchBlock;
-        state = advanceWorkflowRuntimeV2InterpreterState(state);
-        state = pushWorkflowRuntimeV2SequenceFrame(state, {
+        state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition, {
           path: `${current.path}.try.steps`,
           totalSteps: tryCatchStep.try.length,
         });
@@ -423,7 +420,6 @@ export async function workflowRuntimeV2RunWorkflow(
             hadPrevious,
           },
         });
-        state = advanceWorkflowRuntimeV2InterpreterState(state);
         if (resolvedItems.length > 0 && forEachStep.body.length > 0) {
           state = assignToScopePath(state, `vars.${forEachStep.itemVar}`, resolvedItems[0]);
           state = upsertForEachLexicalScope(state, {
@@ -433,7 +429,7 @@ export async function workflowRuntimeV2RunWorkflow(
             index: 0,
             length: resolvedItems.length,
           });
-          state = pushWorkflowRuntimeV2SequenceFrame(state, {
+          state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition, {
             path: `${current.path}.body.steps`,
             totalSteps: forEachStep.body.length,
           });
@@ -444,6 +440,7 @@ export async function workflowRuntimeV2RunWorkflow(
             hadPrevious,
           });
           state = clearForEachLexicalScope(state, forEachStep.id);
+          state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         }
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
@@ -521,8 +518,7 @@ export async function workflowRuntimeV2RunWorkflow(
           }
         }
 
-        state = advanceWorkflowRuntimeV2InterpreterState(state);
-        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+        state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -586,8 +582,7 @@ export async function workflowRuntimeV2RunWorkflow(
         if (config.assign) {
           state = await applyExpressionAssignments(state, config.assign);
         }
-        state = advanceWorkflowRuntimeV2InterpreterState(state);
-        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+        state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -670,8 +665,7 @@ export async function workflowRuntimeV2RunWorkflow(
         if (config.assign) {
           state = await applyExpressionAssignments(state, config.assign);
         }
-        state = advanceWorkflowRuntimeV2InterpreterState(state);
-        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+        state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -750,8 +744,7 @@ export async function workflowRuntimeV2RunWorkflow(
         if (config.assign) {
           state = await applyExpressionAssignments(state, config.assign);
         }
-        state = advanceWorkflowRuntimeV2InterpreterState(state);
-        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+        state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -813,8 +806,7 @@ export async function workflowRuntimeV2RunWorkflow(
                 status: 'SUCCEEDED',
                 errorMessage: runtimeError.message,
               });
-              state = advanceWorkflowRuntimeV2InterpreterState(state);
-              state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+              state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
               stepCount += 1;
               queryStepCount = stepCount;
               await maybeContinueAsNew();
@@ -828,8 +820,7 @@ export async function workflowRuntimeV2RunWorkflow(
         if (handledByOnError) {
           continue;
         }
-        state = advanceWorkflowRuntimeV2InterpreterState(state);
-        state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+        state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
           runId: input.runId,
           stepId: stepProjection.stepId,
@@ -857,8 +848,7 @@ export async function workflowRuntimeV2RunWorkflow(
         ...state,
         scopes: nodeResult.scopes,
       };
-      state = advanceWorkflowRuntimeV2InterpreterState(state);
-      state = advanceWorkflowRuntimeV2ForEachLoopState(state, pinned.definition, current.path);
+      state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
       await activities.projectWorkflowRuntimeV2StepCompletion({
         runId: input.runId,
         stepId: stepProjection.stepId,
@@ -1550,91 +1540,111 @@ function clearForEachLexicalScope(state: WorkflowRuntimeV2InterpreterState, loop
   return state;
 }
 
-function advanceWorkflowRuntimeV2ForEachLoopState(
+/**
+ * Advance the interpreter past the just-completed step at the top of the
+ * frame stack. When `push` names a non-empty child sequence (an if branch,
+ * try block, or forEach body) that frame is entered; otherwise exhausted
+ * frames are settled: plain sequence frames pop, and an exhausted forEach
+ * body frame either restarts for the next item or finalizes its loop.
+ *
+ * This is structural (frame-driven) on purpose: the previous path-heuristic
+ * advanced loops on any completion whose direct body child was last-in-body,
+ * which fired mid-branch (corrupting multi-step nested branches) and never
+ * fired when a trailing control block took an empty branch (abandoning the
+ * remaining items).
+ */
+function advanceWorkflowRuntimeV2PastStep(
   state: WorkflowRuntimeV2InterpreterState,
   definition: WorkflowDefinition,
-  completedStepPath: string
+  push?: { path: string; totalSteps: number }
 ): WorkflowRuntimeV2InterpreterState {
-  const loopProgress = resolveCompletedForEachBodyStep(definition, completedStepPath);
-  if (!loopProgress) {
-    return state;
+  let nextState = incrementTopSequenceFrame(state);
+  if (push && push.totalSteps > 0) {
+    return pushWorkflowRuntimeV2SequenceFrame(nextState, push);
   }
-
-  const loops = getForEachLoopRecord(state);
-  const loopContext = loops[loopProgress.loopId];
-  if (!loopContext) {
-    throw createInterpreterCorruptionError(
-      `Missing control.forEach context for loop ${loopProgress.loopId} while processing ${completedStepPath}`
-    );
-  }
-  if (loopContext.index >= loopContext.items.length - 1) {
-    let nextState = clearForEachLoopContext(state, loopProgress.loopId);
-    nextState = restoreForEachItemVar(nextState, loopContext.itemVar, {
-      previous: loopContext.previous,
-      hadPrevious: loopContext.hadPrevious,
-    });
-    nextState = clearForEachLexicalScope(nextState, loopProgress.loopId);
-    return nextState;
-  }
-
-  const nextIndex = loopContext.index + 1;
-  const updatedLoopContext: ForEachLoopContext = {
-    ...loopContext,
-    index: nextIndex,
-  };
-
-  let nextState = setForEachLoopContext(state, {
-    loopId: loopProgress.loopId,
-    loopContext: updatedLoopContext,
-  });
-  nextState = assignToScopePath(nextState, `vars.${loopContext.itemVar}`, loopContext.items[nextIndex]);
-  nextState = upsertForEachLexicalScope(nextState, {
-    loopId: loopProgress.loopId,
-    itemVar: loopContext.itemVar,
-    item: loopContext.items[nextIndex],
-    index: nextIndex,
-    length: loopContext.items.length,
-  });
-  nextState = pushWorkflowRuntimeV2SequenceFrame(nextState, {
-    path: loopProgress.bodyPath,
-    totalSteps: loopProgress.bodyLength,
-  });
-  return nextState;
+  return settleExhaustedFrames(nextState, definition);
 }
 
-function resolveCompletedForEachBodyStep(
-  definition: WorkflowDefinition,
-  completedStepPath: string
-): {
-  loopId: string;
-  bodyPath: string;
-  bodyLength: number;
-} | null {
-  const ancestry = resolveStepAncestry(definition, completedStepPath);
-  if (!ancestry) {
-    return null;
+function incrementTopSequenceFrame(state: WorkflowRuntimeV2InterpreterState): WorkflowRuntimeV2InterpreterState {
+  const frames = [...state.frames];
+  const top = frames[frames.length - 1];
+  if (top?.kind === 'sequence') {
+    frames[frames.length - 1] = { ...top, nextIndex: top.nextIndex + 1 };
   }
+  return { ...state, frames };
+}
 
-  for (let index = ancestry.length - 2; index >= 0; index -= 1) {
-    const ancestor = ancestry[index];
-    if (ancestor.descendedVia !== 'body' || ancestor.step.type !== 'control.forEach') {
+function settleExhaustedFrames(
+  state: WorkflowRuntimeV2InterpreterState,
+  definition: WorkflowDefinition
+): WorkflowRuntimeV2InterpreterState {
+  let nextState = state;
+
+  while (nextState.frames.length > 0) {
+    const top = nextState.frames[nextState.frames.length - 1];
+    if (top.kind !== 'sequence' || top.nextIndex < top.totalSteps) {
+      break;
+    }
+
+    const bodyMatch = /^(.*)\.body\.steps$/.exec(top.path);
+    if (bodyMatch) {
+      const loopPath = bodyMatch[1];
+      const ancestry = resolveStepAncestry(definition, loopPath);
+      const loopStep = ancestry?.[ancestry.length - 1]?.step;
+      if (!loopStep || loopStep.type !== 'control.forEach') {
+        throw createInterpreterCorruptionError(
+          `No control.forEach found at ${loopPath} while settling frames`,
+          { framePath: top.path }
+        );
+      }
+      const forEachStep = loopStep as ForEachBlock;
+      const loops = getForEachLoopRecord(nextState);
+      const loopContext = loops[forEachStep.id];
+      if (!loopContext) {
+        throw createInterpreterCorruptionError(
+          `Missing control.forEach context for loop ${forEachStep.id} while settling ${top.path}`
+        );
+      }
+
+      if (loopContext.index < loopContext.items.length - 1) {
+        const nextIndex = loopContext.index + 1;
+        nextState = setForEachLoopContext(nextState, {
+          loopId: forEachStep.id,
+          loopContext: { ...loopContext, index: nextIndex },
+        });
+        nextState = assignToScopePath(nextState, `vars.${loopContext.itemVar}`, loopContext.items[nextIndex]);
+        nextState = upsertForEachLexicalScope(nextState, {
+          loopId: forEachStep.id,
+          itemVar: loopContext.itemVar,
+          item: loopContext.items[nextIndex],
+          index: nextIndex,
+          length: loopContext.items.length,
+        });
+        const frames = [...nextState.frames];
+        frames[frames.length - 1] = { ...frames[frames.length - 1], nextIndex: 0 };
+        nextState = { ...nextState, frames };
+        break;
+      }
+
+      nextState = clearForEachLoopContext(nextState, forEachStep.id);
+      nextState = restoreForEachItemVar(nextState, loopContext.itemVar, {
+        previous: loopContext.previous,
+        hadPrevious: loopContext.hadPrevious,
+      });
+      nextState = clearForEachLexicalScope(nextState, forEachStep.id);
+      nextState = { ...nextState, frames: nextState.frames.slice(0, -1) };
       continue;
     }
 
-    const directBodyChild = ancestry[index + 1];
-    const forEachStep = ancestor.step as ForEachBlock;
-    if (directBodyChild.indexInParentSequence !== forEachStep.body.length - 1) {
-      return null;
-    }
-
-    return {
-      loopId: forEachStep.id,
-      bodyPath: `${ancestor.stepPath}.body.steps`,
-      bodyLength: forEachStep.body.length,
-    };
+    nextState = { ...nextState, frames: nextState.frames.slice(0, -1) };
   }
 
-  return null;
+  const topFrame = nextState.frames[nextState.frames.length - 1];
+  const currentStepPath = topFrame && topFrame.nextIndex < topFrame.totalSteps
+    ? (topFrame.path === 'root.steps' ? `root.steps[${topFrame.nextIndex}]` : `${topFrame.path}[${topFrame.nextIndex}]`)
+    : null;
+
+  return { ...nextState, currentStepPath };
 }
 
 function isForEachLoopContext(value: unknown): value is ForEachLoopContext {
@@ -1684,16 +1694,16 @@ function routeForEachOnItemError(input: {
     return null;
   }
 
-  let nextState: WorkflowRuntimeV2InterpreterState = {
+  const nextState: WorkflowRuntimeV2InterpreterState = {
     ...input.state,
     scopes: {
       ...input.state.scopes,
       error: input.runtimeError as Record<string, unknown>,
     },
   };
-  nextState = advanceWorkflowRuntimeV2InterpreterState(nextState);
-  nextState = advanceWorkflowRuntimeV2ForEachLoopState(nextState, input.definition, input.failedStepPath);
-  return nextState;
+  // Continue with the step after the failed one (same item); settling handles
+  // the failed step being last in its sequence, including loop advancement.
+  return advanceWorkflowRuntimeV2PastStep(nextState, input.definition);
 }
 
 type WorkflowRuntimeV2StepAncestor = {
@@ -2039,6 +2049,10 @@ function routeTryCatchFailure(input: {
         path: `${ancestor.stepPath}.catch.steps`,
         totalSteps: tryCatchStep.catch.length,
       });
+    } else {
+      // An empty catch leaves the frames where the try was popped; settle so
+      // exhausted parents (including enclosing forEach bodies) advance.
+      nextState = settleExhaustedFrames(nextState, input.definition);
     }
     return nextState;
   }

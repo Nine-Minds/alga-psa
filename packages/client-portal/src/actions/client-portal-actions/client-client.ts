@@ -2,7 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal account actions intentionally compose client feature models for self-service account views. */
 
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { Client } from '@alga-psa/clients/models';
@@ -27,10 +27,9 @@ export const getClientClient = withAuth(async (
     let clientId: string | null = null;
 
     if (user.contact_id) {
-      const contact = await trx('contacts')
+      const contact = await tenantDb(trx, tenant).table('contacts')
         .where({
           contact_name_id: user.contact_id,
-          tenant
         })
         .select('client_id')
         .first();

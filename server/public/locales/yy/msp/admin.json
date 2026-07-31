@@ -140,6 +140,14 @@
       "fromAddress": {
         "label": "55555",
         "placeholder": "55555"
+      },
+      "authHint": "55555",
+      "security": {
+        "title": "55555",
+        "secure": "55555",
+        "requireTls": "55555",
+        "verifyCert": "55555",
+        "verifyCertHint": "55555"
       }
     },
     "resend": {
@@ -169,7 +177,16 @@
       "loadEmailSettings": "55555",
       "saveSettings": "55555",
       "addDomain": "55555",
-      "verifyDomain": "55555"
+      "verifyDomain": "55555",
+      "testOutbound": "55555"
+    },
+    "test": {
+      "title": "55555",
+      "description": "55555",
+      "recipientLabel": "55555",
+      "recipientPlaceholder": "55555",
+      "run": "55555",
+      "testing": "55555"
     }
   },
   "microsoft365": {

@@ -7,6 +7,7 @@ import { formatDuration, calculateTotalDuration, secondsToMinutes } from './util
 import { Button } from '@alga-psa/ui/components/Button';
 import { Pencil, Trash, Play, Clock, Merge } from 'lucide-react';
 import { Card } from '@alga-psa/ui/components/Card';
+import { useContentCardVariant } from '@alga-psa/ui/components';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -15,7 +16,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import TimeEntryDialog from '../time-entry/time-sheet/TimeEntryDialog';
 import { saveTimeEntry } from '../../../actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentTimePeriod } from '../../../actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 
@@ -34,6 +35,8 @@ export function IntervalManagement({
   onCreateTimeEntry
 }: IntervalManagementProps) {
   const { t } = useTranslation('msp/time-entry');
+  // Compact typography when rendered inside a Grid-layout bento tile.
+  const isBento = useContentCardVariant() === 'bento';
   const [intervals, setIntervals] = useState<TicketInterval[]>([]);
   const [selectedIntervalIds, setSelectedIntervalIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,7 +96,22 @@ export function IntervalManagement({
     );
     return calculateTotalDuration(selectedIntervals);
   }, [filteredIntervals, selectedIntervalIds]);
-  
+
+  // Stable TimeEntryDialog props. The live ticket timer re-renders this subtree
+  // every second; without memoization the inline workItem/Date props change
+  // identity each tick, re-firing the dialog's init effect (flash + input reset).
+  const dialogWorkItem = useMemo(() => ({
+    work_item_id: timeEntryData?.work_item_id || '',
+    type: timeEntryData?.work_item_type || 'ticket',
+    name: t('intervals.entryName', { defaultValue: 'Ticket Time Entry' }),
+    description: timeEntryData?.notes || '',
+    is_billable: true,
+  }), [timeEntryData, t]);
+  const dialogDate = useMemo(() => new Date(), [timeEntryData]);
+  const dialogStartTime = useMemo(() => new Date(timeEntryData?.start_time || ''), [timeEntryData]);
+  const dialogEndTime = useMemo(() => new Date(timeEntryData?.end_time || ''), [timeEntryData]);
+  const dialogExistingEntries = useMemo(() => [], []);
+
   // Handle interval selection
   const toggleIntervalSelection = (intervalId: string) => {
     setSelectedIntervalIds(prevSelected => {
@@ -142,6 +160,10 @@ export function IntervalManagement({
     try {
       // Get current time period
       const timePeriod = await getCurrentTimePeriod();
+      if (isActionMessageError(timePeriod) || isActionPermissionError(timePeriod)) {
+        toast.error(getErrorMessage(timePeriod));
+        return;
+      }
       if (!timePeriod) {
         toast.error(t('intervals.messages.noActivePeriod', { defaultValue: 'No active time period found' }));
         return;
@@ -150,6 +172,10 @@ export function IntervalManagement({
       
       // Create or fetch time sheet
       const timeSheet = await fetchOrCreateTimeSheet(userId, timePeriod.period_id);
+      if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
+        toast.error(getErrorMessage(timeSheet));
+        return;
+      }
       if (!timeSheet) {
         toast.error(t('intervals.messages.failedFetchTimeSheet', { defaultValue: 'Failed to create or fetch time sheet' }));
         return;
@@ -208,6 +234,10 @@ export function IntervalManagement({
     try {
       // Get current time period
       const currentTimePeriod = await getCurrentTimePeriod();
+      if (isActionMessageError(currentTimePeriod) || isActionPermissionError(currentTimePeriod)) {
+        toast.error(getErrorMessage(currentTimePeriod));
+        return;
+      }
       if (!currentTimePeriod) {
         toast.error(t('intervals.messages.noActivePeriod', { defaultValue: 'No active time period found' }));
         return;
@@ -215,13 +245,17 @@ export function IntervalManagement({
 
       // Create or fetch time sheet
       const timeSheet = await fetchOrCreateTimeSheet(userId, currentTimePeriod.period_id);
+      if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
+        toast.error(getErrorMessage(timeSheet));
+        return;
+      }
       if (!timeSheet) {
         toast.error(t('intervals.messages.failedFetchTimeSheet', { defaultValue: 'Failed to create or fetch time sheet' }));
         return;
       }
 
       // Save the time entry directly
-      await saveTimeEntry({
+      const savedEntry = await saveTimeEntry({
         ...timeEntry,
         time_sheet_id: timeSheet.id,
         user_id: userId,
@@ -231,6 +265,11 @@ export function IntervalManagement({
         work_item_type: 'ticket',
         work_item_id: ticketId
       });
+
+      if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
+        toast.error(getErrorMessage(savedEntry));
+        return;
+      }
       
       // Delete the intervals that were converted
       await intervalService.deleteIntervals(selectedIntervalIds);
@@ -249,20 +288,25 @@ export function IntervalManagement({
   };
   
   return (
-    <div className="space-y-4" id="ticket-intervals-management">
-      <div className="flex justify-between items-center">
+    <div className={isBento ? 'space-y-3' : 'space-y-4'} id="ticket-intervals-management">
+      {/* In the narrow bento rail the filter and the total stack vertically with
+          quieter type; the wide Entry layout keeps them on one line. */}
+      <div className={isBento ? 'flex flex-col gap-1.5' : 'flex justify-between items-center'}>
         <div className="flex items-center space-x-2">
           <Switch
             id="filter-short-intervals"
             checked={filterShortIntervals}
             onCheckedChange={setFilterShortIntervals}
           />
-          <Label htmlFor="filter-short-intervals">
+          <Label
+            htmlFor="filter-short-intervals"
+            className={isBento ? 'text-xs font-normal text-[rgb(var(--color-text-600))] mb-0' : undefined}
+          >
             {t('intervals.hideShortIntervals', { defaultValue: 'Hide intervals under 1 minute' })}
           </Label>
         </div>
-        
-        <div className="text-sm text-gray-600">
+
+        <div className={isBento ? 'text-xs text-[rgb(var(--color-text-500))]' : 'text-sm text-gray-600'}>
           {t('intervals.totalTime', {
             defaultValue: 'Total time: {{value}}',
             value: formatDuration(totalDuration)
@@ -328,7 +372,9 @@ export function IntervalManagement({
       {/* Intervals list */}
       <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
         {isLoading ? (
-          <div className="text-center py-8">{t('intervals.states.loading', { defaultValue: 'Loading intervals...' })}</div>
+          <div className={isBento ? 'py-2 text-sm text-[rgb(var(--color-text-400))]' : 'text-center py-8'}>
+            {t('intervals.states.loading', { defaultValue: 'Loading intervals...' })}
+          </div>
         ) : filteredIntervals.length > 0 ? (
           filteredIntervals.map(interval => (
             <IntervalItem
@@ -339,7 +385,7 @@ export function IntervalManagement({
             />
           ))
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className={isBento ? 'py-2 text-sm text-[rgb(var(--color-text-400))]' : 'text-center py-8 text-gray-500'}>
             {intervals.length > 0 && filterShortIntervals
               ? t('intervals.states.noIntervalsLongerThanMinute', { defaultValue: 'No intervals longer than 1 minute found' })
               : t('intervals.states.noIntervalsThisTicket', { defaultValue: 'No intervals found for this ticket' })}
@@ -352,19 +398,13 @@ export function IntervalManagement({
         <TimeEntryDialog
           isOpen={isTimeEntryDialogOpen}
           onClose={() => setIsTimeEntryDialogOpen(false)}
-          workItem={{
-            work_item_id: timeEntryData.work_item_id || '',
-            type: timeEntryData.work_item_type || 'ticket',
-            name: t('intervals.entryName', { defaultValue: 'Ticket Time Entry' }),
-            description: timeEntryData.notes || '',
-            is_billable: true
-          }}
-          date={new Date()}
-          existingEntries={[]}
+          workItem={dialogWorkItem}
+          date={dialogDate}
+          existingEntries={dialogExistingEntries}
           timePeriod={currentTimePeriod}
           isEditable={true}
-          defaultStartTime={new Date(timeEntryData.start_time || '')}
-          defaultEndTime={new Date(timeEntryData.end_time || '')}
+          defaultStartTime={dialogStartTime}
+          defaultEndTime={dialogEndTime}
           timeSheetId={currentTimeSheet.id}
           onSave={handleSaveTimeEntry}
           inDrawer={true}

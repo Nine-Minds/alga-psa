@@ -38,7 +38,15 @@
     "no": "Nein",
     "yes": "Ja"
   },
+  "clientLifecycle": {
+    "prospect": "Interessent",
+    "active": "Aktiver Kunde",
+    "former": "Ehemaliger Kunde",
+    "all": "Alle Lebenszyklusphasen"
+  },
   "clientsPage": {
+    "filterByLifecycle": "Nach Lebenszyklus filtern",
+    "lifecycleFilterLabel": "Lebenszyklusfilter",
     "title": "Kundenseite",
     "description": "Hauptseite zur Kundenverwaltung mit Suche, Filtern und Kundenraster-/Listenansicht",
     "searchPlaceholder": "Kunden, Notizen, Dokumente und Interaktionen suchen",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
   },
   "clientDetails": {
+    "opportunities": "Verkaufschancen",
+    "lifecycleStatus": "Lebenszyklus",
+    "lifecycleStatusHelper": "Interessenten stehen Vertriebsworkflows zur Verfügung, werden aber standardmäßig in operativen Kundenlisten ausgeblendet.",
     "title": "Kundendaten",
     "backToClients": "Zurück zu Kunden",
     "openInNewTab": "In neuem Tab öffnen",
@@ -206,9 +217,9 @@
     "providerDefault": "Anbietervorgabe",
     "inboundEmailDomains": "Eingehende E-Mail-Domänen",
     "inboundEmailDomainsHelp": "Nur diese Domänen werden für den Domänenabgleich eingehender E-Mails verwendet (z. B. acme.com). Domänen müssen für alle Clients eindeutig sein.",
-    "noInboundDomains": "Keine eingehenden E-Mail-Domänen konfiguriert. Der Domänenabgleich wird nicht verwendet.",
+    "noInboundDomains": "Fügen Sie eine Domain hinzu, um eingehende E-Mails diesem Client zuzuordnen.",
     "inboundTicketDestination": "Eingehendes Ticketziel",
-    "inboundDestinationPrecedence": "Vorrang: Kontaktüberschreibung -> Clientziel -> Anbieterstandard.",
+    "inboundDestinationPrecedence": "Verwendet zuerst die Überschreibung des Kontakts, dann die des Clients und dann den Anbieterstandard.",
     "manageLocations": "Standorte verwalten",
     "loadingUsers": "Benutzer werden geladen...",
     "loadingPolicies": "Richtlinien werden geladen...",
@@ -278,9 +289,164 @@
     "nameAliasRemoveFailed": "Alias konnte nicht entfernt werden",
     "nameAliasRemoved": "Alias entfernt",
     "nameAliases": "Aliasse für den Abgleich",
-    "noNameAliases": "Keine Aliasse konfiguriert. Der Kundenname selbst wird immer abgeglichen."
+    "noNameAliases": "Keine Aliasse konfiguriert. Der Kundenname selbst wird immer abgeglichen.",
+    "equipment": "Ausrüstung",
+    "parentClientSelf": "Ein Kunde kann nicht sein eigener übergeordneter Kunde sein",
+    "parentClientPlaceholder": "Kein übergeordneter Kunde",
+    "parentClientClear": "Löschen",
+    "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
+  },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Auffälligkeiten",
+      "documents": "Dokumente",
+      "installBase": "Installationsbasis",
+      "locations": "Standorte",
+      "money": "Finanzen",
+      "notes": "Notizen",
+      "people": "Personen",
+      "record": "Kundendatensatz",
+      "service": "Service",
+      "timeline": "Alles der Reihe nach"
+    },
+    "csatEmpty": "Noch keine Umfrageantworten.",
+    "discardCancel": "Weiter bearbeiten",
+    "discardConfirm": "Änderungen verwerfen",
+    "discardMessage": "Sie haben ungespeicherte Änderungen am Kundendatensatz. Schließen und verwerfen?",
+    "discardTitle": "Ungespeicherte Änderungen",
+    "documents": {
+      "more": "+{{count}} weitere",
+      "none": "Noch keine Dokumente."
+    },
+    "flags": {
+      "clientWaiting": "Kunde wartet seit {{days}} T — {{ref}}",
+      "draftInvoices_one": "1 Rechnungsentwurf — {{amount}} nicht abgerechnet · {{ref}}",
+      "draftInvoices_other": "{{count}} Rechnungsentwürfe — {{amount}} nicht abgerechnet · {{ref}}",
+      "rmaOpen_one": "1 offene RMA — {{days}} T",
+      "rmaOpen_other": "{{count}} offene RMAs — älteste {{days}} T",
+      "slaAtRisk_one": "SLA gefährdet — {{ref}}",
+      "slaAtRisk_other": "{{count}} Tickets mit SLA-Risiko — nächstes {{ref}}",
+      "slaBreached_one": "SLA verletzt — {{ref}}",
+      "slaBreached_other": "{{count}} SLA-Verletzungen — schwerste {{ref}}",
+      "soPartial": "{{ref}}: {{fulfilled}} von {{total}} Positionen erfüllt",
+      "ticketOverdue_one": "1 überfälliges Ticket — {{ref}} {{days}} T überfällig",
+      "ticketOverdue_other": "{{count}} überfällige Tickets — {{ref}} {{days}} T überfällig",
+      "ticketUnassigned_one": "1 nicht zugewiesenes Ticket — {{ref}}",
+      "ticketUnassigned_other": "{{count}} nicht zugewiesene Tickets — ältestes {{ref}}",
+      "wipAging_one": "1 nicht abgerechnete Position — {{days}} T alt{{materials}}",
+      "wipAging_other": "{{count}} nicht abgerechnete Positionen — älteste {{days}} T{{materials}}"
+    },
+    "installBase": {
+      "assets": "verwaltete Assets",
+      "assetsLink": "Verwaltete Assets",
+      "none": "Noch keine ausgelieferte Ausstattung.",
+      "rmas": "offene RMAs",
+      "sold": "verkaufte Einheiten",
+      "viewAsset": "Asset",
+      "warrantyExpired_one": "1 ohne Garantie",
+      "warrantyExpired_other": "{{count}} ohne Garantie",
+      "warrantyExpiring_one": "1 läuft in ≤90 T ab",
+      "warrantyExpiring_other": "{{count}} laufen in ≤90 T ab",
+      "warrantyTracked": " (von {{count}} erfasst)"
+    },
+    "locations": {
+      "billing": "Rechnung",
+      "manage": "Verwalten",
+      "more": "+{{count}} weitere",
+      "none": "Noch keine Standorte.",
+      "shipping": "Versand"
+    },
+    "money": {
+      "activeContracts": "Aktive Verträge",
+      "agingNote": "{{total}} offen · erfasste Zahlungen abgezogen",
+      "billingSetup": "Abrechnungs-Setup",
+      "current": "aktuell",
+      "draft": "Entwurf",
+      "moreDrafts_one": "+1 weiterer Entwurf",
+      "moreDrafts_other": "+{{count}} weitere Entwürfe",
+      "nothingOutstanding": "Keine offenen Posten bei finalisierten Rechnungen.",
+      "taxSettings": "Steuereinstellungen",
+      "unbilledHours": "{{hours}} Std.",
+      "unbilledMaterials": "{{amount}} Material",
+      "unbilledWork": "Nicht abgerechnete Arbeit"
+    },
+    "notes": {
+      "add": "Notiz hinzufügen",
+      "lastEdited": "Geteilte Kundennotiz · bearbeitet vor {{days}} T",
+      "none": "Noch keine Notizen."
+    },
+    "openView": "Öffnen",
+    "people": {
+      "addContact": "Kontakt hinzufügen",
+      "more": "+{{count}} weitere",
+      "noContactInfo": "keine Kontaktdaten hinterlegt",
+      "none": "Noch keine Kontakte.",
+      "primary": "Primär"
+    },
+    "pulseError": "Die Kundenübersicht konnte nicht geladen werden.",
+    "rail": {
+      "close": "Schließen",
+      "installBase": "Installationsbasis",
+      "label": "Kundenansichten",
+      "money": "Finanzen",
+      "more": "Mehr",
+      "records": "Datensätze",
+      "service": "Service"
+    },
+    "record": {
+      "accountManager": "Kundenbetreuer",
+      "additionalInfo": "Zusatzinformationen",
+      "clientSince": "Kunde seit",
+      "defaultContact": "Standardkontakt",
+      "edit": "Bearbeiten",
+      "unset": "nicht gesetzt"
+    },
+    "service": {
+      "newTicket": "Neues Ticket",
+      "none": "Keine offenen Tickets.",
+      "oldest": "ältestes offen",
+      "open": "offene Tickets",
+      "overdue": "überfällig",
+      "overdueTag": "überfällig",
+      "unassigned": "Nicht zugewiesen"
+    },
+    "sla": {
+      "atRisk": "SLA gefährdet",
+      "atRiskLeft": "SLA {{left}} übrig",
+      "breached": "SLA verletzt",
+      "breachedAgo": "SLA vor {{over}} verletzt",
+      "onTrack": "SLA im Plan",
+      "onTrackLeft": "SLA {{left}} übrig",
+      "paused": "SLA pausiert"
+    },
+    "timeline": {
+      "daysAgo": "vor {{count}} T",
+      "empty": "Für diesen Kunden ist noch nichts erfasst.",
+      "error": "Die Chronik konnte nicht geladen werden.",
+      "filterAll": "Alle",
+      "filterInteractions": "Interaktionen",
+      "filterInventory": "Bestand",
+      "filterMoney": "Finanzen",
+      "filterService": "Service",
+      "hoursAgo": "vor {{count}} Std.",
+      "interaction": "Interaktion",
+      "invoiceCreated": "Rechnung entworfen",
+      "invoiceFinalized": "Rechnung finalisiert",
+      "justNow": "gerade eben",
+      "loadMore": "Mehr laden",
+      "loading": "Wird geladen…",
+      "materialAdded": "Material verwendet",
+      "quoteActivity": "Angebotsaktivität",
+      "rmaClosed": "RMA geschlossen",
+      "rmaOpened": "RMA eröffnet",
+      "soCreated": "Auftrag erstellt",
+      "ticketClosed": "Ticket geschlossen",
+      "ticketOpened": "Ticket eröffnet",
+      "unitDelivered": "Ausstattung geliefert"
+    }
   },
   "quickAddClient": {
+    "lifecycleStatus": "Lebenszyklus",
     "title": "Neuen Kunden hinzufügen",
     "clientDetails": "Kundendaten",
     "clientLocation": "Kundenstandort",
@@ -328,7 +494,8 @@
     "created": "\"{{name}}\" wurde erstellt. Fügen Sie unten einen weiteren Kunden hinzu.",
     "createAndAddAnother": "Erstellen + Weiteren hinzufügen",
     "createAndView": "Erstellen + Kunde anzeigen",
-    "additionalDetails": "Zusätzliche Details"
+    "additionalDetails": "Zusätzliche Details",
+    "createFailed": "Failed to create client. Please try again."
   },
   "clientCreatedDialog": {
     "title": "Kunde erstellt",
@@ -446,7 +613,8 @@
     "formattingError": "Formatierungsfehler",
     "removeAssignmentTitle": "Vertragspositionszuordnung entfernen",
     "removeAssignmentMessage": "Sind Sie sicher, dass Sie diese Vertragszeilenzuweisung vom Kunden entfernen möchten? Die Vertragszeile selbst wird nicht gelöscht.",
-    "contracts": "Verträge"
+    "contracts": "Verträge",
+    "taxRatesLoadError": "Failed to load tax rate configuration."
   },
   "clientBillingSchedule": {
     "title": "Abrechnungsplan",
@@ -522,6 +690,17 @@
       "5": "Freitag",
       "6": "Samstag",
       "7": "Sonntag"
+    },
+    "reviewError": "Auswirkung dieser Änderung konnte nicht geprüft werden",
+    "reviewing": "Auswirkung wird geprüft …",
+    "confirmSave": "Bestätigen und speichern",
+    "reviewChanges": "Änderungen prüfen",
+    "impact": {
+      "title": "Vor dem Anwenden prüfen",
+      "periods": "{{count}} bevorstehende(r) Abrechnungszeitraum/-räume über {{lines}} Vertragsposition(en) werden an den neuen Zeitplan angepasst.",
+      "from": "Neu aufgebaut ab {{date}}.",
+      "billedPreserved": "Bereits in Rechnung gestellte Posten bleiben erhalten und ändern sich nicht.",
+      "confirmHint": "Wählen Sie „Bestätigen und speichern“, um anzuwenden."
     }
   },
   "clientContractAssignment": {
@@ -583,7 +762,8 @@
     "startDate": "Startdatum",
     "startDateRequired": "Startdatum ist erforderlich",
     "updateAssignment": "Zuweisung aktualisieren",
-    "useTenantRenewalDefaults": "Standardeinstellungen für Mandantenverlängerung verwenden"
+    "useTenantRenewalDefaults": "Standardeinstellungen für Mandantenverlängerung verwenden",
+    "saveError": "Failed to save contract. Please try again."
   },
   "clientContractLineDashboard": {
     "title": "Nutzungsmetriken (letzte 30 Tage)",
@@ -605,7 +785,10 @@
     "noActiveBucketPlans": "Keine aktiven Bucket-Pläne gefunden.",
     "noHours": "Im ausgewählten Zeitraum wurden keine Stunden erfasst.",
     "noInvoices": "Keine aktuellen Rechnungen gefunden.",
-    "noUsage": "Im ausgewählten Zeitraum wurden keine Nutzungsdaten gefunden."
+    "noUsage": "Im ausgewählten Zeitraum wurden keine Nutzungsdaten gefunden.",
+    "retry": "Wiederholen",
+    "loadError": "Dieser Abschnitt konnte nicht geladen werden.",
+    "balanceDue": "Offener Betrag"
   },
   "clientContractLineGuide": {
     "title": "Leitfaden zur Begriffsklärung von Vertragszeilen",
@@ -884,8 +1067,15 @@
     "email": "E-Mail",
     "clientName": "Kundenname",
     "importCompleteMessage": "{{count}}-Clients wurden erfolgreich importiert",
+    "importCompleteWithErrors": "Import mit Fehlern abgeschlossen",
+    "importResultSummary": "{{created}} erstellt, {{updated}} aktualisiert, {{skipped}} übersprungen, {{failed}} fehlgeschlagen",
+    "skippedExistingMessage": "{{count}} Clients wurden übersprungen, da sie bereits existieren. Aktivieren Sie „Bestehende Clients aktualisieren“, um sie zu überschreiben.",
+    "error": "Fehler",
     "updateExistingTitle": "Bestehende Clients aktualisieren",
-    "updateExistingMessage": "{{count}} Clients sind bereits vorhanden. Möchten Sie sie mit den neuen Daten aktualisieren?"
+    "updateExistingMessage": "{{count}} Clients sind bereits vorhanden. Möchten Sie sie mit den neuen Daten aktualisieren?",
+    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
+    "noValidRows": "There are no valid client rows to import.",
+    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
   },
   "clientsList": {
     "name": "Name",
@@ -997,7 +1187,6 @@
     "title": "Einstellungen zur Steuerberechnung",
     "description": "Konfigurieren Sie, wie Steuern für diesen Kunden berechnet werden.",
     "createDefault": "Standardsteuereinstellungen erstellen",
-    "goToBillingTaxSettings": "Zu den Abrechnungssteuereinstellungen gehen",
     "taxExemptStatus": "Steuerbefreiungsstatus",
     "taxExempt": "Steuerbefreit",
     "taxExemptHelp": "Wenn diese Option aktiviert ist, werden auf Rechnungen für diesen Kunden keine Steuern erhoben.",
@@ -1032,18 +1221,19 @@
     "taxExemptUpdatedSuccess": "Der Steuerbefreiungsstatus wurde erfolgreich aktualisiert",
     "taxExemptUpdateError": "Der Steuerbefreiungsstatus konnte nicht aktualisiert werden",
     "taxSourceExternal": "Extern",
-    "taxSourceHelp": "Verwalten Sie die Standardsteuersätze für Kunden unter „Kundeneinstellungen“ → „Steuersätze“ und verwalten Sie globale Steuersätze unter „Abrechnung“ → „Steuereinstellungen“.",
+    "taxSourceHelp": "Legen Sie die Sätze dieses Clients unter Abrechnung → Steuersätze fest. Legen Sie globale Sätze unter Abrechnungseinstellungen → Steuer fest.",
     "taxSourceInternal": "Intern"
   },
   "clientNotesPanel": {
-    "title": "Notizen und Kurzinformationen",
+    "title": "Notizen",
     "initialNote": "Erste Anmerkung",
-    "lastUpdated": "Letzte Aktualisierung:",
+    "lastUpdated": "Letzte Aktualisierung: {{value}}",
     "save": "Speichern",
     "retry": "Wiederholen",
     "loadError": "Notizen konnten nicht geladen werden",
     "unknownError": "Unbekannter Fehler",
-    "loadErrorTitle": "Notizen konnten nicht geladen werden"
+    "loadErrorTitle": "Notizen konnten nicht geladen werden",
+    "loadErrorDescription": "Could not load notes. Please try again."
   },
   "actions": {
     "cancel": "Abbrechen",
@@ -1207,7 +1397,9 @@
         "endRequired": "Zum Erstellen einer Teams-Besprechung ist eine Endzeit erforderlich",
         "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
         "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
-      }
+      },
+      "loadFailed": "Interaction options could not be loaded. Please try again.",
+      "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
       "addInteraction": "Interaktion hinzufügen",
@@ -1220,7 +1412,9 @@
       "searchPlaceholder": "Interaktionen suchen",
       "startDate": "Startdatum",
       "title": "Interaktionen",
-      "typePlaceholder": "Interaktionstyp"
+      "typePlaceholder": "Interaktionstyp",
+      "loadFailed": "Interactions could not be loaded. Please try again.",
+      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
     },
     "overall": {
       "allContacts": "Alle Kontakte",
@@ -1237,7 +1431,8 @@
       "startTimeLabel": "Startzeit der Interaktion",
       "startTimePlaceholder": "Ab dieser Startzeit filtern",
       "statusPlaceholder": "Status",
-      "title": "Letzte Interaktionen"
+      "title": "Letzte Interaktionen",
+      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
     }
   },
   "clientDrawer": {
@@ -1256,7 +1451,10 @@
         "serialNumber": "Seriennummer",
         "status": "Status",
         "type": "Typ",
-        "warrantyEnd": "Garantieende"
+        "warrantyEnd": "Garantieende",
+        "agent": "Agent",
+        "patching": "Patches",
+        "coverage": "Abdeckung"
       },
       "details": {
         "local": "Lokal",
@@ -1301,7 +1499,9 @@
         "printer": "Drucker",
         "server": "Server",
         "workstation": "Arbeitsplatz"
-      }
+      },
+      "loadError": "Assets können derzeit nicht geladen werden.",
+      "retry": "Wiederholen"
     },
     "tickets": {
       "addTicket": "Ticket hinzufügen",
@@ -1324,6 +1524,36 @@
         "openTicketFailed": "Ticket konnte nicht geöffnet werden",
         "userNotAuthenticated": "Benutzer nicht authentifiziert"
       }
+    }
+  },
+  "clientEquipmentTab": {
+    "retry": "Wiederholen",
+    "loadError": "Dieser Abschnitt konnte nicht geladen werden.",
+    "emptyValue": "—",
+    "orderNumber": "Bestellnummer",
+    "status": "Status",
+    "ordered": "Bestellt",
+    "amount": "Betrag",
+    "product": "Produkt",
+    "sku": "SKU",
+    "serialNumber": "Seriennummer",
+    "delivered": "Geliefert",
+    "asset": "Asset",
+    "viewAsset": "Asset anzeigen",
+    "rmaNumber": "RMA-Nummer",
+    "opened": "Geöffnet",
+    "salesOrders": "Kundenaufträge",
+    "noSalesOrders": "Keine Kundenaufträge für diesen Kunden.",
+    "deliveredUnits": "Gelieferte Einheiten",
+    "noDeliveredEquipment": "Keine gelieferte Ausrüstung erfasst.",
+    "rmas": "RMAs",
+    "noRmas": "Keine RMAs für diesen Kunden."
+  },
+  "contacts": {
+    "quickView": {
+      "loading": "Kontakt wird geladen...",
+      "notFound": "Kontakt nicht gefunden.",
+      "loadFailed": "Kontakt konnte nicht geladen werden."
     }
   }
 }

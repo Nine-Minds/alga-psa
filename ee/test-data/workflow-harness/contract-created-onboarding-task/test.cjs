@@ -1,35 +1,32 @@
 const { randomUUID } = require('node:crypto');
 
+const { deleteTenantRows, pickTenantOne, selectTenantRows, tenantJoin } = require('../_lib/tenant-sql.cjs');
+
 function getApiKey() {
   return process.env.WORKFLOW_HARNESS_API_KEY || process.env.ALGA_API_KEY || '';
 }
 
-async function pickOne(ctx, { label, sql, params }) {
-  const rows = await ctx.db.query(sql, params);
-  if (!rows.length) throw new Error(`Fixture requires ${label} in DB (tenant=${ctx.config.tenantId}).`);
-  return rows[0];
-}
-
 async function ensureDefaultProjectStatus(ctx, { tenantId, createdByUserId }) {
-  const existing = await ctx.db.query(
-    `
-      select status_id
-      from statuses
-      where tenant = $1 and item_type = 'project' and is_default = true
-      order by order_number asc
-      limit 1
-    `,
-    [tenantId]
-  );
+  const existing = await selectTenantRows(ctx, {
+    table: 'statuses',
+    columns: 'status_id',
+    tenantId,
+    where: ["item_type = 'project'", 'is_default = true'],
+    orderBy: 'order_number asc',
+    limit: 1
+  });
   if (existing.length) return existing[0].status_id;
 
-  const maxRow = await ctx.db.query(
-    `select coalesce(max(order_number), 0) as max_order from statuses where tenant = $1 and status_type = 'project'`,
-    [tenantId]
-  );
+  const maxRow = await selectTenantRows(ctx, {
+    table: 'statuses',
+    columns: 'coalesce(max(order_number), 0) as max_order',
+    tenantId,
+    where: "status_type = 'project'"
+  });
   const nextOrder = Number(maxRow?.[0]?.max_order ?? 0) + 1;
 
   const name = 'Fixture Project Default';
+  // Intentionally raw: the fixture needs ON CONFLICT while creating a default project status.
   await ctx.dbWrite.query(
     `
       insert into statuses (tenant, name, status_type, order_number, is_closed, item_type, is_default, created_by)
@@ -39,10 +36,15 @@ async function ensureDefaultProjectStatus(ctx, { tenantId, createdByUserId }) {
     [tenantId, name, nextOrder, createdByUserId]
   );
 
-  const inserted = await ctx.db.query(
-    `select status_id from statuses where tenant = $1 and name = $2 and status_type = 'project' order by order_number asc limit 1`,
-    [tenantId, name]
-  );
+  const inserted = await selectTenantRows(ctx, {
+    table: 'statuses',
+    columns: 'status_id',
+    tenantId,
+    where: ['name = $2', "status_type = 'project'"],
+    params: [name],
+    orderBy: 'order_number asc',
+    limit: 1
+  });
   if (!inserted.length) throw new Error('Failed to create default project status for fixture');
   return inserted[0].status_id;
 }
@@ -56,15 +58,19 @@ module.exports = async function run(ctx) {
   const tenantId = ctx.config.tenantId;
   const marker = '[fixture contract-created-onboarding-task]';
 
-  const client = await pickOne(ctx, {
+  const client = await pickTenantOne(ctx, {
     label: 'a client',
-    sql: `select client_id from clients where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'clients',
+    columns: 'client_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
-  const user = await pickOne(ctx, {
+  const user = await pickTenantOne(ctx, {
     label: 'a user',
-    sql: `select user_id from users where tenant = $1 order by created_at asc limit 1`,
-    params: [tenantId]
+    table: 'users',
+    columns: 'user_id',
+    tenantId,
+    orderBy: 'created_at asc'
   });
 
   await ensureDefaultProjectStatus(ctx, { tenantId, createdByUserId: user.user_id });
@@ -96,49 +102,65 @@ module.exports = async function run(ctx) {
     }
 
     if (!projectDeleted) {
-      const phaseIds = await ctx.db.query(
-        `select phase_id from project_phases where tenant = $1 and project_id = $2`,
-        [tenantId, projectId]
-      );
+      const phaseIds = await selectTenantRows(ctx, {
+        table: 'project_phases',
+        columns: 'phase_id',
+        tenantId,
+        where: 'project_id = $2',
+        params: [projectId]
+      });
       const phaseIdList = phaseIds.map((r) => r.phase_id);
 
       if (phaseIdList.length) {
-        const taskIds = await ctx.db.query(
-          `select task_id from project_tasks where tenant = $1 and phase_id = any($2::uuid[])`,
-          [tenantId, phaseIdList]
-        );
+        const taskIds = await selectTenantRows(ctx, {
+          table: 'project_tasks',
+          columns: 'task_id',
+          tenantId,
+          where: 'phase_id = any($2::uuid[])',
+          params: [phaseIdList]
+        });
         const taskIdList = taskIds.map((r) => r.task_id);
 
         if (taskIdList.length) {
-          await ctx.dbWrite.query(
-            `delete from task_checklist_items where tenant = $1 and task_id = any($2::uuid[])`,
-            [tenantId, taskIdList]
-          );
-          await ctx.dbWrite.query(
-            `delete from project_tasks where tenant = $1 and task_id = any($2::uuid[])`,
-            [tenantId, taskIdList]
-          );
+          await deleteTenantRows(ctx, {
+            table: 'task_checklist_items',
+            tenantId,
+            where: 'task_id = any($2::uuid[])',
+            params: [taskIdList]
+          });
+          await deleteTenantRows(ctx, {
+            table: 'project_tasks',
+            tenantId,
+            where: 'task_id = any($2::uuid[])',
+            params: [taskIdList]
+          });
         }
 
-        await ctx.dbWrite.query(
-          `delete from project_phases where tenant = $1 and phase_id = any($2::uuid[])`,
-          [tenantId, phaseIdList]
-        );
+        await deleteTenantRows(ctx, {
+          table: 'project_phases',
+          tenantId,
+          where: 'phase_id = any($2::uuid[])',
+          params: [phaseIdList]
+        });
       }
 
-      await ctx.dbWrite.query(`delete from project_ticket_links where tenant = $1 and project_id = $2`, [tenantId, projectId]);
-      await ctx.dbWrite.query(`delete from project_status_mappings where tenant = $1 and project_id = $2`, [tenantId, projectId]);
-      await ctx.dbWrite.query(`delete from projects where tenant = $1 and project_id = $2`, [tenantId, projectId]);
+      await deleteTenantRows(ctx, { table: 'project_ticket_links', tenantId, where: 'project_id = $2', params: [projectId] });
+      await deleteTenantRows(ctx, { table: 'project_status_mappings', tenantId, where: 'project_id = $2', params: [projectId] });
+      await deleteTenantRows(ctx, { table: 'projects', tenantId, where: 'project_id = $2', params: [projectId] });
     }
 
-    await ctx.dbWrite.query(
-      `delete from interactions where tenant = $1 and client_id = $2 and notes like $3`,
-      [tenantId, client.client_id, `%${marker}%${contractId}%`]
-    );
-    await ctx.dbWrite.query(
-      `delete from internal_notifications where tenant = $1 and user_id = $2 and (title like $3 or message like $3)`,
-      [tenantId, user.user_id, `%${marker}%${contractId}%`]
-    );
+    await deleteTenantRows(ctx, {
+      table: 'interactions',
+      tenantId,
+      where: ['client_id = $2', 'notes like $3'],
+      params: [client.client_id, `%${marker}%${contractId}%`]
+    });
+    await deleteTenantRows(ctx, {
+      table: 'internal_notifications',
+      tenantId,
+      where: ['user_id = $2', '(title like $3 or message like $3)'],
+      params: [user.user_id, `%${marker}%${contractId}%`]
+    });
   });
 
   const contractId = randomUUID();
@@ -164,49 +186,50 @@ module.exports = async function run(ctx) {
     throw new Error(`Expected run SUCCEEDED, got ${runRow.status}. Steps: ${JSON.stringify(ctx.summarizeSteps(steps))}`);
   }
 
-  const tasks = await ctx.db.query(
-    `
-      select t.task_id, t.task_name
-      from project_tasks t
-      join project_phases p on p.phase_id = t.phase_id and p.tenant = t.tenant
-      where p.tenant = $1 and p.project_id = $2
-      order by t.created_at desc
-      limit 25
-    `,
-    [tenantId, projectId]
-  );
+  const tasks = await selectTenantRows(ctx, {
+    columns: 't.task_id, t.task_name',
+    from: tenantJoin('project_tasks t', 'project_phases p', {
+      leftAlias: 't',
+      rightAlias: 'p',
+      on: 'p.phase_id = t.phase_id'
+    }),
+    tenantAlias: 'p',
+    tenantId,
+    where: 'p.project_id = $2',
+    params: [projectId],
+    orderBy: 't.created_at desc',
+    limit: 25
+  });
 
   const taskFound = tasks.find((t) => typeof t.task_name === 'string' && t.task_name.includes(marker) && t.task_name.includes(contractId));
   if (!taskFound) {
     throw new Error(`Expected a project task containing "${marker}" and contractId on project ${projectId}. Found ${tasks.length} task(s).`);
   }
 
-  const notes = await ctx.db.query(
-    `
-      select interaction_id, notes, visibility, title
-      from interactions
-      where tenant = $1 and client_id = $2
-      order by interaction_date desc
-      limit 25
-    `,
-    [tenantId, client.client_id]
-  );
+  const notes = await selectTenantRows(ctx, {
+    table: 'interactions',
+    columns: 'interaction_id, notes, visibility, title',
+    tenantId,
+    where: 'client_id = $2',
+    params: [client.client_id],
+    orderBy: 'interaction_date desc',
+    limit: 25
+  });
 
   const noteFound = notes.find((n) => typeof n.notes === 'string' && n.notes.includes(marker) && n.notes.includes(contractId));
   if (!noteFound) {
     throw new Error(`Expected a CRM note containing "${marker}" and contractId for client ${client.client_id}. Found ${notes.length} interaction(s).`);
   }
 
-  const notifications = await ctx.db.query(
-    `
-      select internal_notification_id, title, message
-      from internal_notifications
-      where tenant = $1 and user_id = $2
-      order by created_at desc
-      limit 25
-    `,
-    [tenantId, user.user_id]
-  );
+  const notifications = await selectTenantRows(ctx, {
+    table: 'internal_notifications',
+    columns: 'internal_notification_id, title, message',
+    tenantId,
+    where: 'user_id = $2',
+    params: [user.user_id],
+    orderBy: 'created_at desc',
+    limit: 25
+  });
 
   const notificationFound = notifications.find(
     (n) => typeof n.title === 'string' && n.title.includes(marker) && typeof n.message === 'string' && n.message.includes(contractId)

@@ -248,7 +248,6 @@ export function PrintOptionsDialog<T>({
                 label={column.label}
                 checked={selectedKeySet.has(column.key)}
                 onChange={() => toggleColumn(column.key)}
-                containerClassName="mb-0"
                 skipRegistration
               />
             </div>

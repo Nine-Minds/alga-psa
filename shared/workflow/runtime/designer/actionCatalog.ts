@@ -147,6 +147,15 @@ const BUILT_IN_CATALOG_SEEDS: BuiltInCatalogSeed[] = [
     modules: ['crm']
   },
   {
+    groupKey: 'activities',
+    label: 'Activities',
+    iconToken: 'activities',
+    tileKind: 'core-object',
+    description: 'Resolve user activity groups and file activities like tickets into them.',
+    defaultActionId: 'activities.find_group',
+    modules: ['activities']
+  },
+  {
     groupKey: 'data-store',
     label: 'Data Store',
     iconToken: 'data-store',

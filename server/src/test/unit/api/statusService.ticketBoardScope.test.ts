@@ -13,6 +13,12 @@ type StatusRow = {
   is_closed: boolean;
 };
 
+// tenantDb qualifies the tenant predicate as 'statuses.tenant'; strip the alias
+// so the fake rows (keyed by bare column names) still enforce the tenant filter.
+function columnKey(column: string): keyof StatusRow {
+  return (column.includes('.') ? column.split('.').pop()! : column) as keyof StatusRow;
+}
+
 class FakeStatusQueryBuilder {
   private filters: Array<(row: StatusRow) => boolean> = [];
   private searchTerm: string | null = null;
@@ -25,11 +31,11 @@ class FakeStatusQueryBuilder {
 
   where(columnOrConditions: string | Record<string, any>, value?: any): this {
     if (typeof columnOrConditions === 'string') {
-      this.filters.push((row) => row[columnOrConditions as keyof StatusRow] === value);
+      this.filters.push((row) => row[columnKey(columnOrConditions)] === value);
     } else {
       this.filters.push((row) =>
         Object.entries(columnOrConditions).every(
-          ([column, expected]) => row[column as keyof StatusRow] === expected
+          ([column, expected]) => row[columnKey(column)] === expected
         )
       );
     }
@@ -38,14 +44,14 @@ class FakeStatusQueryBuilder {
   }
 
   whereNotNull(column: string): this {
-    this.filters.push((row) => row[column as keyof StatusRow] != null);
+    this.filters.push((row) => row[columnKey(column)] != null);
     return this;
   }
 
   whereILike(column: string, term: string): this {
     this.searchTerm = term.replaceAll('%', '').toLowerCase();
     this.filters.push((row) =>
-      String(row[column as keyof StatusRow]).toLowerCase().includes(this.searchTerm as string)
+      String(row[columnKey(column)]).toLowerCase().includes(this.searchTerm as string)
     );
     return this;
   }

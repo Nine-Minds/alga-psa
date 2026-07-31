@@ -4,16 +4,15 @@
  * Hudu asset-layout→asset-type map server actions (EE-only, Phase 2 FR11).
  *
  * get/set for `hudu_integrations.settings.asset_layout_type_map`. Gating
- * mirrors huduActions (withHuduSettingsAccess): EE tier,
- * `system_settings` RBAC (read=view, update=persist), and the
- * `hudu-integration` flag — enforced on every action.
+ * mirrors huduActions (withHuduSettingsAccess): EE tier and
+ * `system_settings` RBAC (read=view, update=persist) — enforced on every
+ * action.
  */
 
 import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
 import { createAssetType, listAssetTypes } from '@alga-psa/assets/lib/assetTypeRegistry';
@@ -34,6 +33,7 @@ import type {
   HuduLayoutAssignment,
 } from '../../integrations/hudu/assetLayoutMap';
 import { buildFieldsSchemaFromHuduLayout } from '../../integrations/hudu/layoutFieldSchema';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 export type HuduLayoutMapActionResult<T> =
   | { success: true; data: T }
@@ -76,14 +76,6 @@ function withHuduSettingsAccess<TArgs extends unknown[], TResult>(
     }
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
 
     return handler(user, context as { tenant: string }, ...args);
   });
@@ -130,7 +122,7 @@ export const getHuduAssetLayoutMap = withHuduSettingsAccess(
       return { success: true, data: { layouts, map, types } };
     } catch (error) {
       logger.error('[HuduLayoutMapActions] getHuduAssetLayoutMap failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to load Hudu asset layout mappings. Please try again.') };
     }
   }
 );
@@ -221,7 +213,7 @@ export const createAssetTypeFromHuduLayout = withHuduSettingsAccess(
         tenant,
         error: toErrorMessage(error),
       });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to create an asset type from the Hudu layout. Please try again.') };
     }
   }
 );
@@ -247,7 +239,7 @@ export const setHuduAssetLayoutMap = withHuduSettingsAccess(
       return { success: true, data: { map: persisted } };
     } catch (error) {
       logger.error('[HuduLayoutMapActions] setHuduAssetLayoutMap failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to save Hudu asset layout mappings. Please try again.') };
     }
   }
 );

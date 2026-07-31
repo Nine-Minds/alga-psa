@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
+import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { decryptAppleRefreshToken, revokeAppleRefreshToken } from '@/lib/mobileAuth/appleSignIn';
@@ -27,9 +28,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const { tenant, userId } = apiRequest.context!;
 
     const knex = await getConnection(null);
+    const db = tenantDb(knex, tenant);
 
     // 1. Figure out the tenant's billing source and admin headcount.
-    const tenantRow = await knex('tenants').where({ tenant }).first<{
+    const tenantRow = await db.table('tenants').first<{
       tenant: string;
       billing_source: string | null;
       plan: string | null;
@@ -42,8 +44,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const otherInternalUsers = await knex('users')
-      .where({ tenant, user_type: 'internal', is_inactive: false })
+    const otherInternalUsers = await db.table('users')
+      .where({ user_type: 'internal', is_inactive: false })
       .whereNot({ user_id: userId })
       .count<{ count: string }[]>('user_id as count');
 
@@ -51,20 +53,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // 2. Soft-delete the user. Use a transaction so we can't leave a half-deleted row.
     await knex.transaction(async (trx) => {
-      await trx('users')
-        .where({ user_id: userId, tenant })
+      const txDb = tenantDb(trx, tenant);
+      await txDb.table('users')
+        .where({ user_id: userId })
         .update({
           is_inactive: true,
         });
 
       // Best-effort: deactivate any API keys the user still has.
-      await trx('api_keys').where({ user_id: userId, tenant }).update({ active: false });
+      await txDb.table('api_keys').where({ user_id: userId }).update({ active: false });
     });
 
     // 2b. Revoke any Sign in with Apple grants for this user (guideline 5.1.1(v))
     //     and remove the identity mapping so a future SIWA attempt gets a fresh link.
-    const appleIdentities = await knex('apple_user_identities')
-      .where({ tenant, user_id: userId })
+    const appleIdentities = await db.table('apple_user_identities')
+      .where({ user_id: userId })
       .select<{ apple_user_id: string; apple_refresh_token_enc: string | null }[]>([
         'apple_user_id',
         'apple_refresh_token_enc',
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     if (appleIdentities.length > 0) {
-      await knex('apple_user_identities').where({ tenant, user_id: userId }).del();
+      await db.table('apple_user_identities').where({ user_id: userId }).del();
     }
 
     // 3. If this was the last internal user on an IAP tenant, nuke the tenant.

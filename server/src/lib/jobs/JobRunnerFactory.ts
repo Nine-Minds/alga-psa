@@ -30,6 +30,17 @@ export class JobRunnerFactory implements IJobRunnerFactory {
   private static factoryInstance: JobRunnerFactory | null = null;
   private jobRunner: IJobRunner | null = null;
   private initializationPromise: Promise<IJobRunner> | null = null;
+  private lastInitFailure: { error: unknown; at: number } | null = null;
+
+  // Every failed Temporal init allocates a fresh client + gRPC channel that is
+  // never reclaimed, and callers (boot-time per-tenant scheduling, the RMM
+  // reconciler, queue metrics) retry eagerly — enough failed attempts OOM the
+  // process. While the backend is down, replay the cached failure instead of
+  // re-initializing. 60s keeps recovery snappy while still collapsing the
+  // boot-time burst of attempts into one.
+  private static readonly INIT_FAILURE_BACKOFF_MS = Number(
+    process.env.JOB_RUNNER_INIT_FAILURE_BACKOFF_MS ?? 60 * 1000,
+  );
 
   private constructor() {}
 
@@ -67,12 +78,23 @@ export class JobRunnerFactory implements IJobRunnerFactory {
       return this.initializationPromise;
     }
 
+    if (
+      this.lastInitFailure &&
+      Date.now() - this.lastInitFailure.at < JobRunnerFactory.INIT_FAILURE_BACKOFF_MS
+    ) {
+      throw this.lastInitFailure.error;
+    }
+
     // Start initialization
     this.initializationPromise = this.initializeJobRunner(config);
 
     try {
       this.jobRunner = await this.initializationPromise;
+      this.lastInitFailure = null;
       return this.jobRunner;
+    } catch (error) {
+      this.lastInitFailure = { error, at: Date.now() };
+      throw error;
     } finally {
       this.initializationPromise = null;
     }
@@ -96,13 +118,14 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     }
     this.jobRunner = null;
     this.initializationPromise = null;
+    this.lastInitFailure = null;
     PgBossJobRunner.reset();
 
     // Reset TemporalJobRunner if available (EE only)
     if (isEnterprise) {
       try {
         // Dynamic import to avoid bundling EE code in CE
-        import('@enterprise/lib/jobs/runners/TemporalJobRunner')
+        import('@alga-psa/jobs/runners/TemporalJobRunner')
           .then(({ TemporalJobRunner }) => {
             TemporalJobRunner.reset();
           })
@@ -228,7 +251,7 @@ export class JobRunnerFactory implements IJobRunnerFactory {
     // Dynamically import the EE Temporal runner to avoid bundling in CE
     try {
       const { TemporalJobRunner } = await import(
-        '@enterprise/lib/jobs/runners/TemporalJobRunner'
+        '@alga-psa/jobs/runners/TemporalJobRunner'
       );
       return (await TemporalJobRunner.create(temporalConfig)) as unknown as IJobRunner;
     } catch (error) {

@@ -4,7 +4,7 @@
 
 import Comment from '../../models/comment';
 import { IComment } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -22,9 +22,18 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
 
 function formatLiveUpdateDisplayName(user: any): string {
   return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
+}
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
 }
 
 async function assertClientCanCreateComment(
@@ -51,13 +60,16 @@ async function assertClientCanCreateComment(
 
   let clientId = user.clientId || user.client_id || null;
   if (!clientId) {
-    const clientRow = await trx('users as u')
-      .leftJoin('contacts as c', function() {
-        this.on('u.contact_id', 'c.contact_name_id')
-          .andOn('u.tenant', 'c.tenant');
-      })
+    const clientRow = await tenantDb(trx, tenant)
+      .tenantJoin(
+        tenantScopedTable(trx, 'users as u', tenant),
+        'contacts as c',
+        'u.contact_id',
+        'c.contact_name_id',
+        { type: 'left' }
+      )
       .select('c.client_id')
-      .where({ 'u.tenant': tenant, 'u.user_id': user.user_id })
+      .where({ 'u.user_id': user.user_id })
       .first();
     clientId = clientRow?.client_id ?? null;
   }
@@ -66,9 +78,9 @@ async function assertClientCanCreateComment(
     throw new Error('Client user is not associated with a client');
   }
 
-  const ticket = await trx('tickets')
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .select('client_id')
-    .where({ tenant, ticket_id: comment.ticket_id })
+    .where({ ticket_id: comment.ticket_id })
     .first();
 
   if (!ticket || ticket.client_id !== clientId) {
@@ -100,9 +112,9 @@ async function updateTicketResponseState(
   }
 
   // Get current ticket response state
-  const ticket = await trx('tickets')
+  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .select('response_state')
-    .where({ ticket_id: ticketId, tenant })
+    .where({ ticket_id: ticketId })
     .first();
 
   const previousState = (ticket?.response_state || null) as TicketResponseState;
@@ -124,8 +136,8 @@ async function updateTicketResponseState(
 
   // Only update if state actually changed
   if (newState !== previousState) {
-    await trx('tickets')
-      .where({ ticket_id: ticketId, tenant })
+    await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
       .update({ response_state: newState });
 
     // Publish response state change event
@@ -134,8 +146,11 @@ async function updateTicketResponseState(
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
         payload: {
           tenantId: tenant,
+          occurredAt: new Date().toISOString(),
           ticketId,
           userId,
+          previousResponseState: previousState,
+          newResponseState: newState,
           previousState,
           newState,
           trigger: 'comment'
@@ -151,7 +166,7 @@ async function updateTicketResponseState(
   return { previousState, newState };
 }
 
-export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string) => {
+export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -160,11 +175,15 @@ export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketI
     });
   } catch (error) {
     console.error(error);
-    throw new Error(`Failed to find comments for ticket id: ${ticketId}`);
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
 });
 
-export const findCommentById = withAuth(async (_user, { tenant }, commentId: string) => {
+export const findCommentById = withAuth(async (_user, { tenant }, commentId: string): Promise<IComment | TicketActionError | null> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -173,11 +192,15 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
     });
   } catch (error) {
     console.error(error);
-    throw new Error(`Failed to find comment with id: ${commentId}`);
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
 });
 
-export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string> => {
+export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string | TicketActionError> => {
   try {
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
@@ -190,10 +213,9 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
     if (comment.user_id) {
       const { knex: db } = await createTenantKnex();
       const user = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await trx('users')
+        return await tenantScopedTable(trx, 'users', tenant!)
           .select('user_type')
           .where('user_id', comment.user_id)
-          .andWhere('tenant', tenant!)
           .first();
       });
 
@@ -280,9 +302,9 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
 
       // Get user details for event
       if (comment.user_id && commentTenant) {
-        const user = await trx('users')
+        const user = await tenantScopedTable(trx, 'users', commentTenant)
           .select('first_name', 'last_name', 'user_type', 'contact_id')
-          .where({ user_id: comment.user_id, tenant: commentTenant })
+          .where({ user_id: comment.user_id })
           .first();
 
         const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
@@ -295,7 +317,9 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
             eventType: 'TICKET_COMMENT_ADDED',
             payload: {
               tenantId: commentTenant,
+              occurredAt: new Date().toISOString(),
               ticketId: comment.ticket_id!,
+              commentId,
               userId: comment.user_id,
               thread_id: eventComment?.thread_id,
               parent_comment_id: eventComment?.parent_comment_id ?? null,
@@ -441,8 +465,12 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       return commentId;
     });
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`Failed to create comment:`, error);
-    throw new Error(`Failed to create comment`);
+    throw error;
   }
 });
 
@@ -480,19 +508,18 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
       };
 
       // Get the original author name for old comment
-      const oldAuthor = await trx('users')
+      const oldAuthor = await tenantScopedTable(trx, 'users', commentTenant)
         .select('first_name', 'last_name')
-        .where({ user_id: existingComment.user_id, tenant: commentTenant! })
+        .where({ user_id: existingComment.user_id })
         .first();
       const oldAuthorName = oldAuthor ? `${oldAuthor.first_name} ${oldAuthor.last_name}` : 'Unknown User';
 
       // Verify user permissions - only allow users to edit their own comments
       // or  MSP (internal) users to edit any comment
       if (comment.user_id && comment.user_id !== existingComment.user_id) {
-        const user = await trx('users')
+        const user = await tenantScopedTable(trx, 'users', commentTenant)
           .select('user_type')
           .where('user_id', comment.user_id)
-          .andWhere('tenant', commentTenant!)
           .first();
 
       // Only MSP (internal) users can edit other users' comments
@@ -574,9 +601,9 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
 
       // Publish TICKET_COMMENT_UPDATED event if the comment was updated and we have user info
       if (updatedComment && comment.user_id && commentTenant) {
-        const newAuthor = await trx('users')
+        const newAuthor = await tenantScopedTable(trx, 'users', commentTenant)
           .select('first_name', 'last_name')
-          .where({ user_id: comment.user_id, tenant: commentTenant })
+          .where({ user_id: comment.user_id })
           .first();
         const newAuthorName = newAuthor ? `${newAuthor.first_name} ${newAuthor.last_name}` : 'Unknown User';
 
@@ -648,9 +675,13 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
       }
     });
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`[updateComment] Failed to update comment with ID ${id}:`, error);
     console.error(`[updateComment] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available');
-    throw new Error(`Failed to update comment with id ${id}`);
+    throw error;
   }
 });
 
@@ -669,12 +700,12 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       }
 
       // Delete comment reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
-      await trx('comment_reactions')
-        .where({ tenant, comment_id: id })
+      await tenantScopedTable(trx, 'comment_reactions', tenant)
+        .where({ comment_id: id })
         .delete();
 
-      await trx('email_reply_tokens')
-        .where({ tenant, comment_id: id })
+      await tenantScopedTable(trx, 'email_reply_tokens', tenant)
+        .where({ comment_id: id })
         .update({ comment_id: null });
 
       await Comment.delete(trx, tenant, id);
@@ -713,7 +744,11 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       }
     }
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`Failed to delete comment with id ${id}:`, error);
-    throw new Error(`Failed to delete comment with id ${id}`);
+    throw error;
   }
 });

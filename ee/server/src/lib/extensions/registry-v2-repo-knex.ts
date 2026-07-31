@@ -1,9 +1,12 @@
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import {
   type ExtensionRecord,
   type ExtensionVersionRecord,
   setRegistryV2Repository,
 } from './registry-v2';
+
+const EXTENSION_REGISTRY_GLOBAL_TENANT = '__extension_registry_global__';
 
 function uuid(): string {
   try {
@@ -25,9 +28,11 @@ function withSha256Prefix(h: string): string {
 }
 
 export function registerRegistryV2KnexRepo(knex: Knex) {
+  const registryDb = tenantDb(knex, EXTENSION_REGISTRY_GLOBAL_TENANT);
+
   const extensions = {
     async findByNamePublisher(name: string, publisher?: string): Promise<ExtensionRecord | null> {
-      const q = knex('extension_registry').modify((qb) => {
+      const q = registryDb.table('extension_registry').modify((qb) => {
         qb.where({ name });
         if (publisher) qb.andWhere({ publisher });
       });
@@ -51,7 +56,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
         description: null,
       };
       const cols = ['id', 'name', 'publisher', 'created_at'] as const;
-      const [ins] = await knex('extension_registry').insert(row).returning(cols as any);
+      const [ins] = await registryDb.table('extension_registry').insert(row).returning(cols as any);
       return {
         id: ins.id,
         name: ins.name,
@@ -63,11 +68,11 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
 
   const versions = {
     async findByExtensionAndVersion(extensionId: string, version: string): Promise<ExtensionVersionRecord | null> {
-      const v = await knex('extension_version')
+      const v = await registryDb.table('extension_version')
         .where({ registry_id: extensionId, version })
         .first(['id', 'registry_id', 'version', 'runtime', 'main_entry', 'api_endpoints', 'ui', 'capabilities', 'created_at']);
       if (!v) return null;
-      const b = await knex('extension_bundle')
+      const b = await registryDb.table('extension_bundle')
         .where({ version_id: v.id })
         .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
         .first(['content_hash']);
@@ -86,12 +91,12 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
 
     async findByHash(contentHash: string): Promise<ExtensionVersionRecord | null> {
       const prefixed = withSha256Prefix(contentHash);
-      const b = await knex('extension_bundle')
+      const b = await registryDb.table('extension_bundle')
         .where({ content_hash: prefixed })
         .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
         .first(['version_id', 'content_hash']);
       if (!b) return null;
-      const v = await knex('extension_version')
+      const v = await registryDb.table('extension_version')
         .where({ id: b.version_id })
         .first(['id', 'registry_id', 'version', 'runtime', 'main_entry', 'api_endpoints', 'ui', 'capabilities', 'created_at']);
       if (!v) return null;
@@ -109,12 +114,12 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
     },
 
     async findLatestForExtension(extensionId: string): Promise<ExtensionVersionRecord | null> {
-      const v = await knex('extension_version')
+      const v = await registryDb.table('extension_version')
         .where({ registry_id: extensionId })
         .orderBy('created_at', 'desc')
         .first(['id', 'registry_id', 'version', 'runtime', 'main_entry', 'api_endpoints', 'ui', 'capabilities', 'created_at']);
       if (!v) return null;
-      const b = await knex('extension_bundle')
+      const b = await registryDb.table('extension_bundle')
         .where({ version_id: v.id })
         .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
         .first(['content_hash']);
@@ -132,7 +137,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
     },
 
     async listVersionStringsForExtension(extensionId: string): Promise<string[]> {
-      const rows = await knex('extension_version')
+      const rows = await registryDb.table('extension_version')
         .where({ registry_id: extensionId })
         .select(['version']);
       return rows.map((r: any) => r.version as string);
@@ -154,7 +159,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
         capabilities: JSON.stringify(input.capabilities ?? []),
       };
       const vCols = ['id', 'registry_id', 'version', 'runtime', 'main_entry', 'api_endpoints', 'ui', 'capabilities', 'created_at'] as const;
-      const [v] = await knex('extension_version').insert(vRow).returning(vCols as any);
+      const [v] = await registryDb.table('extension_version').insert(vRow).returning(vCols as any);
 
       const contentHashHex = stripSha256Prefix(input.contentHash) ?? '';
       if (contentHashHex) {
@@ -167,7 +172,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
           storage_url: null,
           size_bytes: null,
         };
-        await knex('extension_bundle').insert(bRow);
+        await registryDb.table('extension_bundle').insert(bRow);
       }
 
       // Materialize endpoints into normalized table for strong references (best-effort / idempotent).
@@ -190,7 +195,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
             }))
             .filter((row) => row.method && row.path && row.handler);
           if (rows.length > 0) {
-            await knex('extension_api_endpoint')
+            await registryDb.table('extension_api_endpoint')
               .insert(rows)
               .onConflict(['version_id', 'method', 'path'])
               .merge({ handler: knex.raw('excluded.handler'), updated_at: knex.raw('excluded.updated_at') });
@@ -222,7 +227,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
 
   // Expose attachBundle on the repo object used by upsertVersionFromManifest
   const attachBundle = async (versionId: string, b: { contentHash: string; signature?: string; precompiled?: any }) => {
-    await knex('extension_bundle').insert({
+    await registryDb.table('extension_bundle').insert({
       id: uuid() || undefined,
       version_id: versionId,
       content_hash: b.contentHash,

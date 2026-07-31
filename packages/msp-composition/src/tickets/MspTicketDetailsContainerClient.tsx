@@ -4,7 +4,7 @@ import React, { useCallback } from 'react';
 import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
-import type { IClient, IContact, SurveyTicketSatisfactionSummary } from '@alga-psa/types';
+import type { IClient, IContact, ITicketLinkedTask, SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
 import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
 import TicketLinkedTasksBadge from '@alga-psa/projects/components/TicketLinkedTasksBadge';
@@ -25,11 +25,14 @@ type MspTicketDetailsContainerClientProps = Omit<
 > & {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   isAlgaDeskMode?: boolean;
+  /** Server-started linked-tasks promise for the TicketLinkedTasksBadge. */
+  linkedTasksStream?: Promise<ITicketLinkedTask[] | { actionError: string } | { permissionError: string }>;
 };
 
 export default function MspTicketDetailsContainerClient({
   surveySummary,
   isAlgaDeskMode = false,
+  linkedTasksStream,
   ...props
 }: MspTicketDetailsContainerClientProps) {
   const ticketIntegrationValue = useTicketIntegrationValue();
@@ -56,12 +59,14 @@ export default function MspTicketDetailsContainerClient({
   const renderCreateProjectTask = useCallback(
     ({ ticket, additionalAgents }: { ticket: any; additionalAgents?: { user_id: string; name: string }[] }) => (
       <>
-        {ticket.ticket_id && <TicketLinkedTasksBadge ticketId={ticket.ticket_id} />}
+        {ticket.ticket_id && (
+          <TicketLinkedTasksBadge ticketId={ticket.ticket_id} initialTasks={linkedTasksStream} />
+        )}
         <CreateTaskFromTicketDialog ticket={{ ...ticket, additional_agents: additionalAgents }} />
         <LinkTicketToTaskDialog ticket={ticket} />
       </>
     ),
-    []
+    [linkedTasksStream]
   );
 
   const renderClientDetails = useCallback(
@@ -96,6 +101,8 @@ export default function MspTicketDetailsContainerClient({
         renderClientDetails={renderClientDetails}
         renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}
         hideSlaStatus={isAlgaDeskMode}
+        hideBilling={isAlgaDeskMode}
+        hideScheduling={isAlgaDeskMode}
         hideTimeEntry={isAlgaDeskMode}
         hideMaterials={isAlgaDeskMode}
         uploadTicketAttachmentAction={uploadTicketAttachmentDocument}

@@ -1,6 +1,9 @@
 namespace: msp
 env: production
 edition: enterprise
+# Appliance deployment profile -> capabilities (portal-domain provisioner = direct,
+# trustForwardedHost = true). Custom portal domains use a bring-your-own reverse proxy.
+deploymentProfile: appliance
 host: alga.local
 appUrl: https://alga.local
 domainSuffix: alga.local
@@ -55,6 +58,14 @@ hocuspocus:
 temporal:
   address: temporal-frontend.msp.svc.cluster.local:7233
   namespace: default
+
+# Nine Minds license service (alga-license). Appliances reach it through the
+# public gateway; the License screen's claim-code redemption (connectAppliance
+# -> POST /register) fails with "License service URL not configured" without it.
+# Claim-code and check-in routes are claim/credential-authed — no service
+# secret is needed or set on appliances.
+licenseService:
+  url: "https://license.nineminds.com"
 
 db:
   enabled: true

@@ -59,4 +59,15 @@ export interface DataTableProps<T> {
    * Use custom options for grid views (e.g., [9, 18, 27, 36]) or special cases.
    */
   itemsPerPageOptions?: Array<{ value: string; label: string }>;
+  /**
+   * Render detail beneath a row, in a cell spanning the full width.
+   *
+   * Return `null` for rows with nothing to show — which is the normal case, since
+   * expansion is usually driven by a selection the caller holds. The table does
+   * not own the open/closed state: whatever decides which row is expanded
+   * (a toggle button in a cell, a route param, a fetch that has resolved) already
+   * lives with the caller, and duplicating it here would mean two sources of
+   * truth for one piece of UI state.
+   */
+  expandedRowRender?: (record: T, index: number) => ReactNode;
 }

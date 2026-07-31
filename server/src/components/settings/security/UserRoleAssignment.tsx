@@ -8,17 +8,26 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
-import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles, getUserRolesBatch } from '@alga-psa/auth/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { assignRoleToUser, removeRoleFromUser, getRoles } from '@alga-psa/users/lib/roleActions';
+import { getUserRoles, getUserRolesBatch } from '@alga-psa/auth/actions/policyActions';
+import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import type { IRole, IUserWithRoles } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import toast from 'react-hot-toast';
 
 type ViewMode = 'msp' | 'client';
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // viewOptions is defined inside the component to access translations
 
@@ -73,7 +82,11 @@ export default function UserRoleAssignment() {
   const handleAssignRole = async () => {
     if (selectedUser && selectedRole) {
       try {
-        await assignRoleToUser(selectedUser, selectedRole);
+        const result = await assignRoleToUser(selectedUser, selectedRole);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         await fetchUserRoles(selectedUser);
         // Reset selections
         setSelectedUser('');
@@ -91,7 +104,11 @@ export default function UserRoleAssignment() {
 
   const handleRemoveRole = async (userId: string, roleId: string) => {
     try {
-      await removeRoleFromUser(userId, roleId);
+      const result = await removeRoleFromUser(userId, roleId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchUserRoles(userId);
       toast.success(t('security.userRoles.messages.success.roleRemoved'));
     } catch (error) {

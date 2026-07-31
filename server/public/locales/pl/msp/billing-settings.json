@@ -1,9 +1,11 @@
 {
   "tabs": {
     "general": "Ogólny",
+    "numbering": "Numeracja",
     "quoting": "Cytowanie",
     "tax": "Podatek",
-    "payments": "Płatności"
+    "payments": "Płatności",
+    "costRates": "Stawki kosztów"
   },
   "general": {
     "currency": {
@@ -26,6 +28,10 @@
     "invoiceNumbering": {
       "title": "Numeracja faktur",
       "description": "Dostosuj sposób generowania i wyświetlania numerów faktur."
+    },
+    "creditNoteNumbering": {
+      "title": "Numeracja not kredytowych",
+      "description": "Dostosuj sposób generowania i wyświetlania numerów not kredytowych."
     },
     "zeroDollar": {
       "title": "Faktury o zerowej wartości dolara",
@@ -72,7 +78,7 @@
         }
       },
       "actions": {
-        "save": "Ratować"
+        "save": "Zapisz"
       },
       "toast": {
         "updated": "Ustawienia wygaśnięcia kredytu zostały zaktualizowane."
@@ -111,7 +117,7 @@
         "unnamedBoard": "Tablica bez nazwy"
       },
       "actions": {
-        "save": "Ratować",
+        "save": "Zapisz",
         "saving": "Zapisywanie..."
       },
       "toast": {
@@ -128,6 +134,10 @@
     "quoteNumbering": {
       "title": "Numeracja cytatów",
       "description": "Dostosuj sposób generowania i wyświetlania numerów ofert."
+    },
+    "salesOrderNumbering": {
+      "title": "Numeracja zamówień sprzedaży",
+      "description": "Dostosuj sposób generowania i wyświetlania numerów zamówień sprzedaży."
     }
   },
   "tax": {
@@ -166,7 +176,7 @@
       },
       "loading": "Ładowanie ustawień...",
       "actions": {
-        "cancel": "Anulować",
+        "cancel": "Anuluj",
         "save": "Zapisz ustawienia",
         "saving": "Zapisywanie..."
       },
@@ -203,7 +213,7 @@
         "edit": "Redagować",
         "activate": "Aktywować",
         "deactivate": "Dezaktywować",
-        "cancel": "Anulować",
+        "cancel": "Anuluj",
         "save": "Zapisz zmiany",
         "saving": "Zapisywanie..."
       },
@@ -268,8 +278,8 @@
         "add": "Dodaj nawias",
         "edit": "Redagować",
         "delete": "Usuwać",
-        "cancel": "Anulować",
-        "save": "Ratować",
+        "cancel": "Anuluj",
+        "save": "Zapisz",
         "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
@@ -338,8 +348,8 @@
         "add": "Dodaj komponent",
         "edit": "Redagować",
         "delete": "Usuwać",
-        "cancel": "Anulować",
-        "save": "Ratować",
+        "cancel": "Anuluj",
+        "save": "Zapisz",
         "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
@@ -390,8 +400,8 @@
         "add": "Dodaj wakacje",
         "edit": "Redagować",
         "delete": "Usuwać",
-        "cancel": "Anulować",
-        "save": "Ratować",
+        "cancel": "Anuluj",
+        "save": "Zapisz",
         "saving": "Zapisywanie...",
         "deleting": "Usuwanie..."
       },
@@ -508,7 +518,7 @@
     "actions": {
       "add": "Dodaj typ niestandardowy",
       "importFromStandard": "Importuj ze standardowych typów usług",
-      "save": "Ratować",
+      "save": "Zapisz",
       "close": "Zamknąć"
     },
     "validation": {
@@ -625,7 +635,7 @@
       "delete": "Usuwać",
       "addCurrency": "+ Dodaj walutę",
       "remove": "Usunąć",
-      "cancel": "Anulować",
+      "cancel": "Anuluj",
       "saveChanges": "Zapisz zmiany"
     },
     "table": {
@@ -711,7 +721,7 @@
       "trigger": "Dodaj usługę",
       "addCurrency": "+ Dodaj walutę",
       "remove": "Usunąć",
-      "cancel": "Anulować",
+      "cancel": "Anuluj",
       "save": "Zapisz usługę"
     },
     "fields": {
@@ -796,9 +806,9 @@
     "actions": {
       "addCurrency": "+ Dodaj walutę",
       "remove": "Usunąć",
-      "cancel": "Anulować",
+      "cancel": "Anuluj",
       "create": "Tworzyć",
-      "save": "Ratować"
+      "save": "Zapisz"
     },
     "fields": {
       "productName": {
@@ -864,6 +874,22 @@
       },
       "description": {
         "label": "Opis"
+      },
+      "inventory": {
+        "label": "Magazyn",
+        "track": "Śledź stan magazynowy",
+        "serialized": "Numerowany seryjnie",
+        "kit": "Zestaw",
+        "createsAsset": "Tworzy zasób przy dostawie",
+        "defaultAssetType": "Domyślny typ zasobu",
+        "reorderPoint": "Punkt ponownego zamówienia",
+        "reorderQuantity": "Ilość ponownego zamówienia",
+        "kitPricingMode": "Tryb wyceny zestawu",
+        "kitPricingSum": "Suma składników",
+        "kitPricingFixed": "Cena stała"
+      },
+      "barcode": {
+        "label": "Kod kreskowy (UPC/EAN)"
       }
     },
     "options": {
@@ -932,7 +958,7 @@
         "description": "Ten klient nie zostanie obciążony żadnymi podatkami na fakturach. Pamiętaj, aby zachować w aktach zaświadczenie o zwolnieniu."
       },
       "actions": {
-        "cancel": "Anulować",
+        "cancel": "Anuluj",
         "save": "Zapisz status zwolnienia z podatku",
         "saving": "Zapisywanie..."
       }
@@ -978,7 +1004,7 @@
   "common": {
     "actions": {
       "add": "Dodać",
-      "cancel": "Anulować",
+      "cancel": "Anuluj",
       "close": "Zamknąć",
       "create": "Tworzyć",
       "delete": "Usuwać",
@@ -987,7 +1013,7 @@
       "importWithResolutions": "Importuj z rozdzielczościami",
       "remove": "Usunąć",
       "reset": "Nastawić",
-      "save": "Ratować",
+      "save": "Zapisz",
       "update": "Aktualizacja"
     },
     "columns": {
@@ -1193,6 +1219,91 @@
         "title": "Ustawienia płatności",
         "description": "Skonfiguruj sposób działania linków płatności z fakturami"
       }
+    }
+  },
+  "costRates": {
+    "title": "Stawki kosztów",
+    "description": "Zarządzaj wewnętrznymi stawkami kosztów pracy z pełnymi narzutami, używanymi w raportowaniu rentowności.",
+    "loading": "Ładowanie stawek kosztów...",
+    "default": {
+      "title": "Domyślna stawka kosztu tenanta",
+      "current": "Bieżąca stawka domyślna: {{rate}} od {{date}}",
+      "missing": "Nie skonfigurowano stawki domyślnej tenanta. Użytkownicy bez indywidualnych stawek będą bez wyceny.",
+      "history": "Historia stawki domyślnej",
+      "empty": "Brak stawek domyślnych."
+    },
+    "empty": {
+      "title": "Stawki kosztów nie są skonfigurowane",
+      "description": "Najpierw ustaw stawkę domyślną tenanta, aby raporty mogły wycenić pracę użytkowników bez indywidualnych stawek."
+    },
+    "table": {
+      "currentRate": "Bieżąca stawka",
+      "actions": "Akcje",
+      "usesDefault": "Używa domyślnej",
+      "uncosted": "Bez wyceny",
+      "status": "Status",
+      "user": "Użytkownik"
+    },
+    "history": {
+      "empty": "Brak indywidualnych stawek użytkowników."
+    },
+    "dialog": {
+      "title": "Stawka kosztu",
+      "description": "Wprowadź godzinowy koszt pracy z pełnymi narzutami w domyślnej walucie tenanta."
+    },
+    "fields": {
+      "user": {
+        "label": "Użytkownik",
+        "default": "Domyślne dla tenanta"
+      },
+      "rate": {
+        "label": "Koszt godzinowy"
+      },
+      "effectiveFrom": {
+        "label": "Obowiązuje od"
+      },
+      "effectiveTo": {
+        "label": "Obowiązuje do"
+      }
+    },
+    "actions": {
+      "setDefault": "Ustaw domyślną",
+      "addRate": "Dodaj stawkę",
+      "addUserRate": "Dodaj stawkę użytkownika",
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "saving": "Zapisywanie...",
+      "continue": "Kontynuuj"
+    },
+    "warning": {
+      "title": "W tym zakresie istnieje zarejestrowany czas pracy",
+      "description": "Zmiana tej stawki zmieni historyczną rentowność wpisów czasu w jej okresie obowiązywania.",
+      "body": "Kontynuuj tylko wtedy, gdy jest to zamierzona korekta."
+    },
+    "toast": {
+      "saved": "Stawka kosztu została zapisana.",
+      "deleted": "Stawka kosztu została usunięta."
+    },
+    "errors": {
+      "load": "Nie udało się załadować stawek kosztów",
+      "save": "Nie udało się zapisać stawki kosztu",
+      "delete": "Nie udało się usunąć stawki kosztu"
+    },
+    "formats": {
+      "noRate": "—",
+      "hourlyRate": "{{amount}}/godz.",
+      "dateRange": "{{start}} - {{end}}",
+      "openDateRange": "od {{start}}"
+    },
+    "status": {
+      "current": "Aktualna",
+      "scheduled": "Zaplanowana",
+      "ended": "Zakończona"
+    },
+    "sections": {
+      "userRates": "Stawki użytkowników"
     }
   }
 }

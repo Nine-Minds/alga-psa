@@ -1058,7 +1058,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['column', 'container', 'section', 'page'],
     },
     inspector: COMMON_INSPECTOR,
   },
@@ -1076,7 +1076,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['column', 'container', 'section', 'page'],
     },
     inspector: COMMON_INSPECTOR,
   },
@@ -1095,7 +1095,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['column', 'container', 'section', 'page'],
     },
     inspector: COMMON_INSPECTOR,
   },
@@ -1113,7 +1113,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['column', 'container', 'section', 'page'],
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, SIGNATURE_INSPECTOR),
   },
@@ -1132,7 +1132,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['column', 'container', 'section', 'page'],
     },
     inspector: mergeInspectorSchemas(COMMON_INSPECTOR, ACTION_BUTTON_INSPECTOR),
   },
@@ -1150,7 +1150,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     hierarchy: {
       allowedChildren: [],
-      allowedParents: ['column', 'container', 'section'],
+      allowedParents: ['column', 'container', 'section', 'page'],
     },
     inspector: COMMON_INSPECTOR,
   },

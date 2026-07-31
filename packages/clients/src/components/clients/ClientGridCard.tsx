@@ -54,7 +54,7 @@ const ClientGridCard = ({
         >
             <div className="flex items-center space-x-3 w-full">
                 {/* Checkbox */}
-                <div onClick={stopPropagation} className="flex-shrink-0 [&>div]:mb-0">
+                <div onClick={stopPropagation} className="flex-shrink-0">
                     <Checkbox
                         id={`client-checkbox-${client.client_id}`}
                         checked={selectedClients.includes(client.client_id)}

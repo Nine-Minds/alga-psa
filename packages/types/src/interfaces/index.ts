@@ -6,6 +6,7 @@ export * from './accountingExport.interfaces';
 export * from './accountingExportAdapter.interfaces';
 export * from './activity.interfaces';
 export * from './asset.interfaces';
+export * from './inventory.interfaces';
 export type {
   IUser,
   IRole,
@@ -22,6 +23,7 @@ export type {
   TPasswordCriteria,
 } from './auth.interfaces';
 export * from './billing.interfaces';
+export * from './billingCompute.interfaces';
 export * from './board.interface';
 export * from './cache.interfaces';
 export * from './calendar.interfaces';
@@ -32,6 +34,7 @@ export * from './commentThread.interface';
 export * from './contact.interfaces';
 export * from './contract.interfaces';
 export * from './contractLineServiceConfiguration.interfaces';
+export * from './contractSimulation.interfaces';
 export * from './contractTemplate.interfaces';
 export * from './dataTable.interfaces';
 export * from './document-association.interface';
@@ -41,16 +44,21 @@ export * from './drag.interfaces';
 export * from './event.interfaces';
 export * from './interaction.interfaces';
 export * from './invoice.interfaces';
+export * from './job';
 export * from './material.interfaces';
 export * from './microsoft365-diagnostics.interfaces';
 export * from './online-meeting.interfaces';
 export * from './payment.interfaces';
 export * from './phaseTaskImport.interfaces';
 export * from './project.interfaces';
+export * from './projectBilling.interfaces';
 export * from './ticketImport.interfaces';
 export * from './projectTaskComment.interface';
 export * from './projectTemplate.interfaces';
 export * from './quote.interfaces';
+export * from './opportunity.interfaces';
+export * from './marketing.interfaces';
+export * from './salesOrderDocument.interfaces';
 export * from './recurringTiming.interfaces';
 export * from './schedule.interfaces';
 export * from './scheduling.interfaces';

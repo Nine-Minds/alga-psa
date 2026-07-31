@@ -1,4 +1,5 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 
 export type WorkflowDefinitionRecord = {
   workflow_id: string;
@@ -66,11 +67,18 @@ const assertTenantId = (tenantId: string | null | undefined): string => {
   return normalized;
 };
 
+function workflowDefinitions(
+  knex: Knex,
+  tenant: string,
+): Knex.QueryBuilder<WorkflowDefinitionRecord, WorkflowDefinitionRecord[]> {
+  return tenantDb(knex, tenant).table<WorkflowDefinitionRecord>('workflow_definitions');
+}
+
 const WorkflowDefinitionModelV2 = {
   create: async (knex: Knex, tenantId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
     const tenant = assertTenantId(tenantId);
     const normalized = normalizeWorkflowDefinitionWrite(data);
-    const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
+    const [record] = await workflowDefinitions(knex, tenant)
       .insert({
         ...normalized,
         tenant,
@@ -82,35 +90,49 @@ const WorkflowDefinitionModelV2 = {
     return record;
   },
 
-  update: async (knex: Knex, tenantId: string, workflowId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
+  update: async (
+    knex: Knex,
+    tenantId: string,
+    workflowId: string,
+    data: Partial<WorkflowDefinitionRecord>,
+    options?: {
+      /**
+       * Optimistic concurrency: only apply the update when the stored
+       * draft_version still matches. When it doesn't, no row is written and
+       * null is returned — the caller decides between 404 and 409.
+       */
+      expectedDraftVersion?: number;
+    }
+  ): Promise<WorkflowDefinitionRecord | null> => {
     const tenant = assertTenantId(tenantId);
     const normalized = normalizeWorkflowDefinitionWrite(data);
     delete (normalized as Record<string, unknown>).tenant_id;
     delete (normalized as Record<string, unknown>).tenant;
-    const [record] = await knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .where({ workflow_id: workflowId, tenant })
+    let query = workflowDefinitions(knex, tenant).where({ workflow_id: workflowId });
+    if (options?.expectedDraftVersion !== undefined) {
+      query = query.where({ draft_version: options.expectedDraftVersion });
+    }
+    const [record] = await query
       .update({
         ...normalized,
         is_system: false,
         updated_at: new Date().toISOString()
       })
       .returning('*');
-    return record;
+    return record ?? null;
   },
 
   getById: async (knex: Knex, tenantId: string, workflowId: string): Promise<WorkflowDefinitionRecord | null> => {
     const tenant = assertTenantId(tenantId);
-    const record = await knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .where({ workflow_id: workflowId, tenant })
+    const record = await workflowDefinitions(knex, tenant)
+      .where({ workflow_id: workflowId })
       .first();
     return record || null;
   },
 
   list: async (knex: Knex, tenantId: string): Promise<WorkflowDefinitionRecord[]> => {
     const tenant = assertTenantId(tenantId);
-    return knex<WorkflowDefinitionRecord>('workflow_definitions')
-      .select('*')
-      .where({ tenant });
+    return workflowDefinitions(knex, tenant).select('*');
   }
 };
 

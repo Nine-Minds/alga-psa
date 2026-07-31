@@ -268,7 +268,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     const message = typeof err?.message === "string" ? err.message : "Unexpected error";
     log("ext_bundles.upload_proxy.error", { requestId, message, stack: err?.stack });
-    const r = json(500, { error: message, code: "INTERNAL_ERROR" });
+    const r = json(500, { error: "Failed to prepare extension bundle upload.", code: "INTERNAL_ERROR" });
     r.headers.set("x-request-id", requestId);
     r.headers.set("x-upload-proxy-why", "unhandled_exception");
     return r;

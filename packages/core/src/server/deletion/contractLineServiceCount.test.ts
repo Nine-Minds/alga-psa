@@ -11,26 +11,39 @@ function findCountQuery() {
 
 function makeBuilder(count: number) {
   const builder: any = {};
-  builder.innerJoin = vi.fn().mockReturnValue(builder);
+  const joinClause = {
+    on: vi.fn().mockReturnThis(),
+    andOn: vi.fn().mockReturnThis()
+  };
+  builder.join = vi.fn((_table: string, callback: (this: typeof joinClause) => void) => {
+    callback.call(joinClause);
+    return builder;
+  });
   builder.where = vi.fn().mockReturnValue(builder);
   builder.count = vi.fn().mockReturnValue(builder);
   builder.first = vi.fn().mockResolvedValue({ count: String(count) });
-  return builder;
+  return { builder, joinClause };
 }
 
 describe('DELETION_CONFIGS.service contract_line_service countQuery', () => {
   it('joins contract_lines so orphan rows are excluded from the count', async () => {
     const countQuery = findCountQuery();
-    const builder = makeBuilder(3);
+    const { builder, joinClause } = makeBuilder(3);
     const trx = vi.fn().mockReturnValue(builder) as any;
 
     const count = await countQuery(trx, { tenant: 't-1', entityId: 'svc-1' });
 
     expect(trx).toHaveBeenCalledWith('contract_line_services as cls');
-    expect(builder.innerJoin).toHaveBeenCalledTimes(1);
-    expect(builder.innerJoin.mock.calls[0][0]).toBe('contract_lines as cl');
-    expect(builder.where).toHaveBeenCalledWith({
-      'cls.tenant': 't-1',
+    expect(builder.join).toHaveBeenCalledTimes(1);
+    expect(builder.join.mock.calls[0][0]).toBe('contract_lines as cl');
+    expect(joinClause.on).toHaveBeenCalledWith(
+      'cl.contract_line_id',
+      '=',
+      'cls.contract_line_id'
+    );
+    expect(joinClause.andOn).toHaveBeenCalledWith('cl.tenant', '=', 'cls.tenant');
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'cls.tenant', 't-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, {
       'cls.service_id': 'svc-1'
     });
     expect(count).toBe(3);
@@ -38,7 +51,7 @@ describe('DELETION_CONFIGS.service contract_line_service countQuery', () => {
 
   it('returns 0 when no live contract-line references exist', async () => {
     const countQuery = findCountQuery();
-    const builder = makeBuilder(0);
+    const { builder } = makeBuilder(0);
     const trx = vi.fn().mockReturnValue(builder) as any;
 
     const count = await countQuery(trx, { tenant: 't-1', entityId: 'svc-orphan-only' });

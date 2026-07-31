@@ -21,7 +21,7 @@
       "status": "Status",
       "duration": "Duration",
       "started": "Started",
-      "completed": "Completed"
+      "completed": "Ended"
     },
     "time": {
       "justNow": "Just now",
@@ -45,7 +45,7 @@
         "status": "Status",
         "duration": "Duration",
         "started": "Started",
-        "completed": "Completed"
+        "completed": "Ended"
       },
       "optionsDialog": {
         "title": "Print options",
@@ -62,10 +62,13 @@
       "failed": "Failed",
       "pending": "Pending",
       "processing": "Processing",
+      "queued": "Queued",
+      "running": "Running",
       "pgboss": "PG Boss",
       "temporal": "Temporal"
     },
-    "successRate": "{{count}}% success rate"
+    "successRate": "{{count}}% success rate",
+    "successRateNone": "No finished jobs yet"
   },
   "historyTable": {
     "columns": {
@@ -102,5 +105,36 @@
   "actions": {
     "print": "Print",
     "printOptions": "Print options"
+  },
+  "clearHistory": {
+    "button": "Clear History",
+    "dialog": {
+      "title": "Clear job history",
+      "warning": "This permanently removes job history from this list and can't be undone. It doesn't stop or cancel jobs that are still running.",
+      "daysLabel": "Age in days",
+      "daysError": "Enter a whole number of days (1 or more).",
+      "cancel": "Cancel",
+      "clearing": "Clearing…",
+      "confirm": "Clear History"
+    },
+    "scope": {
+      "finished": {
+        "label": "Finished only",
+        "description": "Completed and failed jobs. Pending, queued, and running jobs are kept."
+      },
+      "all": {
+        "label": "All statuses",
+        "description": "Every job, including pending, queued, and still-running ones."
+      }
+    },
+    "age": {
+      "toggle": "Only delete jobs older than a set age"
+    },
+    "toast": {
+      "none": "No matching jobs to clear.",
+      "error": "Failed to clear job history. Please try again.",
+      "success_one": "Cleared {{count}} job from history.",
+      "success_other": "Cleared {{count}} jobs from history."
+    }
   }
 }

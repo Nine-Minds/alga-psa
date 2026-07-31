@@ -3,6 +3,7 @@ export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/appointment
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/assetEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/capacityThresholdEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/opportunityEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/contactEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/contractEventBuilders';
 export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/creditNoteEventBuilders';

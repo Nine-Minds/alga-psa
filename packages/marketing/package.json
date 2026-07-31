@@ -1,0 +1,85 @@
+{
+  "name": "@alga-psa/marketing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./actions": {
+      "types": "./src/actions/index.ts",
+      "import": "./dist/actions/index.js",
+      "require": "./dist/actions/index.js"
+    },
+    "./actions/*": {
+      "types": "./src/actions/*.ts",
+      "import": "./dist/actions/*.js",
+      "require": "./dist/actions/*.js"
+    },
+    "./components": {
+      "types": "./src/components/index.ts",
+      "import": "./dist/components/index.js",
+      "require": "./dist/components/index.js"
+    },
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./dist/components/*.js",
+      "require": "./dist/components/*.js"
+    },
+    "./lib": {
+      "types": "./src/lib/index.ts",
+      "import": "./dist/lib/index.js",
+      "require": "./dist/lib/index.js"
+    },
+    "./lib/*": {
+      "types": "./src/lib/*.ts",
+      "import": "./dist/lib/*.js",
+      "require": "./dist/lib/*.js"
+    },
+    "./models/*": {
+      "types": "./src/models/*.ts",
+      "import": "./dist/models/*.js",
+      "require": "./dist/models/*.js"
+    },
+    "./schemas": {
+      "types": "./src/schemas/index.ts",
+      "import": "./dist/schemas/index.js",
+      "require": "./dist/schemas/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --config ../billing/vitest.config.ts tests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alga-psa/auth": "*",
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/email": "*",
+    "@alga-psa/opportunities": "*",
+    "@alga-psa/shared": "*",
+    "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
+    "@alga-psa/validation": "*",
+    "knex": "^3.1.0",
+    "lucide-react": "^0.428.0",
+    "react-hot-toast": "^2.5.1",
+    "zod": "^3.22.4"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "tsup": "^8.0.0",
+    "vitest": "^4.1.9"
+  }
+}

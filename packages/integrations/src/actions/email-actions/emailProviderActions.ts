@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '@alga-psa/db';
+import { auditLog, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type {
@@ -13,17 +13,113 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';
 import axios from 'axios';
-import { auditLog } from '@alga-psa/db';
 import { EmailProviderService } from '../../services/email/EmailProviderService';
 import { configureGmailProvider, type ConfigureGmailProviderResult } from './configureGmailProvider';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
-function throwPermissionError(action: string): never {
-  throw new Error(`Permission denied: ${action}`);
-}
+import {
+  actionError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
+import { resolveMicrosoftConsumerProfileConfig } from '../../lib/microsoftConsumerProfileResolution';
+
+type EmailProviderActionError = ActionMessageError;
+type EmailProviderSetupActionResult = EmailProviderSetupResult | EmailProviderActionError;
+type EmailProviderOperationErrorCode =
+  | 'not_found'
+  | 'missing_config'
+  | 'missing_credentials'
+  | 'oauth_refresh_failed'
+  | 'connection_failed'
+  | 'unexpected';
+type EmailProviderOperationResult = {
+  success: boolean;
+  error?: string;
+  errorCode?: EmailProviderOperationErrorCode;
+};
+
+class ExpectedEmailProviderActionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ExpectedEmailProviderActionError';
+  }
+}
+
+function throwExpectedEmailProviderError(message: string): never {
+  throw new ExpectedEmailProviderActionError(message);
+}
+
+function emailProviderOperationError(
+  error: string,
+  errorCode: EmailProviderOperationErrorCode
+): EmailProviderOperationResult {
+  return { success: false, error, errorCode };
+}
+
+function mapImapConnectionFailure(error: unknown): EmailProviderOperationResult {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  if (
+    message.includes('auth') ||
+    message.includes('credential') ||
+    message.includes('login') ||
+    message.includes('invalid_grant') ||
+    message.includes('unauthorized')
+  ) {
+    return emailProviderOperationError(
+      'IMAP authentication failed. Check the mailbox credentials or reconnect OAuth, then try again.',
+      'connection_failed'
+    );
+  }
+
+  return emailProviderOperationError(
+    'Could not connect to the IMAP mailbox. Check the server settings and try again.',
+    'connection_failed'
+  );
+}
+
+function microsoft365ActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const lowerMessage = message.toLowerCase();
+
+  if (message === 'Provider not found') {
+    return message;
+  }
+
+  if (
+    lowerMessage.includes('auth') ||
+    lowerMessage.includes('credential') ||
+    lowerMessage.includes('invalid_grant') ||
+    lowerMessage.includes('refresh token') ||
+    lowerMessage.includes('unauthorized') ||
+    lowerMessage.includes('401')
+  ) {
+    return 'Microsoft 365 authentication failed. Reconnect the mailbox and try again.';
+  }
+
+  if (
+    lowerMessage.includes('permission') ||
+    lowerMessage.includes('scope') ||
+    lowerMessage.includes('consent') ||
+    lowerMessage.includes('forbidden') ||
+    lowerMessage.includes('403')
+  ) {
+    return 'Microsoft 365 permissions are insufficient. Reconnect with the required permissions and try again.';
+  }
+
+  if (
+    lowerMessage.includes('webhook') ||
+    lowerMessage.includes('subscription') ||
+    lowerMessage.includes('notification url')
+  ) {
+    return 'Microsoft webhook setup failed. Check the webhook URL and Microsoft 365 permissions, then try again.';
+  }
+
+  return fallback;
+}
 
 function applyOauthMechanismOverride(client: ImapFlow, mechanism: 'XOAUTH2' | 'OAUTHBEARER'): void {
   if (mechanism !== 'XOAUTH2') return;
@@ -108,6 +204,8 @@ const PROVIDER_COLUMNS = [
   'sender_display_name as senderDisplayName',
   'mailbox',
   'is_active as isActive',
+  'inbound_paused_at as inboundPausedAt',
+  'inbound_pause_reason as inboundPauseReason',
   'status',
   'last_sync_at as lastSyncAt',
   'error_message as errorMessage',
@@ -115,6 +213,8 @@ const PROVIDER_COLUMNS = [
   'created_at as createdAt',
   'updated_at as updatedAt'
 ];
+
+type ProviderRow = EmailProvider;
 
 
 /**
@@ -132,13 +232,14 @@ async function getOrCreateProvider(
     inboundTicketDefaultsId?: string;
   },
   providerId?: string
-) {
+): Promise<EmailProvider> {
   const senderDisplayName = normalizeSenderDisplayName(data.senderDisplayName);
+  const providerTable = () => tenantDb(trx, tenant).table('email_providers');
 
   if (providerId) {
     // Update existing provider by ID
-    const [provider] = await trx('email_providers')
-      .where({ id: providerId, tenant })
+    const providerRows = await providerTable()
+      .where({ id: providerId })
       .update({
         provider_type: data.providerType,
         provider_name: data.providerName,
@@ -148,22 +249,23 @@ async function getOrCreateProvider(
         inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
         updated_at: trx.fn.now()
       })
-      .returning(PROVIDER_COLUMNS);
+      .returning(PROVIDER_COLUMNS) as unknown as ProviderRow[];
+    const [provider] = providerRows;
 
     if (!provider) {
-      throw new Error('Provider not found');
+      throwExpectedEmailProviderError('Email provider not found');
     }
     return provider;
   } else {
     // Check if provider already exists by mailbox
-    const existingProvider = await trx('email_providers')
-      .where({ tenant, mailbox: data.mailbox })
+    const existingProvider = await providerTable()
+      .where({ mailbox: data.mailbox })
       .first();
 
     if (existingProvider) {
       // Update existing provider
-      const [provider] = await trx('email_providers')
-        .where({ tenant, mailbox: data.mailbox })
+      const providerRows = await providerTable()
+        .where({ mailbox: data.mailbox })
         .update({
           provider_type: data.providerType,
           provider_name: data.providerName,
@@ -172,12 +274,13 @@ async function getOrCreateProvider(
           inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
           updated_at: trx.fn.now()
         })
-        .returning(PROVIDER_COLUMNS);
+        .returning(PROVIDER_COLUMNS) as unknown as ProviderRow[];
+      const [provider] = providerRows;
       return provider;
     } else {
       // Create new provider
       const providerId = trx.raw('gen_random_uuid()');
-      const [provider] = await trx('email_providers')
+      const providerRows = await providerTable()
         .insert({
           id: providerId,
           tenant,
@@ -191,7 +294,8 @@ async function getOrCreateProvider(
           created_at: trx.fn.now(),
           updated_at: trx.fn.now()
         })
-        .returning(PROVIDER_COLUMNS);
+        .returning(PROVIDER_COLUMNS) as unknown as ProviderRow[];
+      const [provider] = providerRows;
       return provider;
     }
   }
@@ -208,10 +312,10 @@ function normalizeSenderDisplayName(value?: string | null): string | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return null;
   if (trimmed.length > 255) {
-    throw new Error('Sender display name cannot exceed 255 characters');
+    throwExpectedEmailProviderError('Sender display name cannot exceed 255 characters');
   }
   if (SENDER_DISPLAY_NAME_FORBIDDEN.test(trimmed)) {
-    throw new Error('Sender display name cannot contain quotes, angle brackets, or line breaks');
+    throwExpectedEmailProviderError('Sender display name cannot contain quotes, angle brackets, or line breaks');
   }
   return trimmed;
 }
@@ -224,92 +328,101 @@ async function persistMicrosoftConfig(
   tenant: string,
   providerId: string,
   config?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>
-) {
-  if (!config) return null;
-  if (!tenant) throw new Error('Tenant is required');
+): Promise<MicrosoftEmailProviderConfig | undefined> {
+  if (!config) return undefined;
+  if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save Microsoft email configuration');
 
-  // Check if we should use hosted configuration for Enterprise Edition
-  const hostedConfig = await getHostedMicrosoftConfig();
+  const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
+  if (microsoftProfile.status !== 'ready') {
+    throwExpectedEmailProviderError(
+      microsoftProfile.message || 'Microsoft Email profile is not configured'
+    );
+  }
 
-  // Save secrets to tenant-specific secret store
-  const secretProvider = await getSecretProviderInstance();
-  const [tenantClientId, tenantClientSecret, tenantTenantId] = await Promise.all([
-    secretProvider.getTenantSecret(tenant, 'microsoft_client_id'),
-    secretProvider.getTenantSecret(tenant, 'microsoft_client_secret'),
-    secretProvider.getTenantSecret(tenant, 'microsoft_tenant_id')
-  ]);
-  
-  // Use hosted credentials if available; otherwise prefer tenant provider secrets and then per-provider values.
-  const effectiveClientId = hostedConfig?.client_id || tenantClientId || config.client_id || '';
-  const effectiveClientSecret = hostedConfig?.client_secret || tenantClientSecret || config.client_secret || '';
-  const effectiveTenantId = hostedConfig?.tenant_id || tenantTenantId || config.tenant_id || 'common';
-  const effectiveRedirectUri = hostedConfig?.redirect_uri || config.redirect_uri;
+  const effectiveClientId = microsoftProfile.clientId || '';
+  const effectiveClientSecret = microsoftProfile.clientSecret || '';
+  const effectiveTenantId = microsoftProfile.microsoftTenantId || 'common';
+  const effectiveRedirectUri = config.redirect_uri;
   
   // Ensure required fields are not undefined
   if (!effectiveTenantId) {
-    throw new Error('Tenant ID is required for Microsoft configuration');
+    throwExpectedEmailProviderError('Tenant ID is required for Microsoft configuration');
   }
   if (!effectiveRedirectUri) {
-    throw new Error('Redirect URI is required for Microsoft configuration');
-  }
-  
-  if (effectiveClientId && typeof effectiveClientId === 'string' && !hostedConfig?.client_id) {
-    // Only store user-provided secrets, not hosted ones
-    await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', effectiveClientId);
-  }
-  if (effectiveClientSecret && typeof effectiveClientSecret === 'string' && !hostedConfig?.client_secret) {
-    // Only store user-provided secrets, not hosted ones
-    await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', effectiveClientSecret);
+    throwExpectedEmailProviderError('Redirect URI is required for Microsoft configuration');
   }
   
   const now = new Date();
+  const existingConfig = await tenantDb(trx, tenant)
+    .table('microsoft_email_provider_config')
+    .where({ email_provider_id: providerId })
+    .first();
+  const preserveIssuingApp = Boolean(existingConfig?.refresh_token && !config.refresh_token);
+  const pinnedClientId = preserveIssuingApp ? existingConfig.client_id : effectiveClientId;
+  const pinnedClientSecret = preserveIssuingApp ? existingConfig.client_secret : effectiveClientSecret;
+  const pinnedProfileId = preserveIssuingApp
+    ? existingConfig.microsoft_profile_id
+    : microsoftProfile.profileId || null;
+  const pinnedClientSecretRef = preserveIssuingApp
+    ? existingConfig.client_secret_ref
+    : microsoftProfile.clientSecretRef || null;
+  const pinnedTenantId = preserveIssuingApp ? existingConfig.tenant_id : effectiveTenantId;
 
   // Upsert config while preserving existing sensitive/webhook fields when incoming values are NULL
-  const msConfig = await trx.raw(`
-    INSERT INTO microsoft_email_provider_config (
-      email_provider_id, tenant, client_id, client_secret, tenant_id, redirect_uri,
-      auto_process_emails, max_emails_per_sync, folder_filters,
-      access_token, refresh_token, token_expires_at,
-      webhook_subscription_id, webhook_expires_at, webhook_verification_token,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
-      client_id = EXCLUDED.client_id,
-      client_secret = EXCLUDED.client_secret,
-      tenant_id = EXCLUDED.tenant_id,
-      redirect_uri = EXCLUDED.redirect_uri,
-      auto_process_emails = EXCLUDED.auto_process_emails,
-      max_emails_per_sync = EXCLUDED.max_emails_per_sync,
-      folder_filters = EXCLUDED.folder_filters,
-      -- Preserve existing sensitive values if the new value is NULL
-      access_token = COALESCE(EXCLUDED.access_token, microsoft_email_provider_config.access_token),
-      refresh_token = COALESCE(EXCLUDED.refresh_token, microsoft_email_provider_config.refresh_token),
-      token_expires_at = COALESCE(EXCLUDED.token_expires_at, microsoft_email_provider_config.token_expires_at),
-      -- Preserve existing webhook linkage if the new value is NULL
-      webhook_subscription_id = COALESCE(EXCLUDED.webhook_subscription_id, microsoft_email_provider_config.webhook_subscription_id),
-      webhook_expires_at = COALESCE(EXCLUDED.webhook_expires_at, microsoft_email_provider_config.webhook_expires_at),
-      webhook_verification_token = COALESCE(EXCLUDED.webhook_verification_token, microsoft_email_provider_config.webhook_verification_token),
-      updated_at = EXCLUDED.updated_at
-    RETURNING *
-  `, [
-    providerId,
-    tenant,
-    effectiveClientId,
-    effectiveClientSecret,
-    effectiveTenantId,
-    effectiveRedirectUri,
-    config.auto_process_emails,
-    config.max_emails_per_sync,
-    JSON.stringify(config.folder_filters || []),
-    config.access_token || null,
-    config.refresh_token || null,
-    config.token_expires_at || null,
-    null, // webhook_subscription_id (preserve existing if null)
-    null, // webhook_expires_at (preserve existing if null)
-    null, // webhook_verification_token (preserve existing if null)
-    now,  // created_at
-    now   // updated_at
-  ]).then((result: any) => result.rows[0]);
+  const msConfigRows = await tenantDb(trx, tenant)
+    .table('microsoft_email_provider_config')
+    .insert({
+      email_provider_id: providerId,
+      tenant,
+      client_id: pinnedClientId,
+      client_secret: pinnedClientSecret,
+      microsoft_profile_id: pinnedProfileId,
+      client_secret_ref: pinnedClientSecretRef,
+      tenant_id: pinnedTenantId,
+      redirect_uri: effectiveRedirectUri,
+      auto_process_emails: config.auto_process_emails,
+      max_emails_per_sync: config.max_emails_per_sync,
+      folder_filters: JSON.stringify(config.folder_filters || []),
+      access_token: config.access_token || null,
+      refresh_token: config.refresh_token || null,
+      token_expires_at: config.token_expires_at || null,
+      webhook_subscription_id: null,
+      webhook_expires_at: null,
+      webhook_verification_token: null,
+      delivery_mode: 'polling',
+      webhook_silent_runs: 0,
+      next_subscription_probe_at: null,
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict(['email_provider_id', 'tenant'])
+    .merge({
+      // A settings save commonly has no new token. In that case retain the
+      // credentials that issued the stored refresh token; switching the pin to
+      // a newly-bound profile would make that token irredeemable.
+      client_id: pinnedClientId,
+      client_secret: pinnedClientSecret,
+      microsoft_profile_id: pinnedProfileId,
+      client_secret_ref: pinnedClientSecretRef,
+      tenant_id: pinnedTenantId,
+      redirect_uri: effectiveRedirectUri,
+      auto_process_emails: config.auto_process_emails,
+      max_emails_per_sync: config.max_emails_per_sync,
+      folder_filters: JSON.stringify(config.folder_filters || []),
+      access_token: trx.raw('COALESCE(EXCLUDED.access_token, microsoft_email_provider_config.access_token)'),
+      refresh_token: trx.raw('COALESCE(EXCLUDED.refresh_token, microsoft_email_provider_config.refresh_token)'),
+      token_expires_at: trx.raw('COALESCE(EXCLUDED.token_expires_at, microsoft_email_provider_config.token_expires_at)'),
+      webhook_subscription_id: trx.raw(
+        'COALESCE(EXCLUDED.webhook_subscription_id, microsoft_email_provider_config.webhook_subscription_id)'
+      ),
+      webhook_expires_at: trx.raw('COALESCE(EXCLUDED.webhook_expires_at, microsoft_email_provider_config.webhook_expires_at)'),
+      webhook_verification_token: trx.raw(
+        'COALESCE(EXCLUDED.webhook_verification_token, microsoft_email_provider_config.webhook_verification_token)'
+      ),
+      updated_at: now,
+    })
+    .returning('*') as unknown as MicrosoftEmailProviderConfig[];
+  const [msConfig] = msConfigRows;
   
   if (msConfig) {
     // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
@@ -327,9 +440,9 @@ async function persistGoogleConfig(
   tenant: string,
   providerId: string,
   config?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>
-) {
-  if (!config) return null;
-  if (!tenant) throw new Error('Tenant is required');
+): Promise<GoogleEmailProviderConfig | undefined> {
+  if (!config) return undefined;
+  if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save Google email configuration');
 
   // Google is always tenant-owned (CE and EE): credentials must come from tenant secrets.
   // We will not store OAuth client credentials in the DB.
@@ -356,10 +469,10 @@ async function persistGoogleConfig(
   }
 
   if (!effectiveClientId || !effectiveClientSecret) {
-    throw new Error('Google OAuth is not configured for this tenant. Configure Google settings first.');
+    throwExpectedEmailProviderError('Google OAuth is not configured for this tenant. Configure Google settings first.');
   }
   if (!effectiveProjectId) {
-    throw new Error('Google Cloud project ID is not configured for this tenant. Configure Google settings first.');
+    throwExpectedEmailProviderError('Google Cloud project ID is not configured for this tenant. Configure Google settings first.');
   }
 
   const baseUrl =
@@ -397,51 +510,48 @@ async function persistGoogleConfig(
   
   const now = new Date();
 
-  const googleConfig = await trx.raw(`
-    INSERT INTO google_email_provider_config (
-      email_provider_id, tenant, client_id, client_secret, project_id, redirect_uri,
-      pubsub_topic_name, pubsub_subscription_name, auto_process_emails, max_emails_per_sync,
-      label_filters, access_token, refresh_token, token_expires_at, history_id,
-      watch_expiration, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
-      client_id = EXCLUDED.client_id,
-      client_secret = EXCLUDED.client_secret,
-      project_id = EXCLUDED.project_id,
-      redirect_uri = EXCLUDED.redirect_uri,
-      pubsub_topic_name = EXCLUDED.pubsub_topic_name,
-      pubsub_subscription_name = EXCLUDED.pubsub_subscription_name,
-      auto_process_emails = EXCLUDED.auto_process_emails,
-      max_emails_per_sync = EXCLUDED.max_emails_per_sync,
-      label_filters = EXCLUDED.label_filters,
-      -- Preserve existing sensitive values if the new value is NULL
-      access_token = COALESCE(EXCLUDED.access_token, google_email_provider_config.access_token),
-      refresh_token = COALESCE(EXCLUDED.refresh_token, google_email_provider_config.refresh_token),
-      token_expires_at = COALESCE(EXCLUDED.token_expires_at, google_email_provider_config.token_expires_at),
-      history_id = COALESCE(EXCLUDED.history_id, google_email_provider_config.history_id),
-      watch_expiration = COALESCE(EXCLUDED.watch_expiration, google_email_provider_config.watch_expiration),
-      updated_at = EXCLUDED.updated_at
-    RETURNING *
-  `, [
-    providerId, 
-    tenant, 
-    configPayload.client_id, 
-    configPayload.client_secret,
-    configPayload.project_id, 
-    configPayload.redirect_uri, 
-    configPayload.pubsub_topic_name,
-    configPayload.pubsub_subscription_name, 
-    configPayload.auto_process_emails,
-    configPayload.max_emails_per_sync, 
-    configPayload.label_filters,
-    configPayload.access_token || null, 
-    configPayload.refresh_token || null, 
-    configPayload.token_expires_at || null,
-    configPayload.history_id || null, 
-    configPayload.watch_expiration || null,
-    now,  // created_at
-    now   // updated_at
-  ]).then((result: any) => result.rows[0]);
+  const googleConfigRows = await tenantDb(trx, tenant)
+    .table('google_email_provider_config')
+    .insert({
+      email_provider_id: providerId,
+      tenant,
+      client_id: configPayload.client_id,
+      client_secret: configPayload.client_secret,
+      project_id: configPayload.project_id,
+      redirect_uri: configPayload.redirect_uri,
+      pubsub_topic_name: configPayload.pubsub_topic_name,
+      pubsub_subscription_name: configPayload.pubsub_subscription_name,
+      auto_process_emails: configPayload.auto_process_emails,
+      max_emails_per_sync: configPayload.max_emails_per_sync,
+      label_filters: configPayload.label_filters,
+      access_token: configPayload.access_token || null,
+      refresh_token: configPayload.refresh_token || null,
+      token_expires_at: configPayload.token_expires_at || null,
+      history_id: configPayload.history_id || null,
+      watch_expiration: configPayload.watch_expiration || null,
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict(['email_provider_id', 'tenant'])
+    .merge({
+      client_id: configPayload.client_id,
+      client_secret: configPayload.client_secret,
+      project_id: configPayload.project_id,
+      redirect_uri: configPayload.redirect_uri,
+      pubsub_topic_name: configPayload.pubsub_topic_name,
+      pubsub_subscription_name: configPayload.pubsub_subscription_name,
+      auto_process_emails: configPayload.auto_process_emails,
+      max_emails_per_sync: configPayload.max_emails_per_sync,
+      label_filters: configPayload.label_filters,
+      access_token: trx.raw('COALESCE(EXCLUDED.access_token, google_email_provider_config.access_token)'),
+      refresh_token: trx.raw('COALESCE(EXCLUDED.refresh_token, google_email_provider_config.refresh_token)'),
+      token_expires_at: trx.raw('COALESCE(EXCLUDED.token_expires_at, google_email_provider_config.token_expires_at)'),
+      history_id: trx.raw('COALESCE(EXCLUDED.history_id, google_email_provider_config.history_id)'),
+      watch_expiration: trx.raw('COALESCE(EXCLUDED.watch_expiration, google_email_provider_config.watch_expiration)'),
+      updated_at: now,
+    })
+    .returning('*') as unknown as GoogleEmailProviderConfig[];
+  const [googleConfig] = googleConfigRows;
   
   if (googleConfig) {
     // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
@@ -459,9 +569,9 @@ async function persistImapConfig(
   tenant: string,
   providerId: string,
   config?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>
-) {
-  if (!config) return null;
-  if (!tenant) throw new Error('Tenant is required');
+): Promise<ImapEmailProviderConfig | undefined> {
+  if (!config) return undefined;
+  if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save IMAP email configuration');
 
   const secretProvider = await getSecretProviderInstance();
 
@@ -486,74 +596,68 @@ async function persistImapConfig(
 
   const now = new Date();
 
-  const imapConfig = await trx.raw(`
-    INSERT INTO imap_email_provider_config (
-      email_provider_id, tenant, host, port, secure, allow_starttls, auth_type, username,
-      auto_process_emails, max_emails_per_sync, folder_filters,
-      oauth_authorize_url, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scopes,
-      access_token, refresh_token, token_expires_at,
-      uid_validity, last_uid, last_seen_at, last_sync_at, last_error,
-	      connection_timeout_ms, socket_keepalive,
-	      created_at, updated_at
-		    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
-	      host = EXCLUDED.host,
-	      port = EXCLUDED.port,
-	      secure = EXCLUDED.secure,
-      allow_starttls = EXCLUDED.allow_starttls,
-      auth_type = EXCLUDED.auth_type,
-      username = EXCLUDED.username,
-      auto_process_emails = EXCLUDED.auto_process_emails,
-      max_emails_per_sync = EXCLUDED.max_emails_per_sync,
-      folder_filters = EXCLUDED.folder_filters,
-      oauth_authorize_url = EXCLUDED.oauth_authorize_url,
-      oauth_token_url = EXCLUDED.oauth_token_url,
-      oauth_client_id = EXCLUDED.oauth_client_id,
-      oauth_client_secret = EXCLUDED.oauth_client_secret,
-      oauth_scopes = EXCLUDED.oauth_scopes,
-      connection_timeout_ms = COALESCE(EXCLUDED.connection_timeout_ms, imap_email_provider_config.connection_timeout_ms),
-      socket_keepalive = COALESCE(EXCLUDED.socket_keepalive, imap_email_provider_config.socket_keepalive),
-      -- Preserve existing sensitive values if the new value is NULL
-      access_token = COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token),
-      refresh_token = COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token),
-      token_expires_at = COALESCE(EXCLUDED.token_expires_at, imap_email_provider_config.token_expires_at),
-      uid_validity = COALESCE(EXCLUDED.uid_validity, imap_email_provider_config.uid_validity),
-      last_uid = COALESCE(EXCLUDED.last_uid, imap_email_provider_config.last_uid),
-      last_seen_at = COALESCE(EXCLUDED.last_seen_at, imap_email_provider_config.last_seen_at),
-      last_sync_at = COALESCE(EXCLUDED.last_sync_at, imap_email_provider_config.last_sync_at),
-      last_error = COALESCE(EXCLUDED.last_error, imap_email_provider_config.last_error),
-      updated_at = EXCLUDED.updated_at
-    RETURNING *
-  `, [
-    providerId,
-    tenant,
-    config.host,
-    config.port,
-    config.secure ?? true,
-    config.allow_starttls ?? false,
-    config.auth_type,
-    config.username,
-    config.auto_process_emails ?? true,
-    maxEmailsPerSync,
-    JSON.stringify(folderFiltersArray),
-    config.oauth_authorize_url || null,
-    config.oauth_token_url || null,
-    config.oauth_client_id || null,
-    config.oauth_client_secret || null,
-    config.oauth_scopes || null,
-    config.access_token || null,
-    config.refresh_token || null,
-    config.token_expires_at || null,
-    config.uid_validity || null,
-    config.last_uid || null,
-    config.last_seen_at || null,
-    config.last_sync_at || null,
-    config.last_error || null,
-    connectionTimeoutMs,
-    socketKeepalive,
-    now,  // created_at
-    now   // updated_at
-  ]).then((result: any) => result.rows[0]);
+  const imapConfigRows = await tenantDb(trx, tenant)
+    .table('imap_email_provider_config')
+    .insert({
+      email_provider_id: providerId,
+      tenant,
+      host: config.host,
+      port: config.port,
+      secure: config.secure ?? true,
+      allow_starttls: config.allow_starttls ?? false,
+      auth_type: config.auth_type,
+      username: config.username,
+      auto_process_emails: config.auto_process_emails ?? true,
+      max_emails_per_sync: maxEmailsPerSync,
+      folder_filters: JSON.stringify(folderFiltersArray),
+      oauth_authorize_url: config.oauth_authorize_url || null,
+      oauth_token_url: config.oauth_token_url || null,
+      oauth_client_id: config.oauth_client_id || null,
+      oauth_client_secret: config.oauth_client_secret || null,
+      oauth_scopes: config.oauth_scopes || null,
+      access_token: config.access_token || null,
+      refresh_token: config.refresh_token || null,
+      token_expires_at: config.token_expires_at || null,
+      uid_validity: config.uid_validity || null,
+      last_uid: config.last_uid || null,
+      last_seen_at: config.last_seen_at || null,
+      last_sync_at: config.last_sync_at || null,
+      last_error: config.last_error || null,
+      connection_timeout_ms: connectionTimeoutMs,
+      socket_keepalive: socketKeepalive,
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict(['email_provider_id', 'tenant'])
+    .merge({
+      host: config.host,
+      port: config.port,
+      secure: config.secure ?? true,
+      allow_starttls: config.allow_starttls ?? false,
+      auth_type: config.auth_type,
+      username: config.username,
+      auto_process_emails: config.auto_process_emails ?? true,
+      max_emails_per_sync: maxEmailsPerSync,
+      folder_filters: JSON.stringify(folderFiltersArray),
+      oauth_authorize_url: config.oauth_authorize_url || null,
+      oauth_token_url: config.oauth_token_url || null,
+      oauth_client_id: config.oauth_client_id || null,
+      oauth_client_secret: config.oauth_client_secret || null,
+      oauth_scopes: config.oauth_scopes || null,
+      connection_timeout_ms: trx.raw('COALESCE(EXCLUDED.connection_timeout_ms, imap_email_provider_config.connection_timeout_ms)'),
+      socket_keepalive: trx.raw('COALESCE(EXCLUDED.socket_keepalive, imap_email_provider_config.socket_keepalive)'),
+      access_token: trx.raw('COALESCE(EXCLUDED.access_token, imap_email_provider_config.access_token)'),
+      refresh_token: trx.raw('COALESCE(EXCLUDED.refresh_token, imap_email_provider_config.refresh_token)'),
+      token_expires_at: trx.raw('COALESCE(EXCLUDED.token_expires_at, imap_email_provider_config.token_expires_at)'),
+      uid_validity: trx.raw('COALESCE(EXCLUDED.uid_validity, imap_email_provider_config.uid_validity)'),
+      last_uid: trx.raw('COALESCE(EXCLUDED.last_uid, imap_email_provider_config.last_uid)'),
+      last_seen_at: trx.raw('COALESCE(EXCLUDED.last_seen_at, imap_email_provider_config.last_seen_at)'),
+      last_sync_at: trx.raw('COALESCE(EXCLUDED.last_sync_at, imap_email_provider_config.last_sync_at)'),
+      last_error: trx.raw('COALESCE(EXCLUDED.last_error, imap_email_provider_config.last_error)'),
+      updated_at: now,
+    })
+    .returning('*') as unknown as ImapEmailProviderConfig[];
+  const [imapConfig] = imapConfigRows;
 
   if (imapConfig) {
     imapConfig.folder_filters = imapConfig.folder_filters || [];
@@ -571,18 +675,18 @@ export const getEmailProviders = withAuth(async (
   { tenant }
 ): Promise<{ providers: EmailProvider[] }> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
   
   try {
-    const providers = await knex('email_providers')
-      .where({ tenant })
+    const providers = await db.table('email_providers')
       .orderBy('created_at', 'desc')
-      .select(PROVIDER_COLUMNS);
+      .select(PROVIDER_COLUMNS) as unknown as ProviderRow[];
 
     // Load vendor-specific configs
-    const providersWithConfig = await Promise.all(providers.map(async (provider) => {
+    const providersWithConfig = await Promise.all(providers.map(async (provider): Promise<EmailProvider> => {
       if (provider.providerType === 'microsoft') {
-        const msConfig = await knex('microsoft_email_provider_config')
-          .where({ email_provider_id: provider.id, tenant })
+        const msConfig = await db.table('microsoft_email_provider_config')
+          .where({ email_provider_id: provider.id })
           .select(
             'email_provider_id',
             'tenant',
@@ -599,6 +703,11 @@ export const getEmailProviders = withAuth(async (
             'webhook_subscription_id',
             'webhook_expires_at',
             'webhook_verification_token',
+            'last_subscription_renewal',
+            'delivery_mode',
+            'last_webhook_delivery_at',
+            'webhook_silent_runs',
+            'next_subscription_probe_at',
             'created_at',
             'updated_at'
           )
@@ -610,8 +719,8 @@ export const getEmailProviders = withAuth(async (
           provider.microsoftConfig = msConfig;
         }
       } else if (provider.providerType === 'google') {
-        const googleConfig = await knex('google_email_provider_config')
-          .where({ email_provider_id: provider.id, tenant })
+        const googleConfig = await db.table('google_email_provider_config')
+          .where({ email_provider_id: provider.id })
           .select(
             'email_provider_id',
             'tenant',
@@ -639,8 +748,8 @@ export const getEmailProviders = withAuth(async (
           provider.googleConfig = googleConfig;
         }
       } else if (provider.providerType === 'imap') {
-        const imapConfig = await knex('imap_email_provider_config')
-          .where({ email_provider_id: provider.id, tenant })
+        const imapConfig = await db.table('imap_email_provider_config')
+          .where({ email_provider_id: provider.id })
           .select(
             'email_provider_id',
             'tenant',
@@ -711,7 +820,7 @@ export const upsertEmailProvider = withAuth(async (
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 },
   skipAutomation?: boolean
-): Promise<EmailProviderSetupResult> => {
+): Promise<EmailProviderSetupActionResult> => {
   const { knex } = await createTenantKnex();
 
   const result: EmailProviderSetupResult = {
@@ -720,7 +829,7 @@ export const upsertEmailProvider = withAuth(async (
   };
 
   try {
-    const provider = await knex.transaction(async (trx) => {
+    const provider = await knex.transaction(async (trx): Promise<EmailProvider> => {
       const base = await getOrCreateProvider(trx, tenant, data);
 
       if (data.providerType === 'microsoft') {
@@ -789,18 +898,23 @@ export const upsertEmailProvider = withAuth(async (
         provider.lastSyncAt = new Date().toISOString();
         provider.status = 'connected';
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Failed to initialize Microsoft webhook:', error);
         // Record the error so the UI can display it
-        result.setupError = `Failed to initialize Microsoft webhook: ${errorMessage}`;
+        result.setupError = microsoft365ActionErrorMessage(
+          error,
+          'Failed to initialize Microsoft webhook. Check Microsoft 365 settings and try again.'
+        );
         provider.status = 'error';
       }
     }
 
     return result;
   } catch (error) {
-    console.error('Failed to upsert email provider:', error);
-    throw new Error('Failed to upsert email provider');
+    if (error instanceof ExpectedEmailProviderActionError) {
+      return actionError(error.message);
+    }
+    console.error('Unexpected failure while upserting email provider:', error);
+    return actionError('Failed to save email provider. Please review the settings and try again.');
   }
 });
 
@@ -820,7 +934,7 @@ export const createEmailProvider = withAuth(async (
   imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 },
   skipAutomation?: boolean
-): Promise<EmailProviderSetupResult> => {
+): Promise<EmailProviderSetupActionResult> => {
   // Delegate to upsertEmailProvider since they have identical logic
   return upsertEmailProvider(data, skipAutomation);
 });
@@ -842,7 +956,7 @@ export const updateEmailProvider = withAuth(async (
     imapConfig?: Omit<ImapEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
   skipAutomation?: boolean
-): Promise<EmailProviderSetupResult> => {
+): Promise<EmailProviderSetupActionResult> => {
   const { knex } = await createTenantKnex();
 
   const result: EmailProviderSetupResult = {
@@ -851,7 +965,7 @@ export const updateEmailProvider = withAuth(async (
   };
 
   try {
-    const provider = await knex.transaction(async (trx) => {
+    const provider = await knex.transaction(async (trx): Promise<EmailProvider> => {
       const base = await getOrCreateProvider(trx, tenant, data, providerId);
 
       if (data.providerType === 'microsoft') {
@@ -920,18 +1034,23 @@ export const updateEmailProvider = withAuth(async (
         provider.lastSyncAt = new Date().toISOString();
         provider.status = 'connected';
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Failed to initialize Microsoft webhook:', error);
         // Record the error so the UI can display it
-        result.setupError = `Failed to initialize Microsoft webhook: ${errorMessage}`;
+        result.setupError = microsoft365ActionErrorMessage(
+          error,
+          'Failed to initialize Microsoft webhook. Check Microsoft 365 settings and try again.'
+        );
         provider.status = 'error';
       }
     }
 
     return result;
   } catch (error) {
-    console.error('Failed to update email provider:', error);
-    throw new Error('Failed to update email provider');
+    if (error instanceof ExpectedEmailProviderActionError) {
+      return actionError(error.message);
+    }
+    console.error('Unexpected failure while updating email provider:', error);
+    return actionError('Failed to update email provider. Please review the settings and try again.');
   }
 });
 
@@ -939,20 +1058,16 @@ export const deleteEmailProvider = withAuth(async (
   _user,
   { tenant },
   providerId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
-  
+): Promise<{ success: true } | EmailProviderActionError> => {
   try {
-    const result = await knex('email_providers')
-      .where({ id: providerId, tenant })
-      .delete();
-
-    if (result === 0) {
-      throw new Error('Provider not found');
-    }
+    await new EmailProviderService().deleteProvider(providerId, tenant);
+    return { success: true };
   } catch (error) {
+    if (error instanceof Error && error.message === 'Provider not found') {
+      return actionError('Email provider not found');
+    }
     console.error('Failed to delete email provider:', error);
-    throw new Error('Failed to delete email provider');
+    return actionError('Failed to delete email provider');
   }
 });
 
@@ -960,20 +1075,21 @@ export const resyncImapProvider = withAuth(async (
   _user,
   { tenant },
   providerId: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<EmailProviderOperationResult> => {
   const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+
+  const provider = await db.table('email_providers')
+    .where({ id: providerId, provider_type: 'imap' })
+    .first();
+
+  if (!provider) {
+    return emailProviderOperationError('IMAP provider not found.', 'not_found');
+  }
 
   try {
-    const provider = await knex('email_providers')
-      .where({ id: providerId, tenant, provider_type: 'imap' })
-      .first();
-
-    if (!provider) {
-      throw new Error('IMAP provider not found');
-    }
-
-    await knex('imap_email_provider_config')
-      .where({ email_provider_id: providerId, tenant })
+    await db.table('imap_email_provider_config')
+      .where({ email_provider_id: providerId })
       .update({
         uid_validity: null,
         last_uid: null,
@@ -985,8 +1101,8 @@ export const resyncImapProvider = withAuth(async (
         updated_at: knex.fn.now(),
       });
 
-    await knex('email_providers')
-      .where({ id: providerId, tenant })
+    await db.table('email_providers')
+      .where({ id: providerId })
       .update({
         status: 'disconnected',
         error_message: null,
@@ -996,10 +1112,10 @@ export const resyncImapProvider = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('IMAP resync failed:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to resync IMAP provider'
-    };
+    return emailProviderOperationError(
+      'Failed to resync IMAP provider. Please try again.',
+      'unexpected'
+    );
   }
 });
 
@@ -1007,26 +1123,27 @@ export const testEmailProviderConnection = withAuth(async (
   _user,
   { tenant },
   providerId: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<EmailProviderOperationResult> => {
   const { knex: baseKnex } = await createTenantKnex();
   const knex = baseKnex as any;
+  const db = tenantDb(knex, tenant);
   
   try {
-    const provider = await knex('email_providers')
-      .where({ id: providerId, tenant })
+    const provider = await db.table('email_providers')
+      .where({ id: providerId })
       .first();
 
     if (!provider) {
-      throw new Error('Provider not found');
+      return emailProviderOperationError('Email provider not found.', 'not_found');
     }
 
     if (provider.provider_type === 'imap') {
-      const config = await knex('imap_email_provider_config')
-        .where({ email_provider_id: providerId, tenant })
+      const config = await db.table('imap_email_provider_config')
+        .where({ email_provider_id: providerId })
         .first();
 
       if (!config) {
-        throw new Error('IMAP provider config not found');
+        return emailProviderOperationError('IMAP provider configuration not found.', 'missing_config');
       }
 
       const secretProvider = await getSecretProviderInstance();
@@ -1035,12 +1152,18 @@ export const testEmailProviderConnection = withAuth(async (
       if (config.auth_type === 'oauth2') {
         if (!accessToken || (config.token_expires_at && new Date(config.token_expires_at).getTime() < Date.now() + 5 * 60 * 1000)) {
           if (!config.oauth_token_url || !config.oauth_client_id) {
-            throw new Error('IMAP OAuth token configuration missing');
+            return emailProviderOperationError(
+              'IMAP OAuth token configuration is incomplete. Reconnect the mailbox and try again.',
+              'missing_config'
+            );
           }
           const secretRefreshToken = await secretProvider.getTenantSecret(tenant, `imap_refresh_token_${providerId}` as string);
           const refreshToken = secretRefreshToken || config.refresh_token;
           if (!refreshToken) {
-            throw new Error('IMAP OAuth refresh token missing');
+            return emailProviderOperationError(
+              'IMAP OAuth refresh token is missing. Reconnect the mailbox and try again.',
+              'missing_credentials'
+            );
           }
 
           const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${providerId}` as string);
@@ -1056,16 +1179,25 @@ export const testEmailProviderConnection = withAuth(async (
             params.append('client_secret', clientSecret as string);
           }
 
-          const response = await axios.post(config.oauth_token_url, params as any, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-          });
+          let response;
+          try {
+            response = await axios.post(config.oauth_token_url, params as any, {
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+          } catch (oauthError) {
+            console.warn('IMAP OAuth token refresh failed:', oauthError);
+            return emailProviderOperationError(
+              'IMAP OAuth token refresh failed. Reconnect the mailbox and try again.',
+              'oauth_refresh_failed'
+            );
+          }
 
           accessToken = response.data.access_token;
           const expiresIn = Number(response.data.expires_in || 3600);
           const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-          await knex('imap_email_provider_config')
-            .where({ email_provider_id: providerId, tenant })
+          await db.table('imap_email_provider_config')
+            .where({ email_provider_id: providerId })
             .update({
               access_token: accessToken,
               token_expires_at: expiresAt,
@@ -1089,7 +1221,10 @@ export const testEmailProviderConnection = withAuth(async (
       }
 
       if (!auth.pass && !auth.accessToken) {
-        throw new Error('IMAP credentials missing');
+        return emailProviderOperationError(
+          'IMAP credentials are missing. Add mailbox credentials or reconnect OAuth, then try again.',
+          'missing_credentials'
+        );
       }
 
       const client = new ImapFlow({
@@ -1103,25 +1238,85 @@ export const testEmailProviderConnection = withAuth(async (
 
       applyOauthMechanismOverride(client, oauthMechanism);
 
-      await client.connect();
-      await client.logout();
+      try {
+        await client.connect();
+        await client.logout();
+      } catch (connectionError) {
+        console.warn('IMAP connection test failed:', connectionError);
+        return mapImapConnectionFailure(connectionError);
+      }
     }
 
-    await knex('email_providers')
+    if (provider.provider_type === 'microsoft') {
+      const vendorConfig = await db.table('microsoft_email_provider_config')
+        .where({ email_provider_id: providerId })
+        .first();
+      if (!vendorConfig) {
+        return emailProviderOperationError('Microsoft provider configuration not found.', 'missing_config');
+      }
+
+      const adapterConfig = await buildMicrosoftEmailProviderConfig({
+        id: provider.id,
+        tenant: provider.tenant,
+        name: provider.provider_name || provider.mailbox,
+        provider_type: 'microsoft',
+        mailbox: provider.mailbox,
+        folder_to_monitor: Array.isArray(vendorConfig.folder_filters)
+          ? vendorConfig.folder_filters[0] || 'Inbox'
+          : 'Inbox',
+        active: provider.is_active,
+        webhook_notification_url: `${getWebhookBaseUrl()}/api/email/webhooks/microsoft`,
+        webhook_subscription_id: vendorConfig.webhook_subscription_id || undefined,
+        webhook_verification_token: vendorConfig.webhook_verification_token || undefined,
+        webhook_expires_at: vendorConfig.webhook_expires_at || undefined,
+        connection_status: provider.status || 'disconnected',
+        created_at: provider.created_at,
+        updated_at: provider.updated_at,
+        provider_config: vendorConfig,
+      });
+      const result = await new MicrosoftGraphAdapter(adapterConfig).testConnection();
+      if (!result.success) {
+        await db.table('email_providers').where({ id: providerId }).update({
+          status: 'error',
+          error_message: result.error || 'Microsoft connection test failed',
+          updated_at: knex.fn.now(),
+        });
+        return emailProviderOperationError(
+          'Microsoft 365 authentication failed. Reconnect the mailbox and try again.',
+          'connection_failed'
+        );
+      }
+
+      if (vendorConfig.delivery_mode === 'polling') {
+        const [probeResult] = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+          tenantId: tenant,
+          providerId,
+          lookAheadMinutes: 0,
+        });
+        if (probeResult && !probeResult.success) {
+          return emailProviderOperationError(
+            probeResult.error || 'Microsoft webhook recovery probe failed.',
+            'connection_failed'
+          );
+        }
+      }
+    }
+
+    await db.table('email_providers')
       .where({ id: providerId })
       .update({
         status: 'connected',
-        last_sync_at: knex.fn.now(),
+        error_message: null,
         updated_at: knex.fn.now()
       });
 
     return { success: true };
   } catch (error) {
     console.error('Connection test failed:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Connection test failed'
-    };
+    return emailProviderOperationError(
+      'Connection test failed. Please try again.',
+      'unexpected'
+    );
   }
 });
 
@@ -1153,7 +1348,10 @@ export const retryMicrosoftSubscriptionRenewal = withAuth(async (
     }
   } catch (error: any) {
     console.error('Manual renewal failed:', error);
-    return { success: false, message: error.message || 'Internal server error' };
+    return {
+      success: false,
+      message: microsoft365ActionErrorMessage(error, 'Microsoft subscription renewal failed. Please try again.'),
+    };
   }
 });
 
@@ -1164,14 +1362,15 @@ export const runMicrosoft365Diagnostics = withAuth(async (
 ): Promise<{ success: boolean; report?: Microsoft365DiagnosticsReport; error?: string }> => {
   try {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
 
     const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
     if (!permitted) {
-      throwPermissionError('run Microsoft 365 diagnostics');
+      return { success: false, error: 'Permission denied: Cannot run Microsoft 365 diagnostics' };
     }
 
-    const provider = await knex('email_providers')
-      .where({ id: providerId, tenant })
+    const provider = await db.table('email_providers')
+      .where({ id: providerId })
       .first();
 
     if (!provider) {
@@ -1182,8 +1381,8 @@ export const runMicrosoft365Diagnostics = withAuth(async (
       return { success: false, error: 'Diagnostics are only available for Microsoft 365 providers' };
     }
 
-    const vendorConfig = await knex('microsoft_email_provider_config')
-      .where({ email_provider_id: providerId, tenant })
+    const vendorConfig = await db.table('microsoft_email_provider_config')
+      .where({ email_provider_id: providerId })
       .first();
 
     const baseUrl = getWebhookBaseUrl();
@@ -1210,7 +1409,9 @@ export const runMicrosoft365Diagnostics = withAuth(async (
       updated_at: provider.updated_at,
     };
 
-    const adapter = new MicrosoftGraphAdapter(adapterConfig as any);
+    const adapter = new MicrosoftGraphAdapter(
+      await buildMicrosoftEmailProviderConfig(adapterConfig as any)
+    );
 
     const report = await adapter.runMicrosoft365Diagnostics({
       includeIdentifiers: true,
@@ -1221,7 +1422,10 @@ export const runMicrosoft365Diagnostics = withAuth(async (
 
     return { success: true, report };
   } catch (error: any) {
-    return { success: false, error: error?.message || 'Failed to run diagnostics' };
+    return {
+      success: false,
+      error: microsoft365ActionErrorMessage(error, 'Failed to run Microsoft 365 diagnostics. Please try again.'),
+    };
   }
 });
 

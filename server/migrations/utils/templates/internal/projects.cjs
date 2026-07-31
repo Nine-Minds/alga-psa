@@ -3,6 +3,48 @@
  */
 const TEMPLATES = [
   {
+    templateName: 'project-milestone-ready',
+    subtypeName: 'project-milestone-ready',
+    translations: {
+      en: { title: 'Project Milestone Ready', message: '"{{entryDescription}}" in project "{{projectName}}" is ready to bill ({{amount}})' },
+      fr: { title: 'Jalon du projet prêt', message: '« {{entryDescription}} » dans le projet « {{projectName}} » est prêt à facturer ({{amount}})' },
+      es: { title: 'Hito del proyecto listo', message: '"{{entryDescription}}" en el proyecto "{{projectName}}" está listo para facturarse ({{amount}})' },
+      de: { title: 'Projektmeilenstein bereit', message: '„{{entryDescription}}“ im Projekt „{{projectName}}“ ist zur Abrechnung bereit ({{amount}})' },
+      nl: { title: 'Projectmijlpaal klaar', message: '"{{entryDescription}}" in project "{{projectName}}" is klaar om te factureren ({{amount}})' },
+      it: { title: 'Milestone del progetto pronta', message: '"{{entryDescription}}" nel progetto "{{projectName}}" è pronta per la fatturazione ({{amount}})' },
+      pl: { title: 'Kamień milowy projektu gotowy', message: '„{{entryDescription}}” w projekcie „{{projectName}}” jest gotowy do rozliczenia ({{amount}})' },
+      pt: { title: 'Marco do projeto pronto', message: '"{{entryDescription}}" no projeto "{{projectName}}" está pronto para faturar ({{amount}})' },
+    },
+  },
+  {
+    templateName: 'project-budget-threshold-reached',
+    subtypeName: 'project-budget-threshold-reached',
+    translations: {
+      en: { title: 'Project Budget Threshold Reached', message: 'Project "{{projectName}}" reached {{threshold}} of its budget ({{billed}} billed of {{cap}})' },
+      fr: { title: 'Seuil budgétaire du projet atteint', message: 'Le projet « {{projectName}} » a atteint {{threshold}} de son budget ({{billed}} facturés sur {{cap}})' },
+      es: { title: 'Umbral de presupuesto alcanzado', message: 'El proyecto "{{projectName}}" alcanzó el {{threshold}} de su presupuesto ({{billed}} facturados de {{cap}})' },
+      de: { title: 'Projektbudget-Schwellenwert erreicht', message: 'Projekt „{{projectName}}“ hat {{threshold}} seines Budgets erreicht ({{billed}} von {{cap}} abgerechnet)' },
+      nl: { title: 'Projectbudgetdrempel bereikt', message: 'Project "{{projectName}}" heeft {{threshold}} van het budget bereikt ({{billed}} van {{cap}} gefactureerd)' },
+      it: { title: 'Soglia budget del progetto raggiunta', message: 'Il progetto "{{projectName}}" ha raggiunto il {{threshold}} del budget ({{billed}} fatturati su {{cap}})' },
+      pl: { title: 'Osiągnięto próg budżetu projektu', message: 'Projekt „{{projectName}}” osiągnął {{threshold}} budżetu (zafakturowano {{billed}} z {{cap}})' },
+      pt: { title: 'Limite de orçamento do projeto atingido', message: 'O projeto "{{projectName}}" atingiu {{threshold}} do orçamento ({{billed}} faturados de {{cap}})' },
+    },
+  },
+  {
+    templateName: 'project-budget-exceeded',
+    subtypeName: 'project-budget-exceeded',
+    translations: {
+      en: { title: 'Project Budget Exceeded', message: 'Project "{{projectName}}" exceeded its {{cap}} budget; {{writtenDown}} was written down ({{billed}} billed)' },
+      fr: { title: 'Budget du projet dépassé', message: 'Le projet « {{projectName}} » a dépassé son budget de {{cap}} ; {{writtenDown}} ont été dépréciés ({{billed}} facturés)' },
+      es: { title: 'Presupuesto del proyecto superado', message: 'El proyecto "{{projectName}}" superó su presupuesto de {{cap}}; se dieron de baja {{writtenDown}} ({{billed}} facturados)' },
+      de: { title: 'Projektbudget überschritten', message: 'Projekt „{{projectName}}“ hat sein Budget von {{cap}} überschritten; {{writtenDown}} wurden abgeschrieben ({{billed}} abgerechnet)' },
+      nl: { title: 'Projectbudget overschreden', message: 'Project "{{projectName}}" heeft het budget van {{cap}} overschreden; {{writtenDown}} is afgeschreven ({{billed}} gefactureerd)' },
+      it: { title: 'Budget del progetto superato', message: 'Il progetto "{{projectName}}" ha superato il budget di {{cap}}; {{writtenDown}} sono stati svalutati ({{billed}} fatturati)' },
+      pl: { title: 'Przekroczono budżet projektu', message: 'Projekt „{{projectName}}” przekroczył budżet {{cap}}; odpisano {{writtenDown}} (zafakturowano {{billed}})' },
+      pt: { title: 'Orçamento do projeto excedido', message: 'O projeto "{{projectName}}" excedeu o orçamento de {{cap}}; {{writtenDown}} foram baixados ({{billed}} faturados)' },
+    },
+  },
+  {
     templateName: 'project-assigned',
     subtypeName: 'project-assigned',
     translations: {
@@ -13,6 +55,7 @@ const TEMPLATES = [
       nl: { title: 'Project toegewezen', message: 'Project "{{projectName}}" is aan u toegewezen' },
       it: { title: 'Progetto assegnato', message: 'Il progetto "{{projectName}}" le è stato assegnato' },
       pl: { title: 'Projekt przypisany', message: 'Projekt "{{projectName}}" został do Ciebie przypisany' },
+      pt: { title: 'Projeto atribuído', message: 'O projeto "{{projectName}}" foi atribuído a você' },
     },
   },
   {
@@ -26,6 +69,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuw project aangemaakt', message: 'Project "{{projectName}}" is aangemaakt voor {{clientName}}' },
       it: { title: 'Nuovo progetto creato', message: 'Il progetto "{{projectName}}" è stato creato per {{clientName}}' },
       pl: { title: 'Nowy projekt utworzony', message: 'Projekt "{{projectName}}" został utworzony dla {{clientName}}' },
+      pt: { title: 'Novo projeto criado', message: 'O projeto "{{projectName}}" foi criado para {{clientName}}' },
     },
   },
   {
@@ -39,6 +83,7 @@ const TEMPLATES = [
       nl: { title: 'Taak toegewezen', message: 'De taak "{{taskName}}" in project "{{projectName}}" is aan u toegewezen' },
       it: { title: 'Attività assegnata', message: "L'attività \"{{taskName}}\" del progetto \"{{projectName}}\" le è stata assegnata" },
       pl: { title: 'Zadanie przypisane', message: 'Zadanie "{{taskName}}" w projekcie "{{projectName}}" zostało do Ciebie przypisane' },
+      pt: { title: 'Tarefa atribuída', message: 'A tarefa "{{taskName}}" no projeto "{{projectName}}" foi atribuída a você' },
     },
   },
   {
@@ -52,6 +97,7 @@ const TEMPLATES = [
       nl: { title: 'Nieuwe opmerking bij taak', message: '{{authorName}} heeft een opmerking toegevoegd aan taak "{{taskName}}"' },
       it: { title: 'Nuovo commento sul task', message: '{{authorName}} ha aggiunto un commento al task "{{taskName}}"' },
       pl: { title: 'Nowy komentarz do zadania', message: '{{authorName}} dodał(a) komentarz do zadania "{{taskName}}"' },
+      pt: { title: 'Comentário sobre nova tarefa', message: '{{authorName}} adicionou um comentário à tarefa "{{taskName}}"' },
     },
   },
   {
@@ -65,6 +111,7 @@ const TEMPLATES = [
       nl: { title: 'Mijlpaal voltooid', message: 'De mijlpaal "{{milestoneName}}" in project "{{projectName}}" is voltooid' },
       it: { title: 'Traguardo completato', message: 'La milestone "{{milestoneName}}" del progetto "{{projectName}}" è stata completata' },
       pl: { title: 'Kamień milowy ukończony', message: 'Kamień milowy "{{milestoneName}}" w projekcie "{{projectName}}" został ukończony' },
+      pt: { title: 'Meta concluída', message: 'A meta "{{milestoneName}}" no projeto "{{projectName}}" foi concluída' },
     },
   },
   {
@@ -78,6 +125,7 @@ const TEMPLATES = [
       nl: { title: 'Toegevoegd als extra agent', message: 'U bent toegevoegd als extra agent aan taak "{{taskName}}" in project "{{projectName}}"' },
       it: { title: 'Aggiunto come agente aggiuntivo', message: 'Sei stato aggiunto come agente aggiuntivo al task "{{taskName}}" nel progetto "{{projectName}}"' },
       pl: { title: 'Dodano jako dodatkowego agenta', message: 'Zostałeś(aś) dodany(a) jako dodatkowy agent do zadania "{{taskName}}" w projekcie "{{projectName}}"' },
+      pt: { title: 'Adicionado como agente adicional', message: 'Você foi adicionado como agente adicional na tarefa "{{taskName}}" no projeto "{{projectName}}"' },
     },
   },
   {
@@ -91,6 +139,7 @@ const TEMPLATES = [
       nl: { title: 'Extra agent toegevoegd', message: '{{additionalAgentName}} is toegevoegd als extra agent aan uw taak "{{taskName}}" in project "{{projectName}}"' },
       it: { title: 'Agente aggiuntivo aggiunto', message: '{{additionalAgentName}} è stato aggiunto come agente aggiuntivo al suo task "{{taskName}}" nel progetto "{{projectName}}"' },
       pl: { title: 'Dodano dodatkowego agenta', message: '{{additionalAgentName}} został(a) dodany(a) jako dodatkowy agent do Twojego zadania "{{taskName}}" w projekcie "{{projectName}}"' },
+      pt: { title: 'Agente Adicional Adicionado', message: '{{additionalAgentName}} foi adicionado como agente adicional na sua tarefa "{{taskName}}" no projeto "{{projectName}}"' },
     },
   },
   {
@@ -104,6 +153,7 @@ const TEMPLATES = [
       nl: { title: 'Team toegewezen aan taak', message: "Team '{{teamName}}' is toegewezen aan taak '{{taskName}}' in project '{{projectName}}' door {{performedByName}}" },
       it: { title: 'Team assegnato al task', message: "Il team '{{teamName}}' è stato assegnato al task '{{taskName}}' nel progetto '{{projectName}}' da {{performedByName}}" },
       pl: { title: 'Zespół przypisany do zadania', message: "Zespół '{{teamName}}' został przypisany do zadania '{{taskName}}' w projekcie '{{projectName}}' przez {{performedByName}}" },
+      pt: { title: 'Equipe atribuída à tarefa', message: 'A equipe \'{{teamName}}\' foi designada para a tarefa \'{{taskName}}\' no projeto \'{{projectName}}\' por {{performedByName}}' },
     },
   },
 ];

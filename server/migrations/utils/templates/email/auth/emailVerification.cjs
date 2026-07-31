@@ -327,6 +327,30 @@ const STYLED_COPY = {
     textFooter: 'To jest zautomatyzowana wiadomo\u015b\u0107 bezpiecze\u0144stwa.\n\u00a9 {{currentYear}} {{tenantClientName}}. Wszelkie prawa zastrze\u017cone.',
   },
 };
+STYLED_COPY.pt = {
+  subject: 'Verifique seu email{{#if registrationClientName}} para {{registrationClientName}}{{/if}}',
+  headerTitle: 'Verificação de email',
+  headerSubtitle: 'Confirme seu endereço de email para começar',
+  greeting: 'Olá,',
+  intro: 'Boas-vindas! Verifique seu endereço de email para ativar sua conta{{#if registrationClientName}} para <strong>{{registrationClientName}}</strong>{{/if}}.',
+  whyTitle: '✉️ Por que verificar seu email?',
+  why1: '✓ Garante a segurança da conta e as opções de recuperação',
+  why2: '✓ Habilita notificações e atualizações importantes',
+  why3: '✓ Confirma que você é o proprietário da conta',
+  buttonText: 'Verificar endereço de email',
+  linkInstructions: 'Ou copie e cole este link no navegador:',
+  warningTitle: '⏰ Verificação com prazo limitado',
+  warningText: 'Este link de verificação expirará em <strong>{{expirationTime}}</strong>. Conclua a verificação antes desse prazo.',
+  didntRequest: '<strong>Não solicitou este email?</strong> Você pode ignorá-lo com segurança. Seu endereço de email não será adicionado ao nosso sistema a menos que você clique no link de verificação acima.',
+  footer1: 'Este é um email automático de segurança.',
+  footer2: '© {{currentYear}} {{tenantClientName}}. Todos os direitos reservados.',
+  textWhy: '✉️ Por que verificar seu email?\n✓ Garante a segurança da conta e as opções de recuperação\n✓ Habilita notificações e atualizações importantes\n✓ Confirma que você é o proprietário da conta',
+  textButton: 'Verificar endereço de email: {{verificationUrl}}',
+  textWarning: '⏰ Verificação com prazo limitado\nEste link de verificação expirará em {{expirationTime}}. Conclua a verificação antes desse prazo.',
+  textDidntRequest: 'Não solicitou este email? Você pode ignorá-lo com segurança. Seu endereço de email não será adicionado ao nosso sistema a menos que você clique no link de verificação acima.',
+  textFooter: 'Este é um email automático de segurança.\n© {{currentYear}} {{tenantClientName}}. Todos os direitos reservados.',
+};
+
 /* eslint-enable max-len */
 
 function buildStyledHtml(c) {

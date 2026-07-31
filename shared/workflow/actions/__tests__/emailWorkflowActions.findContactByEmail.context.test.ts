@@ -37,7 +37,7 @@ function makeContactsQuery(rows: any[]) {
       if (typeof clause === 'function') {
         const nestedQuery: any = {
           where: vi.fn().mockReturnThis(),
-          orWhereExists: vi.fn().mockImplementation((callback: (this: any) => void) => {
+          orWhereExists: vi.fn().mockImplementation((callback: unknown) => {
             scenario.contactsQueryUsedAdditionalEmailMatch = true;
             const existsQuery: any = {
               select: vi.fn().mockReturnThis(),
@@ -45,7 +45,9 @@ function makeContactsQuery(rows: any[]) {
               whereRaw: vi.fn().mockReturnThis(),
               andWhere: vi.fn().mockReturnThis(),
             };
-            callback.call(existsQuery);
+            if (typeof callback === 'function') {
+              callback.call(existsQuery);
+            }
             return nestedQuery;
           }),
         };
@@ -84,6 +86,14 @@ function makeUsersQuery(row: Scenario['internalUserRow']) {
 
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) => withAdminTransactionMock(callback),
+  tenantDb: (trx: any) => ({
+    table: (tableName: string) => trx(tableName),
+    subquery: (tableName: string) => trx(tableName),
+    tenantJoin: (builder: any, tableName: string) => {
+      builder.leftJoin?.(tableName);
+      return builder;
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -112,6 +122,9 @@ describe('findContactByEmail context-aware resolution', () => {
           }
           if (table === 'contact_additional_email_addresses as cea') {
             return makePhoneNumbersQuery([]);
+          }
+          if (table === 'contact_additional_email_addresses as caea') {
+            return makeChainable();
           }
           if (table === 'users') {
             return makeUsersQuery(scenario.internalUserRow);

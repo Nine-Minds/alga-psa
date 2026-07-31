@@ -1,3 +1,4 @@
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 export async function captureInboundWebhookSampleIfRequested(args: {
@@ -8,9 +9,8 @@ export async function captureInboundWebhookSampleIfRequested(args: {
   now?: Date;
 }): Promise<boolean> {
   const now = args.now ?? new Date();
-  const updated = await args.knex('inbound_webhooks')
+  const updated = await tenantDb(args.knex, args.tenant).table('inbound_webhooks')
     .where({
-      tenant: args.tenant,
       inbound_webhook_id: args.inboundWebhookId,
     })
     .whereNotNull('sample_capture_expires_at')

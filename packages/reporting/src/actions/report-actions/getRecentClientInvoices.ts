@@ -6,6 +6,9 @@ import type { IInvoice } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 // Removed safe-action import as it's not the standard pattern here
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -14,7 +17,10 @@ const InputSchema = z.object({
 });
 
 // Define the type for the returned invoice data, selecting only necessary fields
-export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'invoice_date' | 'due_date' | 'total_amount' | 'status'>;
+export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'invoice_date' | 'due_date' | 'total_amount' | 'status' | 'currency_code'> & {
+  /** total − credit applied − completed payments; null for drafts (not yet owed). */
+  balance_due: number | null;
+};
 
 /**
  * Server action to fetch recent invoices for a specific client.
@@ -24,46 +30,94 @@ export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'in
  * @returns A promise that resolves to an array of recent invoices or throws an error.
  */
 export const getRecentClientInvoices = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: { clientId: string; limit?: number }
-): Promise<RecentInvoice[]> => {
+): Promise<RecentInvoice[] | ReportingActionError> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    throw new Error(`Validation Error: ${errorMessages}`);
+    return reportingActionErrorFrom(validationResult.error)!;
   }
   const { clientId, limit } = validationResult.data;
 
   const { knex } = await createTenantKnex();
 
+  // Client portal users may only see their own client's invoices: the
+  // caller-supplied clientId is never trusted — resolve the client from the
+  // session contact and require it to match.
+  if (user.user_type === 'client') {
+    let portalClientId = typeof user.clientId === 'string' && user.clientId.length > 0
+      ? user.clientId
+      : null;
+    if (!portalClientId && user.contact_id) {
+      const contact = await tenantDb(knex, tenant).table('contacts')
+        .where({ contact_name_id: user.contact_id })
+        .select('client_id')
+        .first<{ client_id: string | null }>();
+      portalClientId = contact?.client_id ?? null;
+    }
+    if (!portalClientId || portalClientId !== clientId) {
+      return permissionError('Permission denied: cannot access invoices for another client');
+    }
+  }
+
   console.log(`Fetching recent invoices for client ${clientId} in tenant ${tenant}, limit ${limit}`);
 
   try {
     const invoices: RecentInvoice[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('invoices')
+      // Same money math as the pulse's aging (D6): completed payments only.
+      const completedPayments = trx('invoice_payments')
+        .where({ tenant, status: 'completed' })
+        .groupBy('invoice_id')
+        .select('invoice_id')
+        .sum({ paid_amount: 'amount' })
+        .as('ip');
+
+      const rows = await trx('invoices as i')
+        .leftJoin(completedPayments, 'ip.invoice_id', 'i.invoice_id')
         .select(
-          'invoice_id',
-          'invoice_number',
-          'invoice_date',
-          'due_date',
-          'total_amount',
-          'status'
-          // 'currency_code' // Not included as it's not in IInvoice interface
+          'i.invoice_id',
+          'i.invoice_number',
+          'i.invoice_date',
+          'i.due_date',
+          'i.total_amount',
+          'i.status',
+          'i.currency_code',
+          'i.credit_applied',
+          'i.finalized_at',
+          'ip.paid_amount'
         )
         .where({
-          client_id: clientId,
-          tenant: tenant,
+          'i.client_id': clientId,
+          'i.tenant': tenant,
         })
-        .orderBy('invoice_date', 'desc')
+        .orderBy('i.invoice_date', 'desc')
         .limit(limit);
+
+      return rows.map((row: any): RecentInvoice => {
+        const isDraft = row.finalized_at == null && row.status === 'draft';
+        return {
+          invoice_id: row.invoice_id,
+          invoice_number: row.invoice_number,
+          invoice_date: row.invoice_date,
+          due_date: row.due_date,
+          total_amount: row.total_amount,
+          status: row.status,
+          currency_code: row.currency_code,
+          balance_due: isDraft
+            ? null
+            : Math.max(0, Number(row.total_amount ?? 0) - Number(row.credit_applied ?? 0) - Number(row.paid_amount ?? 0)),
+        };
+      });
     });
 
     console.log(`Found ${invoices.length} recent invoices for client ${clientId}`);
     return invoices;
   } catch (error) {
+    const expected = reportingActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error fetching recent invoices for client ${clientId} in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch recent invoices: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });

@@ -2,18 +2,25 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
-import { getSlaPolicies } from '@alga-psa/sla/actions';
-import { ContractWizard, ContractDialog } from '@alga-psa/billing/components';
-import { getTeamsMeetingCapability, scheduleTeamsMeeting as scheduleTeamsMeetingAction, refreshMeetingRecordings } from '@alga-psa/scheduling/actions';
+import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
+import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
+import { ContractDialog } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractDialog';
+import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
+import { scheduleTeamsMeeting as scheduleTeamsMeetingAction } from '@alga-psa/scheduling/actions/onlineMeetingSchedulingActions';
+import { refreshMeetingRecordings } from '@alga-psa/scheduling/actions/onlineMeetingArtifactActions';
 import ClientAssets from './MspClientAssets';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
 
 export function MspClientCrossFeatureProvider({ children }: { children: ReactNode }) {
+  const openTicketDetails = useTicketDetailsDrawer();
+
   const renderQuickAddTicket = useCallback(
     (props: QuickAddTicketRenderProps) => (
       <QuickAddTicket
@@ -39,6 +46,13 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
   const renderClientAssets = useCallback(
     (props: ClientAssetsRenderProps) => (
       <ClientAssets clientId={props.clientId} />
+    ),
+    []
+  );
+
+  const renderClientOpportunities = useCallback(
+    (props: ClientOpportunitiesRenderProps) => (
+      <ClientOpportunitiesTab clientId={props.clientId} clientName={props.clientName} />
     ),
     []
   );
@@ -121,16 +135,33 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderClientOpportunities,
       renderClientTickets,
       renderContactTickets,
       renderContractWizard,
       renderContractQuickAdd,
+      openTicketDetails,
       getTeamsMeetingCapability,
       scheduleTeamsMeeting,
       refreshMeetingRecordings,
       getSlaPolicies,
     }),
-    [renderQuickAddTicket, renderSurveySummaryCard, renderClientAssets, renderClientTickets, renderContactTickets, renderContractWizard, renderContractQuickAdd]
+    [
+      renderQuickAddTicket,
+      getTicketFormOptions,
+      renderSurveySummaryCard,
+      renderClientAssets,
+      renderClientOpportunities,
+      renderClientTickets,
+      renderContactTickets,
+      renderContractWizard,
+      renderContractQuickAdd,
+      openTicketDetails,
+      getTeamsMeetingCapability,
+      scheduleTeamsMeeting,
+      refreshMeetingRecordings,
+      getSlaPolicies,
+    ]
   );
 
   return (

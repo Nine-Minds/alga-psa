@@ -6,9 +6,13 @@ import {
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { SupportedLocale } from './lib/localeConfig';
+import type { Knex } from 'knex';
+
+const tenantScopedTable = (knex: Knex | Knex.Transaction, table: string, tenant: string) =>
+  tenantDb(knex, tenant).table(table);
 
 function extractEmailAddress(value: string): string {
   const trimmed = value.trim();
@@ -211,10 +215,9 @@ async function addCommentThreadReplyHeaders(params: {
 
   try {
     const { knex } = await createTenantKnex(params.tenantId);
-    const comment = await knex('comments')
+    const comment = await tenantScopedTable(knex, 'comments', params.tenantId)
       .select('thread_id', 'parent_comment_id')
       .where({
-        tenant: params.tenantId,
         comment_id: params.commentId,
       })
       .first<{ thread_id?: string | null; parent_comment_id?: string | null }>();
@@ -224,10 +227,9 @@ async function addCommentThreadReplyHeaders(params: {
     }
 
     const [latestOutbound, thread] = await Promise.all([
-      knex('email_sending_logs')
+      tenantScopedTable(knex, 'email_sending_logs', params.tenantId)
         .select('rfc_message_id')
         .where({
-          tenant: params.tenantId,
           comment_thread_id: comment.thread_id,
           status: 'sent',
         })
@@ -235,10 +237,9 @@ async function addCommentThreadReplyHeaders(params: {
         .orderBy('created_at', 'desc')
         .orderBy('id', 'desc')
         .first<{ rfc_message_id?: string | null }>(),
-      knex('comment_threads')
+      tenantScopedTable(knex, 'comment_threads', params.tenantId)
         .select('email_references')
         .where({
-          tenant: params.tenantId,
           thread_id: comment.thread_id,
         })
         .first<{ email_references?: string[] | string | null }>(),
@@ -284,9 +285,8 @@ async function persistCommentThreadReferences(params: {
 
   try {
     const { knex } = await createTenantKnex(params.tenantId);
-    await knex('comment_threads')
+    await tenantScopedTable(knex, 'comment_threads', params.tenantId)
       .where({
-        tenant: params.tenantId,
         thread_id: params.context.commentThreadId,
       })
       .update({
@@ -327,9 +327,9 @@ export async function applyTicketThreadHeaders(params: {
 
   try {
     const { knex } = await createTenantKnex(params.tenantId);
-    const ticket = await knex('tickets')
+    const ticket = await tenantDb(knex, params.tenantId).table('tickets')
       .select('email_metadata')
-      .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+      .where({ ticket_id: params.ticketId })
       .first<{ email_metadata?: Record<string, any> | null }>();
 
     const meta = ticket?.email_metadata && typeof ticket.email_metadata === 'object'
@@ -342,8 +342,8 @@ export async function applyTicketThreadHeaders(params: {
       const domain = (params.fromDomain && params.fromDomain.trim()) || 'alga-psa.local';
       root = `<ticket-${params.ticketId}@${domain}>`;
       // Deterministic value → concurrent first-events converge on the same anchor.
-      await knex('tickets')
-        .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+      await tenantDb(knex, params.tenantId).table('tickets')
+        .where({ ticket_id: params.ticketId })
         .update({
           email_metadata: knex.raw(
             `jsonb_set(COALESCE(email_metadata, '{}'::jsonb), '{threadRoot}', to_jsonb(?::text), true)`,
@@ -412,6 +412,10 @@ function deriveOutboundMessageIds(result: ProviderEmailSendResult, message?: Pro
 export abstract class BaseEmailService {
   protected initialized: boolean = false;
   protected emailProvider: IEmailProvider | null = null;
+  // Real reason the provider could not be initialized (e.g. SMTP auth/TLS
+  // failure). Set by subclasses when an explicitly-configured provider fails,
+  // so send attempts report the actual cause instead of a generic "disabled".
+  protected providerInitError: string | null = null;
   protected static readonly EMAIL_LOG_TABLE = 'email_sending_logs';
 
   /**
@@ -435,6 +439,7 @@ export abstract class BaseEmailService {
   public async initialize(): Promise<void> {
     if (this.initialized) return;
 
+    this.providerInitError = null;
     try {
       this.emailProvider = await this.getEmailProvider();
       if (!this.emailProvider) {
@@ -445,6 +450,7 @@ export abstract class BaseEmailService {
     } catch (error) {
       logger.error(`[${this.getServiceName()}] Failed to initialize email provider:`, error);
       this.emailProvider = null;
+      this.providerInitError = error instanceof Error ? error.message : String(error);
     }
 
     this.initialized = true;
@@ -459,6 +465,13 @@ export abstract class BaseEmailService {
     }
 
     if (!this.emailProvider) {
+      if (this.providerInitError) {
+        logger.warn(`[${this.getServiceName()}] Email provider failed to initialize: ${this.providerInitError}`);
+        return {
+          success: false,
+          error: `Email provider not ready: ${this.providerInitError}`
+        };
+      }
       logger.warn(`[${this.getServiceName()}] Service disabled or not configured`);
       return {
         success: false,
@@ -596,7 +609,9 @@ export abstract class BaseEmailService {
       const result = await this.emailProvider.sendEmail(emailMessage, params.tenantId || 'system');
 
       // Best-effort: persist provider-level send result for auditing/debugging.
-      void this.logEmailSendResult({
+      // Awaited: inbound reply matching reads email_sending_logs immediately after
+      // a send returns — fire-and-forget raced it.
+      await this.logEmailSendResult({
         tenantId: typeof params.tenantId === 'string' ? params.tenantId : null,
         providerResult: result,
         message: emailMessage,
@@ -682,7 +697,9 @@ export abstract class BaseEmailService {
         const providerId = this.emailProvider?.providerId ?? 'unknown';
         const providerType = this.emailProvider?.providerType ?? 'unknown';
 
-        void this.logEmailSendResult({
+        // Awaited: inbound reply matching reads email_sending_logs immediately after
+        // a send returns — fire-and-forget raced it.
+        await this.logEmailSendResult({
           tenantId: typeof params.tenantId === 'string' ? params.tenantId : null,
           providerResult: {
             success: false,
@@ -767,10 +784,9 @@ export abstract class BaseEmailService {
         params.replyContext?.conversationToken
       );
       const comment = params.replyContext?.commentId
-        ? await knex('comments')
+        ? await tenantScopedTable(knex, 'comments', params.tenantId)
           .select('thread_id', 'parent_comment_id')
           .where({
-            tenant: params.tenantId,
             comment_id: params.replyContext.commentId,
           })
           .first<{ thread_id?: string | null; parent_comment_id?: string | null }>()
@@ -803,7 +819,7 @@ export abstract class BaseEmailService {
         },
       };
 
-      await knex(BaseEmailService.EMAIL_LOG_TABLE).insert({
+      await tenantScopedTable(knex, BaseEmailService.EMAIL_LOG_TABLE, params.tenantId).insert({
         tenant: params.tenantId,
         message_id: params.providerResult.messageId ?? null,
         provider_message_id: providerMessageId,
@@ -832,9 +848,8 @@ export abstract class BaseEmailService {
 
       if (params.providerResult.success && params.replyContext?.commentId && rfcMessageId) {
         if (comment?.thread_id && !comment.parent_comment_id) {
-          await knex('comment_threads')
+          await tenantScopedTable(knex, 'comment_threads', params.tenantId)
             .where({
-              tenant: params.tenantId,
               thread_id: comment.thread_id,
             })
             .update({
@@ -864,6 +879,19 @@ export abstract class BaseEmailService {
       await this.initialize();
     }
     return this.emailProvider !== null;
+  }
+
+  /**
+   * Real reason the provider could not be initialized, if any (e.g. an SMTP
+   * auth/TLS/connection failure). Null when no provider is configured at all or
+   * when a provider initialized successfully. Callers can surface this to admins
+   * instead of a generic "disabled or not configured" message.
+   */
+  public async getInitializationError(): Promise<string | null> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    return this.providerInitError;
   }
 
   /**

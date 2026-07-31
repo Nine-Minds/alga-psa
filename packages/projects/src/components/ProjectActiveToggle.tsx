@@ -4,12 +4,21 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { updateProject } from '../actions/projectActions';
 import { useState } from 'react';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectActiveToggleProps {
   projectId: string;
   initialIsInactive: boolean;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function ProjectActiveToggle({ projectId, initialIsInactive }: ProjectActiveToggleProps) {
@@ -19,8 +28,8 @@ export default function ProjectActiveToggle({ projectId, initialIsInactive }: Pr
   const toggleProjectActive = async () => {
     try {
       const updatedProject = await updateProject(projectId, { is_inactive: !isInactive });
-      if (isActionPermissionError(updatedProject)) {
-        handleError(updatedProject.permissionError);
+      if (isReturnedActionError(updatedProject)) {
+        handleError(getErrorMessage(updatedProject));
         return;
       }
       setIsInactive(updatedProject.is_inactive);

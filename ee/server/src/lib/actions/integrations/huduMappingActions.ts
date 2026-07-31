@@ -6,8 +6,8 @@
  * sync / list / set / clear for company mappings in the SHARED CE table
  * `tenant_external_entity_mappings`. Gating mirrors huduActions
  * (withHuduSettingsAccess): EE tier, `system_settings`
- * RBAC (read=list, update=mutate), and the `hudu-integration` flag — NOT the
- * billing_settings-gated externalMappingActions wrappers (OQ3).
+ * RBAC (read=list, update=mutate) — NOT the billing_settings-gated
+ * externalMappingActions wrappers (OQ3).
  *
  * "Cache the list for mapping" (F040) = a compact companies snapshot in
  * hudu_integrations.settings.companies_cache so the mapping UI renders
@@ -18,9 +18,9 @@ import logger from '@alga-psa/core/logger';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { TIER_FEATURES } from '@alga-psa/types';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import { createTenantKnex } from 'server/src/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { createHuduClient } from '../../integrations/hudu/huduClient';
 import {
@@ -46,6 +46,7 @@ import type {
   HuduMappingWriteResult,
   HuduMatcherClient,
 } from '../../integrations/hudu/companyMapping';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 export type HuduMappingActionResult<T> =
   | { success: true; data: T }
@@ -95,14 +96,6 @@ function withHuduSettingsAccess<TArgs extends unknown[], TResult>(
 
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
 
-    const enabled = await featureFlags.isEnabled('hudu-integration', {
-      userId: user.user_id,
-      tenantId: context.tenant,
-    });
-    if (!enabled) {
-      throw new Error('Hudu integration is disabled for this tenant.');
-    }
-
     return handler(user, context as { tenant: string }, ...args);
   });
 }
@@ -125,8 +118,7 @@ async function fetchAndCacheCompanies(knex: Knex, tenant: string): Promise<HuduC
 }
 
 async function listMatchableClients(knex: Knex, tenant: string): Promise<HuduMatcherClient[]> {
-  return knex('clients')
-    .where({ tenant })
+  return tenantDb(knex, tenant).table('clients')
     .where((qb) => qb.where('is_inactive', false).orWhereNull('is_inactive'))
     .select('client_id', 'client_name');
 }
@@ -147,7 +139,7 @@ export const syncHuduCompanies = withHuduSettingsAccess(
       return { success: true, data: cache };
     } catch (error) {
       logger.error('[HuduMappingActions] syncHuduCompanies failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to sync Hudu companies. Please try again.') };
     }
   }
 );
@@ -200,7 +192,7 @@ export const getHuduCompanyMappings = withHuduSettingsAccess(
       return { success: true, data: { companies, fetched_at: cache.fetched_at, fromCache } };
     } catch (error) {
       logger.error('[HuduMappingActions] getHuduCompanyMappings failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to load Hudu company mappings. Please try again.') };
     }
   }
 );
@@ -259,7 +251,7 @@ export const setHuduCompanyMapping = withHuduSettingsAccess(
       return { success: true, data: { mapping_id: result.mapping.id } };
     } catch (error) {
       logger.error('[HuduMappingActions] setHuduCompanyMapping failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to save Hudu company mapping. Please try again.') };
     }
   }
 );
@@ -289,7 +281,7 @@ export const clearHuduCompanyMapping = withHuduSettingsAccess(
       return { success: true, data: { cleared } };
     } catch (error) {
       logger.error('[HuduMappingActions] clearHuduCompanyMapping failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to clear Hudu company mapping. Please try again.') };
     }
   }
 );
@@ -304,7 +296,7 @@ export const resolveHuduCompanyIdForClient = withHuduSettingsAccess(
       return { success: true, data: { huduCompanyId } };
     } catch (error) {
       logger.error('[HuduMappingActions] resolveHuduCompanyIdForClient failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to resolve Hudu company mapping. Please try again.') };
     }
   }
 );
@@ -322,7 +314,7 @@ export const resolveClientIdForHuduCompany = withHuduSettingsAccess(
       return { success: true, data: { clientId } };
     } catch (error) {
       logger.error('[HuduMappingActions] resolveClientIdForHuduCompany failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to resolve Hudu company mapping. Please try again.') };
     }
   }
 );

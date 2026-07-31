@@ -1,5 +1,6 @@
 import { getConnection } from '@/lib/db/db';
 import { createHash } from 'crypto';
+import { tenantDb } from '@alga-psa/db';
 
 export interface ExternalMappingPayload {
   tenantId: string;
@@ -45,7 +46,7 @@ export class ExternalEntityMappingRepository {
       recordedAt: new Date().toISOString()
     };
 
-    await knex('external_entity_mappings')
+    await tenantDb(knex, payload.tenantId).table('external_entity_mappings')
       .insert({
         tenant: payload.tenantId,
         asset_id: payload.assetId,

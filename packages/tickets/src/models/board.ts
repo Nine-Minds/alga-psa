@@ -1,5 +1,14 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { IBoard } from '@alga-psa/types';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 const Board = {
   getAll: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, includeAll: boolean = false): Promise<IBoard[]> => {
@@ -8,9 +17,8 @@ const Board = {
         throw new Error('Tenant context is required');
       }
 
-      let query = knexOrTrx<IBoard>('boards')
-        .select('*')
-        .where('tenant', tenant);
+      let query = tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
+        .select('*');
       if (!includeAll) {
         query = query.andWhere('is_inactive', false);
       }
@@ -28,10 +36,9 @@ const Board = {
         throw new Error('Tenant context is required');
       }
 
-      const board = await knexOrTrx<IBoard>('boards')
+      const board = await tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
         .select('*')
         .where('board_id', id)
-        .andWhere('tenant', tenant)
         .first();
       return board;
     } catch (error) {
@@ -47,8 +54,8 @@ const Board = {
       }
 
       // Check if this is the first board - if so, make it default
-      const existingBoards = await knexOrTrx('boards')
-        .where({ tenant, is_default: true });
+      const existingBoards = await tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
+        .where({ is_default: true });
 
       const boardToInsert = {
         ...board,
@@ -57,7 +64,9 @@ const Board = {
         is_default: existingBoards.length === 0 // Make default if no other default exists
       };
 
-      const [insertedBoard] = await knexOrTrx('boards').insert(boardToInsert).returning('*');
+      const [insertedBoard] = await tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
+        .insert(boardToInsert)
+        .returning('*');
       return insertedBoard;
     } catch (error) {
       console.error('Error inserting board:', error);
@@ -72,10 +81,9 @@ const Board = {
       }
 
       // Check if this is a default board
-      const board = await knexOrTrx<IBoard>('boards')
+      const board = await tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
         .where({
           board_id: id,
-          tenant,
           is_default: true
         })
         .first();
@@ -84,9 +92,8 @@ const Board = {
         throw new Error('Cannot delete the default board');
       }
 
-      await knexOrTrx<IBoard>('boards')
+      await tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
         .where('board_id', id)
-        .andWhere('tenant', tenant)
         .del();
     } catch (error) {
       console.error(`Error deleting board with id ${id}:`, error);
@@ -102,8 +109,8 @@ const Board = {
 
       // If updating is_default to false, check if this is the last default board
       if (updates.is_default === false) {
-        const defaultBoards = await knexOrTrx('boards')
-          .where({ tenant, is_default: true })
+        const defaultBoards = await tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
+          .where({ is_default: true })
           .whereNot('board_id', id);
 
         if (defaultBoards.length === 0) {
@@ -113,14 +120,13 @@ const Board = {
 
       // If setting as default, unset all other defaults first
       if (updates.is_default === true) {
-        await knexOrTrx('boards')
-          .where({ tenant, is_default: true })
+        await tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
+          .where({ is_default: true })
           .update({ is_default: false });
       }
 
-      const [updatedBoard] = await knexOrTrx('boards')
+      const [updatedBoard] = await tenantScopedTable<IBoard>(knexOrTrx, 'boards', tenant)
         .where('board_id', id)
-        .andWhere('tenant', tenant)
         .update(updates)
         .returning('*');
 

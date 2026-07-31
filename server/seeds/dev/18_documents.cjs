@@ -1,89 +1,46 @@
+const { getFirstTenantSeedContext } = require('./_tenant.cjs');
+
 exports.seed = async function (knex) {
-    // Get tenant first
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+    const context = await getFirstTenantSeedContext(knex);
+    if (!context) return;
+
+    const { tenantId, db } = context;
+    const documentTypeId = (typeName) => db.table('document_types')
+        .where({ type_name: typeName })
+        .select('type_id')
+        .first();
+    const glindaUserId = db.table('users')
+        .where({ username: 'glinda' })
+        .select('user_id')
+        .first();
 
     // Insert documents
-    const documents = await knex('documents')
+    const documents = await db.table('documents')
         .insert([
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_name: 'Alice Lost White Rabbit',
-                type_id: knex('document_types')
-                    .where({
-                        tenant: tenant.tenant,
-                        type_name: 'Ticket'
-                    })
-                    .select('type_id')
-                    .first(),
-                user_id: knex('users')
-                    .where({
-                        tenant: tenant.tenant,
-                        username: 'glinda'
-                    })
-                    .select('user_id')
-                    .first(),
-                created_by: knex('users')
-                    .where({
-                        tenant: tenant.tenant,
-                        username: 'glinda'
-                    })
-                    .select('user_id')
-                    .first(),
+                type_id: documentTypeId('Ticket'),
+                user_id: glindaUserId,
+                created_by: glindaUserId,
                 entered_at: knex.fn.now(),
                 content: 'Searched for White Rabbit in Wonderland. No luck yet.'
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_name: 'Client Profile',
-                type_id: knex('document_types')
-                    .where({
-                        tenant: tenant.tenant,
-                        type_name: 'Client'
-                    })
-                    .select('type_id')
-                    .first(),
-                user_id: knex('users')
-                    .where({
-                        tenant: tenant.tenant,
-                        username: 'glinda'
-                    })
-                    .select('user_id')
-                    .first(),
-                created_by: knex('users')
-                    .where({
-                        tenant: tenant.tenant,
-                        username: 'glinda'
-                    })
-                    .select('user_id')
-                    .first(),
+                type_id: documentTypeId('Client'),
+                user_id: glindaUserId,
+                created_by: glindaUserId,
                 entered_at: knex.fn.now(),
                 content: 'Wonderland Client Profile and Details'
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_name: 'White Rabbit Search Plan',
-                type_id: knex('document_types')
-                    .where({
-                        tenant: tenant.tenant,
-                        type_name: 'Ticket'
-                    })
-                    .select('type_id')
-                    .first(),
-                user_id: knex('users')
-                    .where({
-                        tenant: tenant.tenant,
-                        username: 'glinda'
-                    })
-                    .select('user_id')
-                    .first(),
-                created_by: knex('users')
-                    .where({
-                        tenant: tenant.tenant,
-                        username: 'glinda'
-                    })
-                    .select('user_id')
-                    .first(),
+                type_id: documentTypeId('Ticket'),
+                user_id: glindaUserId,
+                created_by: glindaUserId,
                 entered_at: knex.fn.now(),
                 content: `Further actions for White Rabbit search:
                     1. Check the rabbit hole near the old oak tree.
@@ -101,18 +58,16 @@ exports.seed = async function (knex) {
         .returning(['document_id']);
 
     // Get the ticket ID we want to associate with
-    const ticketId = await knex('tickets')
+    const ticketId = await db.table('tickets')
         .where({
-            tenant: tenant.tenant,
             title: 'Lost White Rabbit'
         })
         .select('ticket_id')
         .first();
 
     // Get the client ID we want to associate with
-    const clientId = await knex('clients')
+    const clientId = await db.table('clients')
         .where({
-            tenant: tenant.tenant,
             client_name: 'Wonderland Inc'
         })
         .select('client_id')
@@ -124,13 +79,13 @@ exports.seed = async function (knex) {
     if (ticketId) {
         associations.push(
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_id: documents[0].document_id,
                 entity_id: ticketId.ticket_id,
                 entity_type: 'ticket'
             },
             {
-                tenant: tenant.tenant,
+                tenant: tenantId,
                 document_id: documents[2].document_id,
                 entity_id: ticketId.ticket_id,
                 entity_type: 'ticket'
@@ -140,7 +95,7 @@ exports.seed = async function (knex) {
 
     if (clientId) {
         associations.push({
-            tenant: tenant.tenant,
+            tenant: tenantId,
             document_id: documents[1].document_id,
             entity_id: clientId.client_id,
             entity_type: 'client'
@@ -148,6 +103,6 @@ exports.seed = async function (knex) {
     }
 
     if (associations.length > 0) {
-        await knex('document_associations').insert(associations);
+        await db.table('document_associations').insert(associations);
     }
 };

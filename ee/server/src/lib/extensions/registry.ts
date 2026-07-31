@@ -3,7 +3,7 @@
  * 
  * This service manages extension registration, initialization, and lifecycle.
  */
-import { createTenantKnex } from '@/lib/db';
+import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { ExtensionStorageService } from './storage/storageService';
 import {
@@ -37,6 +37,14 @@ export class ExtensionRegistry implements IExtensionRegistry {
     this.knex = knexInstance;
   }
 
+  private tenantTable(tenantId: string, table: 'extensions' | 'extension_settings') {
+    return tenantDb(this.knex, tenantId).table(table);
+  }
+
+  private extensionPermissions(tenantId: string) {
+    return tenantDb(this.knex, tenantId).parentScopedTable('extension_permissions');
+  }
+
   /**
    * Register a new extension with the system
    */
@@ -61,10 +69,9 @@ export class ExtensionRegistry implements IExtensionRegistry {
 
     if (existingExtension) {
       // Update existing extension
-      const [updated] = await this.knex('extensions')
+      const [updated] = await this.tenantTable(options.tenant_id, 'extensions')
         .where({
-          id: existingExtension.id,
-          tenant_id: options.tenant_id
+          id: existingExtension.id
         })
         .update({
           version: manifest.version,
@@ -76,7 +83,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
 
       // Update permissions
       const permissionsArray = this.extractPermissionsArray(manifest.permissions);
-      await this.updateExtensionPermissions(updated.id, permissionsArray);
+      await this.updateExtensionPermissions(options.tenant_id, updated.id, permissionsArray);
 
       return {
         ...updated,
@@ -85,7 +92,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     }
 
     // Create new extension
-    const [extension] = await this.knex('extensions')
+    const [extension] = await this.tenantTable(options.tenant_id, 'extensions')
       .insert({
         tenant_id: options.tenant_id,
         name: manifest.name,
@@ -99,7 +106,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
     // Register permissions
     const permissionsArray = this.extractPermissionsArray(manifest.permissions);
     if (permissionsArray.length > 0) {
-      await this.updateExtensionPermissions(extension.id, permissionsArray);
+      await this.updateExtensionPermissions(options.tenant_id, extension.id, permissionsArray);
     }
 
     return {
@@ -115,10 +122,9 @@ export class ExtensionRegistry implements IExtensionRegistry {
     id: string,
     options: ExtensionInitOptions
   ): Promise<Extension | null> {
-    const extension = await this.knex('extensions')
+    const extension = await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        id,
-        tenant_id: options.tenant_id
+        id
       })
       .first();
 
@@ -139,10 +145,9 @@ export class ExtensionRegistry implements IExtensionRegistry {
     name: string,
     options: ExtensionInitOptions
   ): Promise<Extension | null> {
-    const extension = await this.knex('extensions')
+    const extension = await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        name,
-        tenant_id: options.tenant_id
+        name
       })
       .first();
 
@@ -162,10 +167,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
   async listExtensions(
     options: ExtensionInitOptions
   ): Promise<Extension[]> {
-    const extensions = await this.knex('extensions')
-      .where({
-        tenant_id: options.tenant_id
-      })
+    const extensions = await this.tenantTable(options.tenant_id, 'extensions')
       .orderBy('name');
 
     return extensions.map((extension: any) => ({
@@ -206,10 +208,9 @@ export class ExtensionRegistry implements IExtensionRegistry {
     }
 
     // Enable the extension
-    await this.knex('extensions')
+    await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        id,
-        tenant_id: options.tenant_id
+        id
       })
       .update({
         is_enabled: true,
@@ -249,10 +250,9 @@ export class ExtensionRegistry implements IExtensionRegistry {
     }
 
     // Disable the extension
-    await this.knex('extensions')
+    await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        id,
-        tenant_id: options.tenant_id
+        id
       })
       .update({
         is_enabled: false,
@@ -293,10 +293,9 @@ export class ExtensionRegistry implements IExtensionRegistry {
 
     // Delete the extension and related data
     // This will cascade to permissions, files, storage, and settings
-    await this.knex('extensions')
+    await this.tenantTable(options.tenant_id, 'extensions')
       .where({
-        id,
-        tenant_id: options.tenant_id
+        id
       })
       .delete();
 
@@ -335,17 +334,16 @@ export class ExtensionRegistry implements IExtensionRegistry {
       tenantId: options.tenant_id,
       getStorage: () => storageService,
       getSettings: async () => {
-        const settings = await this.knex('extension_settings')
+        const settings = await this.tenantTable(options.tenant_id, 'extension_settings')
           .where({
-            extension_id: id,
-            tenant_id: options.tenant_id
+            extension_id: id
           })
           .first();
 
         return settings ? settings.settings : {};
       },
       updateSettings: async (settings: Record<string, any>) => {
-        await this.knex('extension_settings')
+        await this.tenantTable(options.tenant_id, 'extension_settings')
           .insert({
             extension_id: id,
             tenant_id: options.tenant_id,
@@ -358,7 +356,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
           });
       },
       hasPermission: async (permission: string) => {
-        const permissionExists = await this.knex('extension_permissions')
+        const permissionExists = await this.extensionPermissions(options.tenant_id)
           .where({
             extension_id: id,
             resource: permission.split(':')[0],
@@ -458,11 +456,11 @@ export class ExtensionRegistry implements IExtensionRegistry {
    * Update extension permissions
    */
   private async updateExtensionPermissions(
+    tenantId: string,
     extensionId: string,
     permissions: string[]
   ): Promise<void> {
-    // Delete existing permissions
-    await this.knex('extension_permissions')
+    await this.extensionPermissions(tenantId)
       .where({ extension_id: extensionId })
       .delete();
 
@@ -477,17 +475,16 @@ export class ExtensionRegistry implements IExtensionRegistry {
         };
       });
 
-      await this.knex('extension_permissions').insert(permissionRows);
+      await tenantDb(this.knex, tenantId).insertParentScoped('extension_permissions', permissionRows);
     }
   }
 
   // Add methods expected by extension actions
   async getAllExtensions(tenantId?: string): Promise<Extension[]> {
-    let query = this.knex('extensions');
-    
-    if (tenantId) {
-      query = query.where({ tenant_id: tenantId });
-    }
+    let query = tenantId
+      ? this.tenantTable(tenantId, 'extensions')
+      : tenantDb(this.knex, '__extension_registry_all_extensions__')
+        .unscoped('extensions', 'getAllExtensions supports tenantless extension listing');
     
     const extensions = await query.orderBy('name');
     

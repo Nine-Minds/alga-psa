@@ -92,8 +92,11 @@ describe('hudu_integrations migration + repository — DB integration', () => {
       .select('column_name', 'data_type', 'is_nullable', 'column_default');
     const byName = new Map(columns.map((c: any) => [c.column_name, c]));
 
-    expect([...byName.keys()].sort()).toEqual(
-      [
+    // The create migration establishes these columns; later migrations
+    // (e.g. 20260629120000_hudu_integrations_sync_state) may add more, so this
+    // is a subset check rather than an exact set.
+    expect([...byName.keys()]).toEqual(
+      expect.arrayContaining([
         'tenant',
         'integration_id',
         'base_url',
@@ -103,7 +106,7 @@ describe('hudu_integrations migration + repository — DB integration', () => {
         'settings',
         'created_at',
         'updated_at',
-      ].sort()
+      ])
     );
 
     expect(byName.get('tenant')).toMatchObject({ data_type: 'uuid', is_nullable: 'NO' });
@@ -155,22 +158,18 @@ describe('hudu_integrations migration + repository — DB integration', () => {
     );
     expect(fks.rows.map((r: any) => r.ref_table)).toContain('tenants');
 
-    // updated_at trigger exists and fires on UPDATE.
+    // updated_at is app-owned: the migration drops any legacy trigger (Citus
+    // refuses to distribute a table with triggers) and the repository stamps
+    // updated_at on every write — so there is deliberately NO DB trigger.
     const triggers = await db.raw(
       `SELECT tgname FROM pg_trigger WHERE tgrelid = ?::regclass AND NOT tgisinternal`,
       [TABLE]
     );
-    expect(triggers.rows.map((r: any) => r.tgname)).toContain(`update_${TABLE}_updated_at`);
+    expect(triggers.rows.map((r: any) => r.tgname)).not.toContain(`update_${TABLE}_updated_at`);
 
-    const [inserted] = await db(TABLE)
-      .insert({ tenant: tenantId, base_url: 'https://docs.example.com' })
-      .returning('*');
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    await db(TABLE).where({ tenant: tenantId }).update({ base_url: 'https://docs2.example.com' });
-    const updated = await db(TABLE).where({ tenant: tenantId }).first();
-    expect(new Date(updated.updated_at).getTime()).toBeGreaterThan(
-      new Date(inserted.updated_at).getTime()
-    );
+    await db(TABLE).insert({ tenant: tenantId, base_url: 'https://docs.example.com' });
+    const inserted = await db(TABLE).where({ tenant: tenantId }).first();
+    expect(inserted.base_url).toBe('https://docs.example.com');
 
     await migration.down(db);
     expect(await db.schema.hasTable(TABLE)).toBe(false);

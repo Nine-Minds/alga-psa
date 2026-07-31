@@ -16,7 +16,7 @@ import {
 } from '../lib/kanbanPreferences';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityId, findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getTaskCommentCountsBatch } from '../actions/projectTaskCommentActions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -32,11 +32,21 @@ import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
+import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
+import type { ProjectBillingOverview } from '@alga-psa/types';
+import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
+import { derivePhaseBillingBadges, getCurrentDateInUserTimeZone } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
@@ -54,7 +64,7 @@ import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
@@ -62,11 +72,12 @@ import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import RemoveTeamDialog from './RemoveTeamDialog';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
@@ -83,6 +94,17 @@ const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
 // hydration so existing per-project widths survive the move to server prefs.
 const projectListColumnWidthsLegacyKey = (projectId: string) =>
   `tasklistview-column-sizing:${projectId}`;
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function unwrapActionResult<T>(value: T | { actionError: string } | { permissionError: string }): T {
+  if (isReturnedActionError(value)) {
+    throw new Error(getErrorMessage(value));
+  }
+  return value;
+}
 
 // Row density (zoom) presets for the list view, mirroring the tickets table.
 // Indexed by level/10 (0..10); each scales row vertical padding + font size,
@@ -200,6 +222,7 @@ interface ProjectDetailProps {
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
   initialTaskId?: string | null;
   initialPhaseId?: string | null;
+  initialViewMode?: 'kanban' | 'list' | 'billing' | null;
   onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
 }
 
@@ -214,16 +237,25 @@ export default function ProjectDetail({
   onTagsUpdate,
   initialTaskId,
   initialPhaseId,
+  initialViewMode,
   onUrlUpdate
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { money } = useCurrencyFormat();
+  const {
+    enabled: projectBillingUiEnabled,
+    loading: projectBillingUiLoading,
+  } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  // Billing surfaces are injected from the composition layer (billing package
+  // implements them); null when no provider is mounted → billing UI hidden.
+  const billingIntegration = useProjectBillingIntegration();
   useTagPermissions(['project', 'project_task']);
   const { getDocumentCountsForEntities } = useDocumentsCrossFeature();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
   // Batch-load all user preferences in a single server action (instead of 5 separate calls)
-  type ProjectViewMode = 'kanban' | 'list';
+  type ProjectViewMode = 'kanban' | 'list' | 'billing';
   // Column widths are scoped per project (each project can show different
   // columns), so the preference key includes the project id.
   const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
@@ -322,7 +354,20 @@ export default function ProjectDetail({
     spentHours: number;
     remainingHours: number;
   } | null>(null);
- 
+
+  // Project billing (option 3 — "Billing" as a third view + ambient signals)
+  const [canViewBilling, setCanViewBilling] = useState(false);
+  const [canManageBilling, setCanManageBilling] = useState(false);
+  const [canCompletePhase, setCanCompletePhase] = useState(false);
+  const [billingOverview, setBillingOverview] = useState<ProjectBillingOverview | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingHighlightEntryId, setBillingHighlightEntryId] = useState<string | null>(null);
+  const [billingToday, setBillingToday] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBillingToday(getCurrentDateInUserTimeZone());
+  }, []);
+
   // State for the Move Task Dialog
   const [isMoveTaskDialogOpen, setIsMoveTaskDialogOpen] = useState(false);
   const [taskToMove, setTaskToMove] = useState<IProjectTask | null>(null);
@@ -429,6 +474,11 @@ export default function ProjectDetail({
           return [];
         });
         if (stale) return;
+        if (isTagActionError(tags)) {
+          console.warn('Failed to fetch project tags, continuing without tags:', tags);
+          setProjectTags([]);
+          return;
+        }
 
         setProjectTags(tags);
 
@@ -575,6 +625,180 @@ export default function ProjectDetail({
     ).length;
   }, [filteredTasks, phaseStatusLookup]);
 
+  // Resolve the viewer's billing/phase permissions once. Billing read gates the
+  // whole view + ambient signals (F115); the invoice create/generate set gates
+  // mutations; project:update gates phase completion (F154 — not billing).
+  useEffect(() => {
+    let stale = false;
+    checkCurrentUserPermissions([
+      { resource: 'billing', action: 'read' },
+      { resource: 'invoice', action: 'create' },
+      { resource: 'invoice', action: 'generate' },
+      { resource: 'project', action: 'update' },
+    ]).then((results) => {
+      if (stale) return;
+      const granted = (resource: string, action: string) =>
+        results.some((r) => r.resource === resource && r.action === action && r.granted);
+      setCanViewBilling(granted('billing', 'read'));
+      setCanManageBilling(granted('invoice', 'create') || granted('invoice', 'generate'));
+      setCanCompletePhase(granted('project', 'update'));
+    }).catch(() => { if (!stale) { setCanViewBilling(false); setCanManageBilling(false); } });
+    return () => { stale = true; };
+  }, [project.project_id]);
+
+  // Load the billing overview for the badges, chips, and billing view. Refreshed
+  // after any billing mutation so the whole screen reflects the new state.
+  const refreshBilling = useCallback(async () => {
+    if (!canViewBilling || !billingIntegration) { setBillingOverview(null); return; }
+    setBillingLoading(true);
+    try {
+      const overview = await billingIntegration.fetchOverview(project.project_id);
+      if (isActionMessageError(overview) || isActionPermissionError(overview)) {
+        console.error('Error loading project billing overview:', getErrorMessage(overview));
+        setBillingOverview(null);
+        return;
+      }
+      setBillingOverview(overview);
+    } catch (error) {
+      console.error('Error loading project billing overview:', error);
+      setBillingOverview(null);
+    } finally {
+      setBillingLoading(false);
+    }
+  }, [canViewBilling, billingIntegration, project.project_id]);
+
+  useEffect(() => { void refreshBilling(); }, [refreshBilling]);
+
+  // Phase → billing badge (F136) and phase → "all tasks closed" (F138) maps.
+  const phaseBillingBadges = useMemo(() => (
+    projectBillingUiEnabled && billingOverview?.config
+      ? derivePhaseBillingBadges(billingOverview.entries, billingOverview.config.currency, billingToday)
+      : {}
+  ), [billingOverview, billingToday, projectBillingUiEnabled]);
+
+  const phaseAllTasksClosed = useMemo(() => {
+    const result: Record<string, boolean> = {};
+    const perPhase: Record<string, { total: number; closed: number }> = {};
+    for (const task of projectTasks) {
+      const phaseId = task.phase_id;
+      if (!phaseId) continue;
+      const bucket = perPhase[phaseId] ?? (perPhase[phaseId] = { total: 0, closed: 0 });
+      bucket.total += 1;
+      if (phaseStatusLookup.get(task.project_status_mapping_id)?.is_closed === true) bucket.closed += 1;
+    }
+    for (const [phaseId, counts] of Object.entries(perPhase)) {
+      result[phaseId] = counts.total > 0 && counts.closed === counts.total;
+    }
+    return result;
+  }, [projectTasks, phaseStatusLookup]);
+
+  // A persisted Billing preference is ambient discovery, not direct access.
+  // Keep explicit ?view=billing links functional while the UI flag is off.
+  useEffect(() => {
+    if (
+      !isViewModeLoading
+      && !projectBillingUiLoading
+      && viewMode === 'billing'
+      && (!canViewBilling || !billingIntegration || (!projectBillingUiEnabled && initialViewMode !== 'billing'))
+    ) {
+      setViewMode('kanban');
+    }
+  }, [
+    isViewModeLoading,
+    projectBillingUiLoading,
+    viewMode,
+    canViewBilling,
+    billingIntegration,
+    projectBillingUiEnabled,
+    initialViewMode,
+    setViewMode,
+  ]);
+
+  // A ?view= URL parameter (e.g. the Invoicing Hub's review-queue links)
+  // overrides the persisted view preference once per navigation; the billing
+  // target additionally waits for the permission check so the RBAC fallback
+  // above cannot race it.
+  const appliedInitialViewRef = useRef(false);
+  useEffect(() => {
+    if (appliedInitialViewRef.current || !initialViewMode || isViewModeLoading) return;
+    if (initialViewMode === 'billing' && !canViewBilling) return;
+    appliedInitialViewRef.current = true;
+    if (viewMode !== initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode, isViewModeLoading, canViewBilling, viewMode, setViewMode]);
+
+  const handleMarkPhaseComplete = useCallback(async (phase: IProjectPhase) => {
+    try {
+      const result = await markPhaseComplete(phase.phase_id);
+      setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? result.phase : p)));
+      void refreshBilling();
+      const readyEntry = result.ready_entries[0];
+      if (readyEntry && canViewBilling && projectBillingUiEnabled) {
+        // F139 — deep link into the billing view and highlight the freshly ready entry.
+        toast.success(
+          (toastRef) => (
+            <span className="flex items-center gap-2">
+              {t('phases.completeReadyToast', '{{description}} is ready to bill', { description: readyEntry.description })}
+              <button
+                type="button"
+                className="font-semibold text-primary-600 underline"
+                onClick={() => {
+                  setBillingHighlightEntryId(readyEntry.entry_id);
+                  setViewMode('billing');
+                  toast.dismiss(toastRef.id);
+                }}
+              >
+                {t('phases.viewInBilling', 'View')}
+              </button>
+            </span>
+          ),
+          { duration: 8000 },
+        );
+      } else {
+        toast.success(t('phases.markedComplete', 'Phase marked complete'));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
+  }, [refreshBilling, canViewBilling, projectBillingUiEnabled, t, setViewMode]);
+
+  const handleReopenPhase = useCallback(async (phase: IProjectPhase) => {
+    try {
+      const updated = await reopenPhase(phase.phase_id);
+      setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? updated : p)));
+      void refreshBilling();
+      toast.success(t('phases.reopened', 'Phase reopened'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
+  }, [refreshBilling, t]);
+
+  // Shared ViewSwitcher options; the Billing option appears only with billing
+  // read permission (F113/F115).
+  const viewSwitcherOptions = useMemo(() => {
+    const options: { value: ProjectViewMode; label: string; icon: typeof LayoutGrid }[] = [
+      { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
+      { value: 'list', label: t('listView', 'List'), icon: List },
+    ];
+    if (canViewBilling && projectBillingUiEnabled && billingIntegration) {
+      options.push({ value: 'billing', label: t('billingView', 'Billing'), icon: Receipt });
+    }
+    return options;
+  }, [t, canViewBilling, projectBillingUiEnabled, billingIntegration]);
+
+  const readyEntryCount = useMemo(
+    () => (billingOverview?.entries ?? []).filter((entry) => entry.status === 'ready').length,
+    [billingOverview],
+  );
+
+  // The deep-link highlight is a one-shot cue; clear it after a few seconds.
+  useEffect(() => {
+    if (!billingHighlightEntryId) return;
+    const timer = setTimeout(() => setBillingHighlightEntryId(null), 6000);
+    return () => clearTimeout(timer);
+  }, [billingHighlightEntryId]);
+
   // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
   useEffect(() => {
     let stale = false;
@@ -585,6 +809,14 @@ export default function ProjectDetail({
           getProjectStatusesByPhase(project.project_id),
         ]);
         if (stale) return;
+        if (isReturnedActionError(data)) {
+          handleError(data);
+          return;
+        }
+        if (isReturnedActionError(phaseStatuses)) {
+          handleError(phaseStatuses);
+          return;
+        }
         setAllProjectTasks(data.tasks);
         setAllProjectTaskResources(data.taskResources);
         setAllProjectTaskTags(data.taskTags);
@@ -1228,7 +1460,7 @@ export default function ProjectDetail({
       for (const task of tasksToMove) {
         try {
           if (task.phase_id !== newPhaseId) {
-            await moveTaskToPhase(
+            const moveResult = await moveTaskToPhase(
               task.task_id,
               newPhaseId,
               newStatusMappingId,
@@ -1236,6 +1468,11 @@ export default function ProjectDetail({
               prevBefore,
               safeAfter,
             );
+            if (isReturnedActionError(moveResult)) {
+              toast.error(getErrorMessage(moveResult));
+              failed++;
+              continue;
+            }
             crossPhaseMoved++;
           } else {
             const updatedTask = await updateTaskStatus(
@@ -1244,6 +1481,11 @@ export default function ProjectDetail({
               prevBefore,
               safeAfter,
             );
+            if (isReturnedActionError(updatedTask)) {
+              toast.error(getErrorMessage(updatedTask));
+              failed++;
+              continue;
+            }
             statusUpdatedById.set(task.task_id, updatedTask);
           }
           prevBefore = task.task_id;
@@ -1307,21 +1549,29 @@ export default function ProjectDetail({
       // Check if we're moving to a different phase
       if (task.phase_id !== newPhaseId) {
         // Move to different phase with new status
-        await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        const moveResult = await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        if (isReturnedActionError(moveResult)) {
+          toast.error(getErrorMessage(moveResult));
+          return;
+        }
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId } : t
         ));
         toast.success(t('projectDetail.taskMovedToNewPhase', 'Task moved to new phase'));
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
-        await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        const updatedTask = await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        if (isReturnedActionError(updatedTask)) {
+          toast.error(getErrorMessage(updatedTask));
+          return;
+        }
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, project_status_mapping_id: newStatusMappingId } : t
         ));
         toast.success(t('projectDetail.taskStatusUpdated', 'Task status updated'));
       } else {
         // Same phase and status - just reorder
-        await reorderTask(taskId, beforeTaskId, afterTaskId);
+        unwrapActionResult(await reorderTask(taskId, beforeTaskId, afterTaskId));
         toast.success(t('projectDetail.taskReordered', 'Task reordered'));
       }
     } catch (error) {
@@ -1393,7 +1643,11 @@ export default function ProjectDetail({
         }
 
         setPriorities(allPriorities);
-        setTaskTypes(types);
+        if (isReturnedActionError(types)) {
+          handleError(types);
+        } else {
+          setTaskTypes(types);
+        }
       } catch (error) {
         if (!stale) handleError(error, 'Failed to load initial data');
       }
@@ -1460,7 +1714,12 @@ export default function ProjectDetail({
 
       setIsLoadingTasks(true);
       try {
-        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = await getTasksForPhase(selectedPhase.phase_id);
+        const phaseData = await getTasksForPhase(selectedPhase.phase_id);
+        if (isReturnedActionError(phaseData)) {
+          handleError(phaseData);
+          return;
+        }
+        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = phaseData;
         if (stale) return;
 
         // Add checklist items to tasks from batch-loaded data
@@ -1535,6 +1794,10 @@ export default function ProjectDetail({
       try {
         const allTeams = await getTeams();
         if (stale) return;
+        if (isTeamActionError(allTeams)) {
+          console.warn('Cannot load teams for project task display:', allTeams);
+          return;
+        }
         setTeams(allTeams);
         const namesMap: Record<string, string> = {};
         allTeams.forEach(team => {
@@ -1574,6 +1837,10 @@ export default function ProjectDetail({
     const loadTaskAndSelectPhase = async () => {
       try {
         const task = await getTaskById(initialTaskId);
+        if (isReturnedActionError(task)) {
+          toast.error(getErrorMessage(task));
+          return;
+        }
         if (!task) {
           toast.error(t('projectDetail.taskNotFound', 'Task not found'));
           return;
@@ -1658,6 +1925,13 @@ export default function ProjectDetail({
       try {
         const taskIds = projectTasks.map(task => task.task_id);
         const counts = await getTaskCommentCountsBatch(taskIds);
+        if (isReturnedActionError(counts)) {
+          if (!stale) {
+            toast.error(getErrorMessage(counts));
+            setTaskCommentCounts({});
+          }
+          return;
+        }
         if (!stale) setTaskCommentCounts(counts);
       } catch (error) {
         if (!stale) {
@@ -1742,6 +2016,11 @@ export default function ProjectDetail({
       for (const task of samePhaseTasks) {
         try {
           const updatedTask = await updateTaskStatus(task.task_id, targetStatusId, prevBefore, afterTaskId);
+          if (isReturnedActionError(updatedTask)) {
+            toast.error(getErrorMessage(updatedTask));
+            failed++;
+            continue;
+          }
           statusUpdatedById.set(task.task_id, updatedTask);
           prevBefore = task.task_id;
         } catch (error) {
@@ -1753,7 +2032,7 @@ export default function ProjectDetail({
       // Move cross-phase tasks into the current phase at the target status
       for (const task of otherPhaseTasks) {
         try {
-          await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId);
+          unwrapActionResult(await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId));
           movedInCount++;
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
@@ -1885,7 +2164,18 @@ export default function ProjectDetail({
 
       try {
         const updatedTask = await updateTaskStatus(draggedTaskId, targetStatusId, beforeTaskId, afterTaskId);
-        const checklistItems = await getTaskChecklistItems(draggedTaskId);
+        if (isReturnedActionError(updatedTask)) {
+          setProjectTasks(prevTasks =>
+            prevTasks.map((t): IProjectTask =>
+              t.task_id === draggedTaskId
+                ? { ...t, project_status_mapping_id: task.project_status_mapping_id, order_key: task.order_key }
+                : t
+            )
+          );
+          toast.error(getErrorMessage(updatedTask));
+          return;
+        }
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(draggedTaskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Reconcile with the authoritative server values (final order_key, etc.).
@@ -1914,7 +2204,7 @@ export default function ProjectDetail({
       animateDroppedTask();
 
       try {
-        await reorderTask(draggedTaskId, beforeTaskId, afterTaskId);
+        unwrapActionResult(await reorderTask(draggedTaskId, beforeTaskId, afterTaskId));
       } catch (error) {
         // Roll back the optimistic reorder on failure.
         setProjectTasks(prevTasks =>
@@ -2066,8 +2356,8 @@ export default function ProjectDetail({
       if (!draggedPhase) return;
       
       const reorderResult = await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
-      if (isActionPermissionError(reorderResult)) {
-        handleError(reorderResult.permissionError);
+      if (isReturnedActionError(reorderResult)) {
+        handleError(getErrorMessage(reorderResult));
         return;
       }
 
@@ -2203,7 +2493,7 @@ export default function ProjectDetail({
           // Omit the status mapping so moveTaskToPhase performs phase-aware
           // status remapping — passing the source status can land a task on a
           // mapping that isn't valid for the target phase's status set.
-          const movedTask = await moveTaskToPhase(id, targetPhase.phase_id);
+          const movedTask = unwrapActionResult(await moveTaskToPhase(id, targetPhase.phase_id));
           movedById.set(id, movedTask);
           success++;
         } catch (error) {
@@ -2255,12 +2545,12 @@ export default function ProjectDetail({
       // Omit the status mapping so moveTaskToPhase performs phase-aware status
       // remapping — passing the source status can land the task on a mapping
       // that isn't valid for the target phase's status set.
-      const updatedTask = await moveTaskToPhase(
+      const updatedTask = unwrapActionResult(await moveTaskToPhase(
         moveConfirmation.taskId,
         moveConfirmation.targetPhase.phase_id,
-      );
+      ));
 
-      const checklistItems = await getTaskChecklistItems(moveConfirmation.taskId);
+      const checklistItems = unwrapActionResult(await getTaskChecklistItems(moveConfirmation.taskId));
       const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
       setProjectTasks(prevTasks =>
@@ -2302,10 +2592,12 @@ export default function ProjectDetail({
       const activePhase = selectedPhase || currentPhase;
 
       if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
-        const [checklistItems, taskResources] = await Promise.all([
+        const [checklistResult, taskResourcesResult] = await Promise.all([
           getTaskChecklistItems(newTask.task_id),
           getTaskResourcesAction(newTask.task_id)
         ]);
+        const checklistItems = unwrapActionResult(checklistResult);
+        const taskResources = unwrapActionResult(taskResourcesResult);
         const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
 
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
@@ -2385,10 +2677,12 @@ export default function ProjectDetail({
     if (updatedTask) {
       try {
         // Fetch checklist items and task resources in parallel
-        const [checklistItems, taskResources] = await Promise.all([
+        const [checklistResult, taskResourcesResult] = await Promise.all([
           getTaskChecklistItems(updatedTask.task_id),
           getTaskResourcesAction(updatedTask.task_id)
         ]);
+        const checklistItems = unwrapActionResult(checklistResult);
+        const taskResources = unwrapActionResult(taskResourcesResult);
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Update kanban view data
@@ -2483,9 +2777,13 @@ export default function ProjectDetail({
         actual_hours: Number(task.actual_hours) || 0,
         checklist_items: task.checklist_items
       });
+      if (isReturnedActionError(updatedTask)) {
+        toast.error(getErrorMessage(updatedTask));
+        return;
+      }
 
       if (updatedTask) {
-        const checklistItems = await getTaskChecklistItems(taskId);
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Update kanban view data
@@ -2524,6 +2822,10 @@ export default function ProjectDetail({
         checklist_items: task.checklist_items,
         ...updates,
       });
+      if (isReturnedActionError(updatedTask)) {
+        toast.error(getErrorMessage(updatedTask));
+        return;
+      }
 
       if (updatedTask) {
         // Inline list edits (status, priority, due date, hours, etc.) never
@@ -2539,12 +2841,14 @@ export default function ProjectDetail({
   };
 
   const refreshTaskAfterTeamChange = async (taskId: string) => {
-    const [updatedTask, resources] = await Promise.all([
+    const [updatedTaskResult, resourcesResult] = await Promise.all([
       getTaskById(taskId),
       getTaskResourcesAction(taskId),
     ]);
+    const updatedTask = unwrapActionResult(updatedTaskResult);
+    const resources = unwrapActionResult(resourcesResult);
     if (!updatedTask) return;
-    const checklistItems = await getTaskChecklistItems(taskId);
+    const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
     const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
     setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -2558,7 +2862,7 @@ export default function ProjectDetail({
 
   const performTeamAssign = async (taskId: string, teamId: string) => {
     try {
-      await assignTeamToProjectTask(taskId, teamId);
+      unwrapActionResult(await assignTeamToProjectTask(taskId, teamId));
       await refreshTaskAfterTeamChange(taskId);
       toast.success(t('projectDetail.teamAssignedSuccess', 'Team assigned successfully'));
     } catch (error) {
@@ -2573,7 +2877,7 @@ export default function ProjectDetail({
 
     if (task.assigned_team_id) {
       try {
-        const resources = await getTaskResourcesAction(taskId);
+        const resources = unwrapActionResult(await getTaskResourcesAction(taskId));
         setPendingTaskTeamMembers(resources.filter((r: any) => r.role === 'team_member'));
       } catch (error) {
         console.error('Failed to load task resources for team switch dialog:', error);
@@ -2594,7 +2898,7 @@ export default function ProjectDetail({
     if (!pendingTeamAssign) return;
     const { taskId, teamId } = pendingTeamAssign;
     try {
-      await removeTeamFromProjectTask(taskId, { mode, keepUserIds });
+      unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode, keepUserIds }));
       await performTeamAssign(taskId, teamId);
     } catch (error) {
       handleError(error, t('projectDetail.assignTeamFailed', 'Failed to assign team'));
@@ -2627,8 +2931,8 @@ export default function ProjectDetail({
         start_date: editingStartDate || null,
         end_date: editingEndDate || null
       });
-      if (isActionPermissionError(updatedPhase)) {
-        handleError(updatedPhase.permissionError);
+      if (isReturnedActionError(updatedPhase)) {
+        handleError(getErrorMessage(updatedPhase));
         return;
       }
 
@@ -2674,8 +2978,8 @@ export default function ProjectDetail({
 
     try {
       const deleteResult = await deletePhase(deletePhaseConfirmation.phaseId);
-      if (isActionPermissionError(deleteResult)) {
-        handleError(deleteResult.permissionError);
+      if (isReturnedActionError(deleteResult)) {
+        handleError(getErrorMessage(deleteResult));
         return;
       }
       setProjectPhases(prevPhases =>
@@ -2714,7 +3018,7 @@ export default function ProjectDetail({
 
   const handleReorderTasks = async (updates: { taskId: string, newWbsCode: string }[]) => {
     try {
-      await reorderTasksInStatus(updates);
+      unwrapActionResult(await reorderTasksInStatus(updates));
       // Update local state to reflect the new order
       const updatedTasks = [...projectTasks];
       updates.forEach(({taskId, newWbsCode}) => {
@@ -2751,11 +3055,14 @@ export default function ProjectDetail({
 
     try {
         // Fetch necessary details for the dialog toggles
-        const [resources, links, checklist] = await Promise.all([
+        const [resourcesResult, linksResult, checklistResult] = await Promise.all([
             getTaskResourcesAction(task.task_id),
             getTaskTicketLinksAction(task.task_id),
             getTaskChecklistItems(task.task_id)
         ]);
+        const resources = unwrapActionResult(resourcesResult);
+        const links = unwrapActionResult(linksResult);
+        const checklist = unwrapActionResult(checklistResult);
 
         setTaskToDuplicate(task);
         setDuplicateTaskToggleDetails({
@@ -2782,14 +3089,14 @@ export default function ProjectDetail({
 
     console.log(`Moving task ${taskToMove.task_id} to phase ${targetPhaseId} with status ${targetStatusId}`);
     try {
-      const movedTask = await moveTaskToPhase(
+      const movedTask = unwrapActionResult(await moveTaskToPhase(
         taskToMove.task_id,
         targetPhaseId,
         targetStatusId
-      );
+      ));
 
       if (movedTask) {
-        const checklistItems = await getTaskChecklistItems(movedTask.task_id);
+        const checklistItems = unwrapActionResult(await getTaskChecklistItems(movedTask.task_id));
         const taskWithDetails = { ...movedTask, checklist_items: checklistItems };
 
         // Check if the task was moved to a different phase than the currently selected one
@@ -2843,7 +3150,7 @@ export default function ProjectDetail({
 
     for (const taskId of ids) {
       try {
-        const movedTask = await moveTaskToPhase(taskId, targetPhaseId, targetStatusId);
+        const movedTask = unwrapActionResult(await moveTaskToPhase(taskId, targetPhaseId, targetStatusId));
         if (movedTask) {
           moved.push(movedTask);
         } else {
@@ -2899,7 +3206,12 @@ export default function ProjectDetail({
 
     for (const taskId of ids) {
       try {
-        await deleteTaskAction(taskId);
+        const result = await deleteTaskAction(taskId);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          failed.push(taskId);
+          continue;
+        }
         deleted.push(taskId);
       } catch (error) {
         console.error(`Failed to delete task ${taskId}:`, error);
@@ -2959,7 +3271,7 @@ export default function ProjectDetail({
           // A user assignment should become the primary assignee. The UI renders the
           // team over the user, so any existing team assignment must be removed first.
           if (task.assigned_team_id) {
-            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+            unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode: 'remove_all' }));
             resourcesToRefresh.push(taskId);
           }
           const updatedTask = await updateTaskWithChecklist(taskId, {
@@ -2970,8 +3282,13 @@ export default function ProjectDetail({
             actual_hours: Number(task.actual_hours) || 0,
             checklist_items: task.checklist_items,
           });
+          if (isReturnedActionError(updatedTask)) {
+            toast.error(getErrorMessage(updatedTask));
+            failed++;
+            continue;
+          }
           if (updatedTask) {
-            const checklistItems = await getTaskChecklistItems(taskId);
+            const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
             const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
             setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
             setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -2989,7 +3306,7 @@ export default function ProjectDetail({
         const refreshed = await Promise.all(
           resourcesToRefresh.map(async (id) => {
             try {
-              return [id, await getTaskResourcesAction(id)] as const;
+              return [id, unwrapActionResult(await getTaskResourcesAction(id))] as const;
             } catch (error) {
               console.error(`Failed to refresh resources for task ${id}:`, error);
               return null;
@@ -3043,9 +3360,9 @@ export default function ProjectDetail({
           // can't surface the per-task keep/remove prompt, so we mirror the
           // single-user-assign path (which always removes the prior team).
           if (task.assigned_team_id) {
-            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+            unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode: 'remove_all' }));
           }
-          await assignTeamToProjectTask(taskId, teamId);
+          unwrapActionResult(await assignTeamToProjectTask(taskId, teamId));
           await refreshTaskAfterTeamChange(taskId);
           success++;
         } catch (error) {
@@ -3088,6 +3405,10 @@ export default function ProjectDetail({
         // the per-task tag state via the existing handler.
         try {
           const refreshed = await findTagsByEntityIds(result.updatedIds, 'project_task');
+          if (isTagActionError(refreshed)) {
+            console.error('Failed to refresh task tags after bulk add:', refreshed);
+            return;
+          }
           const byTask = new Map<string, ITag[]>();
           for (const id of result.updatedIds) byTask.set(id, []);
           for (const tag of refreshed) {
@@ -3136,6 +3457,42 @@ export default function ProjectDetail({
   const renderHeader = () => {
     const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
 
+    // Billing view header (F114): "Billing" heading + model/ready chips; task
+    // search and filters are intentionally hidden.
+    if (viewMode === 'billing') {
+      const config = billingOverview?.config;
+      const modelChipLabel = !config
+        ? t('billing.header.notEnabled', 'Not enabled')
+        : config.billing_model === 'fixed_price'
+          ? t('billing.header.fixedChip', 'Fixed price · {{total}}', {
+            total: money(config.total_price ?? 0, config.currency ?? undefined),
+          })
+          : t('billing.header.tmChip', 'Time & materials');
+      return (
+        <div className="mb-4 flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-bold">{t('billing.header.title', 'Billing')}</h2>
+            <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border-100))] px-2.5 py-0.5 text-xs font-semibold text-[rgb(var(--color-text-600))]">
+              {modelChipLabel}
+            </span>
+            {readyEntryCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                {t('billing.header.readyChip', '{{count}} ready to bill', { count: readyEntryCount })}
+              </span>
+            )}
+            <div className="ml-auto">
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={(v) => setViewMode(v as ProjectViewMode)}
+                options={viewSwitcherOptions}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (viewMode === 'list') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
@@ -3174,10 +3531,7 @@ export default function ProjectDetail({
               <ViewSwitcher
                 currentView={viewMode}
                 onChange={(v) => setViewMode(v as ProjectViewMode)}
-                options={[
-                  { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
-                  { value: 'list', label: t('listView', 'List'), icon: List }
-                ]}
+                options={viewSwitcherOptions}
               />
             </div>
           </div>
@@ -3474,10 +3828,7 @@ export default function ProjectDetail({
             <ViewSwitcher
               currentView={viewMode}
               onChange={(v) => setViewMode(v as ProjectViewMode)}
-              options={[
-                { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
-                { value: 'list', label: t('listView', 'List'), icon: List }
-              ]}
+              options={viewSwitcherOptions}
             />
           </div>
         </div>
@@ -3671,6 +4022,23 @@ export default function ProjectDetail({
 
   // Render the scrollable content (kanban board or list view)
   const renderContent = () => {
+    // Billing view rendering (option 3): billing workspace replaces the board.
+    if (viewMode === 'billing') {
+      if (!billingIntegration) return null;
+      return (
+        <billingIntegration.BillingView
+          projectId={project.project_id}
+          clientId={project.client_id ?? null}
+          phases={projectPhases}
+          overview={billingOverview}
+          loading={billingLoading && billingOverview === null}
+          canManage={canManageBilling}
+          highlightEntryId={billingHighlightEntryId}
+          onChanged={() => { void refreshBilling(); }}
+        />
+      );
+    }
+
     // List view rendering
     if (viewMode === 'list') {
       if (!projectTaskDataLoaded) {
@@ -3722,6 +4090,11 @@ export default function ProjectDetail({
               setShowQuickAdd(true);
             }
           }}
+          phaseBillingBadges={phaseBillingBadges}
+          phaseAllTasksClosed={phaseAllTasksClosed}
+          canCompletePhase={canCompletePhase}
+          onMarkPhaseComplete={handleMarkPhaseComplete}
+          onReopenPhase={handleReopenPhase}
           onTaskTagsChange={handleTaskTagsChange}
           onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
           onTeamAssign={handleTeamAssign}
@@ -3845,13 +4218,16 @@ export default function ProjectDetail({
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
+        {projectBillingUiEnabled && billingIntegration && (
+          <billingIntegration.PaymentWarningBanner projectId={project.project_id} className="mb-3 flex-shrink-0" />
+        )}
         <div className={styles.contentWrapper}>
           {/* Phases panel - collapsible in kanban view */}
-          {viewMode === 'kanban' && (
+          {(viewMode === 'kanban' || viewMode === 'billing') && (
             <div
                 ref={phasesContainerRef}
                 className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}
-                style={phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
+                style={viewMode === 'kanban' && phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
               >
               {/* Toggle button */}
               <CollapseToggleButton
@@ -3866,6 +4242,7 @@ export default function ProjectDetail({
               {/* Phases panel content */}
               <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
                 <ProjectPhases
+                  viewMode={viewMode}
                   phases={projectPhases}
                   projectId={project.project_id}
                   selectedPhase={selectedPhase}
@@ -3904,6 +4281,11 @@ export default function ProjectDetail({
                   onDragEnd={handlePhaseDragEnd}
                   onStatusesChanged={() => setStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
+                  phaseBillingBadges={phaseBillingBadges}
+                  phaseAllTasksClosed={phaseAllTasksClosed}
+                  canCompletePhase={canCompletePhase}
+                  onMarkPhaseComplete={handleMarkPhaseComplete}
+                  onReopenPhase={handleReopenPhase}
                 />
               </div>
             </div>
@@ -3914,28 +4296,30 @@ export default function ProjectDetail({
               className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}
             >
               {renderHeader()}
-              <div className={styles.kanbanScrollbarShell}>
-                <div
-                  ref={scrollbarTrackRef}
-                  className={styles.kanbanScrollbarTrack}
-                  onPointerDown={handleKanbanScrollbarTrackPointerDown}
-                >
+              {viewMode !== 'billing' && (
+                <div className={styles.kanbanScrollbarShell}>
                   <div
-                    data-kanban-scrollbar-thumb="true"
-                    ref={scrollbarThumbRef}
-                    className={styles.kanbanScrollbarThumb}
-                    onPointerDown={handleKanbanScrollbarThumbPointerDown}
-                    onKeyDown={handleKanbanScrollbarKeyDown}
-                    role="scrollbar"
-                    aria-controls="kanban-scroll-container"
-                    aria-orientation="horizontal"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={0}
-                    tabIndex={0}
-                  />
+                    ref={scrollbarTrackRef}
+                    className={styles.kanbanScrollbarTrack}
+                    onPointerDown={handleKanbanScrollbarTrackPointerDown}
+                  >
+                    <div
+                      data-kanban-scrollbar-thumb="true"
+                      ref={scrollbarThumbRef}
+                      className={styles.kanbanScrollbarThumb}
+                      onPointerDown={handleKanbanScrollbarThumbPointerDown}
+                      onKeyDown={handleKanbanScrollbarKeyDown}
+                      role="scrollbar"
+                      aria-controls="kanban-scroll-container"
+                      aria-orientation="horizontal"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={0}
+                      tabIndex={0}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             {/* Independent sticky status strip */}
             {showStickyStatusNames && viewMode === 'kanban' && (
@@ -3972,7 +4356,7 @@ export default function ProjectDetail({
                               indeterminate={stripSomeSelected && !stripAllSelected}
                               onChange={() => setTasksSelected(stripTaskIds, !stripAllSelected)}
                               size="sm"
-                              containerClassName="mb-0 flex-shrink-0"
+                              containerClassName="flex-shrink-0"
                               skipRegistration
                             />
                           )}
@@ -4116,13 +4500,13 @@ export default function ProjectDetail({
           onConfirm={async (targetPhaseId: string, options: DuplicateOptions) => {
             if (!taskToDuplicate) return;
             try {
-              const newTask = await duplicateTaskToPhase(
+              const newTask = unwrapActionResult(await duplicateTaskToPhase(
                 taskToDuplicate.task_id,
                 targetPhaseId,
                 options
-              );
+              ));
               
-              const checklistItems = await getTaskChecklistItems(newTask.task_id);
+              const checklistItems = unwrapActionResult(await getTaskChecklistItems(newTask.task_id));
               const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
               setProjectTasks(prev => [...prev, taskWithChecklist]);
               // Add to allProjectTasks for filtered counts
@@ -4231,7 +4615,12 @@ export default function ProjectDetail({
           onConfirm={async () => {
             if (!taskToDelete) return;
             try {
-              await deleteTaskAction(taskToDelete.task_id);
+              const result = await deleteTaskAction(taskToDelete.task_id);
+              if (isReturnedActionError(result)) {
+                toast.error(getErrorMessage(result));
+                setTaskToDelete(null);
+                return;
+              }
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
               // Remove from allProjectTasks for filtered counts
               setAllProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));

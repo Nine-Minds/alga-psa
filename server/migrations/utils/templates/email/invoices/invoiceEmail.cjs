@@ -157,6 +157,26 @@ const COPY = {
     textDetailsHeader: 'Szczeg\u00f3\u0142y faktury:',
   },
 };
+SUBJECTS.pt = 'Fatura {{invoice.number}} de {{company.name}}';
+COPY.pt = {
+  headerLabel: 'Fatura',
+  greeting: 'Olá {{recipient.name}},',
+  intro: 'Segue em anexo sua fatura de <strong>{{company.name}}</strong>.',
+  invoiceNumberLabel: 'Número da fatura',
+  amountDueLabel: 'Valor devido',
+  invoiceDateLabel: 'Data da fatura',
+  dueDateLabel: 'Data de vencimento',
+  customMessageLabel: 'Observação de {{company.name}}',
+  attachmentNote: 'A fatura está anexada a este email como PDF. Se tiver alguma dúvida, entre em contato conosco.',
+  thankYou: 'Agradecemos pela preferência!',
+  bestRegards: 'Atenciosamente,',
+  footer: 'Powered by Alga PSA',
+  textHeader: 'Fatura {{invoice.number}} de {{company.name}}',
+  textGreeting: 'Olá {{recipient.name}},',
+  textIntro: 'Segue em anexo sua fatura de {{company.name}}.',
+  textDetailsHeader: 'Detalhes da fatura:',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {

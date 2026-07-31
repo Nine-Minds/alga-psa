@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@alga-psa/ui/components/Card";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { Badge } from "@alga-psa/ui/components/Badge";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import SettingsTabSkeleton from "@alga-psa/ui/components/skeletons/SettingsTabSkeleton";
 import type { SsoProviderOption } from "@ee/lib/auth/providerConfig";
@@ -79,6 +80,30 @@ export default function SsoBulkAssignment() {
 
   return (
     <div className="space-y-6">
+      {!shouldShowFallback && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("ssoBulk.status.title")}</CardTitle>
+            <CardDescription>{t("ssoBulk.status.caption")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {providerOptions!.map((option) => (
+              <div
+                key={option.id}
+                className="flex items-center justify-between rounded-lg border border-muted-foreground/20 p-3"
+              >
+                <span className="text-sm font-medium">{option.name}</span>
+                <Badge variant={option.configured ? "success" : "secondary"}>
+                  {option.configured
+                    ? t("ssoBulk.status.available")
+                    : t("ssoBulk.status.notConfigured")}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>{t("ssoBulk.autoLink.title")}</CardTitle>

@@ -42,8 +42,8 @@ describe('inbound webhook sample capture', () => {
     ).resolves.toBe(true);
 
     expect(knex).toHaveBeenCalledWith('inbound_webhooks');
+    expect(query.where).toHaveBeenCalledWith('inbound_webhooks.tenant', 'tenant-a');
     expect(query.where).toHaveBeenCalledWith({
-      tenant: 'tenant-a',
       inbound_webhook_id: 'webhook-1',
     });
     expect(query.whereNotNull).toHaveBeenCalledWith('sample_capture_expires_at');
@@ -71,8 +71,8 @@ describe('inbound webhook sample capture', () => {
       }),
     ).resolves.toBe(false);
 
+    expect(query.where).toHaveBeenCalledWith('inbound_webhooks.tenant', 'tenant-a');
     expect(query.where).toHaveBeenCalledWith({
-      tenant: 'tenant-a',
       inbound_webhook_id: 'webhook-1',
     });
     expect(query.andWhere).toHaveBeenCalledWith('sample_capture_expires_at', '>', now);

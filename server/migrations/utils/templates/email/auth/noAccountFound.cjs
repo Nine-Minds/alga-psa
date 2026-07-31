@@ -509,6 +509,82 @@ Uwaga dotycz\u0105ca bezpiecze\u0144stwa: Je\u015bli nie prosi\u0142e\u015b(a\u0
 To automatyczna wiadomo\u015b\u0107. Nie odpowiadaj na ten e-mail.`,
   },
 };
+LANGS.pt = {
+  subject: '{{platformName}} - Solicitação de acesso',
+  html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">{{platformName}}</h1>
+          </div>
+          <h2 style="color: #111827; font-size: 24px; margin: 30px 30px 0;">
+            Solicitação de acesso
+          </h2>
+          <div style="padding: 40px 30px;">
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">Olá,</p>
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
+              Recebemos uma solicitação para acessar o portal do cliente usando este endereço de email.
+            </p>
+            <p style="color: #111827; font-size: 16px; margin-bottom: 20px;">
+              Se você tem uma conta conosco, deverá receber um email separado com seus links de login.
+            </p>
+            <p style="color: #111827; font-size: 16px; margin-bottom: 15px;">
+              Se não recebeu um email de login, isso pode significar:
+            </p>
+            <ul style="color: #111827; font-size: 16px; margin-bottom: 25px;">
+              <li>Este endereço de email não está associado a nenhuma conta do portal do cliente</li>
+              <li>Sua conta pode estar inativa</li>
+              <li>O email pode ter sido filtrado para a pasta de spam</li>
+            </ul>
+
+            <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
+              <p style="color: #1e40af; font-size: 14px; margin: 0;">
+                <strong>Precisa de ajuda?</strong>
+              </p>
+              <p style="color: #1e40af; font-size: 14px; margin: 5px 0 0 0;">
+                Se acredita que deveria ter acesso a um portal do cliente, entre em contato com a equipe de suporte do seu provedor de serviços.
+              </p>
+            </div>
+
+            <div style="background-color: #f3f4f6; border-radius: 6px; padding: 20px; margin: 25px 0;">
+              <p style="color: #4b5563; font-size: 14px; margin: 0;">
+                <strong>Observação de segurança:</strong> Se você não solicitou acesso, pode ignorar este email com segurança.
+              </p>
+            </div>
+          </div>
+
+          <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 5px 0;">
+              © {{currentYear}} {{platformName}}. Todos os direitos reservados.
+            </p>
+            <p style="color: #9ca3af; font-size: 11px; margin: 5px 0;">
+              Esta é uma mensagem automática. Não responda a este email.
+            </p>
+          </div>
+        </div>
+      `,
+  text: `{{platformName}} - Solicitação de acesso
+
+Olá,
+
+Recebemos uma solicitação para acessar o portal do cliente usando este endereço de email.
+
+Se você tem uma conta conosco, deverá receber um email separado com seus links de login.
+
+Se não recebeu um email de login, isso pode significar:
+- Este endereço de email não está associado a nenhuma conta do portal do cliente
+- Sua conta pode estar inativa
+- O email pode ter sido filtrado para a pasta de spam
+
+Precisa de ajuda?
+Se acredita que deveria ter acesso a um portal do cliente, entre em contato com a equipe de suporte do seu provedor de serviços.
+
+Observação de segurança: Se você não solicitou acesso, pode ignorar este email com segurança.
+
+---
+© {{currentYear}} {{platformName}}. Todos os direitos reservados.
+Esta é uma mensagem automática. Não responda a este email.`,
+};
+
 /* eslint-enable max-len */
 
 function getTemplate() {

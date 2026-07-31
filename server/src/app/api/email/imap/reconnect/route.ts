@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
@@ -15,31 +16,38 @@ export async function POST(request: NextRequest) {
       allowedProducts: ['psa', 'algadesk'],
     });
 
-    const body = await request.json();
-    const { providerId } = body;
+    let body: { providerId?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Request body must be valid JSON' }, { status: 400 });
+    }
+
+    const providerId = typeof body.providerId === 'string' ? body.providerId.trim() : '';
     if (!providerId) {
       return NextResponse.json({ error: 'providerId is required' }, { status: 400 });
     }
 
     const { knex, tenant } = await createTenantKnex();
-    const provider = await knex('email_providers')
-      .where({ id: providerId, tenant, provider_type: 'imap' })
+    const db = tenantDb(knex, tenant);
+    const provider = await db.table('email_providers')
+      .where({ id: providerId, provider_type: 'imap' })
       .first();
 
     if (!provider) {
       return NextResponse.json({ error: 'IMAP provider not found' }, { status: 404 });
     }
 
-    await knex('imap_email_provider_config')
-      .where({ email_provider_id: providerId, tenant })
+    await db.table('imap_email_provider_config')
+      .where({ email_provider_id: providerId })
       .update({
         lease_owner: null,
         lease_expires_at: null,
         updated_at: knex.fn.now(),
       });
 
-    await knex('email_providers')
-      .where({ id: providerId, tenant })
+    await db.table('email_providers')
+      .where({ id: providerId })
       .update({
         status: 'disconnected',
         error_message: null,
@@ -52,6 +60,6 @@ export async function POST(request: NextRequest) {
       return toProductAccessDeniedResponse(error);
     }
     console.error('IMAP reconnect error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to reconnect IMAP provider' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to reconnect IMAP provider. Please try again.' }, { status: 500 });
   }
 }

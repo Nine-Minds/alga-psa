@@ -471,28 +471,24 @@ export default function ExtensionDebugPage({
             checked={showStdout}
             onChange={(e) => setShowStdout(e.target.checked)}
             label="stdout"
-            containerClassName="mb-0"
           />
           <Checkbox
             id="show-stderr"
             checked={showStderr}
             onChange={(e) => setShowStderr(e.target.checked)}
             label="stderr"
-            containerClassName="mb-0"
           />
           <Checkbox
             id="show-logs"
             checked={showLogs}
             onChange={(e) => setShowLogs(e.target.checked)}
             label="logs"
-            containerClassName="mb-0"
           />
           <Checkbox
             id="auto-scroll"
             checked={autoScroll}
             onChange={(e) => setAutoScroll(e.target.checked)}
             label="auto-scroll"
-            containerClassName="mb-0"
           />
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${

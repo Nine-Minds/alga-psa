@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { resolveMicrosoftConsumerProfileConfig } from '../microsoftConsumerProfileResolution';
 
@@ -31,6 +32,7 @@ export const MSP_SSO_CLAIM_STATUS_VALUES: MspSsoDomainClaimStatus[] = [
 ];
 
 const PROVIDER_ORDER: MspSsoProviderId[] = ['google', 'azure-ad'];
+const MSP_SSO_DOMAIN_DISCOVERY_CONTEXT = 'msp-sso-domain-discovery';
 const DOMAIN_PATTERN =
   /^(?=.{1,255}$)(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
@@ -279,7 +281,11 @@ export async function resolveTenantForMspSsoDomain(
   }
 
   const db = await getAdminConnection();
-  const rows = await db(MSP_SSO_LOGIN_DOMAIN_TABLE)
+  const rows = await tenantDb(db, MSP_SSO_DOMAIN_DISCOVERY_CONTEXT)
+    .unscoped(
+      MSP_SSO_LOGIN_DOMAIN_TABLE,
+      'tenant discovery from MSP SSO login domain before tenant context exists'
+    )
     .select('tenant', 'claim_status')
     .where({ is_active: true })
     .whereRaw('lower(domain) = ?', [normalizedDomain]);

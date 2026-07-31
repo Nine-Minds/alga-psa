@@ -4,7 +4,7 @@ type Row = Record<string, unknown>;
 
 type KnexMock = ((tableName: string) => {
   leftJoin: (_table: string, _join: (...args: unknown[]) => void) => any;
-  where: (clause: Row) => any;
+  where: (clause: Row | string, value?: unknown) => any;
   orderBy: (_column: string, _direction?: string) => any;
   limit: (_count: number) => any;
   select: (...columns: string[]) => Promise<Row[]>;
@@ -145,10 +145,14 @@ function buildKnexMock(input: {
       leftJoin(_table: string, _join: (...args: unknown[]) => void) {
         return builder;
       },
-      where(clause: Row) {
+      where(clause: Row | string, value?: unknown) {
         const normalized: Row = {};
-        for (const [key, value] of Object.entries(clause)) {
-          normalized[stripPrefix(key)] = value;
+        if (typeof clause === 'string') {
+          normalized[stripPrefix(clause)] = value;
+        } else {
+          for (const [key, value] of Object.entries(clause)) {
+            normalized[stripPrefix(key)] = value;
+          }
         }
         state.whereClauses.push(normalized);
         return builder;

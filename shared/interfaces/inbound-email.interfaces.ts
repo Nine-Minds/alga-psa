@@ -8,12 +8,18 @@ export interface EmailProviderConfig {
   mailbox: string;
   folder_to_monitor: string; // Defaults to 'Inbox'
   active: boolean;
+  inboundPausedAt?: string | null;
+  inboundPauseReason?: 'manual' | 'tenant_cancelled' | null;
   // Common webhook fields as real columns
   webhook_notification_url: string;
   webhook_subscription_id?: string;
   webhook_verification_token?: string;
   webhook_expires_at?: string; // ISO date
   last_subscription_renewal?: string; // ISO date
+  delivery_mode?: 'webhook' | 'polling';
+  last_webhook_delivery_at?: string;
+  webhook_silent_runs?: number;
+  next_subscription_probe_at?: string;
   // Connection status fields
   connection_status: 'connected' | 'disconnected' | 'error';
   last_connection_test?: string; // ISO date
@@ -35,6 +41,15 @@ export interface EmailProviderConfig {
     pubsub_subscription_name?: string;
     client_id?: string;
     client_secret?: string;
+    tenant_id?: string;
+    microsoft_profile_id?: string;
+    client_secret_ref?: string;
+    resolved_client_id?: string;
+    resolved_client_secret?: string;
+    resolved_tenant_id?: string;
+    resolved_credential_source?: 'profile' | 'vendor' | 'environment' | 'legacy';
+    resolved_profile_id?: string;
+    resolved_client_secret_ref?: string;
     access_token?: string;
     refresh_token?: string;
     token_expires_at?: string;

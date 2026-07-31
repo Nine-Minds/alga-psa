@@ -7,12 +7,14 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
   RmmAlertRuleActions,
 } from './contracts';
+import { resolveRmmTicketContactId } from './resolveContact';
 
 export interface CreateAlertTicketParams {
   event: NormalizedRmmAlertEvent;
@@ -20,6 +22,7 @@ export interface CreateAlertTicketParams {
   clientId: string;
   assetId?: string | null;
   organizationName?: string | null;
+  mappingDefaultContactId?: string | null;
 }
 
 export interface CreatedAlertTicket {
@@ -48,6 +51,10 @@ export async function createTicketForAlert(
   }
 
   const priorityId = actions.priorityOverride ?? (await resolvePriorityForSeverity(trx, tenantId, event.severity));
+  const contactId = await resolveRmmTicketContactId(trx, tenantId, {
+    clientId: params.clientId,
+    mappingDefaultContactId: params.mappingDefaultContactId,
+  });
 
   const title = renderTemplate(actions.ticketTemplate?.titleTemplate, params) ?? defaultTitle(event);
   const description = renderTemplate(actions.ticketTemplate?.descriptionTemplate, params) ?? defaultDescription(event);
@@ -64,13 +71,15 @@ export async function createTicketForAlert(
     throw new Error('Failed to generate ticket number');
   }
   const now = new Date().toISOString();
+  const db = tenantDb(trx, tenantId);
 
-  const [ticket] = await trx('tickets')
+  const [ticket] = await db.table('tickets')
     .insert({
       tenant: tenantId,
       ticket_number: ticketNumber,
       title,
       client_id: params.clientId,
+      contact_name_id: contactId,
       status_id: defaultStatusId,
       priority_id: priorityId ?? null,
       board_id: boardId,
@@ -108,7 +117,9 @@ export async function addAlertInternalNote(
     throw new Error('Failed to generate comment/thread identifiers');
   }
 
-  await trx('comment_threads').insert({
+  const db = tenantDb(trx, tenantId);
+
+  await db.table('comment_threads').insert({
     tenant: tenantId,
     thread_id: ids.thread_id,
     ticket_id: ticketId,
@@ -121,7 +132,7 @@ export async function addAlertInternalNote(
     created_by: null,
   });
 
-  await trx('comments').insert({
+  await db.table('comments').insert({
     tenant: tenantId,
     comment_id: ids.comment_id,
     thread_id: ids.thread_id,
@@ -142,11 +153,13 @@ async function associateAsset(
   ticketId: string,
   now: string
 ): Promise<void> {
+  const db = tenantDb(trx, tenantId);
+
   // asset_associations.created_by is NOT NULL with an FK to users; attribute
   // system-created links to the tenant's earliest user (Huntress convention).
-  const auditUser = await trx('users').where({ tenant: tenantId }).orderBy('created_at', 'asc').first('user_id');
+  const auditUser = await db.table('users').orderBy('created_at', 'asc').first('user_id');
   if (!auditUser) return;
-  await trx('asset_associations').insert({
+  await db.table('asset_associations').insert({
     tenant: tenantId,
     asset_id: assetId,
     entity_id: ticketId,
@@ -163,8 +176,8 @@ async function resolveBoardId(
   ruleBoardId?: string
 ): Promise<string | null> {
   if (ruleBoardId) return ruleBoardId;
-  const defaultBoard = await trx('boards')
-    .where({ tenant: tenantId, is_default: true })
+  const defaultBoard = await tenantDb(trx, tenantId).table('boards')
+    .where({ is_default: true })
     .andWhere((qb) => qb.where('is_inactive', false).orWhereNull('is_inactive'))
     .first('board_id');
   return defaultBoard?.board_id ?? null;
@@ -188,8 +201,7 @@ async function resolvePriorityForSeverity(
   // back to a substring match after the exact pass.
   for (const exact of [true, false]) {
     for (const name of candidates) {
-      const priority = await trx('priorities')
-        .where({ tenant: tenantId })
+      const priority = await tenantDb(trx, tenantId).table('priorities')
         .whereRaw(
           exact ? 'LOWER(priority_name) = ?' : 'LOWER(priority_name) LIKE ?',
           [exact ? name : `%${name}%`]

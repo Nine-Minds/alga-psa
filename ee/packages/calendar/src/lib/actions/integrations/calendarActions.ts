@@ -1,7 +1,7 @@
 'use server';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
 import {
   generateGoogleCalendarAuthUrl,
   generateMicrosoftCalendarAuthUrl,
@@ -52,6 +52,48 @@ type AuthenticatedUser = {
 
 function isClientPortalUser(user: AuthenticatedUser): boolean {
   return user?.user_type === 'client';
+}
+
+function calendarActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  const lowerMessage = message.toLowerCase();
+
+  if (!message) {
+    return fallback;
+  }
+
+  if (
+    lowerMessage.includes('forbidden') ||
+    lowerMessage.includes('permission') ||
+    lowerMessage.includes('not owned')
+  ) {
+    return 'Permission denied: calendar provider not found or not owned by user.';
+  }
+
+  if (
+    lowerMessage.includes('oauth tokens not found') ||
+    lowerMessage.includes('no refresh token') ||
+    lowerMessage.includes('credentials not configured') ||
+    lowerMessage.includes('invalid_grant') ||
+    lowerMessage.includes('unauthorized') ||
+    lowerMessage.includes('401')
+  ) {
+    return 'Calendar authentication failed. Reconnect the calendar provider and try again.';
+  }
+
+  if (
+    lowerMessage.includes('webhook') ||
+    lowerMessage.includes('subscription') ||
+    lowerMessage.includes('notification url')
+  ) {
+    return 'Calendar webhook setup failed. Check the calendar permissions and webhook URL, then try again.';
+  }
+
+  if (lowerMessage.includes('provider not found')) {
+    return 'Calendar provider not found.';
+  }
+
+  return fallback;
 }
 
 async function getOwnedCalendarProviderOrNull(params: {
@@ -174,7 +216,7 @@ export async function initiateCalendarOAuthImpl(
       state: encodedState,
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to initiate OAuth' };
+    return { success: false, error: calendarActionErrorMessage(err, 'Failed to initiate calendar OAuth.') };
   }
 }
 
@@ -195,7 +237,7 @@ export async function getCalendarProvidersImpl(
 
     return { success: true, providers };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to fetch calendar providers' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to fetch calendar providers.') };
   }
 }
 
@@ -276,7 +318,7 @@ export async function createCalendarProviderImpl(
         // fall through
       }
     }
-    return { success: false, error: error?.message || 'Failed to create calendar provider' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to create calendar provider.') };
   }
 }
 
@@ -303,7 +345,7 @@ export async function updateCalendarProviderImpl(
 
     return { success: true, provider };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to update calendar provider' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to update calendar provider.') };
   }
 }
 
@@ -328,7 +370,7 @@ export async function deleteCalendarProviderImpl(
 
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to delete calendar provider' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to delete calendar provider.') };
   }
 }
 
@@ -352,7 +394,7 @@ export async function syncScheduleEntryToCalendarImpl(
     const syncService = new CalendarSyncService();
     return await syncService.syncScheduleEntryToExternal(entryId, calendarProviderId);
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to sync schedule entry' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to sync schedule entry.') };
   }
 }
 
@@ -376,7 +418,7 @@ export async function syncExternalEventToScheduleImpl(
     const syncService = new CalendarSyncService();
     return await syncService.syncExternalEventToSchedule(externalEventId, calendarProviderId);
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to sync external event' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to sync external event.') };
   }
 }
 
@@ -395,12 +437,11 @@ export async function resolveCalendarConflictImpl(
 
     const { knex } = await createTenantKnex();
     const mapping = await withTransaction(knex, async (trx) => {
-      return trx('calendar_event_mappings as cem')
-        .join('calendar_providers as cp', function (this: any) {
-          this.on('cp.id', '=', 'cem.calendar_provider_id').andOn('cp.tenant', '=', 'cem.tenant');
-        })
-        .where('cem.tenant', tenant)
-        .andWhere('cem.id', resolution.mappingId)
+      const db = tenantDb(trx, tenant);
+      const query = db.table<any>('calendar_event_mappings as cem');
+      db.tenantJoin(query, 'calendar_providers as cp', 'cp.id', 'cem.calendar_provider_id');
+      return query
+        .where('cem.id', resolution.mappingId)
         .andWhere('cp.user_id', user.user_id)
         .first(['cem.id']);
     });
@@ -413,7 +454,7 @@ export async function resolveCalendarConflictImpl(
       resolution.mergeData
     );
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to resolve conflict' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to resolve calendar conflict.') };
   }
 }
 
@@ -433,12 +474,11 @@ export async function getScheduleEntrySyncStatusImpl(
 
     const { knex } = await createTenantKnex();
     const mappings = await withTransaction(knex, async (trx) => {
-      return trx('calendar_event_mappings as cem')
-        .join('calendar_providers as cp', function (this: any) {
-          this.on('cp.id', '=', 'cem.calendar_provider_id').andOn('cp.tenant', '=', 'cem.tenant');
-        })
+      const db = tenantDb(trx, tenant);
+      const query = db.table<any>('calendar_event_mappings as cem');
+      db.tenantJoin(query, 'calendar_providers as cp', 'cp.id', 'cem.calendar_provider_id');
+      return query
         .where('cem.schedule_entry_id', entryId)
-        .andWhere('cem.tenant', tenant)
         .andWhere('cp.user_id', user.user_id)
         .select('cem.*');
     });
@@ -470,7 +510,7 @@ export async function getScheduleEntrySyncStatusImpl(
 
     return { success: true, status: statuses };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to get sync status' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to get calendar sync status.') };
   }
 }
 
@@ -524,12 +564,11 @@ export async function syncCalendarProviderImpl(
           const windowEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
 
           const mappings = await withTransaction(knex, async (trx) => {
-            return trx('calendar_event_mappings as cem')
-              .join('schedule_entries as se', function (this: any) {
-                this.on('se.entry_id', '=', 'cem.schedule_entry_id').andOn('se.tenant', '=', 'cem.tenant');
-              })
-              .where('cem.tenant', tenantId)
-              .andWhere('cem.calendar_provider_id', calendarProviderId)
+            const db = tenantDb(trx, tenantId);
+            const query = db.table<any>('calendar_event_mappings as cem');
+            db.tenantJoin(query, 'schedule_entries as se', 'se.entry_id', 'cem.schedule_entry_id');
+            return query
+              .where('cem.calendar_provider_id', calendarProviderId)
               .andWhere(function (this: any) {
                 this.where('se.scheduled_start', '<=', windowEnd).andWhere('se.scheduled_end', '>=', windowStart);
               })
@@ -566,15 +605,17 @@ export async function syncCalendarProviderImpl(
 
           if (allowPush) {
             const recentEntries = await withTransaction(knex, async (trx) => {
-              return trx('schedule_entries')
-                .where('schedule_entries.tenant', tenantId)
-                .andWhere('schedule_entries.scheduled_start', '<=', windowEnd)
-                .andWhere('schedule_entries.scheduled_end', '>=', windowStart)
-                .leftJoin('calendar_event_mappings as cem', function (this: any) {
-                  this.on('cem.schedule_entry_id', '=', 'schedule_entries.entry_id')
-                    .andOn('cem.tenant', '=', 'schedule_entries.tenant')
-                    .andOn('cem.calendar_provider_id', '=', trx.raw('?', [calendarProviderId]));
-                })
+              const db = tenantDb(trx, tenantId);
+              const query = db.table<any>('schedule_entries')
+                .where('schedule_entries.scheduled_start', '<=', windowEnd)
+                .andWhere('schedule_entries.scheduled_end', '>=', windowStart);
+              db.tenantJoin(query, 'calendar_event_mappings as cem', 'cem.schedule_entry_id', 'schedule_entries.entry_id', {
+                type: 'left',
+                on(join: any) {
+                  join.andOn('cem.calendar_provider_id', '=', trx.raw('?', [calendarProviderId]));
+                },
+              });
+              return query
                 .whereNull('cem.id')
                 .limit(100)
                 .select('schedule_entries.entry_id as entry_id');
@@ -603,7 +644,7 @@ export async function syncCalendarProviderImpl(
                 await adapter.registerWebhookSubscription();
               } catch (subscriptionError: any) {
                 failures.push(
-                  `Webhook registration failed: ${subscriptionError?.message || 'unknown error'}`
+                  `Webhook registration failed: ${calendarActionErrorMessage(subscriptionError, 'Calendar webhook setup failed.')}`
                 );
               }
             }
@@ -630,7 +671,7 @@ export async function syncCalendarProviderImpl(
           console.warn(`[calendarActions] Background sync completed with errors in ${duration}ms: ${summary}`);
         }
       } catch (error: any) {
-        const message = error?.message || 'Failed to sync calendar provider';
+        const message = calendarActionErrorMessage(error, 'Failed to sync calendar provider.');
         console.error('[calendarActions] Background sync failed:', error);
         try {
           await providerService.updateProviderStatus(calendarProviderId, {
@@ -645,7 +686,7 @@ export async function syncCalendarProviderImpl(
 
     return { success: true, started: true };
   } catch (error: any) {
-    return { success: false, error: error?.message || 'Failed to start calendar sync' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Failed to start calendar sync.') };
   }
 }
 
@@ -660,7 +701,7 @@ export async function retryMicrosoftCalendarSubscriptionRenewalImpl(
     }
 
     const { knex } = await createTenantKnex();
-    const provider = await knex('calendar_providers').where({ id: providerId, tenant }).first();
+    const provider = await tenantDb(knex, tenant).table('calendar_providers').where({ id: providerId }).first();
 
     if (!provider) {
       return { success: false, error: 'Provider not found or access denied' };
@@ -698,6 +739,6 @@ export async function retryMicrosoftCalendarSubscriptionRenewalImpl(
     return { success: false, error: result.error || 'Renewal failed' };
   } catch (error: any) {
     console.error('[calendarActions] Manual renewal failed:', error);
-    return { success: false, error: error.message || 'Internal server error' };
+    return { success: false, error: calendarActionErrorMessage(error, 'Calendar subscription renewal failed.') };
   }
 }

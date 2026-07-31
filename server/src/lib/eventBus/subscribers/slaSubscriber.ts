@@ -21,6 +21,7 @@ import {
 import {
   createTenantKnex,
   runWithTenant,
+  tenantDb,
   withTransaction,
   withTenantTransactionRetryReadOnly
 } from '@alga-psa/db';
@@ -86,6 +87,7 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
 
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
+      const db = tenantDb(knex, tenantId);
 
       // The main creation paths publish TICKET_CREATED after their
       // transaction commits, so the row is normally visible immediately.
@@ -96,8 +98,8 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
         if (attempt > 0) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
-        ticket = await knex('tickets')
-          .where({ tenant: tenantId, ticket_id: ticketId })
+        ticket = await db.table('tickets')
+          .where({ ticket_id: ticketId })
           .select('client_id', 'board_id', 'priority_id', 'entered_at')
           .first();
         if (ticket) {
@@ -272,8 +274,8 @@ async function handleTicketClosedEvent(event: unknown): Promise<void> {
   try {
     const result = await withTenantTransactionRetryReadOnly(tenantId, async (trx: Knex.Transaction) => {
       // Get the closed_at time from the ticket
-      const ticket = await trx('tickets')
-        .where({ tenant: tenantId, ticket_id: ticketId })
+      const ticket = await tenantDb(trx, tenantId).table('tickets')
+        .where({ ticket_id: ticketId })
         .select('closed_at')
         .first();
 
@@ -420,9 +422,8 @@ async function handleResponseStateChangedEvent(event: unknown): Promise<void> {
       const { knex } = await createTenantKnex();
 
       // Check if response state tracking is enabled for this tenant
-      const tenantSettingsRow = await knex('tenant_settings')
+      const tenantSettingsRow = await tenantDb(knex, tenantId).table('tenant_settings')
         .select('ticket_display_settings')
-        .where({ tenant: tenantId })
         .first();
       const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
       if (!responseStateEnabled) {

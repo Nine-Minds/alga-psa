@@ -11,10 +11,13 @@ test('T006 setup/status UI package uses session-based auth (no query token)', ()
   const nextConfig = fs.readFileSync(path.join(uiRoot, 'next.config.mjs'), 'utf8');
   const statusPage = fs.readFileSync(path.join(uiRoot, 'app', 'page.tsx'), 'utf8');
   const setupPage = fs.readFileSync(path.join(uiRoot, 'app', 'setup', 'page.tsx'), 'utf8');
+  const podAccessPanel = fs.readFileSync(path.join(uiRoot, 'app', 'PodAccessPanel.tsx'), 'utf8');
   const layout = fs.readFileSync(path.join(uiRoot, 'app', 'layout.tsx'), 'utf8');
   const dockerfile = fs.readFileSync(path.join(repoRoot, 'ee', 'appliance', 'control-plane', 'Dockerfile'), 'utf8');
 
   assert.equal(packageJson.scripts.build, 'next build');
+  assert.equal(packageJson.dependencies['@xterm/xterm'], '6.0.0');
+  assert.equal(packageJson.dependencies['@xterm/addon-fit'], '0.11.0');
   assert.match(nextConfig, /output: 'export'/);
   assert.match(nextConfig, /distDir: 'dist'/);
   assert.match(dockerfile, /COPY --from=ui-build .*status-ui\/dist \.\/status-ui\/dist/);
@@ -23,6 +26,13 @@ test('T006 setup/status UI package uses session-based auth (no query token)', ()
   assert.match(layout, /<AuthGate>\{children\}<\/AuthGate>/);
   assert.match(statusPage, /fetch\(apiPath\(["']\/api\/status["']\)/);
   assert.match(statusPage, /href="\/setup\/"/);
+  assert.match(statusPage, /value: "access", label: "Access"/);
+  assert.match(statusPage, /<PodAccessPanel/);
+  assert.match(podAccessPanel, /new Terminal\(/);
+  assert.match(podAccessPanel, /new FitAddon\(/);
+  assert.match(podAccessPanel, /\/api\/k8s\/exec/);
+  assert.match(podAccessPanel, /\/api\/k8s\/port-forwards/);
+  assert.match(podAccessPanel, /Anyone who can reach the appliance LAN/);
   assert.match(setupPage, /fetch\(["']\/api\/setup\/config["']/);
   assert.match(setupPage, /fetch\(["']\/api\/setup["']/);
 

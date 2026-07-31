@@ -4,15 +4,67 @@
 
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type { TenantEmailSettings } from '@alga-psa/types';
+import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
+import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
+import {
+  actionError,
+  isActionMessageError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
   defaultFromDomain?: string | null;
   ticketingFromEmail?: string | null;
+  ticketingFromName?: string | null;
 };
+
+// getEmailSettings masks stored secrets as this sentinel so they are never
+// sent to the browser. On save it means "unchanged" — restore the real value.
+const SECRET_MASK = '***';
+const SECRET_FIELDS = ['password', 'apiKey'] as const;
+const EDITABLE_PROVIDER_TYPES = ['smtp', 'resend'] as const;
+
+function withEditableProviderConfigs(settings: TenantEmailSettings): TenantEmailSettings {
+  const providerConfigs = [...(settings.providerConfigs ?? [])];
+
+  for (const providerType of EDITABLE_PROVIDER_TYPES) {
+    if (!providerConfigs.some(config => config.providerType === providerType)) {
+      providerConfigs.push(createDefaultProviderConfig(providerType, {
+        isEnabled: providerType === settings.emailProvider,
+      }));
+    }
+  }
+
+  return { ...settings, providerConfigs };
+}
+
+function mergeProviderSecrets(
+  incoming: EmailProviderConfig[],
+  existing: EmailProviderConfig[] | undefined
+): EmailProviderConfig[] {
+  const existingById = new Map((existing ?? []).map(config => [config.providerId, config]));
+
+  return incoming.map(config => {
+    const prior = existingById.get(config.providerId);
+    const nextConfig: Record<string, any> = { ...(config.config ?? {}) };
+
+    for (const field of SECRET_FIELDS) {
+      if (nextConfig[field] !== SECRET_MASK) continue;
+      // The client only ever held the mask, so this is not a real change.
+      const priorValue = prior?.config?.[field];
+      if (priorValue) {
+        nextConfig[field] = priorValue;
+      } else {
+        delete nextConfig[field];
+      }
+    }
+
+    return { ...config, config: nextConfig };
+  });
+}
 
 function extractDomain(address?: string | null): string | null {
   if (!address) return null;
@@ -28,10 +80,15 @@ function hasOwnUpdate<K extends keyof EmailSettingsUpdateInput>(
   return Object.prototype.hasOwnProperty.call(updates, key);
 }
 
+function normalizeOptionalString(value?: string | null): string | null {
+  const normalized = value?.trim();
+  return normalized || null;
+}
+
 export const getEmailSettings = withAuth(async (
   _user,
   { tenant }
-): Promise<TenantEmailSettings | null> => {
+): Promise<TenantEmailSettings | null | ActionMessageError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -40,32 +97,31 @@ export const getEmailSettings = withAuth(async (
 
     if (!settings) {
       // Return default settings if none exist
+      const defaultSmtpConfig = createDefaultProviderConfig('smtp', { isEnabled: true });
       const defaultSettings: TenantEmailSettings = {
         tenantId: tenant || '',
         defaultFromDomain: process.env.EMAIL_FROM ? extractDomain(process.env.EMAIL_FROM) || undefined : undefined,
         ticketingFromEmail: undefined,
+        ticketingFromName: null,
         customDomains: [],
         emailProvider: 'smtp',
-        providerConfigs: [
-          {
-            providerId: 'default-smtp',
-            providerType: 'smtp',
-            isEnabled: true,
-            config: {
-              host: process.env.EMAIL_HOST || '',
-              port: parseInt(process.env.EMAIL_PORT || '587'),
-              username: process.env.EMAIL_USERNAME || '',
-              password: '', // Don't expose password
-              from: process.env.EMAIL_FROM || ''
-            }
+        providerConfigs: [{
+          ...defaultSmtpConfig,
+          config: {
+            ...defaultSmtpConfig.config,
+            host: process.env.EMAIL_HOST || '',
+            port: parseInt(process.env.EMAIL_PORT || '587'),
+            username: process.env.EMAIL_USERNAME || '',
+            password: '', // Don't expose password
+            from: process.env.EMAIL_FROM || ''
           }
-        ],
+        }],
         trackingEnabled: false,
         createdAt: new Date(),
         updatedAt: new Date()
       };
       
-      return defaultSettings;
+      return withEditableProviderConfigs(defaultSettings);
     }
 
     // Don't expose sensitive data like passwords and API keys in full
@@ -81,10 +137,10 @@ export const getEmailSettings = withAuth(async (
       }))
     };
 
-    return sanitizedSettings;
+    return withEditableProviderConfigs(sanitizedSettings);
   } catch (error: any) {
     console.error('Error fetching email settings:', error);
-    throw new Error('Failed to fetch email settings');
+    return actionError('Failed to fetch email settings');
   }
 });
 
@@ -92,7 +148,7 @@ export const updateEmailSettings = withAuth(async (
   _user,
   { tenant },
   updates: EmailSettingsUpdateInput
-): Promise<TenantEmailSettings> => {
+): Promise<TenantEmailSettings | ActionMessageError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -106,14 +162,28 @@ export const updateEmailSettings = withAuth(async (
     const nextTicketingFromEmail = hasOwnUpdate(updates, 'ticketingFromEmail')
       ? updates.ticketingFromEmail?.trim() || null
       : existingSettings?.ticketingFromEmail ?? null;
+    const nextTicketingFromName = hasOwnUpdate(updates, 'ticketingFromName')
+      ? normalizeOptionalString(updates.ticketingFromName)
+      : existingSettings?.ticketingFromName ?? null;
+
+    const mergedProviderConfigs = updates.providerConfigs
+      ? mergeProviderSecrets(updates.providerConfigs, existingSettings?.providerConfigs)
+      : existingSettings?.providerConfigs ?? [];
+    const normalizedProviderConfigs = updates.emailProvider
+      ? mergedProviderConfigs.map(config => ({
+          ...config,
+          isEnabled: config.providerType === updates.emailProvider,
+        }))
+      : mergedProviderConfigs;
 
     const mergedSettings: TenantEmailSettings = {
       tenantId: tenant || '',
       defaultFromDomain: nextDefaultFromDomain,
       ticketingFromEmail: nextTicketingFromEmail,
+      ticketingFromName: nextTicketingFromName,
       customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
       emailProvider: updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp',
-      providerConfigs: updates.providerConfigs ?? existingSettings?.providerConfigs ?? [],
+      providerConfigs: normalizedProviderConfigs,
       trackingEnabled: updates.trackingEnabled ?? existingSettings?.trackingEnabled ?? false,
       maxDailyEmails: updates.maxDailyEmails ?? existingSettings?.maxDailyEmails,
       createdAt: existingSettings?.createdAt ?? now,
@@ -123,12 +193,12 @@ export const updateEmailSettings = withAuth(async (
     const targetDomain = mergedSettings.defaultFromDomain?.trim().toLowerCase();
     if (mergedSettings.ticketingFromEmail) {
       if (!targetDomain) {
-        throw new Error('Configure an outbound domain before choosing a ticketing From address');
+        return actionError('Configure an outbound domain before choosing a ticketing From address');
       }
 
       const fromDomain = extractDomain(mergedSettings.ticketingFromEmail);
       if (!fromDomain || fromDomain !== targetDomain) {
-        throw new Error('Ticketing From address must use the configured outbound domain');
+        return actionError('Ticketing From address must use the configured outbound domain');
       }
     }
 
@@ -137,6 +207,7 @@ export const updateEmailSettings = withAuth(async (
       tenant: tenant,
       default_from_domain: mergedSettings.defaultFromDomain ?? null,
       ticketing_from_email: mergedSettings.ticketingFromEmail || null,
+      ticketing_from_name: mergedSettings.ticketingFromName || null,
       custom_domains: JSON.stringify(mergedSettings.customDomains || []),
       email_provider: mergedSettings.emailProvider,
       provider_configs: JSON.stringify(mergedSettings.providerConfigs || []),
@@ -145,19 +216,17 @@ export const updateEmailSettings = withAuth(async (
       updated_at: now
     };
 
+    const settingsTable = () => tenantDb(knex, tenant).table('tenant_email_settings');
+
     // Check if settings exist
-    const existing = await knex('tenant_email_settings')
-      .where({ tenant: tenant })
-      .first();
+    const existing = await settingsTable().first();
 
     if (existing) {
       // Update existing settings
-      await knex('tenant_email_settings')
-        .where({ tenant: tenant })
-        .update(settingsData);
+      await settingsTable().update(settingsData);
     } else {
       // Create new settings
-      await knex('tenant_email_settings')
+      await settingsTable()
         .insert({
           ...settingsData,
           created_at: now
@@ -166,13 +235,35 @@ export const updateEmailSettings = withAuth(async (
 
     // Re-fetch and return updated settings
     const updatedSettings = await getEmailSettings();
+    if (isActionMessageError(updatedSettings)) {
+      return updatedSettings;
+    }
     if (!updatedSettings) {
-      throw new Error('Failed to retrieve updated settings');
+      return actionError('Failed to retrieve updated settings');
     }
     
     return updatedSettings;
   } catch (error: any) {
     console.error('Error updating email settings:', error);
-    throw new Error('Failed to update email settings');
+    return actionError('Failed to update email settings');
+  }
+});
+
+/**
+ * Verify the saved outbound provider (and optionally send a test email to the
+ * given address). Returns the real failure reason so admins can diagnose SMTP
+ * problems from the Outbound Email tab without reading server logs.
+ */
+export const testOutboundEmail = withAuth(async (
+  _user,
+  { tenant },
+  toAddress?: string
+): Promise<{ success: boolean; message?: string; error?: string }> => {
+  try {
+    const recipient = toAddress?.trim() || undefined;
+    return await TenantEmailService.testConnection(tenant || '', recipient);
+  } catch (error: any) {
+    console.error('Error testing outbound email:', error);
+    return { success: false, error: 'Failed to test outbound email' };
   }
 });

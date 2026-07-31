@@ -48,6 +48,9 @@ vi.mock('@alga-psa/db', () => ({
     const trx = vi.fn((table: string) => makeQueryBuilder(table));
     return callback(trx);
   }),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => conn(table).where({ tenant }),
+  }),
 }));
 
 // sendEmail publishes outbound-email lifecycle events (F071); stub the publisher

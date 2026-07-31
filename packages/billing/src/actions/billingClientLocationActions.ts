@@ -9,8 +9,12 @@
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
+import {
+  permissionError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Subset of IClientLocation fields that billing surfaces (quote/invoice/contract UI and PDFs)
@@ -39,6 +43,14 @@ export type BillingLocationSummary = Pick<
   | 'email'
 >;
 
+function tenantScopedTable(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  table: string
+): Knex.QueryBuilder {
+  return tenantDb(conn, tenant).table(table);
+}
+
 /**
  * Fetch active client locations for a given client, ordered so the
  * default/billing address comes first.
@@ -49,9 +61,9 @@ export const getActiveClientLocationsForBilling = withAuth(async (
   user,
   { tenant },
   clientId: string,
-): Promise<BillingLocationSummary[]> => {
+): Promise<BillingLocationSummary[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'client', 'read')) {
-    throw new Error('Permission denied: client read required');
+    return permissionError('Permission denied: client read required');
   }
   if (!clientId) {
     return [];
@@ -59,8 +71,27 @@ export const getActiveClientLocationsForBilling = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
+  // Client portal users hold client-flagged copies of client:read, so the
+  // permission check alone does not scope results — client callers may only
+  // query their own client's locations.
+  if (user.user_type === 'client') {
+    let portalClientId = typeof user.clientId === 'string' && user.clientId.length > 0
+      ? user.clientId
+      : null;
+    if (!portalClientId && user.contact_id) {
+      const contact = await tenantDb(knex, tenant).table('contacts')
+        .where({ contact_name_id: user.contact_id })
+        .select('client_id')
+        .first<{ client_id: string | null }>();
+      portalClientId = contact?.client_id ?? null;
+    }
+    if (!portalClientId || portalClientId !== clientId) {
+      return permissionError('Permission denied: cannot access locations for another client');
+    }
+  }
+
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('client_locations')
+    return tenantScopedTable(trx, tenant, 'client_locations')
       .select<BillingLocationSummary[]>(
         'location_id',
         'client_id',
@@ -83,7 +114,6 @@ export const getActiveClientLocationsForBilling = withAuth(async (
         'email',
       )
       .where({
-        tenant,
         client_id: clientId,
         is_active: true,
       })

@@ -99,8 +99,10 @@ function makeFakeKnex() {
     _where: [] as Record<string, unknown>[],
     _whereNot: [] as Record<string, unknown>[],
 
-    where(w: Record<string, unknown>) {
-      this._where.push(w);
+    where(w: Record<string, unknown> | string, value?: unknown) {
+      // tenantDb scopes each root query with where('<table>.tenant', tenant);
+      // normalize the qualified column to its bare name so tenant scoping stays visible.
+      this._where.push(typeof w === 'string' ? { [w.split('.').pop() as string]: value } : w);
       return this;
     },
     whereNot(w: Record<string, unknown>) {
@@ -126,7 +128,7 @@ function makeFakeKnex() {
       return Promise.resolve([]);
     },
     update(patch: Record<string, unknown>) {
-      const whereClause = this._where[0] ?? {};
+      const whereClause = Object.assign({}, ...this._where);
       if (this._table === 'users') {
         mockState.userUpdates.push({ where: whereClause, update: patch });
       } else if (this._table === 'api_keys') {
@@ -136,7 +138,7 @@ function makeFakeKnex() {
     },
     del() {
       if (this._table === 'apple_user_identities') {
-        mockState.appleIdentityDeletes.push(this._where[0] ?? {});
+        mockState.appleIdentityDeletes.push(Object.assign({}, ...this._where));
       }
       return Promise.resolve(1);
     },

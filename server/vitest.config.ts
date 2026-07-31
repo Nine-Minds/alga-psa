@@ -1,8 +1,13 @@
-import { defineConfig } from 'vitest/config';
+import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import fs from 'node:fs';
 import path from 'path';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
+
+// CI runners are UTC and several date-sensitive suites assert against it.
+// Default local runs to UTC so results match CI; set TZ explicitly to
+// exercise another zone.
+process.env.TZ = process.env.TZ || 'UTC';
 
 export default defineConfig({
   // The repo's tsconfig sets `jsx: "preserve"` (Next.js/SWC compiles JSX with
@@ -22,6 +27,19 @@ export default defineConfig({
       'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
+    ],
+    // The visual golden suite launches Chromium + Postgres and depends on
+    // machine-local fonts; it is a manual template-review tool, never part of
+    // an unscoped run. Opt in with RUN_VISUAL=1 (see src/test/visual/README.md).
+    exclude: [
+      '**/node_modules/**',
+      ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
+      // *.db.test.* suites (shared/workflow businessOperations.*) recreate a
+      // live Postgres database and mutate DB_* env for the whole fork — they
+      // are integration tests by naming convention. The CI unit-coverage job
+      // opts out (it runs without a database, same reason src/test/integration
+      // isn't in it); local full runs with a DB still include them.
+      ...(process.env.SKIP_DB_TESTS === '1' ? ['**/*.db.test.?(c|m)[jt]s?(x)'] : []),
     ],
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
@@ -50,13 +68,49 @@ export default defineConfig({
     logHeapUsage: true,
     testTimeout: 20000,
     hookTimeout: 120000,
+    // The main vitest process retains every test's console output for the
+    // report; across the widened package/shared run the chatty suites (db
+    // config dumps, workflow loggers) accumulate into the multi-GB range and
+    // OOM the orchestrator at report time. Keep logs for failures only.
+    silent: 'passed-only',
     coverage: {
       // Opt-in via --coverage; always-on coverage made every local run pay the
       // instrumentation cost. CI enables it where reports are collected.
       enabled: false,
       provider: 'v8',
+      // AST-aware remapping (vitest 4's default): the classic sourcemap remap
+      // of the full package/shared file set blows the 14GB heap at report
+      // time ("Ineffective mark-compacts near heap limit"); this path uses a
+      // fraction of the memory.
+      experimentalAstAwareRemapping: true,
+      // Coverage reports are skipped on failing runs by default; red runs
+      // are exactly the ones the metrics sheet needs coverage rows for.
+      reportOnFailure: true,
+      // The suite loads @alga-psa/* code through the src aliases below, so
+      // package and shared sources are measured alongside server/src.
+      // allowExternal admits files outside server/ into the report — and it
+      // switches include/exclude matching to absolute paths, so these
+      // patterns must be absolute. Two limits of the v8 provider here:
+      // untested-file discovery never leaves the vitest root, so package and
+      // shared files the suite never loads are absent from the report (their
+      // percentages read optimistic), while server/src gets true 0% entries.
+      allowExternal: true,
       include: [
-        'src/**/*.{js,ts,jsx,tsx}',
+        path.resolve(__dirname, './src') + '/**/*.{js,ts,jsx,tsx}',
+        path.resolve(__dirname, '../packages') + '/*/src/**/*.{js,ts,jsx,tsx}',
+        path.resolve(__dirname, '../shared') + '/**/*.{js,ts,jsx,tsx}',
+      ],
+      exclude: [
+        ...coverageConfigDefaults.exclude,
+        '**/dist/**',
+        '**/node_modules/**',
+        '**/migrations/**',
+        '**/seeds/**',
+        // Codegen output (e.g. the 59k-line MCP registry) reads as ~100%
+        // covered because importing a data literal executes it — one file
+        // inflated the suite's lines% by ~7 points and moved the trend line
+        // whenever the generator re-ran.
+        '**/*.generated.ts',
       ],
       reportsDirectory: path.resolve(__dirname, './coverage'),
       reporter: ['text', 'html', 'lcov'],
@@ -90,6 +144,9 @@ export default defineConfig({
       { find: '@enterprise', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
       { find: '@alga-psa/shared', replacement: path.resolve(__dirname, '../shared') },
+      // @alga-psa/search export names mirror its src layout, so a prefix alias
+      // resolves all subpaths (./sql, ./indexers/*, ...) to source for Vitest.
+      { find: '@alga-psa/search', replacement: path.resolve(__dirname, '../packages/search/src') },
 
       // Workspace packages are not guaranteed to be linked into node_modules in all dev/test setups.
       // Explicitly alias the most common @alga-psa/* modules to their source entrypoints for Vitest.
@@ -110,6 +167,12 @@ export default defineConfig({
       { find: /^@alga-psa\/db\/connection$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts') },
       { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../packages/db/src/models/index.ts') },
       { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: path.resolve(__dirname, '../packages/db/src/models/$1') },
+      // db's ./workDate export maps to src/lib/workDate (names don't mirror the
+      // src layout), so a prefix alias can't reach it — alias it explicitly.
+      { find: /^@alga-psa\/db\/workDate$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts') },
+
+      { find: /^@alga-psa\/portal-shared$/, replacement: path.resolve(__dirname, '../packages/portal-shared/src/index.ts') },
+      { find: /^@alga-psa\/portal-shared\/(.*)$/, replacement: path.resolve(__dirname, '../packages/portal-shared/src/$1') },
 
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../packages/types/src/index.ts') },
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/index.ts') },
@@ -119,7 +182,9 @@ export default defineConfig({
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
       { find: /^@alga-psa\/licensing$/, replacement: path.resolve(__dirname, '../packages/licensing/src/index.ts') },
       { find: /^@alga-psa\/licensing\/actions$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/index.ts') },
+      { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
+      { find: /^@alga-psa\/auth\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/actions/$1') },
       { find: /^@alga-psa\/auth\/sso\/entry$/, replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },
       { find: /^@alga-psa\/auth\/rbac$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/rbac.ts') },
@@ -139,7 +204,16 @@ export default defineConfig({
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../packages/ui/src/index.ts') },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../packages/ui/src/$1') },
       { find: /^@alga-psa\/billing$/, replacement: path.resolve(__dirname, '../packages/billing/src/index.ts') },
+      // ./testing/qboSimulator doesn't mirror the src layout; resolve it before
+      // the generic prefix alias below shadows the package exports map.
+      { find: /^@alga-psa\/billing\/testing\/qboSimulator$/, replacement: path.resolve(__dirname, '../packages/billing/src/services/accountingSync/testing/qboSimulator.ts') },
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/billing/src/$1') },
+      { find: /^@alga-psa\/opportunities$/, replacement: path.resolve(__dirname, '../packages/opportunities/src/index.ts') },
+      { find: /^@alga-psa\/opportunities\/(.*)$/, replacement: path.resolve(__dirname, '../packages/opportunities/src/$1') },
+      { find: /^@alga-psa\/marketing$/, replacement: path.resolve(__dirname, '../packages/marketing/src/index.ts') },
+      { find: /^@alga-psa\/marketing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/marketing/src/$1') },
+      { find: /^@alga-psa\/inventory$/, replacement: path.resolve(__dirname, '../packages/inventory/src/index.ts') },
+      { find: /^@alga-psa\/inventory\/(.*)$/, replacement: path.resolve(__dirname, '../packages/inventory/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../packages/formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/formatting/src/$1') },
       { find: /^@alga-psa\/projects$/, replacement: path.resolve(__dirname, '../packages/projects/src/index.ts') },
@@ -157,6 +231,11 @@ export default defineConfig({
       { find: /^@alga-psa\/reporting\/actions$/, replacement: path.resolve(__dirname, '../packages/reporting/src/actions/index.ts') },
       { find: /^@alga-psa\/reporting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reporting/src/$1') },
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
+      { find: /^@alga-psa\/jobs\/fanout$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/fanout/index.ts') },
+      { find: /^@alga-psa\/jobs\/runner$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/jobRunnerAccessor.ts') },
+      { find: /^@alga-psa\/jobs\/handlers\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/handlers/$1') },
+      { find: /^@alga-psa\/jobs\/handler-utils\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/handler-utils/$1') },
+      { find: /^@alga-psa\/jobs\/runners\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/jobs/runners/$1') },
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },
       { find: /^@alga-psa\/teams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/teams/src/$1') },
@@ -188,6 +267,11 @@ export default defineConfig({
       { find: /^@alga-psa\/client-portal$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/index.ts') },
       { find: /^@alga-psa\/client-portal\/(.*)$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/$1') },
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
+      { find: /^@alga-psa\/jobs\/fanout$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/fanout/index.ts') },
+      { find: /^@alga-psa\/jobs\/runner$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/jobRunnerAccessor.ts') },
+      { find: /^@alga-psa\/jobs\/handlers\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/handlers/$1') },
+      { find: /^@alga-psa\/jobs\/handler-utils\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/handler-utils/$1') },
+      { find: /^@alga-psa\/jobs\/runners\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/lib/jobs/runners/$1') },
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/sla$/, replacement: path.resolve(__dirname, '../packages/sla/src/index.ts') },
       { find: /^@alga-psa\/sla\/(.*)$/, replacement: path.resolve(__dirname, '../packages/sla/src/$1') },
@@ -196,6 +280,14 @@ export default defineConfig({
       { find: /^@alga-psa\/tenancy$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/index.ts') },
       { find: /^@alga-psa\/tenancy\/actions$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/actions/index.ts') },
       { find: /^@alga-psa\/tenancy\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/$1') },
+
+      // Emulator packages live under packages/emulators/* and are not linked
+      // into node_modules; their smoke tests import each other by name.
+      { find: /^@alga-psa\/emulator-host$/, replacement: path.resolve(__dirname, '../packages/emulators/host/src/index.ts') },
+      { find: /^@alga-psa\/emulator-msgraph$/, replacement: path.resolve(__dirname, '../packages/emulators/msgraph/src/index.ts') },
+      { find: /^@alga-psa\/emulator-qbo$/, replacement: path.resolve(__dirname, '../packages/emulators/qbo/src/index.ts') },
+      { find: /^@alga-psa\/emulator-smtp-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/smtp-sink/src/index.ts') },
+      { find: /^@alga-psa\/emulator-webhook-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/webhook-sink/src/index.ts') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
@@ -229,8 +321,18 @@ export default defineConfig({
       // so the real client would open a live connection and hang unit tests.
       // Tests that need specific Redis behavior still override this with their
       // own vi.mock/vi.doMock('redis').
-      { find: /^redis$/, replacement: path.resolve(__dirname, './src/test/stubs/redis.ts') },
+      // REAL_REDIS=1 (integration CI, which runs a Redis service) skips the
+      // stub entirely: the event-bus paths those tests exercise need stream
+      // commands the stub cannot meaningfully fake.
+      ...(process.env.REAL_REDIS === '1'
+        ? []
+        : [{ find: /^redis$/, replacement: path.resolve(__dirname, './src/test/stubs/redis.ts') }]),
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
+      // next-auth's exports map doesn't expose ./lib/env, but four tickets
+      // component tests vi.mock it. With next-auth inlined (see test.server
+      // above) Vite strictly resolves the mock specifier through the exports
+      // map and aborts the run — alias it to the real file so the mock applies.
+      { find: /^next-auth\/lib\/env$/, replacement: path.resolve(__dirname, '../node_modules/next-auth/lib/env.js') },
       { find: /^ajv\/dist\/2020$/, replacement: path.resolve(__dirname, '../node_modules/ajv/dist/2020.js') },
       {
         find: /^ajv\/dist\/refs\/json-schema-draft-07\.json$/,

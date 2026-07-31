@@ -217,6 +217,10 @@
       "close": {
         "label": "Zamknij panel",
         "description": "Zamknij aktywny panel lub szufladę."
+      },
+      "submit": {
+        "label": "Zapisz panel",
+        "description": "Zapisz formularz aktywnego panelu lub szuflady."
       }
     },
     "drawer": {

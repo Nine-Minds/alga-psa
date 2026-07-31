@@ -49,6 +49,16 @@ each Tactical Client to an AlgaPSA client and use the **Auto-sync** toggle to
 control whether that organization's devices import. Map a Tactical Client to an
 AlgaPSA client before you sync devices, so its agents land on the right client.
 
+Each mapping also supports a **Default Notification Contact**. Choose a contact from
+the mapped client using the picker that appears alongside the client selector. When
+an alert for that organization creates a ticket, AlgaPSA sets the ticket's contact
+to the person you chose and fires the tenant's configured "Ticket Created"
+client-facing email, notifying the right person at the client the moment an alert
+becomes a ticket. If no default is set, AlgaPSA falls back to the client's primary
+contact. If no valid contact can be resolved in either case, the ticket is still
+created — just without a contact or client notification. Use **Add new contact** in
+the picker to create a contact inline without leaving the mapping screen.
+
 ## Sync devices into assets
 
 Click **Sync Devices** to import agents from the organizations you mapped with

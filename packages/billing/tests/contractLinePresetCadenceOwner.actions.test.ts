@@ -10,6 +10,10 @@ let currentTrx: any;
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
   withTransaction: async (_knex: unknown, fn: any) => fn(currentTrx),
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (table: string) => conn(table),
+    unscoped: (table: string) => conn(table),
+  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({

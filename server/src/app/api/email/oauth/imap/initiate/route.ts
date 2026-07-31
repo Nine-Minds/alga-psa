@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { encodeState, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
@@ -24,16 +25,17 @@ export async function POST(request: NextRequest) {
     }
 
     const { knex, tenant } = await createTenantKnex();
-    const provider = await knex('email_providers')
-      .where({ id: providerId, tenant, provider_type: 'imap' })
+    const db = tenantDb(knex, tenant);
+    const provider = await db.table('email_providers')
+      .where({ id: providerId, provider_type: 'imap' })
       .first();
 
     if (!provider) {
       return NextResponse.json({ error: 'IMAP provider not found' }, { status: 404 });
     }
 
-    const imapConfig = await knex('imap_email_provider_config')
-      .where({ email_provider_id: providerId, tenant })
+    const imapConfig = await db.table('imap_email_provider_config')
+      .where({ email_provider_id: providerId })
       .first();
 
     if (!imapConfig) {
@@ -82,6 +84,6 @@ export async function POST(request: NextRequest) {
       return toProductAccessDeniedResponse(error);
     }
     console.error('IMAP OAuth initiate error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to initiate IMAP OAuth' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to initiate IMAP OAuth. Please try again.' }, { status: 500 });
   }
 }

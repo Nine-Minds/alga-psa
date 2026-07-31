@@ -5,11 +5,28 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 // Use the published @alga-psa/shared package subpath (exports map ->
 // dist/utils/encryption.js) rather than a dev-source-layout relative path: the
 // appliance bootstrap runs this module from the built production image, where
 // shared/ ships only as dist + node_modules (no shared/utils/ source tree).
 import { hashPassword, generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
+
+type DynamicTenantColumn = 'tenant' | 'tenant_id';
+
+function dynamicTenantCleanupQuery(
+  trx: Knex.Transaction,
+  table: string,
+  tenantId: string,
+  tenantColumn: DynamicTenantColumn
+): Knex.QueryBuilder {
+  return tenantDb(trx, tenantId)
+    .unscoped(
+      table,
+      `test tenant rollback deletes dynamically selected tenant-owned table ${table} using ${tenantColumn}`,
+    )
+    .where(tenantColumn, tenantId);
+}
 
 async function deleteTenantScopedRows(
   trx: Knex.Transaction,
@@ -18,13 +35,13 @@ async function deleteTenantScopedRows(
 ): Promise<void> {
   const hasTenantColumn = await trx.schema.hasColumn(table, 'tenant');
   if (hasTenantColumn) {
-    await trx(table).where('tenant', tenantId).del();
+    await dynamicTenantCleanupQuery(trx, table, tenantId, 'tenant').del();
     return;
   }
 
   const hasTenantIdColumn = await trx.schema.hasColumn(table, 'tenant_id');
   if (hasTenantIdColumn) {
-    await trx(table).where('tenant_id', tenantId).del();
+    await dynamicTenantCleanupQuery(trx, table, tenantId, 'tenant_id').del();
   }
 }
 
@@ -75,13 +92,14 @@ export async function createTenant(
   input: { tenantName: string; email: string; clientName?: string; productCode?: 'psa' | 'algadesk'; tenantId?: string }
 ): Promise<CreateTenantResult> {
   return await db.transaction(async (trx) => {
+    const bootstrapDb = tenantDb(trx, input.tenantId ?? '__tenant_creation_bootstrap__');
     // Idempotency: when a tenant id is supplied (appliance install adopting the
     // registry-minted id) and the tenant already exists, skip creation and return
     // it — so a re-run of the install bootstrap doesn't error or duplicate.
     if (input.tenantId) {
-      const existing = await trx('tenants').where({ tenant: input.tenantId }).first();
+      const existing = await tenantDb(trx, input.tenantId).table('tenants').first();
       if (existing) {
-        const existingClient = await trx('clients').where({ tenant: input.tenantId }).first();
+        const existingClient = await tenantDb(trx, input.tenantId).table('clients').first();
         return { tenantId: input.tenantId, clientId: existingClient?.client_id };
       }
     }
@@ -102,7 +120,8 @@ export async function createTenant(
     if (input.tenantId) {
       tenantInsert.tenant = input.tenantId;
     }
-    const tenantResult = await trx('tenants')
+    const tenantResult = await bootstrapDb
+      .unscoped('tenants', 'tenant creation bootstrap inserts tenant row before scoped tenant exists')
       .insert(tenantInsert)
       .returning('tenant');
 
@@ -111,7 +130,7 @@ export async function createTenant(
     // Create client using provided name or fallback to tenant company name
     let clientId: string | undefined;
     if (input.clientName ?? tenantCompanyName) {
-      const clientResult = await trx('clients')
+      const clientResult = await tenantDb(trx, tenantId).table('clients')
         .insert({
           client_id: uuidv4(),
           client_name: input.clientName ?? tenantCompanyName,
@@ -143,9 +162,10 @@ export async function createAdminUser(
   }
 ): Promise<CreateAdminUserResult> {
   return await db.transaction(async (trx) => {
+    const tenantScopedDb = tenantDb(trx, input.tenantId);
     // Check if user already exists in this tenant
-    const existingUser = await trx('users')
-      .where({ email: input.email, tenant: input.tenantId })
+    const existingUser = await tenantScopedDb.table('users')
+      .where({ email: input.email })
       .first();
 
     if (existingUser) {
@@ -157,7 +177,7 @@ export async function createAdminUser(
     const hashedPassword = await hashPassword(temporaryPassword);
     
     // Create user
-    const userResult = await trx('users')
+    const userResult = await tenantScopedDb.table('users')
       .insert({
         user_id: uuidv4(),
         first_name: input.firstName,
@@ -178,14 +198,14 @@ export async function createAdminUser(
     const userId = userResult[0].user_id || userResult[0];
 
     // Find or create Admin role
-    let adminRole = await trx('roles')
-      .where({ role_name: 'Admin', tenant: input.tenantId, msp: true, client: false })
+    let adminRole = await tenantScopedDb.table('roles')
+      .where({ role_name: 'Admin', msp: true, client: false })
       .first();
 
     let roleId: string;
     if (!adminRole) {
       // Create Admin role for this tenant
-      const newRoleResult = await trx('roles')
+      const newRoleResult = await tenantScopedDb.table('roles')
         .insert({
           role_id: uuidv4(),
           role_name: 'Admin',
@@ -204,7 +224,7 @@ export async function createAdminUser(
     }
 
     // Associate user with role
-    await trx('user_roles').insert({
+    await tenantScopedDb.table('user_roles').insert({
       user_id: userId,
       tenant: input.tenantId,
       role_id: roleId,
@@ -228,11 +248,12 @@ export async function setupTenantData(
   }
 ): Promise<{ setupSteps: string[] }> {
   return await db.transaction(async (trx) => {
+    const tenantScopedDb = tenantDb(trx, input.tenantId);
     const setupSteps: string[] = [];
 
     // Set up tenant email settings
     try {
-      await trx('tenant_email_settings').insert({
+      await tenantScopedDb.table('tenant_email_settings').insert({
         tenant_id: input.tenantId,
         email_provider: 'resend',
         fallback_enabled: true,
@@ -249,7 +270,7 @@ export async function setupTenantData(
     // Create tenant-client association if we have a client
     if (input.clientId) {
       try {
-        await trx('tenant_companies').insert({
+        await tenantScopedDb.table('tenant_companies').insert({
           tenant: input.tenantId,
           client_id: input.clientId,
           is_default: true,

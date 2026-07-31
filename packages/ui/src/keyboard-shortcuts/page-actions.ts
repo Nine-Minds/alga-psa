@@ -29,6 +29,18 @@ export function usePageSaveShortcut(handler: ShortcutAction['handler'], options:
   useCatalogPageShortcut('page.save', handler, options);
 }
 
+// Submit shortcut for forms hosted in a Drawer. The drawer itself pushes the
+// 'panel' scope while open (DrawerContext), so unlike useDialogSubmitShortcut
+// this only registers the action — page-scope saves are suppressed in panels,
+// and this is the panel-scope replacement.
+export function usePanelSubmitShortcut(handler: ShortcutAction['handler'], options: PageShortcutOptions = {}): void {
+  const action = useMemo<ShortcutAction>(
+    () => createShortcutAction('panel.submit', handler, { enabled: options.enabled }),
+    [handler, options.enabled],
+  );
+  useShortcutAction(action);
+}
+
 interface DialogSubmitShortcutOptions {
   enabled?: boolean;
   active?: boolean;

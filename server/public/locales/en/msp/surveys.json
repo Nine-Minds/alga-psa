@@ -277,6 +277,7 @@
   },
   "dashboard": {
     "loadingInsights": "Loading survey insights...",
+    "printTitle": "Survey Dashboard",
     "responseMetrics": {
       "cards": {
         "sent": "Invitations Sent",
@@ -398,7 +399,7 @@
     }
   },
   "clientSummary": {
-    "title": "CSAT Summary",
+    "title": "Satisfaction",
     "empty": "No survey data available for this client yet. Surveys sent after ticket closures will populate this view.",
     "labels": {
       "averageRating": "Average Rating",
@@ -422,6 +423,43 @@
     },
     "fallbacks": {
       "none": "-"
+    }
+  },
+  "print": {
+    "emptyValue": "—",
+    "columns": {
+      "date": "Date",
+      "averageRating": "Average Rating",
+      "responses": "Responses",
+      "rating": "Rating",
+      "share": "Share",
+      "ticket": "Ticket",
+      "client": "Client",
+      "contact": "Contact",
+      "agent": "Agent",
+      "technician": "Technician",
+      "submitted": "Submitted",
+      "comment": "Comment"
+    },
+    "metrics": {
+      "invitations": "Invitations",
+      "responses": "Responses",
+      "responseRate": "Response Rate",
+      "averageRating": "Average Rating",
+      "outstanding": "Outstanding",
+      "recentNegative": "Recent Negative"
+    },
+    "sections": {
+      "trend": "Response Trend",
+      "distribution": "Satisfaction Distribution",
+      "topIssues": "Top Issues",
+      "recentResponses": "Recent Responses"
+    },
+    "empty": {
+      "trend": "No responses in this period.",
+      "distribution": "No rated responses in this period.",
+      "topIssues": "No negative responses in this period.",
+      "recentResponses": "No responses in this period."
     }
   }
 }

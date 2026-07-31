@@ -1,4 +1,6 @@
 exports.seed = async function(knex, tenantId) {
+    const { tenantDb } = await import('@alga-psa/db');
+
     let tenants;
     if (tenantId) {
         tenants = [{ tenant: tenantId }];
@@ -11,6 +13,7 @@ exports.seed = async function(knex, tenantId) {
     }
 
     const mspPermissions = [
+        ['account_management', ['read', 'update', 'delete'], 'account and subscription'],
         ['client', ['create', 'read', 'update', 'delete'], 'clients'],
         ['contact', ['create', 'read', 'update', 'delete'], 'contacts'],
         ['document', ['create', 'read', 'update', 'delete'], 'documents'],
@@ -57,7 +60,8 @@ exports.seed = async function(knex, tenantId) {
     ];
 
     for (const { tenant } of tenants) {
-        const existingPermissions = await knex('permissions').where({ tenant });
+        const db = tenantDb(knex, tenant);
+        const existingPermissions = await db.table('permissions');
         const existingPermMap = new Map();
         existingPermissions.forEach(p => {
             const key = `${p.resource}:${p.action}:${p.msp ? 'msp' : 'client'}`;
@@ -73,7 +77,7 @@ exports.seed = async function(knex, tenantId) {
         }
 
         if (permissionsToInsert.length > 0) {
-            await knex('permissions').insert(permissionsToInsert);
+            await db.table('permissions').insert(permissionsToInsert);
             console.log(`Inserted ${permissionsToInsert.length} Algadesk permissions for tenant ${tenant}`);
         } else {
             console.log(`All Algadesk permissions already exist for tenant ${tenant}`);

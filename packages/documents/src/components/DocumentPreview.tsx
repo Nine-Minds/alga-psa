@@ -52,7 +52,8 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
                     throw new Error(result.error || 'Failed to load preview');
                 }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load preview');
+                console.error('Failed to load document preview:', err);
+                setError('Failed to load preview');
             } finally {
                 setIsLoading(false);
             }

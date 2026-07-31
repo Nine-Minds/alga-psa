@@ -1,4 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const mockedTenantConnection = vi.hoisted(() => ({
   db: null as any,
@@ -37,7 +40,8 @@ import { createPDFGenerationService } from '../../../../../../packages/billing/s
 import { browserPoolService } from '../../../../../../packages/billing/src/services/browserPoolService';
 import { TaxService } from '../../../../../../packages/billing/src/services/taxService';
 
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
+
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 const {
@@ -70,12 +74,18 @@ describe('Quote infrastructure', () => {
     await cleanupContext();
   }, 30000);
 
+  // valid_until must stay in the future: Quote.getById auto-expires a 'sent'
+  // quote once it lapses, which silently turns every revision test into
+  // "Only sent or rejected quotes can be revised". A fixed literal here rotted
+  // once already. Tests that want a lapsed quote pass valid_until explicitly.
+  const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
   async function createFinancialQuote(overrides: Record<string, unknown> = {}) {
     return Quote.create(context.db, context.tenantId, {
       client_id: context.clientId,
       title: 'Financial quote',
       quote_date: '2026-03-13T00:00:00.000Z',
-      valid_until: '2026-03-20T00:00:00.000Z',
+      valid_until: validUntil,
       subtotal: 0,
       discount_total: 0,
       tax: 0,
@@ -176,13 +186,13 @@ describe('Quote infrastructure', () => {
     expect(fk.rows[0]?.delete_rule).toBe('CASCADE');
   });
 
-  it('T006: Numbering generates Q-0001 on first quote call', async () => {
+  it('T006: Numbering generates QUO-0001 on first quote call', async () => {
     const nextNumber = await SharedNumberingService.getNextNumber('QUOTE', {
       knex: context.db,
       tenant: context.tenantId,
     });
 
-    expect(nextNumber).toBe('Q-0001');
+    expect(nextNumber).toBe('QUO-0001');
   });
 
   it('T007: Numbering generates a sequential quote series', async () => {
@@ -190,7 +200,7 @@ describe('Quote infrastructure', () => {
     const second = await SharedNumberingService.getNextNumber('QUOTE', { knex: context.db, tenant: context.tenantId });
     const third = await SharedNumberingService.getNextNumber('QUOTE', { knex: context.db, tenant: context.tenantId });
 
-    expect([first, second, third]).toEqual(['Q-0001', 'Q-0002', 'Q-0003']);
+    expect([first, second, third]).toEqual(['QUO-0001', 'QUO-0002', 'QUO-0003']);
   });
 
   it('T008: Numbering keeps quote sequences isolated by tenant', async () => {
@@ -199,8 +209,8 @@ describe('Quote infrastructure', () => {
     const firstTenantNumber = await SharedNumberingService.getNextNumber('QUOTE', { knex: context.db, tenant: context.tenantId });
     const secondTenantNumber = await SharedNumberingService.getNextNumber('QUOTE', { knex: context.db, tenant: otherTenantId });
 
-    expect(firstTenantNumber).toBe('Q-0001');
-    expect(secondTenantNumber).toBe('Q-0001');
+    expect(firstTenantNumber).toBe('QUO-0001');
+    expect(secondTenantNumber).toBe('QUO-0001');
   });
 
   it('T018: getById returns a tenant-scoped quote with items', async () => {
@@ -1064,7 +1074,18 @@ describe('Quote infrastructure', () => {
   });
 
   it('T076a: Template migration: standard quote template seed upsert succeeds on repeated runs', async () => {
-    const migration = await import('../../../../../migrations/20260313131000_create_standard_quote_document_templates.cjs');
+    // Resolved by name, not by timestamp: this migration has been renumbered
+    // once already and a hardcoded prefix silently breaks the test.
+    const migrationsDir = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../../../../migrations'
+    );
+    const migrationFile = (await fs.readdir(migrationsDir))
+      .find((name) => name.endsWith('_create_standard_quote_document_templates.cjs'));
+
+    expect(migrationFile).toBeTruthy();
+
+    const migration = await import(path.join(migrationsDir, migrationFile!));
 
     await migration.up(context.db);
     await migration.up(context.db);
@@ -1166,7 +1187,7 @@ describe('Quote infrastructure', () => {
       created_by: context.userId,
     });
 
-    const preview = await createPDFGenerationService(context.tenantId).renderPreview({
+    const preview = await createPDFGenerationService(context.tenantId).renderQuotePreview({
       quoteId: quote.quote_id,
       templateCode: 'standard-quote-default',
     });
@@ -1194,7 +1215,7 @@ describe('Quote infrastructure', () => {
       created_by: context.userId,
     });
 
-    const preview = await createPDFGenerationService(context.tenantId).renderPreview({
+    const preview = await createPDFGenerationService(context.tenantId).renderQuotePreview({
       quoteId: quote.quote_id,
       templateCode: 'standard-quote-detailed',
     });
@@ -1275,7 +1296,7 @@ describe('Quote infrastructure', () => {
     const quote = await createFinancialQuote();
     const getBrowserSpy = vi.spyOn(browserPoolService, 'getBrowser');
 
-    const preview = await createPDFGenerationService(context.tenantId).renderPreview({
+    const preview = await createPDFGenerationService(context.tenantId).renderQuotePreview({
       quoteId: quote.quote_id,
       templateCode: 'standard-quote-default',
     });
@@ -1531,7 +1552,7 @@ describe('Quote infrastructure', () => {
     });
     const activities = await QuoteActivity.listByQuoteId(context.db, context.tenantId, quote.quote_id);
 
-    expect(quote.quote_number).toBe('Q-0001');
+    expect(quote.quote_number).toBe('QUO-0001');
     expect(activities.map((activity) => activity.activity_type)).toContain('created');
   });
 

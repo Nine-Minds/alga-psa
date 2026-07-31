@@ -7,7 +7,7 @@ const contractCadenceSource = readFileSync(
   'utf8',
 );
 const clientCadenceSource = readFileSync(
-  resolve(__dirname, '../../../../../packages/billing/src/actions/clientCadenceScheduleRegeneration.ts'),
+  resolve(__dirname, '../../../../../shared/billingClients/clientCadenceScheduleRegeneration.ts'),
   'utf8',
 );
 const billingAndTaxSource = readFileSync(

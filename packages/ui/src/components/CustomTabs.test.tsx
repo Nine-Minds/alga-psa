@@ -65,6 +65,19 @@ describe('CustomTabs', () => {
     expect(screen.getByRole('tab', { name: 'General' }).getAttribute('data-state')).toBe('active');
   });
 
+  it('can hide a trigger while keeping directly selected content available', () => {
+    const tabs: TabContent[] = [
+      baseTabs[0],
+      { ...baseTabs[1], hideTrigger: true },
+    ];
+
+    render(<CustomTabs tabs={tabs} defaultTab="billing" />);
+
+    expect(screen.queryByRole('tab', { name: 'Billing' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'General' })).toBeTruthy();
+    expect(screen.getByText('Billing panel')).toBeTruthy();
+  });
+
   it('passes tab ids to beforeTabChange and can prevent navigation', () => {
     const beforeTabChange = vi.fn(() => false);
     const onTabChange = vi.fn();

@@ -39,10 +39,13 @@ const TimeEntrySettings: React.FC = () => {
 
     // Ensure the tab parameter is preserved
     if (!currentSearchParams.has('tab')) {
-      currentSearchParams.set('tab', 'time-entry');
+      currentSearchParams.delete('tab');
     }
 
-    const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
+    const query = currentSearchParams.toString();
+    const newUrl = query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
     window.history.pushState({}, '', newUrl);
   };
 

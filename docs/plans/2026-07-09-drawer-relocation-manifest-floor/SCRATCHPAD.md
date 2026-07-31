@@ -1,0 +1,197 @@
+# SCRATCHPAD — Relocate cross-feature composition out of the shell
+
+## Links
+- PRD (this folder). Branch `fix/eliminate_node_crashes`, base `991e3ada8a` (Phase A+B).
+- Prior Phase A+B plan: `~/.claude/plans/recursive-rolling-kahn.md`.
+- ESLint barrel guard: `eslint.config.js` → `ALGA_BARREL_RESTRICTED_PATHS`.
+- Doc: `docs/architecture/package-build-system.md` → "Server-action barrels & the RSC manifest".
+
+## Why (the OOM in one paragraph)
+Dev OOM = one `JSON.stringify` of `server/.next/dev/server/server-reference-manifest.json` > V8's ~512MB string cap. Size ~ O(reachable 'use server' modules × routes). Phase A+B cut barrels (projects 21.7MB→9.8MB). Residual ~137-module/route floor = the always-on shell (`DefaultLayout` lines 461-587) statically composing every feature's cross-feature UI, fed by the single shell `DrawerOutlet` (line 575). This plan relocates that composition to route segments — static, isolation-preserving.
+
+## DECISIVE FINDING (2026-07-09) — cross-feature drawer navigation is first-class
+The drawer is a real navigation STACK (`packages/ui/src/context/DrawerContext.tsx`: `history[]`, `currentIndex`, `goBack`, `canGoForward`, branch-truncation, `drawer.historyBack` keyboard shortcut). Views chain ACROSS features:
+- `TicketDetails.tsx:1032,1441` — ticket drawer `replaceDrawer(...)` → a client view.
+- `InteractionDetails.tsx:92,181,202,341` — `openDrawer`, `clientDrawer.openClientDrawer(...)`, and a `goBack` button.
+So you can open a ticket → jump to its client → to an interaction → go back/forward, one panel, from many routes. This ONLY works because the single `DrawerOutlet` is wrapped by the FULL cross-feature provider stack.
+
+CONSEQUENCE: **per-feature drawer outlets are REJECTED.** A segment-scoped outlet only has that segment's providers → cross-feature `replaceDrawer(<ClientView/>)` would break. Under no-dynamic-imports, "navigate to anything from anywhere" ⇒ "statically import everything at the outlet" ⇒ the floor. Cannot have per-feature outlets AND the drawer stack.
+
+DECISION: **Option A only** (user, 2026-07-09) — keep the single outlet + full stack together and UNCHANGED (drawer nav byte-for-byte identical), but mount them (`WorkspaceProviders`) over WORK routes only; non-work routes (inventory/settings/extensions/reports/…) shed the whole floor. The work-route floor is intrinsic to cross-feature drawer nav and is ACCEPTED (N4). Option B (routed modals) was declined (N3).
+
+## DEAD ENDS (do not re-attempt — reset out on 2026-07-09)
+- **Option 1 — split god modules:** a full loop attempted 5 splits (optimizedTicketActions, ticketActions, projectTaskActions, projectActions, documentActions), created lean `*Reads.ts` + `_internal/` files, measured each, and REVERTED all. Result: 137→137/139 modules — NO reduction. Reason: the shell imports heavy UI *components* (TicketDetails, TaskEdit, dashboards) that pull the action subsystems regardless of how actions are split. Net-zero code. Plan folder + 6 bookkeeping commits were `git reset --hard`'d off (recover: `git reset --hard 4b30d5515d`).
+- **Option 2 — dynamic imports / next/dynamic:** REJECTED by architecture. `import('@alga-psa/…')` is a runtime edge the statically-enforced package isolation (declared deps, subpath exports, ESLint boundary rules, packageDependencies.test.ts) cannot see/govern. No dynamic imports anywhere in this work (N1).
+
+## THE SEAM (3-agent trace, 2026-07-08)
+Dependency-inversion: each feature package defines a context ("I need X integration"); `packages/msp-composition/src/**` supplies it by importing the OTHER feature's heavy UI and injecting `render*` callbacks. Correct feature-package isolation — but all mounted in always-on DefaultLayout because the single DrawerOutlet is there.
+
+DECISIVE FACT: `DrawerOutlet` (DefaultLayout:575) is the ONLY MSP outlet; `openDrawer(content: ReactNode)` (packages/ui/src/context/DrawerContext.tsx) stores content in reducer state and renders it at the outlet → content is parented to the SHELL, reads context from the shell. So any heavy view opened via the global drawer pins its provider to the shell. (Verified: no DrawerOutlet exists outside DefaultLayout in the MSP tree.)
+
+MANIFEST vs CONTEXT (keep these straight):
+- MANIFEST/module-graph = who statically `import`s the heavy view = the PROVIDER that builds the render callback. Move the provider → move the import.
+- CONTEXT/runtime = where the element RENDERS (the outlet position). Moving a provider out of the shell requires the drawer content to render under that provider → the outlet must be in the segment too. That's why Phase 2 = per-segment outlets.
+
+NOTE: the per-provider P1/P2 verdicts below are SUPERSEDED by the Option-A decision — all cross-feature providers (461-472) + DrawerOutlet (575) move TOGETHER into `WorkspaceProviders` (cross-feature drawer nav needs them co-mounted). The table is kept only as the inventory of what's in the stack + who consumes each context.
+
+Seam table (provider @ DefaultLayout line → context → heavy UI → consumers → in-stack):
+| Provider (line) | context | heavy UI | consumed on | verdict |
+|---|---|---|---|---|
+| SchedulingProviderWithCallbacks (461) | ui SchedulingContext | AgentScheduleView | tickets/clients/projects via drawer | drawer-pinned → P2 |
+| MspTicketIntegrationProvider (463) | projects TicketIntegrationContext | TicketDetails,QuickAddTicket,CategoryPicker | projects/**, tickets/[id]*, user-activities | SCOPED → P1 |
+| MspClientIntegrationProvider (464) | projects ClientIntegrationContext | ClientQuickView | projects/** + shell(QuickCreate→ProjectQuickAdd) | P1 (unpin via intercept) |
+| ActivityDrawerProvider (465) | ua ActivityDrawerContext | ActivityDetailViewerDrawer | user-activities only | P2 (drawer) |
+| MspClientDrawerProvider (466) | ui ClientDrawerContext | ClientQuickView | clients/contacts/projects/assets via drawer | P2 |
+| MspClientCrossFeatureProvider (467) | clients ClientCrossFeatureContext | ContractWizard,ContractDialog,ClientQuickView | clients/contacts/projects/scheduling | P2 |
+| MspAssetCrossFeatureProvider (468) | assets AssetCrossFeatureContext | TicketDetails,asset dashboards | assets, clients/[id], tickets/[id] | P2 or accept (OQ2) |
+| MspDocumentsCrossFeatureProvider (469) | core DocumentsCrossFeatureContext | Documents,DocumentStorageCard | 6 groups + drawer | P2 or accept (OQ2) |
+| MspSchedulingCrossFeatureProvider (470) | scheduling SchedulingCrossFeatureContext | TicketDetails,TaskEdit,InteractionDetails | WorkItemDrawer (all via drawer) | P2 |
+| MspActivityCrossFeatureProvider (471) | ui ActivityCrossFeatureContext | TicketDetails,TaskEdit,EntryPopup,TimeEntryDialog,EE TaskForm | user-activities components | P2 (heaviest) |
+| QuickAddClientProviderWithCallbacks (472) | ui QuickAddClientContext | quick-add dialogs | header + many | GLOBAL — STAYS |
+
+STAY-GLOBAL (verified lightweight): CommandPalette (no feature UI), chat RightSidebar (already `lazy`), generic DrawerProvider/DrawerOutlet host, header quick-create trigger.
+
+REUSE THESE EXISTING PATTERNS:
+- Ticket quick-create already intercepted: `server/src/app/msp/create-ticket/page.tsx` + `server/src/app/msp/@modal/(.)create-ticket/` + `buildCreateTicketHref` (`@alga-psa/tickets/lib/createTicketRoute`). Template for P1's other 6 dialogs.
+- Self-wrap precedents: `MspProjectPageClient`, `MspTicketDetailsContainerClient` (L91), `MspBillingDashboardClient` (L17), `MspContactTickets` (L230) already re-provide contexts at feature entry. The shell copies are partly redundant already.
+
+## RUNBOOK — manifest canary (ground truth; rerun after each group)
+```bash
+cd /Users/natalliabukhtsik/Desktop/projects/alga-psa
+pkill -f "nx next:dev server"; rm -rf server/.next/dev
+NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_TUI=false NX_DAEMON=false E2E_AUTH_BYPASS=true PORT=3000 \
+  nohup npx nx next:dev server > /tmp/dr.log 2>&1 &   # wait for "Ready in"
+for r in /msp/projects /msp/billing /msp/schedule /msp/tickets /msp/clients; do
+  curl -s -o /dev/null -w "%{http_code} $r\n" --max-time 150 "http://localhost:3000$r"; done  # first may be 000, re-hit
+ls -lh server/.next/dev/server/app/msp/projects/page/server-reference-manifest.json
+grep -o 'ACTIONS_MODULE[0-9]*' server/.next/dev/server/app/msp/projects/page/server-reference-manifest.json | sort -u | wc -l
+# KEY Phase-2 check: does a feature-agnostic route still pull cross-feature packages?
+python3 -c "
+import json,re,collections,sys
+d=json.load(open(sys.argv[1])); k=next(iter(d['node']))
+mid=next(iter(d['node'][k]['workers'].values()))['moduleId']
+c=collections.Counter(re.findall(r'\[project\]/(packages/[a-z-]+|server/src)/',mid))
+[print(f'{n:4d}  {p}') for p,n in c.most_common()]
+" server/.next/dev/server/app/msp/billing/page/server-reference-manifest.json
+```
+Gotcha (from prior run): background `nohup … &` sometimes leaves an empty log in this shell — if so, run the dev server in the foreground and drive curls from another step. E2E_AUTH_BYPASS routes 307 (compile happens before the layout auth redirect → manifest populates). zsh does NOT word-split `$VAR` in `for` loops — use explicit lists.
+
+## RUNBOOK — gates
+```bash
+cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck        # exit 0
+cd /Users/natalliabukhtsik/Desktop/projects/alga-psa
+npx eslint "server/src/components/layout/**/*.{ts,tsx}" "server/src/app/msp/**/layout.tsx" \
+  "packages/msp-composition/src/**/*.{ts,tsx}" "packages/*/src/actions/**/*.{ts,tsx}" --quiet 2>&1 | grep -c "no-restricted-imports"   # 0
+# no dynamic imports rule (manual until an ESLint rule is added):
+rg -n "import\(['\"]@alga-psa/" server/src/components/layout server/src/app/msp packages/msp-composition/src   # empty
+cd packages/msp-composition && npx vitest run src/packageDependencies.test.ts   # note: root vitest include is ../packages/**, run package-relative
+```
+
+## GOTCHAS / DECISIONS
+- Node v25.8.1; heap ~8.4GB irrelevant (per-string cap). `tsc` needs the 16GB flag.
+- Phase 1 is standalone and bankable even if Phase 2 is deferred.
+- Phase 2 gated on the SPIKE (F040-F042): confirm the "global drawer state + per-segment outlet, one active outlet at a time" model holds; else fall back to per-segment DrawerProvider (OQ1).
+- Duplicating a provider across N segment layouts is fine (static, scoped) when a view is opened from a few segments; for genuinely-everywhere views (documents) weigh duplication vs the small win (OQ2). Measure before deciding.
+- Feature-package isolation MUST be preserved: keep the render-callback injection (scheduling never imports tickets directly); only the MOUNT POINT moves.
+
+## RESULTS (fill in)
+Option A frees NON-WORK routes; work routes keep the floor (intrinsic to drawer nav — accepted).
+| Milestone | non-work route (/msp/inventory) cross-feature modules | non-work partial size | work route (/msp/projects) — expected unchanged | notes |
+|---|---|---|---|---|
+| baseline (Phase A+B) | tickets 16522, clients 10514, scheduling 7510, projects 4506, user-activities 751 | 13.70 MB / 163 actions | 9.80 MB / 137 actions | measured 2026-07-09 via dev canary |
+| after P1 (intercept quick-create) | ? (quick-add graphs gone) | ? | ~unchanged | — |
+| after P2 (workspace layer) | 0 workspace UI/composition paths; 35 cross-feature action paths remain | 7.98 MB / 134 actions | 9.31 MB / 133 actions | measured after F060-F062 |
+| /msp/settings (non-work) | 0 workspace UI/composition paths; 63 settings-owned cross-feature action paths remain | 31.85 MB / 237 actions | — | settings tabs import tickets/projects/clients settings actions |
+| /msp/billing (ambiguous) | baseline tickets 24002, clients 15274, scheduling 10910, projects 6546, user-activities 1091 | 24.43 MB / 201 actions | — | classification deferred to p2 work-set grep |
+
+## 2026-07-09 — p1-intercept-scaffold
+- F001/T001 baseline canary captured with `NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_TUI=false NX_DAEMON=false E2E_AUTH_BYPASS=true PORT=3000 npx nx next:dev server`; route hits returned 307 after compiling, which is acceptable because manifest generation occurs before auth redirect.
+- Baseline manifest readings:
+  - `/msp/projects`: `server/.next/dev/server/app/msp/projects/page/server-reference-manifest.json`, 9.80 MB (`10280206` bytes), 137 `ACTIONS_MODULE*` entries.
+  - `/msp/inventory`: 13.70 MB (`14367196` bytes), 163 actions; cross-feature counts tickets 16522, clients 10514, scheduling 7510, projects 4506, user-activities 751.
+  - `/msp/settings`: 37.39 MB (`39208781` bytes), 251 actions; cross-feature counts clients 31704, tickets 30383, projects 15852, scheduling 14531, user-activities 1321.
+  - `/msp/billing`: 24.43 MB (`25617939` bytes), 201 actions; cross-feature counts tickets 24002, clients 15274, scheduling 10910, projects 6546, user-activities 1091.
+- F002 ticket intercepted quick-create pattern: `packages/tickets/src/lib/createTicketRoute.ts` owns `CREATE_TICKET_PATH`, `buildCreateTicketHref`, and `parseCreateTicketPrefill`; `server/src/app/msp/create-ticket/page.tsx` renders the full-page route with `closeMode="replace"`; `server/src/app/msp/@modal/(.)create-ticket/page.tsx` renders the intercepted modal with `closeMode="back"`; both delegate UI to `server/src/app/msp/_components/CreateTicketRouteClient.tsx`.
+- F003 changed `server/src/components/layout/QuickCreateDialog.tsx` into a route-only dispatcher. It now imports only `buildCreateTicketHref` from feature packages and maps client/contact/asset/project/service/product to `/msp/create-<x>`, eliminating direct shell imports of `QuickAddClient`, `QuickAddContact`, `QuickAddAsset`, `ProjectQuickAdd`, `QuickAddService`, and `QuickAddProduct`.
+- T002 verification: `rg` over `QuickCreateDialog.tsx` finds no heavy dialog/action/loading imports (only the component name itself); `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; `cd server && npx vitest run src/test/unit/layout/QuickCreateDialog.i18n.test.tsx` passed 2 tests. Attempting the older ticket integration test also hit an existing Vite resolver issue in `Header.tsx` for `@alga-psa/auth/actions/permission-actions`, so it is not used as the scaffold gate.
+
+## 2026-07-09 — p1-intercept-dialogs
+- F010-F014 added full create routes plus intercepted `@modal/(.)create-*` pages for client, contact, asset, project, service, and product. Full routes pass `closeMode="replace"`; intercepted modal routes pass `closeMode="back"`, matching the ticket pattern.
+- New route clients live under `server/src/app/msp/_components/`:
+  - `CreateClientRouteClient.tsx` imports `QuickAddClient` and preserves success toast, `router.refresh()`, and `alga:quick-create:created` client event.
+  - `CreateContactRouteClient.tsx` imports `QuickAddContact`, loads clients with `getAllClients(false)`, preserves loading/error UI, success toast, refresh, and contact event.
+  - `CreateAssetRouteClient.tsx` imports `QuickAddAsset`, preserves success toast and refresh.
+  - `CreateProjectRouteClient.tsx` imports `ProjectQuickAdd`, loads clients with `getAllClients(false)`, preserves loading/error UI, success toast, and refresh.
+  - `CreateServiceRouteClient.tsx` imports `QuickAddService`, loads service types with `getServiceTypesForSelection()`, preserves loading/error UI, success toast, refresh, and service-type refresh callback.
+  - `CreateProductRouteClient.tsx` imports `QuickAddProduct`, preserves success toast and refresh.
+- Shared close guard: `useQuickCreateRouteClose.ts` prevents double navigation when a dialog calls both success and close callbacks.
+- F015/T011 static result: `server/src/components/layout/QuickCreateDialog.tsx` has zero static imports of `QuickAddClient`, `QuickAddContact`, `QuickAddAsset`, `ProjectQuickAdd`, `QuickAddService`, or `QuickAddProduct`; those imports now exist only in route clients. Exact source paths are not visible in `server-reference-manifest.json`, so the canary is static import placement plus create-route compile.
+- T010 route canary: with the dev server already running, `curl` compiled `/msp/create-ticket`, `/msp/create-client`, `/msp/create-contact`, `/msp/create-asset`, `/msp/create-project`, `/msp/create-service`, and `/msp/create-product`; all returned 307 after compile. Generated full-route manifests ranged from 8.37 MB to 8.85 MB.
+- Verification: `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; `cd server && npx vitest run src/test/unit/layout/QuickCreateDialog.i18n.test.tsx src/test/unit/app/msp/quick-create-routes.static.test.ts` passed 4 tests.
+
+## 2026-07-09 — p1-verify
+- F020/T020 gates:
+  - `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0 after the route additions and dynamic-import fix.
+  - ESLint barrel guard command reported `0` `no-restricted-imports` violations. It exits through a noisy pipeline with an existing ESLint flat-config warning in `packages/integrations/src/actions/qboActions.ts`; no barrel violation was present.
+  - `rg -n "import\\(['\"]@alga-psa/" server/src/components/layout server/src/app/msp packages/msp-composition/src` is empty after changing `server/src/app/msp/settings/extensions/[id]/settings/page.tsx` to statically import `FeaturePlaceholder`.
+  - Route smoke compiled `/msp/create-ticket`, the six new `/msp/create-*` routes, `/msp/projects`, and `/msp/user-activities`; all returned 307 after compile.
+  - `cd server && npx vitest run src/test/unit/layout/QuickCreateDialog.i18n.test.tsx src/test/unit/app/msp/quick-create-routes.static.test.ts` passed 4 tests.
+- Runtime submit note: browser-level form submission was not automated in this loop because valid create payloads depend on tenant data and DB state; the static route contract plus typecheck validates that each dialog is mounted with its submit callbacks and close behavior preserved.
+
+## 2026-07-09 — p2-define-work-set
+- F030/T030 grep used:
+  - `rg -n "\b(useDrawer|openDrawer|replaceDrawer|useClientDrawer|useActivityDrawer|useTicketIntegration|useClientIntegration|useSchedulingCrossFeature|useActivityCrossFeature|useClientCrossFeature|useAssetCrossFeature|useDocumentsCrossFeature|useQuickAddClient)\b" server/src/app/msp server/src/components packages --glob '*.{ts,tsx}' --glob '!**/*.test.*' --glob '!**/__tests__/**'`
+  - `find server/src/app/msp -name page.tsx -o -name layout.tsx`
+- Workspace WORK routes (need full cross-feature provider stack + single outlet):
+  - Tickets: `/msp/tickets/**` including bulk/import/export intercepted modal routes.
+  - Projects: `/msp/projects/**` (projects list/details/tasks/templates use `useDrawer`, `useTicketIntegration`, `useClientIntegration`, documents cross-feature hooks).
+  - Clients/contacts/interactions: `/msp/clients/**`, `/msp/contacts/**`, `/msp/account-manager` is client-domain but no drawer hook found in `AccountManagerDashboard`.
+  - Assets: `/msp/assets/**` (asset dashboard/detail/form use `useClientDrawer`, `useAssetCrossFeature`, documents cross-feature).
+  - Scheduling/time: `/msp/schedule`, `/msp/technician-dispatch`, `/msp/time-entry/**`, `/msp/time-sheet-approvals` (schedule entry/time sheet/dispatch drawers and scheduling cross-feature work item drawer).
+  - User activities: `/msp/user-activities` (activity drawer provider + activity cross-feature).
+  - Billing: `/msp/billing/**`, `/msp/invoices/[id]`, `/msp/quote-approvals`, `/msp/quote-document-templates` are classified WORK because billing dashboard components use `useQuickAddClient`, `ContractDetail` uses `useDrawer`/`replaceDrawer` and documents cross-feature, and contract basics uses quick-add client. This means `/msp/billing` is not a Phase 2 floor-free route under current behavior.
+  - Create routes: `/msp/create-ticket`, `/msp/create-client`, `/msp/create-contact`, `/msp/create-asset`, `/msp/create-project`, `/msp/create-service`, `/msp/create-product` and their `@modal/(.)create-*` counterparts render feature dialogs and need the route-local composition needed by those dialogs.
+- NON-WORK routes (no cross-feature workspace stack intended): `/msp/inventory/**`, `/msp/settings/**`, `/msp/extensions/**`, `/msp/reports`, `/msp/automation-hub`, `/msp/document-templates/**`, `/msp/surveys/**`, `/msp/profile`, `/msp/account`, `/msp/jobs`, `/msp/workflow-editor/**`, `/msp/workflow-control`, `/msp/workflows/**`, `/msp/documents`, `/msp/knowledge-base/**`, `/msp/email-logs`, `/msp/licenses/**`, `/msp/onboarding`, `/msp/platform-updates/**`, `/msp/search`, `/msp/security-settings`, `/msp/share_document`, `/msp/test/**`, `/msp/chat`.
+- Important exception/remediation: `/msp/settings` and `/msp/service-requests/[definitionId]` use the generic `useDrawer` for local details/editing (`UserList`, `OrgChart`, `UserDetails`, `ServiceRequestDefinitionEditorPage`). These are not cross-feature drawer navigation and should not force the full workspace stack. Added F062/T063 to localize these generic drawers before shell `DrawerOutlet` removal.
+- User OOM route classification:
+  - `/msp/inventory`: non-work, target floor-free after WorkspaceProviders moves.
+  - `/msp/settings`: non-work after F062 local drawer remediation, target floor-free.
+  - `/msp/billing`: empirically work due contract/client/document drawer integrations; work-route floor remains accepted unless billing UX is redesigned separately.
+
+## 2026-07-09 — p2-workspace-extract
+- F040 extracted `server/src/components/layout/WorkspaceProviders.tsx`. It contains the previous DefaultLayout workspace stack in order: `SchedulingProviderWithCallbacks` → `MspTicketIntegrationProvider` → `MspClientIntegrationProvider` → `ActivityDrawerProvider` → `MspClientDrawerProvider` → `MspClientCrossFeatureProvider` → `MspAssetCrossFeatureProvider` → `MspDocumentsCrossFeatureProvider` → `MspSchedulingCrossFeatureProvider` → `MspActivityCrossFeatureProvider` → `QuickAddClientProviderWithCallbacks` → children + `DrawerOutlet`.
+- `server/src/components/layout/DefaultLayout.tsx` now imports only lightweight `DrawerProvider` from `@alga-psa/ui` plus `WorkspaceProviders`; it no longer directly imports the heavy msp-composition providers or `DrawerOutlet`.
+- F041/OQ1 decision: keep `DrawerProvider` state global in `DefaultLayout` for now. Chrome grep found no direct `useDrawer` usage in `server/src/components/layout`, but global state keeps existing generic drawer callers alive while F062 localizes non-work generic drawers. `WorkspaceProviders` owns the single outlet and all heavy cross-feature providers.
+- T040/T041 verification: `cd server && npx vitest run src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/layout/QuickCreateDialog.i18n.test.tsx` passed 4 tests; `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0.
+
+## 2026-07-09 — p2-workspace-mount
+- F050/OQ2 decision: use per-work-route `layout.tsx` wrappers instead of a `(work)` route-group folder move. Rationale: no route moves, no conflict with the existing top-level `@modal` parallel slot, and app-wide intercepted create modal pages can wrap their own content explicitly.
+- Added `server/src/app/msp/_components/WorkspaceRouteLayout.tsx`, a server wrapper around `WorkspaceProviders`.
+- F051 mounted `WorkspaceRouteLayout` on work route folders: assets, billing, clients, contacts, create-ticket/client/contact/asset/project/service/product, invoices, projects, quote-approvals, quote-document-templates, schedule, technician-dispatch, tickets, time-entry, time-sheet-approvals, and user-activities. Top-level `@modal/(.)create-*` pages also wrap their modal content directly because they do not inherit feature layouts.
+- F052 context preservation rationale: the wrapped routes use the same `WorkspaceProviders` component extracted from `DefaultLayout`, so cross-feature contexts and the single drawer outlet remain co-mounted. Full data-driven ticket→client→interaction browser smoke remains for final verification; this group covered structural and route-compile gates.
+- T050-T052 verification: `cd server && npx vitest run src/test/unit/app/msp/workspace-route-layout.static.test.ts src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/app/msp/quick-create-routes.static.test.ts` passed 6 tests; `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; route compile smoke returned 307 for `/msp/projects`, `/msp/tickets`, `/msp/clients`, `/msp/contacts`, `/msp/assets`, `/msp/billing`, `/msp/schedule`, `/msp/technician-dispatch`, `/msp/time-entry`, `/msp/time-sheet-approvals`, `/msp/user-activities`, `/msp/create-ticket`, `/msp/create-client`, `/msp/create-project`.
+- Temporary state until p2-remove-from-shell: work routes are now wrapped both by their route layout and by the still-global `DefaultLayout` workspace wrapper. The next commit removes the global wrapper so there is one active outlet again.
+
+## 2026-07-09 — p2-remove-from-shell
+- F060 removed `WorkspaceProviders` from `server/src/components/layout/DefaultLayout.tsx`; the shell keeps only lightweight `DrawerProvider` state. `DefaultLayout` grep is empty for `WorkspaceProviders`, `DrawerOutlet`, and all heavy provider names.
+- F062 added `server/src/app/msp/_components/LocalDrawerOutlet.tsx`, `server/src/app/msp/settings/layout.tsx`, and a local outlet in `server/src/app/msp/service-requests/layout.tsx` so generic non-work drawers still have an outlet without importing `WorkspaceProviders`.
+- Moved `registerSlaIntegration()` out of the root `/msp` layout and into `WorkspaceRouteLayout`; otherwise ticket actions stayed in every non-work manifest.
+- F061 clean canary after `rm -rf server/.next/dev`:
+  - `/msp/inventory`: 7.98 MB, 134 actions, 0 workspace UI/composition source paths. Remaining 35 cross-feature source paths are action modules, not `msp-composition`/provider/drawer UI.
+  - `/msp/settings`: 31.85 MB, 237 actions, 0 workspace UI/composition source paths. Remaining 63 cross-feature action paths come from settings tabs (`TicketingSettings`, `ProjectSettings`, `TimeEntrySettings`, user/client settings), not the workspace stack.
+  - `/msp/service-requests`: 4.41 MB, 105 actions, 0 workspace UI/composition source paths; local drawer outlet covers the generic editor drawer.
+  - Work comparison: `/msp/projects` 9.31 MB/133 actions; `/msp/billing` 24.20 MB/200 actions.
+- T060-T063 verification: `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0; `cd server && npx vitest run src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/app/msp/workspace-route-layout.static.test.ts src/test/unit/app/msp/non-work-local-drawer.static.test.ts` passed 6 tests; dynamic `import('@alga-psa/` grep over scoped paths is empty; ESLint barrel guard reported `0` restricted-import violations with the existing flat-config warning in `packages/integrations/src/actions/qboActions.ts`.
+
+## 2026-07-09 — p2-verify
+- F070/T070 final mixed-route canary compiled 18 routes without Zone Allocation OOM: `/msp/inventory`, `/msp/settings`, `/msp/service-requests`, `/msp/projects`, `/msp/tickets`, `/msp/clients`, `/msp/contacts`, `/msp/assets`, `/msp/billing`, `/msp/schedule`, `/msp/technician-dispatch`, `/msp/time-entry`, `/msp/time-sheet-approvals`, `/msp/user-activities`, `/msp/reports`, `/msp/extensions`, `/msp/jobs`, `/msp/workflow-editor`. All returned 307 after compile under E2E auth bypass.
+- Final manifest summary:
+  - Non-work: `/msp/inventory` 7.98 MB / 134 actions / 0 workspace UI-or-composition source paths; `/msp/settings` 31.85 MB / 237 actions / 0 workspace UI-or-composition source paths; `/msp/service-requests` 4.41 MB / 105 actions / 0 workspace UI-or-composition source paths; `/msp/reports` 4.38 MB / 105 actions; `/msp/extensions` 4.82 MB / 110 actions; `/msp/jobs` 4.36 MB / 105 actions; `/msp/workflow-editor` 5.59 MB / 112 actions.
+  - Work comparison: `/msp/projects` 9.31 MB / 133 actions; `/msp/billing` 24.20 MB / 200 actions.
+- F071/T071 final gates:
+  - `cd server && NODE_OPTIONS="--max-old-space-size=16384" npm run typecheck` exited 0.
+  - `cd packages/msp-composition && npx vitest run src/packageDependencies.test.ts` passed 1 test.
+  - `cd server && npx vitest run src/test/unit/layout/WorkspaceProviders.static.test.ts src/test/unit/app/msp/workspace-route-layout.static.test.ts src/test/unit/app/msp/non-work-local-drawer.static.test.ts src/test/unit/app/msp/quick-create-routes.static.test.ts src/test/unit/layout/QuickCreateDialog.i18n.test.tsx` passed 10 tests.
+  - `rg -n "import\\(['\"]@alga-psa/" server/src/components/layout server/src/app/msp packages/msp-composition/src` is empty.
+  - ESLint barrel guard reported `0` `no-restricted-imports` violations; existing flat-config warning remains in `packages/integrations/src/actions/qboActions.ts`.
+- F072/T072 runtime-smoke status: representative work and non-work routes compile and render through their layouts; static tests prove work routes and app-wide create modals are wrapped by the exact `WorkspaceProviders` stack and non-work generic drawer routes have local outlets. A data-driven browser chain ticket→client→interaction with back/forward was not automated in this loop because it depends on seeded ticket/client/interaction records; it remains the manual smoke for a real tenant dataset.

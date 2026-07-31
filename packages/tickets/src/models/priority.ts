@@ -10,7 +10,16 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IPriority } from '@alga-psa/types';
+
+function tenantScopedTable<Row extends object = Record<string, unknown>>(
+  conn: Knex | Knex.Transaction,
+  table: string,
+  tenant: string
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
 
 /**
  * Priority model with tenant-explicit methods.
@@ -30,9 +39,8 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const query = knexOrTrx('priorities')
-      .select('*')
-      .where({ tenant });
+    const query = tenantScopedTable<IPriority>(knexOrTrx, 'priorities', tenant)
+      .select('*');
 
     if (itemType) {
       query.where({ item_type: itemType });
@@ -53,8 +61,8 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const [priority] = await knexOrTrx('priorities')
-      .where({ priority_id: id, tenant });
+    const [priority] = await tenantScopedTable<IPriority>(knexOrTrx, 'priorities', tenant)
+      .where({ priority_id: id });
 
     return priority || null;
   },
@@ -71,7 +79,7 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const [insertedPriority] = await knexOrTrx('priorities')
+    const [insertedPriority] = await tenantScopedTable<IPriority>(knexOrTrx, 'priorities', tenant)
       .insert({
         ...priority,
         tenant,
@@ -97,8 +105,8 @@ const Priority = {
     // Remove tenant from update data since it's a partition key and cannot be modified
     const { ...updateData } = priority;
 
-    const [updatedPriority] = await knexOrTrx('priorities')
-      .where({ priority_id: id, tenant })
+    const [updatedPriority] = await tenantScopedTable<IPriority>(knexOrTrx, 'priorities', tenant)
+      .where({ priority_id: id })
       .update(updateData)
       .returning('*');
 
@@ -117,8 +125,8 @@ const Priority = {
       throw new Error('Tenant context is required for priority operations');
     }
 
-    const deleted = await knexOrTrx('priorities')
-      .where({ priority_id: id, tenant })
+    const deleted = await tenantScopedTable<IPriority>(knexOrTrx, 'priorities', tenant)
+      .where({ priority_id: id })
       .del();
 
     if (deleted === 0) {

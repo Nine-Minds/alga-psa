@@ -23,11 +23,30 @@ const activeIntegrationBuilder = () => ({
   first: vi.fn().mockResolvedValue({ integration_id: 'int-h', instance_url: 'https://api.huntress.io' })
 });
 
-const integrationOnlyKnex = (): any =>
-  vi.fn((table: string) => {
+const workflowRunActorBuilder = () => ({
+  leftJoin: vi.fn().mockReturnThis(),
+  select: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  first: vi.fn().mockResolvedValue({ matched_workflow_id: 'wf-1', published_by: 'user-1', created_by: null })
+});
+
+const permissionBuilder = (allowed = true) => ({
+  join: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  first: vi.fn().mockResolvedValue(allowed ? { permission_id: 'perm-1' } : undefined)
+});
+
+const integrationOnlyKnex = (allowed = true): any => {
+  const trx: any = vi.fn((table: string) => {
+    if (table === 'workflow_runs as wr') return workflowRunActorBuilder();
+    if (table === 'user_roles as ur') return permissionBuilder(allowed);
     if (table === 'rmm_integrations') return activeIntegrationBuilder();
     throw new Error(`Unexpected table ${table}`);
   });
+  trx.raw = vi.fn().mockResolvedValue(undefined);
+  trx.transaction = vi.fn(async (callback) => callback(trx));
+  return trx;
+};
 
 const loadActionById = async (actionId: string) => {
   vi.resetModules();
@@ -143,6 +162,23 @@ describe('Huntress workflow action handlers (T010)', () => {
       code: 'CONFLICT',
       message: expect.stringContaining('remediations must be approved')
     });
+  });
+
+  it('denies Huntress API access when the workflow actor cannot manage integrations', async () => {
+    const action = await loadActionById('huntress.incidents.get');
+    const getIncidentReport = vi.fn().mockResolvedValue({ id: 421, status: 'sent', severity: 'high', body: 'secret' });
+    await mockClient({ getIncidentReport });
+
+    await expect(
+      action.handler(
+        { incident_id: 421 },
+        { ...baseCtx, tenantId: 'tenant-1', knex: integrationOnlyKnex(false) } as any
+      )
+    ).rejects.toMatchObject({
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: settings:update'
+    });
+    expect(getIncidentReport).not.toHaveBeenCalled();
   });
 
   it('organizations.list and agents.get normalize reference data', async () => {

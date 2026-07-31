@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, requireTenantId } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { checkPortalInvitationLimit, formatRateLimitError } from '@alga-psa/auth';
 import crypto from 'crypto';
@@ -16,6 +16,13 @@ export interface PortalInvitation {
   metadata: Record<string, any>;
 }
 
+interface PortalInvitationVerificationRow extends PortalInvitation {
+  tenant: string;
+  full_name: string;
+  contact_email: string;
+  client_name?: string | null;
+}
+
 export interface TokenVerificationResult {
   valid: boolean;
   tenant?: string;
@@ -29,6 +36,8 @@ export interface TokenVerificationResult {
   error?: string;
   errorCode?: 'INVALID_OR_EXPIRED_TOKEN' | 'VERIFICATION_FAILED';
 }
+
+const PORTAL_INVITATION_TENANT_DISCOVERY = 'tenant-discovery';
 
 export class PortalInvitationService {
   /**
@@ -56,7 +65,7 @@ export class PortalInvitationService {
         return { success: false, error: 'Unauthorized' };
       }
 
-      const { tenant } = await createTenantKnex();
+      const tenant = await requireTenantId(trx);
 
       // Check rate limit
       const rateLimitResult = await checkPortalInvitationLimit(contactId);
@@ -66,8 +75,8 @@ export class PortalInvitationService {
       }
 
       // Verify contact exists and is a portal admin (using transaction)
-      const contact = await trx('contacts')
-        .where({ tenant, contact_name_id: contactId })
+      const contact = await tenantDb(trx, tenant).table('contacts')
+        .where({ contact_name_id: contactId })
         .first();
 
       if (!contact) {
@@ -81,9 +90,8 @@ export class PortalInvitationService {
       // Compute expiration in the database to avoid timezone/DST drift
 
       // Check if there's already an active invitation (using transaction)
-      const existingInvitation = await trx('portal_invitations')
+      const existingInvitation = await tenantDb(trx, tenant).table('portal_invitations')
         .where({
-          tenant,
           contact_id: contactId,
           used_at: null
         })
@@ -100,7 +108,7 @@ export class PortalInvitationService {
       }
 
       // Create invitation record (using transaction)
-      const [invitation] = await trx('portal_invitations')
+      const [invitation] = await tenantDb(trx, tenant).table('portal_invitations')
         .insert({
           tenant,
           contact_id: contactId,
@@ -142,7 +150,8 @@ export class PortalInvitationService {
         return { success: false, error: 'Unauthorized' };
       }
 
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex();
+      const tenant = await requireTenantId(knex);
 
       // Check rate limit
       const rateLimitResult = await checkPortalInvitationLimit(contactId);
@@ -152,8 +161,8 @@ export class PortalInvitationService {
       }
 
       // Verify contact exists and is a portal admin
-      const contact = await knex('contacts')
-        .where({ tenant, contact_name_id: contactId })
+      const contact = await tenantDb(knex, tenant).table('contacts')
+        .where({ contact_name_id: contactId })
         .first();
 
       if (!contact) {
@@ -167,9 +176,8 @@ export class PortalInvitationService {
       // Compute expiration in the database to avoid timezone/DST drift
 
       // Check if there's already an active invitation
-      const existingInvitation = await knex('portal_invitations')
+      const existingInvitation = await tenantDb(knex, tenant).table('portal_invitations')
         .where({
-          tenant,
           contact_id: contactId,
           used_at: null
         })
@@ -186,7 +194,7 @@ export class PortalInvitationService {
       }
 
       // Create invitation record
-      const [invitation] = await knex('portal_invitations')
+      const [invitation] = await tenantDb(knex, tenant).table('portal_invitations')
         .insert({
           tenant,
           contact_id: contactId,
@@ -225,7 +233,8 @@ export class PortalInvitationService {
         // First, find the invitation to get its tenant
         // This initial query needs to scan all shards, but it's necessary
         // to determine which tenant the token belongs to
-        const tokenInfo = await trx('portal_invitations')
+        const tokenInfo = await tenantDb(trx, PORTAL_INVITATION_TENANT_DISCOVERY)
+          .unscoped('portal_invitations', 'tenant discovery from portal invitation token')
           .where({
             token,
             used_at: null
@@ -245,22 +254,17 @@ export class PortalInvitationService {
         const tokenTenant = tokenInfo.tenant;
 
         // Clean up expired tokens for this tenant (single-shard query)
-        await trx('portal_invitations')
-          .where('tenant', tokenTenant)
+        await tenantDb(trx, tokenTenant).table('portal_invitations')
           .where('expires_at', '<', trx.fn.now())
           .del();
         
         // Now fetch the full invitation with joins (single-shard query)
-        const invitation = await trx('portal_invitations as pi')
-          .join('contacts as c', function() {
-            this.on('pi.tenant', '=', 'c.tenant')
-                .andOn('pi.contact_id', '=', 'c.contact_name_id');
-          })
-          .leftJoin('clients as comp', function() {
-            this.on('c.tenant', '=', 'comp.tenant')
-                .andOn('c.client_id', '=', 'comp.client_id');
-          })
-          .where('pi.tenant', tokenTenant)
+        const scopedDb = tenantDb(trx, tokenTenant);
+        const invitationQuery = scopedDb.table('portal_invitations as pi');
+        scopedDb.tenantJoin(invitationQuery, 'contacts as c', 'pi.contact_id', 'c.contact_name_id');
+        scopedDb.tenantJoin(invitationQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+
+        const invitation = await invitationQuery
           .where({
             'pi.token': token,
             'pi.used_at': null
@@ -272,7 +276,7 @@ export class PortalInvitationService {
             'c.email as contact_email',
             'comp.client_name'
           )
-          .first();
+          .first() as PortalInvitationVerificationRow | undefined;
 
         if (!invitation) {
           return {
@@ -319,13 +323,13 @@ export class PortalInvitationService {
    */
   static async markTokenAsUsed(token: string): Promise<boolean> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex();
+      const tenant = await requireTenantId(knex);
 
       // Use withTransaction helper for proper connection management
       return await withTransaction(knex, async (trx) => {
-        const updateCount = await trx('portal_invitations')
+        const updateCount = await tenantDb(trx, tenant).table('portal_invitations')
           .where({
-            tenant,
             token,
             used_at: null
           })
@@ -347,15 +351,15 @@ export class PortalInvitationService {
    */
   static async getInvitationHistory(contactId: string): Promise<PortalInvitation[]> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex();
+      const tenant = await requireTenantId(knex);
 
-      const invitations = await knex('portal_invitations')
+      const invitations = await tenantDb(knex, tenant).table('portal_invitations')
         .where({
-          tenant,
           contact_id: contactId
         })
         .orderBy('created_at', 'desc')
-        .select('*');
+        .select('*') as PortalInvitation[];
 
       return invitations;
 
@@ -370,11 +374,11 @@ export class PortalInvitationService {
    */
   static async revokeInvitation(invitationId: string): Promise<boolean> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex();
+      const tenant = await requireTenantId(knex);
 
-      const updateCount = await knex('portal_invitations')
+      const updateCount = await tenantDb(knex, tenant).table('portal_invitations')
         .where({
-          tenant,
           invitation_id: invitationId,
           used_at: null
         })
@@ -397,13 +401,13 @@ export class PortalInvitationService {
    */
   static async cleanupExpiredTokens(trx?: Knex.Transaction): Promise<number> {
     try {
-      const { knex, tenant } = await createTenantKnex();
+      const { knex } = await createTenantKnex();
+      const tenant = await requireTenantId(trx ?? knex);
 
       // Use provided transaction or create a new one
       const cleanup = async (tx: Knex.Transaction) => {
         // Delete expired tokens for this tenant only (single-shard query)
-        const deletedRows = await tx('portal_invitations')
-          .where('tenant', tenant)
+        const deletedRows = await tenantDb(tx, tenant).table('portal_invitations')
           .where('expires_at', '<', tx.fn.now())
           .del();
         
@@ -413,7 +417,7 @@ export class PortalInvitationService {
           console.log(`Cleaned up ${deletedCount} expired portal invitation tokens for tenant ${tenant}`);
           
           // Log to audit_logs if needed
-          await tx('audit_logs').insert({
+          await tenantDb(tx, tenant).table('audit_logs').insert({
             audit_id: tx.raw('gen_random_uuid()'),
             tenant: tenant || '00000000-0000-0000-0000-000000000000',
             table_name: 'portal_invitations',

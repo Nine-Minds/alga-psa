@@ -1,3 +1,4 @@
+export { default as ClearJobHistoryButton } from './monitoring/ClearJobHistoryButton';
 export { default as JobDetailsDrawer } from './monitoring/JobDetailsDrawer';
 export { default as JobHistoryTable } from './monitoring/JobHistoryTable';
 export { default as JobMetricsDisplay } from './monitoring/JobMetricsDisplay';

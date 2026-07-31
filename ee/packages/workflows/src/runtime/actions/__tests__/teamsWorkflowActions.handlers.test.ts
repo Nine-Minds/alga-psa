@@ -205,7 +205,11 @@ describe('Teams workflow action handlers (T011)', () => {
     mocks.createChannelConversation.mockResolvedValue({ conversationId: '19:abc;messageid=1', activityId: 'act-9' });
 
     const result = await action.handler(
-      { channel_id: '19:abc@thread.tacv2', message: 'New critical alert' },
+      {
+        channel_id: '19:abc@thread.tacv2',
+        message: 'New critical alert',
+        service_url: 'https://attacker-profile.trafficmanager.net/'
+      } as any,
       { ...baseCtx, tenantId: 'tenant-1', knex: buildKnex() } as any
     );
     expect(mocks.createChannelConversation).toHaveBeenCalledWith({
@@ -229,6 +233,22 @@ describe('Teams workflow action handlers (T011)', () => {
     ).rejects.toMatchObject({
       code: 'APP_NOT_IN_TEAM',
       message: expect.stringContaining('not installed in that team')
+    });
+  });
+
+  it('post_to_channel does not expose service_url in its input schema', async () => {
+    const action = await loadActionById('teams.post_to_channel');
+
+    const parsed = action.inputSchema.safeParse({
+      channel_id: '19:abc@thread.tacv2',
+      message: 'New critical alert',
+      service_url: 'https://attacker-profile.trafficmanager.net/'
+    });
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.success ? parsed.data : null).toEqual({
+      channel_id: '19:abc@thread.tacv2',
+      message: 'New critical alert'
     });
   });
 
@@ -256,6 +276,15 @@ describe('Teams workflow action handlers (T011)', () => {
         action.handler(input as any, { ...baseCtx, tenantId: 'tenant-1', knex: buildKnex({ installStatus: 'install_pending' }) } as any)
       ).rejects.toMatchObject({ code: 'INTEGRATION_INACTIVE' });
     }
+  });
+});
+
+describe('Teams service URL trust checks', () => {
+  it('rejects attacker-controlled trafficmanager subdomains while preserving known Teams hosts', async () => {
+    const { isTrustedServiceUrl } = await import('../teamsWorkflowRuntimeSupport');
+
+    expect(isTrustedServiceUrl('https://smba.trafficmanager.net/amer/')).toBe(true);
+    expect(isTrustedServiceUrl('https://attacker-profile.trafficmanager.net/')).toBe(false);
   });
 });
 

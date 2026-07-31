@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'crypto';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildSurveyExpiredPayload } from '@alga-psa/workflow-streams';
 
@@ -59,6 +59,8 @@ export interface ResolvedSurveyInvitation {
 
 const SURVEY_INVITATIONS_TABLE = 'survey_invitations';
 const SURVEY_TEMPLATES_TABLE = 'survey_templates';
+const SURVEY_TOKEN_DISCOVERY_TENANT = '__survey_public_token_discovery__';
+const SURVEY_TOKEN_DISCOVERY_REASON = 'tenant discovery for public survey token lookup';
 
 export function issueSurveyToken(): { plainToken: string; hashedToken: string } {
   const plainToken = randomBytes(32).toString('base64url');
@@ -81,7 +83,8 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
   const hashedToken = hashSurveyToken(token);
   const admin = await getAdminConnection();
 
-  const lookup = await admin<InvitationLookupRow>(SURVEY_INVITATIONS_TABLE)
+  const lookup = await tenantDb(admin, SURVEY_TOKEN_DISCOVERY_TENANT)
+    .unscoped<InvitationLookupRow>(SURVEY_INVITATIONS_TABLE, SURVEY_TOKEN_DISCOVERY_REASON)
     .select(['tenant', 'invitation_id'])
     .where('survey_token_hash', hashedToken)
     .first();
@@ -94,8 +97,9 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
 
   const invitationRow = await runWithTenant<InvitationDetailRow | undefined>(tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
 
-    return knex<InvitationDetailRow>(SURVEY_INVITATIONS_TABLE)
+    const query = db.table<InvitationDetailRow>(SURVEY_INVITATIONS_TABLE)
       .select([
         `${SURVEY_INVITATIONS_TABLE}.invitation_id`,
         `${SURVEY_INVITATIONS_TABLE}.tenant`,
@@ -113,14 +117,16 @@ export async function resolveSurveyTenantFromToken(token: string): Promise<Resol
         `${SURVEY_TEMPLATES_TABLE}.rating_type`,
         `${SURVEY_TEMPLATES_TABLE}.rating_scale`,
         `${SURVEY_TEMPLATES_TABLE}.rating_labels`,
-      ])
-      .innerJoin(SURVEY_TEMPLATES_TABLE, function joinTemplates() {
-        this.on(`${SURVEY_TEMPLATES_TABLE}.template_id`, '=', `${SURVEY_INVITATIONS_TABLE}.template_id`).andOn(
-          `${SURVEY_TEMPLATES_TABLE}.tenant`,
-          '=',
-          `${SURVEY_INVITATIONS_TABLE}.tenant`
-        );
-      })
+      ]);
+
+    db.tenantJoin(
+      query,
+      SURVEY_TEMPLATES_TABLE,
+      `${SURVEY_TEMPLATES_TABLE}.template_id`,
+      `${SURVEY_INVITATIONS_TABLE}.template_id`
+    );
+
+    return query
       .where(`${SURVEY_INVITATIONS_TABLE}.survey_token_hash`, hashedToken)
       .first() as unknown as InvitationDetailRow | undefined;
   });

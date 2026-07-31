@@ -9,7 +9,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HuduClientTab } from '@ee/components/integrations/hudu/HuduClientTab';
-import type { HuduCompanyDataResult } from '@ee/lib/actions/integrations/huduDataActions';
+import type { HuduCompanyDataResult } from '@ee/lib/integrations/hudu/huduDataTypes';
 import type { HuduArticle, HuduAsset } from '@ee/lib/integrations/hudu/contracts';
 
 const { getHuduClientContextMock, getHuduCompanyAssetsMock, getHuduCompanyArticlesMock } =

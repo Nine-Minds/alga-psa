@@ -5,6 +5,11 @@
  */
 
 import { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+
+function tenantTable(db: Knex, tenantId: string, table: string) {
+  return tenantDb(db, tenantId).table(table);
+}
 
 /**
  * Seed the permissions table for a test tenant
@@ -17,8 +22,7 @@ export async function seedPermissionsForTenant(
   console.log(`[Permission Helper] Seeding permissions for tenant ${tenantId}`);
 
   // Check if permissions already exist for this tenant
-  const existingCount = await db('permissions')
-    .where({ tenant: tenantId })
+  const existingCount = await tenantTable(db, tenantId, 'permissions')
     .count('* as count')
     .first();
 
@@ -129,7 +133,7 @@ export async function seedPermissionsForTenant(
     description: perm.description
   }));
 
-  await db('permissions').insert(permissionsToInsert);
+  await tenantTable(db, tenantId, 'permissions').insert(permissionsToInsert);
 
   console.log(`[Permission Helper] ✓ Seeded ${permissionsToInsert.length} permissions for tenant ${tenantId}`);
 }
@@ -146,32 +150,30 @@ export async function grantAllPermissionsToRole(
   console.log(`[Permission Helper] Granting all permissions to ${roleName} for tenant ${tenantId}`);
 
   // Get all available MSP permissions for this tenant
-  const allPermissions = await db('permissions')
+  const allPermissions = await tenantTable(db, tenantId, 'permissions')
     .select('permission_id', 'resource', 'action')
-    .where({ msp: true, tenant: tenantId });
+    .where({ msp: true });
 
   console.log(`[Permission Helper] Found ${allPermissions.length} total MSP permissions`);
 
   // Get the role for this tenant
-  const role = await db('roles')
+  const role = await tenantTable(db, tenantId, 'roles')
     .where({
-      tenant: tenantId,
       role_name: roleName,
     })
     .first();
 
   if (!role) {
     console.error(`[Permission Helper] Role ${roleName} not found for tenant ${tenantId}`);
-    console.log('[Permission Helper] Available roles:', await db('roles').where({ tenant: tenantId }).select('role_name'));
+    console.log('[Permission Helper] Available roles:', await tenantTable(db, tenantId, 'roles').select('role_name'));
     throw new Error(`Role ${roleName} not found for tenant ${tenantId}`);
   }
 
   console.log(`[Permission Helper] Found role: ${role.role_name} (${role.role_id})`);
 
   // Get existing role permissions
-  const existingPermissions = await db('role_permissions')
+  const existingPermissions = await tenantTable(db, tenantId, 'role_permissions')
     .where({
-      tenant: tenantId,
       role_id: role.role_id,
     })
     .select('permission_id');
@@ -191,7 +193,7 @@ export async function grantAllPermissionsToRole(
     console.log(`[Permission Helper] Adding ${permissionsToAdd.length} new permissions`);
     console.log('[Permission Helper] Sample permissions:', permissionsToAdd.slice(0, 5).map(p => `${p.resource}.${p.action}`));
 
-    await db('role_permissions').insert(
+    await tenantTable(db, tenantId, 'role_permissions').insert(
       permissionsToAdd.map((p: any) => ({
         tenant: tenantId,
         role_id: role.role_id,
@@ -203,9 +205,8 @@ export async function grantAllPermissionsToRole(
   }
 
   // Verify the permissions were added
-  const finalCount = await db('role_permissions')
+  const finalCount = await tenantTable(db, tenantId, 'role_permissions')
     .where({
-      tenant: tenantId,
       role_id: role.role_id,
     })
     .count('* as count')
@@ -225,8 +226,8 @@ export async function grantPermissionsToRole(
   roleName: string,
   permissions: Array<{ resource: string; action: string }>
 ): Promise<void> {
-  const role = await db('roles')
-    .where({ tenant: tenantId, role_name: roleName })
+  const role = await tenantTable(db, tenantId, 'roles')
+    .where({ role_name: roleName })
     .first();
 
   if (!role) {
@@ -235,12 +236,11 @@ export async function grantPermissionsToRole(
 
   for (const perm of permissions) {
     // Find the permission ID
-    const permission = await db('permissions')
+    const permission = await tenantTable(db, tenantId, 'permissions')
       .where({
         resource: perm.resource,
         action: perm.action,
         msp: true,
-        tenant: tenantId,
       })
       .first();
 
@@ -250,16 +250,15 @@ export async function grantPermissionsToRole(
     }
 
     // Check if already granted
-    const existing = await db('role_permissions')
+    const existing = await tenantTable(db, tenantId, 'role_permissions')
       .where({
-        tenant: tenantId,
         role_id: role.role_id,
         permission_id: permission.permission_id,
       })
       .first();
 
     if (!existing) {
-      await db('role_permissions').insert({
+      await tenantTable(db, tenantId, 'role_permissions').insert({
         tenant: tenantId,
         role_id: role.role_id,
         permission_id: permission.permission_id,

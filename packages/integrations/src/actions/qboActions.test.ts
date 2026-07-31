@@ -180,12 +180,16 @@ describe('QBO integration actions', () => {
 
   // --- getQboConnectionStatus ---
 
-  it('getQboConnectionStatus in CE rejects with Enterprise Edition message', async () => {
+  it('getQboConnectionStatus in CE returns an Enterprise Edition status error', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
     process.env.EDITION = 'ce';
 
-    await expect(getQboConnectionStatus()).rejects.toThrow(
-      'QuickBooks Online integration is only available in Enterprise Edition.'
+    await expect(getQboConnectionStatus()).resolves.toEqual(
+      expect.objectContaining({
+        connected: false,
+        error: 'QuickBooks Online integration is only available in Enterprise Edition.',
+        errorCode: 'ENTERPRISE_REQUIRED',
+      })
     );
   });
 
@@ -325,10 +329,39 @@ describe('QBO integration actions', () => {
 
     const result = await getQboAccounts();
 
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
     expect(result).toHaveLength(2);
     expect(result.map((a) => a.id)).toEqual(['acct-1', 'acct-2']);
     expect(result.every((a) => ['Bank', 'Other Current Asset'].includes(a.accountType))).toBe(true);
     expect(result.find((a) => a.accountType === 'Accounts Receivable')).toBeUndefined();
+  });
+
+  it('getQboAccounts: reports a missing QuickBooks connection instead of returning an empty catalog', async () => {
+    const result = await getQboAccounts();
+
+    expect(result).toEqual({
+      actionError: 'Connect QuickBooks before loading QuickBooks accounts.'
+    });
+    expect(qboClientCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('getQboAccounts: reports an expired QuickBooks connection as a reconnect-required catalog error', async () => {
+    const credMap = {
+      'realm-expired': {
+        accessToken: 'at', refreshToken: 'rt', realmId: 'realm-expired',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    };
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify(credMap));
+    qboClientCreateMock.mockRejectedValue(new Error('refresh token expired'));
+
+    const result = await getQboAccounts();
+
+    expect(result).toEqual({
+      actionError: 'Reconnect QuickBooks before loading QuickBooks accounts.'
+    });
   });
 
   it('getQboClasses: returns active classes only', async () => {
@@ -350,6 +383,8 @@ describe('QBO integration actions', () => {
 
     const result = await getQboClasses();
 
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
     expect(result).toHaveLength(2);
     expect(result.map((c) => c.id)).toEqual(['cls-1', 'cls-3']);
     expect(result.find((c) => c.id === 'cls-2')).toBeUndefined();
@@ -373,6 +408,8 @@ describe('QBO integration actions', () => {
 
     const result = await getQboDepartments();
 
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
     expect(result).toHaveLength(2);
     expect(result[0]).toEqual({ id: 'dept-1', name: 'East Region' });
     expect(result[1]).toEqual({ id: 'dept-2', name: 'West Region' });

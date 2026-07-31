@@ -18,8 +18,11 @@ export const routes: Record<string, RouteLoader> = {
     validateDirectRoute: () => import('@enterprise/app/api/integrations/entra/validate-direct/route'),
     validateCippRoute: () => import('@enterprise/app/api/integrations/entra/validate-cipp/route'),
     discoveryRoute: () => import('@enterprise/app/api/integrations/entra/discovery/route'),
+    scheduleRoute: () => import('@enterprise/app/api/integrations/entra/schedule/route'),
     syncRoute: () => import('@enterprise/app/api/integrations/entra/sync/route'),
+    syncPreflightRoute: () => import('@enterprise/app/api/integrations/entra/sync/preflight/route'),
     syncRunsRoute: () => import('@enterprise/app/api/integrations/entra/sync/runs/route'),
+    mappingsRoute: () => import('@enterprise/app/api/integrations/entra/mappings/route'),
     mappingsPreviewRoute: () => import('@enterprise/app/api/integrations/entra/mappings/preview/route'),
     mappingsConfirmRoute: () => import('@enterprise/app/api/integrations/entra/mappings/confirm/route'),
     mappingsUnmapRoute: () => import('@enterprise/app/api/integrations/entra/mappings/unmap/route'),
@@ -27,4 +30,5 @@ export const routes: Record<string, RouteLoader> = {
     reconciliationQueueRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/route'),
     resolveExistingRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/resolve-existing/route'),
     resolveNewRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/resolve-new/route'),
+    dismissQueueItemRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/dismiss/route'),
 };

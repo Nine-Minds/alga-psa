@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { syncTacticalSingleAgentForTenant } from '@alga-psa/integrations/lib/rmm/tacticalrmm/syncSingleAgent';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -74,8 +74,20 @@ export async function POST(req: Request) {
     const triggeredAt = body.alert_time ? String(body.alert_time) : new Date().toISOString();
 
     const { knex } = await createTenantKnex();
-    const integration = await knex('rmm_integrations')
-      .where({ tenant, provider: PROVIDER })
+    const db = tenantDb(knex, tenant);
+
+    // Suspended tenants (cancelled, pending deletion) get a 200 ack with no
+    // processing so the remote RMM neither retries nor alerts.
+    if (await isTenantSuspended(knex, tenant)) {
+      console.debug('[TacticalRMM webhook] Ignoring alert for suspended tenant', {
+        tenant,
+        event: 'rmm_webhook_tenant_suspended',
+      });
+      return NextResponse.json({ ok: true, recorded: false, reason: 'tenant_suspended' }, { status: 200 });
+    }
+
+    const integration = await db.table('rmm_integrations')
+      .where({ provider: PROVIDER })
       .first(['integration_id']);
 
     if (!integration?.integration_id) {
@@ -85,9 +97,8 @@ export async function POST(req: Request) {
 
     // Associate to asset when possible via external entity mapping.
     let assetId: string | undefined;
-    const mapping = await knex('tenant_external_entity_mappings')
+    const mapping = await db.table('tenant_external_entity_mappings')
       .where({
-        tenant,
         integration_type: PROVIDER,
         alga_entity_type: 'asset',
         external_entity_id: agentId,
@@ -146,7 +157,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, recorded: true, outcome: result.outcome }, { status: 200 });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Webhook error' }, { status: 500 });
+    console.error('[TacticalRMM webhook] Failed to process webhook:', err);
+    return NextResponse.json({ error: 'Webhook could not be processed.' }, { status: 500 });
   }
 }
 
