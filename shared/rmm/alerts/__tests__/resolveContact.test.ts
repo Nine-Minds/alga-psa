@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { resolveRmmTicketContactId } from '../resolveContact';
+
+// resolveContact queries through the tenantDb facade; the fake trx below
+// dispatches by table name, so mock the facade as a passthrough — tenant
+// scoping is the real facade's concern, not this test's.
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({ table: (name: string) => conn(name) }),
+}));
+
 
 interface State {
   clients: Array<{ tenant: string; client_id: string; properties?: unknown }>;

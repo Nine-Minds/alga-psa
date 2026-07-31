@@ -133,6 +133,11 @@ describe('processInboundEmailInApp', () => {
     });
     findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
     findValidClientPrimaryContactIdMock.mockResolvedValue(null);
+    // Default: sender does not match a contact. clearAllMocks keeps
+    // implementations, so without a per-run default every test that skips
+    // setting this inherits an earlier test's matched contact (order-dependent
+    // under seed shuffle). Tests needing a match override it locally.
+    findContactByEmailMock.mockResolvedValue(null);
     findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
     upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
     resolveEffectiveInboundTicketDefaultsMock.mockResolvedValue({
@@ -729,6 +734,11 @@ describe('processInboundEmailInApp', () => {
   });
 
   it('T022: reply-token path calls watch-list upsert for existing ticket', async () => {
+    // Pin the sender as UNMATCHED: beforeEach only clears calls, so without
+    // this the mock inherits whichever mockResolvedValue an earlier test set
+    // (order-dependent under seed shuffle), and matched senders are excluded
+    // from the watch-list since 85887803bc.
+    findContactByEmailMock.mockResolvedValue(null);
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'Reply body',
       sanitizedHtml: undefined,
@@ -779,6 +789,8 @@ describe('processInboundEmailInApp', () => {
   });
 
   it('T023: thread-header path calls watch-list upsert for existing ticket', async () => {
+    // Unmatched sender, pinned for order-independence (see T022).
+    findContactByEmailMock.mockResolvedValue(null);
     findTicketByReplyTokenMock.mockResolvedValue(null);
     findTicketByEmailThreadMock.mockResolvedValue({
       ticketId: 'ticket-thread-123',

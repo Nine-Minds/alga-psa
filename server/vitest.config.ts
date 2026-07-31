@@ -26,6 +26,11 @@ export default defineConfig({
     include: [
       'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      // shared/ carries ~120 test files (inbound email, billing schedule,
+      // workflow actions) that gated nothing before this line: the CI job
+      // passed ../shared as a CLI filter, but filters only narrow the include
+      // set, so they silently matched zero files.
+      '../shared/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
     ],
     // The visual golden suite launches Chromium + Postgres and depends on
@@ -39,7 +44,11 @@ export default defineConfig({
       // are integration tests by naming convention. The CI unit-coverage job
       // opts out (it runs without a database, same reason src/test/integration
       // isn't in it); local full runs with a DB still include them.
-      ...(process.env.SKIP_DB_TESTS === '1' ? ['**/*.db.test.?(c|m)[jt]s?(x)'] : []),
+      // Both patterns needed: `**` never crosses the literal `..` segment
+      // (dot-directory), so the bare pattern misses ../shared and ../packages.
+      ...(process.env.SKIP_DB_TESTS === '1'
+        ? ['**/*.db.test.?(c|m)[jt]s?(x)', '../**/*.db.test.?(c|m)[jt]s?(x)']
+        : []),
     ],
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
