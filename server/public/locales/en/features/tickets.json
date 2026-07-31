@@ -882,7 +882,6 @@
     "resolveAndClose": "Resolve and close",
     "closeTicketResolutionPrompt": "Choose a close status and add a resolution for this ticket.",
     "selectCloseStatus": "Select a close status",
-    "closeTicketResolutionPlaceholder": "Summarize the resolution for the ticket history and customer.",
     "cannotCloseYet": "This ticket can't be closed yet",
     "closeRulesIntro": "The board's close rules require the following before this ticket can be closed:",
     "viewChecklist": "View checklist",
@@ -1148,7 +1147,9 @@
     "clientRequired": "A client must be assigned to this ticket before materials can be added.",
     "serialUnit": "Serial / MAC (serialized product)",
     "selectUnit": "Select a unit to deliver...",
-    "onHandByLocation": "On hand by location"
+    "onHandByLocation": "On hand by location",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Watch List",
@@ -1498,7 +1499,6 @@
       "pausedHint": "The clock is paused while the ticket waits in a paused status."
     },
     "tiles": {
-      "request": "Request",
       "openedBy": "Opened by {{name}}",
       "showMore": "Show more",
       "showLess": "Show less",

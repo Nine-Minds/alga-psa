@@ -259,7 +259,8 @@
       "invoices": "Invoices",
       "lines": "Contract Lines",
       "overview": "Overview",
-      "pricing": "Pricing Schedules"
+      "pricing": "Pricing Schedules",
+      "simulator": "Simulate"
     },
     "validation": {
       "billingFrequencyRequired": "Billing frequency is required.",
@@ -1156,6 +1157,12 @@
         "active": "Active",
         "inactive": "Inactive"
       }
+    },
+    "simulation": {
+      "client": "Client context",
+      "hypothetical": "Hypothetical client profile",
+      "open": "Simulate",
+      "title": "Template simulation"
     }
   },
   "quickStart": {
@@ -1321,6 +1328,10 @@
       "saveDraft": "Save as Draft",
       "saving": "Saving...",
       "completing": "Completing..."
+    },
+    "simulation": {
+      "description": "Test this unsaved draft with assumed activity. Simulation does not save or issue anything.",
+      "title": "Simulate before creating"
     }
   },
   "wizardBasics": {
@@ -2067,6 +2078,240 @@
         "contract": "If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.",
         "client": "If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Fixed-only scenario — nothing to assume.",
+      "hoursUnit": "hrs",
+      "inputLabel": "Assumed {{unit}} per service period — {{service}}",
+      "loadReplay": "Load activity and invoices",
+      "periodLabel": "P{{number}}",
+      "replayEnd": "Through",
+      "replayStart": "From",
+      "replayTitle": "Compare with past invoices",
+      "rowLabel": "{{service}} — assumed {{unit}} per service period",
+      "subtitle": "Enter expected work or usage by service period. For arrears, each invoice uses the previous service period.",
+      "title": "Assumed activity",
+      "useRecent": "Use average from last 3 billing periods",
+      "varyByPeriod": "Set activity for each invoice",
+      "arrearsHint": "Each invoice bills the previous service period.",
+      "advanceHint": "Each invoice bills its current service period.",
+      "invoicePeriodLabel": "{{period}} invoice",
+      "overrideInputLabel": "{{period}} invoice — {{unit}} from its service period — {{service}}",
+      "zeroActivity": "This service contributes nothing until assumed activity is greater than zero.",
+      "averageLoaded": "Activity average loaded from {{window}}. {{count}} assumed values changed.",
+      "replayLoaded": "Historical activity loaded from {{window}} with {{count}} issued invoices. {{changed}} assumed values changed.",
+      "replayRangeLoaded": "Historical activity and {{count}} issued invoices loaded from {{window}}. Assumed activity is unchanged.",
+      "prefillNextStep": "Updated values are highlighted. Update the simulation to recalculate invoices.",
+      "prefillUnchanged": "Loaded values from {{window}} match the current assumed activity.",
+      "loadingHistory": "Loading historical activity…",
+      "prefillChange": "Loaded value: {{before}} → {{after}} {{unit}} per service period",
+      "prefillOverrides": "{{count}} period values loaded"
+    },
+    "compare": {
+      "added": "Added",
+      "changed": "Changed",
+      "horizonImpact": "Total change over {{count}} billing periods",
+      "horizonImpactHint": "Compared with the current contract",
+      "noChange": "No simulated change",
+      "removed": "Removed from current contract"
+    },
+    "emptyScenario": {
+      "description": "This contract has no contract lines. Add contract lines first, then come back to simulate.",
+      "title": "Nothing to simulate yet"
+    },
+    "diagnostics": {
+      "title": "Simulation notes"
+    },
+    "explanation": {
+      "amount": "Amount",
+      "close": "Close",
+      "inputs": "Inputs",
+      "noBreakdown": "No breakdown available",
+      "steps": "Arithmetic",
+      "title": "Charge breakdown"
+    },
+    "featureName": "Contract Simulator",
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Amount",
+        "line": "Line",
+        "qty": "Quantity",
+        "rate": "Rate"
+      },
+      "draftNote": "draft, not issued",
+      "billedInAdvance": "Billed in advance",
+      "billedInArrears": "Billed in arrears",
+      "explainHint": "Show how this amount was computed",
+      "renderedPreview": "Preview invoice layout",
+      "invoicePeriod": "Invoice period: {{start}} – {{end}}",
+      "servicePeriod": "Service period: {{start}} – {{end}}",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "title": "{{period}} simulated invoice",
+      "total": "Total"
+    },
+    "loadFailed": "Failed to load the contract scenario.",
+    "loadingSnapshot": "Loading scenario…",
+    "preparingDraft": "Preparing simulation…",
+    "markers": {
+      "bucketOverage": "Bucket overage",
+      "cadenceCoincidence": "Cadence overlap",
+      "contractEnd": "Contract ends",
+      "oneTime": "One-time",
+      "prorated": "Prorated"
+    },
+    "replay": {
+      "actualInvoice": "Issued invoice {{number}}",
+      "issued": "issued",
+      "previewIssued": "Preview issued invoice",
+      "projected": "simulated",
+      "simulatedDelta": "simulated difference"
+    },
+    "runBar": {
+      "compareToggle": "Show changes from current contract",
+      "horizonOption": "{{count}} billing periods",
+      "lastRun": "Simulation current · {{count}} billing periods",
+      "neverRun": "Not simulated yet",
+      "simulate": "Simulate",
+      "simulating": "Simulating…",
+      "stale": "Changes not simulated",
+      "staleBanner": "These amounts are from the previous simulation. Update the simulation to include your latest changes.",
+      "updateSimulation": "Update simulation"
+    },
+    "scenario": {
+      "addAdjustment": "+ add adjustment",
+      "advancedChanges": "Advanced contract changes",
+      "advancedSummary": "{{schedules}} schedules · {{discounts}} discounts · {{adjustments}} adjustments",
+      "addBucket": "Add included hours",
+      "addCatalogService": "Add catalog service",
+      "addCatalogServiceOption": "+ Add catalog service…",
+      "addDiscount": "+ add discount",
+      "addIncludedHours": "Add included hours",
+      "addIncludedUnits": "Add included units",
+      "addLine": "Add line",
+      "addSchedule": "+ add schedule",
+      "addTier": "+ add tier",
+      "adjustments": "Adjustments",
+      "allocationRate": "Allocation rate",
+      "catalogRate": "Catalog rate",
+      "allLines": "all lines",
+      "bucketIncluded": "Includes {{hours}} hrs; rate above is the overage rate",
+      "cadence": {
+        "client": "Use client billing schedule",
+        "contract": "Use contract line schedule"
+      },
+      "defaultRate": "default",
+      "discountTypes": {
+        "fixed": "fixed",
+        "percentage": "percent"
+      },
+      "discounts": "Discounts",
+      "fields": {
+        "adjustmentAmount": "Adjustment amount dollars",
+        "adjustmentDescription": "Adjustment description",
+        "adjustmentPeriod": "Adjustment period",
+        "billingFrequency": "Billing frequency",
+        "billingTiming": "Billing timing",
+        "bucketQuantity": "Included bucket quantity",
+        "cadenceOwner": "Billing schedule",
+        "configurationType": "Service billing method",
+        "discountLine": "Discount line",
+        "discountName": "Discount name",
+        "discountType": "Discount type",
+        "discountValue": "Discount value",
+        "lineName": "Contract line name",
+        "lineType": "Line type",
+        "minimumBillableMinutes": "Minimum billable minutes",
+        "minimumUsage": "Minimum usage",
+        "includedHours": "Included hours",
+        "includedUnits": "Included units",
+        "overtimeRate": "Overtime rate ($/hr)",
+        "overtimeThreshold": "Overtime threshold (hours)",
+        "roundUpMinutes": "Round up to minutes",
+        "scheduleEffectiveDate": "Schedule effective date",
+        "scheduleEndDate": "Schedule end date",
+        "scheduleRate": "Schedule rate dollars",
+        "serviceQuantity": "License or product quantity",
+        "tierMaximum": "Tier maximum",
+        "tierMinimum": "Tier minimum",
+        "tierRate": "Tier rate dollars",
+        "usageUnit": "Usage unit"
+      },
+      "frequencies": {
+        "annually": "Annually",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "semi-annually": "Semi-annually"
+      },
+      "licenseSuffix": " · license",
+      "lineCount": "{{count}} lines",
+      "lineSummary": "{{type}} · {{frequency}} · {{timing}} · {{services}}",
+      "oneService": "1 service",
+      "serviceCount": "{{count}} services",
+      "collapseDetailsFor": "Collapse details for {{line}}",
+      "editDetails": "Edit rules",
+      "editDetailsFor": "Edit details for {{line}}",
+      "modified": "Modified",
+      "newAdjustmentName": "One-time adjustment",
+      "newDiscountName": "Scenario discount",
+      "newLineName": "Scenario line {{number}}",
+      "oneTime": "one-time",
+      "overtime": "overtime",
+      "placeholders": {
+        "minimum": "minimum",
+        "minimumMinutes": "minimum minutes",
+        "overtimeRate": "overtime $/hr",
+        "roundMinutes": "round minutes",
+        "thresholdHours": "threshold hours"
+      },
+      "pricingSchedules": "Pricing schedules",
+      "productUnitPrice": "Unit price",
+      "hourlyRate": "Hourly rate",
+      "usageRate": "Usage rate",
+      "overageRate": "Overage rate",
+      "serviceBaseRate": "Service base rate",
+      "rateOverriddenByLine": "Rate replaced by recurring line price",
+      "fromServiceRates": "From service rates",
+      "proration": "proration",
+      "removeAdjustment": "Remove adjustment",
+      "removeDiscount": "Remove discount",
+      "removeLine": "Remove",
+      "removeSchedule": "Remove pricing schedule",
+      "removeTier": "Remove tier",
+      "removeService": "remove",
+      "recurringLinePrice": "Recurring line price",
+      "resetAll": "Reset all",
+      "resetLine": "Reset",
+      "rollover": "rollover",
+      "tieredPricing": "tiered pricing",
+      "timing": {
+        "advance": "Bill in advance",
+        "arrears": "Bill in arrears"
+      },
+      "types": {
+        "bucket": "Bucket overlay",
+        "fixed": "Fixed",
+        "hourly": "Hourly",
+        "usage": "Usage"
+      },
+      "title": "Contract changes"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} from current contract",
+      "deltaUp": "+{{amount}} from current contract",
+      "empty": "Simulate to see upcoming billing periods and inspect each charge.",
+      "noDelta": "no change vs live",
+      "noPreviousDelta": "no change vs previous",
+      "invoicePeriod": "Invoice period",
+      "periodAria": "{{period}}, {{total}}",
+      "previousDelta": "{{sign}}{{amount}} from {{period}} invoice",
+      "title": "Simulated invoice periods"
+    },
+    "unavailable": {
+      "description": "The contract simulator is available in the Enterprise edition of Alga PSA.",
+      "title": "Enterprise Feature"
     }
   }
 }

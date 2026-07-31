@@ -278,9 +278,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       updateUrlParams({ invoiceId: null, templateId: null });
     } catch (error) {
       console.error('Failed to unfinalize invoice:', error);
-      setError(t('finalizedTab.errors.unfinalizeFailed', {
-        defaultValue: 'Failed to unfinalize invoice. Please try again.',
-      }));
+      setError(getErrorMessage(error));
     }
   };
 
@@ -318,7 +316,14 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       for (const invoiceId of selectedInvoices) {
         const result = await unfinalizeInvoice(invoiceId);
         if (isInvoiceMutationError(result)) {
-          setError(getErrorMessage(result));
+          const invoiceNumber = invoices.find((invoice) => invoice.invoice_id === invoiceId)?.invoice_number;
+          setError(invoiceNumber
+            ? t('finalizedTab.errors.bulkUnfinalizeInvoiceFailed', {
+                defaultValue: 'Could not unfinalize {{invoiceNumber}}: {{reason}}',
+                invoiceNumber,
+                reason: getErrorMessage(result),
+              })
+            : getErrorMessage(result));
           return;
         }
       }
@@ -327,9 +332,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       onRefreshNeeded();
     } catch (error) {
       console.error('Failed to unfinalize invoices:', error);
-      setError(t('finalizedTab.errors.bulkUnfinalizeFailed', {
-        defaultValue: 'Failed to unfinalize invoices. Please try again.',
-      }));
+      setError(getErrorMessage(error));
     }
   };
 
@@ -459,9 +462,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                     await loadData();
                     onRefreshNeeded();
                   } catch (error) {
-                    setError(t('finalizedTab.errors.unfinalizeFailed', {
-                      defaultValue: 'Failed to unfinalize invoice. Please try again.',
-                    }));
+                    setError(getErrorMessage(error));
                   }
                 }}
                 className="flex items-center gap-2"

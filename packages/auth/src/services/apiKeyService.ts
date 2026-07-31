@@ -1,4 +1,4 @@
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
 
@@ -22,6 +22,25 @@ interface ApiKey {
 export class ApiKeyService {
   private static apiKeysQuery(knex: Knex, tenant: string) {
     return tenantDb(knex, tenant).table<ApiKey>('api_keys');
+  }
+
+  /**
+   * Why an otherwise-valid key must not authenticate: deactivated owning
+   * user (missing user counts as inactive) or suspended tenant. Errors
+   * propagate to validateApiKey's catch, which fails closed.
+   */
+  private static async getKeyGateReason(
+    knex: Knex,
+    tenant: string,
+    userId: string
+  ): Promise<'user_inactive' | 'tenant_suspended' | null> {
+    const user = await tenantDb(knex, tenant)
+      .table('users')
+      .where({ user_id: userId })
+      .first('is_inactive');
+    if (!user || user.is_inactive) return 'user_inactive';
+    if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
+    return null;
   }
 
   /**
@@ -130,6 +149,15 @@ export class ApiKeyService {
 
       if (!record) {
         console.log(`Invalid or expired API key attempt in tenant ${tenant}`);
+        return null;
+      }
+
+      // A deactivated owner or a suspended tenant (cancelled, pending
+      // deletion) must not authenticate. Reversible: reactivation restores
+      // the same keys untouched.
+      const gateReason = await this.getKeyGateReason(knex, tenant, record.user_id);
+      if (gateReason) {
+        console.log(`API key rejected (${gateReason}) in tenant ${tenant}`);
         return null;
       }
 

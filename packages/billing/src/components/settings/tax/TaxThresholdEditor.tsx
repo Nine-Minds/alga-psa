@@ -29,6 +29,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 import { ITaxRateThreshold } from '@alga-psa/types';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -70,8 +71,10 @@ interface TaxThresholdEditorProps {
   isReadOnly?: boolean;
 }
 
-export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = false }: TaxThresholdEditorProps) {
+export function TaxThresholdEditor({ taxRateId, currency, isReadOnly = false }: TaxThresholdEditorProps) {
   const { t } = useTranslation('msp/billing-settings');
+  const { symbol } = useCurrencyFormat();
+  const currencySymbol = currency ?? symbol();
   const [thresholds, setThresholds] = useState<ITaxRateThreshold[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,18 +137,18 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
         const currentMax = current.max_amount;
         if (currentMax === null || currentMax === undefined) {
           issues.push(t('tax.thresholds.issueNoMax', {
-            from: `${currency}${current.min_amount.toLocaleString()}`,
+            from: `${currencySymbol}${current.min_amount.toLocaleString()}`,
             defaultValue: 'Bracket starting at {{from}} has no max but is not the last bracket.'
           }));
         } else if (currentMax < next.min_amount) {
           issues.push(t('tax.thresholds.issueGap', {
-            from: `${currency}${currentMax.toLocaleString()}`,
-            to: `${currency}${next.min_amount.toLocaleString()}`,
+            from: `${currencySymbol}${currentMax.toLocaleString()}`,
+            to: `${currencySymbol}${next.min_amount.toLocaleString()}`,
             defaultValue: 'Gap between {{from}} and {{to}}'
           }));
         } else if (currentMax > next.min_amount) {
           issues.push(t('tax.thresholds.issueOverlap', {
-            at: `${currency}${currentMax.toLocaleString()}`,
+            at: `${currencySymbol}${currentMax.toLocaleString()}`,
             defaultValue: 'Overlap between brackets at {{at}}'
           }));
         }
@@ -153,7 +156,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
     }
 
     return issues;
-  }, [thresholds, currency, t]);
+  }, [thresholds, currencySymbol, t]);
 
   // Get suggested min_amount for new bracket
   const getSuggestedMinAmount = useCallback(() => {
@@ -297,7 +300,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
   }, [thresholds, previewAmount]);
 
   const formatCurrency = (amount: number) => {
-    return `${currency}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${currencySymbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const columns: ColumnDefinition<ITaxRateThreshold>[] = [

@@ -83,7 +83,7 @@ describe('ChatCompletionsService (streaming)', () => {
 
     await ChatCompletionsService.createRawCompletionStream([
       { role: 'user', content: 'Hello' },
-    ]);
+    ], 'tenant-stream');
 
     expect(openAiCreateSpy).toHaveBeenCalledTimes(1);
     const [request] = openAiCreateSpy.mock.calls[0] ?? [];

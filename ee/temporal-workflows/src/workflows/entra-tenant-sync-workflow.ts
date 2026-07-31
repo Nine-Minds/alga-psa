@@ -12,6 +12,8 @@ const activities = proxyActivities<{
     workflowId: string;
     runType: 'single-tenant';
     initiatedBy?: string;
+    scopeManagedTenantId?: string | null;
+    scopeClientId?: string | null;
   }): Promise<{ runId: string }>;
   loadMappedTenantsActivity(input: {
     tenantId: string;
@@ -54,6 +56,7 @@ function createEmptySummary(totalTenants: number): EntraSyncRunSummary {
     updated: 0,
     ambiguous: 0,
     inactivated: 0,
+    skipped: 0,
   };
 }
 
@@ -66,6 +69,9 @@ export async function entraTenantSyncWorkflow(
     workflowId,
     runType: 'single-tenant',
     initiatedBy: input.actor?.userId,
+    // History names the client a run touched, not just its type.
+    scopeManagedTenantId: input.managedTenantId,
+    scopeClientId: input.clientId ?? null,
   });
 
   log.info('Starting Entra tenant sync workflow', {
@@ -126,6 +132,7 @@ export async function entraTenantSyncWorkflow(
       updated: 0,
       ambiguous: 0,
       inactivated: 0,
+      skipped: 0,
       errorMessage: error instanceof Error ? error.message : 'Tenant sync failed.',
     };
   }
@@ -148,6 +155,7 @@ export async function entraTenantSyncWorkflow(
   summary.updated = tenantResult.updated;
   summary.ambiguous = tenantResult.ambiguous;
   summary.inactivated = tenantResult.inactivated;
+  summary.skipped = tenantResult.skipped;
 
   const status = tenantResult.status === 'completed' ? 'completed' : 'failed';
   await activities.finalizeSyncRunActivity({

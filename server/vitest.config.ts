@@ -28,6 +28,19 @@ export default defineConfig({
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
     ],
+    // The visual golden suite launches Chromium + Postgres and depends on
+    // machine-local fonts; it is a manual template-review tool, never part of
+    // an unscoped run. Opt in with RUN_VISUAL=1 (see src/test/visual/README.md).
+    exclude: [
+      '**/node_modules/**',
+      ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
+      // *.db.test.* suites (shared/workflow businessOperations.*) recreate a
+      // live Postgres database and mutate DB_* env for the whole fork — they
+      // are integration tests by naming convention. The CI unit-coverage job
+      // opts out (it runs without a database, same reason src/test/integration
+      // isn't in it); local full runs with a DB still include them.
+      ...(process.env.SKIP_DB_TESTS === '1' ? ['**/*.db.test.?(c|m)[jt]s?(x)'] : []),
+    ],
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
@@ -55,11 +68,21 @@ export default defineConfig({
     logHeapUsage: true,
     testTimeout: 20000,
     hookTimeout: 120000,
+    // The main vitest process retains every test's console output for the
+    // report; across the widened package/shared run the chatty suites (db
+    // config dumps, workflow loggers) accumulate into the multi-GB range and
+    // OOM the orchestrator at report time. Keep logs for failures only.
+    silent: 'passed-only',
     coverage: {
       // Opt-in via --coverage; always-on coverage made every local run pay the
       // instrumentation cost. CI enables it where reports are collected.
       enabled: false,
       provider: 'v8',
+      // AST-aware remapping (vitest 4's default): the classic sourcemap remap
+      // of the full package/shared file set blows the 14GB heap at report
+      // time ("Ineffective mark-compacts near heap limit"); this path uses a
+      // fraction of the memory.
+      experimentalAstAwareRemapping: true,
       // Coverage reports are skipped on failing runs by default; red runs
       // are exactly the ones the metrics sheet needs coverage rows for.
       reportOnFailure: true,
@@ -83,6 +106,11 @@ export default defineConfig({
         '**/node_modules/**',
         '**/migrations/**',
         '**/seeds/**',
+        // Codegen output (e.g. the 59k-line MCP registry) reads as ~100%
+        // covered because importing a data literal executes it — one file
+        // inflated the suite's lines% by ~7 points and moved the trend line
+        // whenever the generator re-ran.
+        '**/*.generated.ts',
       ],
       reportsDirectory: path.resolve(__dirname, './coverage'),
       reporter: ['text', 'html', 'lcov'],
@@ -176,9 +204,14 @@ export default defineConfig({
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../packages/ui/src/index.ts') },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../packages/ui/src/$1') },
       { find: /^@alga-psa\/billing$/, replacement: path.resolve(__dirname, '../packages/billing/src/index.ts') },
+      // ./testing/qboSimulator doesn't mirror the src layout; resolve it before
+      // the generic prefix alias below shadows the package exports map.
+      { find: /^@alga-psa\/billing\/testing\/qboSimulator$/, replacement: path.resolve(__dirname, '../packages/billing/src/services/accountingSync/testing/qboSimulator.ts') },
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/billing/src/$1') },
       { find: /^@alga-psa\/opportunities$/, replacement: path.resolve(__dirname, '../packages/opportunities/src/index.ts') },
       { find: /^@alga-psa\/opportunities\/(.*)$/, replacement: path.resolve(__dirname, '../packages/opportunities/src/$1') },
+      { find: /^@alga-psa\/marketing$/, replacement: path.resolve(__dirname, '../packages/marketing/src/index.ts') },
+      { find: /^@alga-psa\/marketing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/marketing/src/$1') },
       { find: /^@alga-psa\/inventory$/, replacement: path.resolve(__dirname, '../packages/inventory/src/index.ts') },
       { find: /^@alga-psa\/inventory\/(.*)$/, replacement: path.resolve(__dirname, '../packages/inventory/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../packages/formatting/src/index.ts') },
@@ -248,6 +281,14 @@ export default defineConfig({
       { find: /^@alga-psa\/tenancy\/actions$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/actions/index.ts') },
       { find: /^@alga-psa\/tenancy\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/$1') },
 
+      // Emulator packages live under packages/emulators/* and are not linked
+      // into node_modules; their smoke tests import each other by name.
+      { find: /^@alga-psa\/emulator-host$/, replacement: path.resolve(__dirname, '../packages/emulators/host/src/index.ts') },
+      { find: /^@alga-psa\/emulator-msgraph$/, replacement: path.resolve(__dirname, '../packages/emulators/msgraph/src/index.ts') },
+      { find: /^@alga-psa\/emulator-qbo$/, replacement: path.resolve(__dirname, '../packages/emulators/qbo/src/index.ts') },
+      { find: /^@alga-psa\/emulator-smtp-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/smtp-sink/src/index.ts') },
+      { find: /^@alga-psa\/emulator-webhook-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/webhook-sink/src/index.ts') },
+
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
       { find: /^@alga-psa\/storage\/(.*)$/, replacement: path.resolve(__dirname, '../packages/storage/src/$1') },
@@ -287,6 +328,11 @@ export default defineConfig({
         ? []
         : [{ find: /^redis$/, replacement: path.resolve(__dirname, './src/test/stubs/redis.ts') }]),
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
+      // next-auth's exports map doesn't expose ./lib/env, but four tickets
+      // component tests vi.mock it. With next-auth inlined (see test.server
+      // above) Vite strictly resolves the mock specifier through the exports
+      // map and aborts the run — alias it to the real file so the mock applies.
+      { find: /^next-auth\/lib\/env$/, replacement: path.resolve(__dirname, '../node_modules/next-auth/lib/env.js') },
       { find: /^ajv\/dist\/2020$/, replacement: path.resolve(__dirname, '../node_modules/ajv/dist/2020.js') },
       {
         find: /^ajv\/dist\/refs\/json-schema-draft-07\.json$/,

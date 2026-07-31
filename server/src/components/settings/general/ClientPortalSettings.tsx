@@ -3,7 +3,7 @@
 
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
-import { Globe, Palette } from 'lucide-react';
+import { Calendar, Globe, Palette } from 'lucide-react';
 import { LanguageHierarchyTable } from '@alga-psa/ui/components/LanguageHierarchyTable';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -20,7 +20,7 @@ import {
   updateTenantClientPortalLocaleAction,
 } from '@alga-psa/tenancy/actions/tenant-actions/tenantClientPortalLocaleActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
@@ -35,6 +35,10 @@ import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-ac
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useActionPolling } from '@alga-psa/ui/hooks';
+import {
+  getClientPortalFeatureSettings,
+  updateClientPortalFeatureSettings,
+} from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
 
 const UNSET_LOCALE_VALUE = '__inherit__';
 const DEFAULT_PORTAL_HERO_GRADIENT: PortalHeroGradient = 'primary-shades';
@@ -83,6 +87,9 @@ const ClientPortalSettings = () => {
   );
   const [localeLoading, setLocaleLoading] = useState<boolean>(true);
   const [localeSaving, setLocaleSaving] = useState<boolean>(false);
+  const [appointmentsEnabled, setAppointmentsEnabled] = useState(true);
+  const [portalFeaturesLoading, setPortalFeaturesLoading] = useState(true);
+  const [portalFeaturesSaving, setPortalFeaturesSaving] = useState(false);
   const { refreshBranding } = useBranding();
 
   const visibleLocales = useMemo(
@@ -115,11 +122,18 @@ const ClientPortalSettings = () => {
   useEffect(() => {
     const loadTenantSettings = async () => {
       try {
-        const [user, brandingSettings, orgLocaleSettings, clientPortalLocaleSettings] = await Promise.all([
+        const [
+          user,
+          brandingSettings,
+          orgLocaleSettings,
+          clientPortalLocaleSettings,
+          portalFeatureSettings,
+        ] = await Promise.all([
           getCurrentUser(),
           getTenantBrandingAction(),
           getTenantLocaleSettingsAction(),
           getTenantClientPortalLocaleAction(),
+          getClientPortalFeatureSettings(),
         ]);
 
         if (user) {
@@ -141,11 +155,13 @@ const ClientPortalSettings = () => {
         }
 
         setClientPortalLocale(clientPortalLocaleSettings?.defaultLocale ?? null);
+        setAppointmentsEnabled(portalFeatureSettings.appointmentsEnabled);
       } catch (error) {
         console.error('Failed to load tenant settings:', error);
       } finally {
         setBrandingLoading(false);
         setLocaleLoading(false);
+        setPortalFeaturesLoading(false);
       }
     };
 
@@ -181,6 +197,44 @@ const ClientPortalSettings = () => {
       handleError(error, 'Failed to update client portal default language');
     } finally {
       setLocaleSaving(false);
+    }
+  };
+
+  const handleAppointmentsEnabledChange = async (enabled: boolean) => {
+    const previous = appointmentsEnabled;
+    setAppointmentsEnabled(enabled);
+    setPortalFeaturesSaving(true);
+
+    try {
+      const result = await updateClientPortalFeatureSettings({
+        appointmentsEnabled: enabled,
+      });
+      if (isActionPermissionError(result)) {
+        setAppointmentsEnabled(previous);
+        handleError(result);
+        return;
+      }
+
+      setAppointmentsEnabled(result.appointmentsEnabled);
+      toast.success(
+        result.appointmentsEnabled
+          ? t('clientPortal.features.appointmentsEnabled', {
+              defaultValue: 'Appointments are now available in the client portal',
+            })
+          : t('clientPortal.features.appointmentsDisabled', {
+              defaultValue: 'Appointments are now hidden from the client portal',
+            }),
+      );
+    } catch (error) {
+      setAppointmentsEnabled(previous);
+      handleError(
+        error,
+        t('clientPortal.features.updateFailed', {
+          defaultValue: 'Failed to update client portal features',
+        }),
+      );
+    } finally {
+      setPortalFeaturesSaving(false);
     }
   };
 
@@ -258,14 +312,55 @@ const ClientPortalSettings = () => {
     <div className="space-y-6">
       <ClientPortalDomainSettings />
 
-      {/* Client Portal Language Card */}
       <Card>
         <CardHeader>
           <CardTitle>
             <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              {t('clientPortal.features.title', { defaultValue: 'Portal Features' })}
+            </div>
+          </CardTitle>
+          <CardDescription>
+            {t('clientPortal.features.description', {
+              defaultValue: 'Choose which self-service features clients can access.',
+            })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                {t('clientPortal.features.appointmentsLabel', {
+                  defaultValue: 'Appointments',
+                })}
+              </div>
+              <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
+                {t('clientPortal.features.appointmentsHelp', {
+                  defaultValue: 'Allow clients to view and request appointments from the client portal.',
+                })}
+              </p>
+            </div>
+            <Switch
+              id="client-portal-appointments-enabled"
+              checked={appointmentsEnabled}
+              onCheckedChange={handleAppointmentsEnabledChange}
+              disabled={portalFeaturesLoading || portalFeaturesSaving}
+              aria-label={t('clientPortal.features.appointmentsLabel', {
+                defaultValue: 'Appointments',
+              })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Client Portal Language Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
               {t('clientPortalLanguage.title', { defaultValue: 'Client Portal Language' })}
-            </div>
+            </span>
           </CardTitle>
           <CardDescription>
             {t('clientPortalLanguage.description', {
@@ -303,10 +398,10 @@ const ClientPortalSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            <div className="flex items-center gap-2">
+            <span className="flex items-center gap-2">
               <Palette className="h-5 w-5" />
               {t('clientPortal.branding.title')}
-            </div>
+            </span>
           </CardTitle>
           <CardDescription>
             {t('clientPortal.branding.description')}
@@ -607,7 +702,9 @@ const ClientPortalSettings = () => {
                             { label: t('clientPortal.dashboardPreview.navTickets', { defaultValue: 'Tickets' }), active: false },
                             { label: t('clientPortal.dashboardPreview.navServiceRequests', { defaultValue: 'Service Requests' }), active: false },
                             { label: t('clientPortal.dashboardPreview.navProjects', { defaultValue: 'Projects' }), active: false },
-                            { label: t('clientPortal.dashboardPreview.navAppointments', { defaultValue: 'Appointments' }), active: false },
+                            ...(appointmentsEnabled
+                              ? [{ label: t('clientPortal.dashboardPreview.navAppointments', { defaultValue: 'Appointments' }), active: false }]
+                              : []),
                             { label: t('clientPortal.dashboardPreview.navDevices', { defaultValue: 'My devices' }), active: false },
                           ].map((item, idx) => (
                             <li key={idx}>

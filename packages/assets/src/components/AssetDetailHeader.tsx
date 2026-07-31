@@ -41,6 +41,12 @@ interface AssetDetailHeaderProps {
   asset: Asset;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  /**
+   * Opens the detail page's focus drawer on the Edit view. Falls back to the
+   * /msp/assets/[id]/edit route when absent, so the header still works on its
+   * own (and that route remains valid for deep links).
+   */
+  onEdit?: () => void;
 }
 
 const getAssetIcon = (type: string) => {
@@ -57,7 +63,8 @@ const getAssetIcon = (type: string) => {
 export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({ 
   asset,
   onRefresh,
-  isRefreshing 
+  isRefreshing,
+  onEdit
 }) => {
   const { t } = useTranslation('msp/assets');
   const router = useRouter();
@@ -232,7 +239,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
               )}
               <DropdownMenuItem
                 id="edit-asset-action"
-                onSelect={() => router.push(`/msp/assets/${asset.asset_id}/edit`)}
+                onSelect={() => (onEdit ? onEdit() : router.push(`/msp/assets/${asset.asset_id}/edit`))}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 {t('assetDetailHeader.actions.editAsset', { defaultValue: 'Edit Asset' })}

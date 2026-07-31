@@ -370,6 +370,9 @@
       "title": "Brak dostępu do portalu",
       "description": "Ten kontakt nie ma jeszcze dostępu do portalu klienta"
     },
+    "noClient": {
+      "description": "Przypisz ten kontakt do klienta, aby zarządzać dostępem do portalu."
+    },
     "portalAdmin": {
       "label": "Administrator portalu",
       "helper": "Po włączeniu użytkownik zostanie utworzony z rolą Administratora klienta. Po wyłączeniu otrzyma rolę Użytkownika klienta."

@@ -2,6 +2,7 @@
   "common": {
     "actions": "11111",
     "active": "11111",
+    "allTime": "11111",
     "cancel": "11111",
     "clear": "11111",
     "close": "11111",
@@ -14,6 +15,7 @@
     "inactive": "11111",
     "loading": "11111",
     "name": "11111",
+    "period": "11111",
     "quantity": "11111",
     "refresh": "11111",
     "refreshing": "11111",
@@ -28,6 +30,7 @@
     "search": "11111",
     "status": "11111",
     "to": "11111",
+    "today": "11111",
     "total": "11111",
     "unknown": "11111"
   },
@@ -432,6 +435,7 @@
     "candidateCapNote": "11111 {{cap}} 11111",
     "candidateCount": "11111 {{count}} 11111",
     "candidateCountPlural": "11111 {{count}} 11111",
+    "candidatesTitle": "11111",
     "columns": {
       "aiVerdict": "11111",
       "assignedTo": "11111",

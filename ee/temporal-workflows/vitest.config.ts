@@ -60,6 +60,10 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/encryption$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/encryption.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src')}/$1` },
+      { find: /^@alga-psa\/marketing$/, replacement: path.resolve(__dirname, '../../packages/marketing/src/index.ts') },
+      { find: /^@alga-psa\/marketing\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/marketing/src')}/$1` },
+      { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../../packages/types/src/index.ts') },
+      { find: /^@alga-psa\/types\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/types/src')}/$1` },
     ],
   },
 });

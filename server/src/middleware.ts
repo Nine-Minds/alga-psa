@@ -59,6 +59,8 @@ const apiKeySkipPaths = [
   '/api/health',
   '/api/healthz',
   '/api/readyz',
+  // SCIM v2 endpoints authenticate tenant-specific Bearer tokens in-route.
+  '/api/scim/',
   '/api/documents/download/',
   '/api/documents/view/',
   '/api/email/webhooks/',
@@ -80,12 +82,18 @@ const apiKeySkipPaths = [
   '/api/v1/mobile/iap/',
   // Mobile account endpoints use Bearer auth (validated in route handler)
   '/api/v1/mobile/account/',
+  // Public marketing endpoints (capture forms, email open/click tracking,
+  // unsubscribe) are unauthenticated by design: rate-limited, honeypotted,
+  // HMAC-signed where applicable, and deliberately oracle-free in-route.
+  '/api/marketing/capture/',
+  '/api/marketing/track/',
+  '/api/marketing/unsubscribe/',
   '/api/integrations/ninjaone/callback',
   '/api/integrations/xero/connect',
   '/api/integrations/xero/callback',
   '/api/integrations/qbo/connect',
   '/api/integrations/qbo/callback',
-  // Entra integration API routes use session auth via requireEntraUiFlagEnabled
+  // Entra integration API routes use session auth via requireEntraAccess
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',
@@ -107,6 +115,9 @@ const apiKeySkipPaths = [
   '/api/webhooks/alternative-payments',
   '/api/webhooks/ninjaone',
   '/api/webhooks/tacticalrmm',
+  // AI gateway money/credit lifecycle events; authenticated via the
+  // X-Alga-Webhook-Secret shared secret verified in the route handler.
+  '/api/webhooks/ai-gateway',
   // Server-to-server webhooks from nm-store. Authenticated via HMAC
   // x-webhook-signature using ALGA_WEBHOOK_SECRET (verified in route handlers).
   '/api/billing/check-tenant',

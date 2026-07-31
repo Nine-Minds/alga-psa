@@ -8,6 +8,7 @@ const getAllActiveContactsModelMock = vi.fn();
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
+  hasPermission: async () => true,
 }));
 
 vi.mock('@alga-psa/db', () => ({

@@ -1,6 +1,7 @@
 {
   "$comment": "Tier-1 integration gate: the suites that run on every PR (scripts/run-tier1-integration.mjs). Membership is deliberate — money paths, intake paths (tickets, inbound email, portal), authorization, and the named user journeys. Every entry must exist on disk; the runner fails loudly on a missing path so files cannot silently drop out of the gate. Budget: ~15 min wall clock (serial sum from the 2026-07-17 nightly: ~12.3 min). When adding entries, check the integration-tier1 duration column in the test-metrics sheet and keep headroom.",
   "paths": [
+    "src/test/integration/journeys",
     "src/test/integration/accounting",
     "src/test/integration/authorization",
     "src/test/integration/billing",
@@ -13,6 +14,7 @@
     "src/test/integration/multiCurrencyGaps.integration.test.ts",
     "src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts",
     "src/test/integration/ticketCloseRules.integration.test.ts",
+    "src/test/integration/ticketAssignmentResources.integration.test.ts",
     "src/test/integration/ticketStatusReadSurfaces.integration.test.ts",
     "src/test/integration/ticketActivityLog.integration.test.ts",
     "src/test/integration/autoCloseTickets.integration.test.ts",
@@ -29,6 +31,9 @@
     "src/test/integration/clientPortalDocuments.integration.test.ts",
     "src/test/integration/actions/projectActionsIntegration.test.ts",
     "src/test/integration/api/projectService.statusLookup.integration.test.ts",
+    "src/test/integration/api/contractLineService.listContracts.integration.test.ts",
+    "src/test/integration/api/clientService.defaultCurrency.integration.test.ts",
+    "src/test/integration/api/quotePermissionResource.integration.test.ts",
     "src/test/integration/appointmentAvailability.integration.test.ts",
     "src/test/integration/scheduling/scheduleEntryRecurrence.integration.test.ts",
     "src/test/integration/imports/importWorkflow.integration.test.ts",

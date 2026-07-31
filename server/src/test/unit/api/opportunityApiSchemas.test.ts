@@ -34,9 +34,10 @@ describe('opportunity REST schemas', () => {
     });
   });
 
-  it('rejects unwhitelisted sorts and non-contract declared checkpoints', () => {
+  it('rejects unwhitelisted sorts and accepts only declared stage checkpoints', () => {
     expect(opportunityListQuerySchema.safeParse({ sort_by: 'title; DROP TABLE opportunities' }).success).toBe(false);
-    expect(declaredOpportunityEvidenceApiSchema.safeParse({ checkpoint: 'assessment' }).success).toBe(false);
+    expect(declaredOpportunityEvidenceApiSchema.safeParse({ checkpoint: 'not-a-stage' }).success).toBe(false);
+    expect(declaredOpportunityEvidenceApiSchema.safeParse({ checkpoint: 'assessment' }).success).toBe(true);
     expect(declaredOpportunityEvidenceApiSchema.safeParse({ checkpoint: 'qualified' }).success).toBe(true);
   });
 

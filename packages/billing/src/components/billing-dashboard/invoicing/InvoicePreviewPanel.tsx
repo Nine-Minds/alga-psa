@@ -57,6 +57,8 @@ interface InvoicePreviewPanelProps {
   onUnfinalize?: () => Promise<void>;
   onDraftInvoiceUpdated?: (updated: DraftInvoicePropertiesUpdateResult) => Promise<void> | void;
   isFinalized: boolean;
+  /** Suppress mutation controls when embedded as cross-feature invoice detail. */
+  readOnly?: boolean;
   creditApplied?: number;
   draftInvoiceSummary?: DbInvoiceViewModel | null;
   /** Client owning the invoice; enables the manual Apply Credit action. */
@@ -80,6 +82,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   onUnfinalize,
   onDraftInvoiceUpdated,
   isFinalized,
+  readOnly = false,
   creditApplied = 0,
   draftInvoiceSummary = null,
   clientId = null,
@@ -162,11 +165,13 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   }, [draftInvoiceSummary, invoiceId]);
 
   useEffect(() => {
+    let cancelled = false;
     const loadInvoiceData = async () => {
       if (!invoiceId) {
         setDetailedInvoiceData(null);
         setTaxSource('internal');
         setResolvedTemplateId(null);
+        setIsLoading(false);
         return;
       }
 
@@ -181,6 +186,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           getInvoicePurchaseOrderSummary(invoiceId),
           getResolvedInvoiceTemplateId(invoiceId),
         ]);
+
+        if (cancelled) return;
 
         if (isReturnedActionError(viewModel)) {
           throw new Error(getErrorMessage(viewModel));
@@ -200,6 +207,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
         setDetailedInvoiceData(viewModel);
       } catch (err) {
+        if (cancelled) return;
         console.error(`Error fetching detailed data for invoice ${invoiceId}:`, err);
         const message = err instanceof Error ? err.message : 'An unknown error occurred.';
         setError(t('invoicePreview.errors.loadFailed', {
@@ -210,11 +218,14 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         setPoSummary(null);
         setResolvedTemplateId(null);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    loadInvoiceData();
+    void loadInvoiceData();
+    return () => {
+      cancelled = true;
+    };
   }, [invoiceId, previewRefreshCounter]);
 
   useEffect(() => {
@@ -389,7 +400,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   return (
     <Card className="h-full">
       <div className="p-6" ref={containerRef}>
-        {!isFinalized && draftInvoiceEditorSummary ? (
+        {!readOnly && !isFinalized && draftInvoiceEditorSummary ? (
           <DraftInvoiceDetailsCard
             invoice={draftInvoiceEditorSummary}
             onSaved={handleDraftInvoiceUpdated}
@@ -657,7 +668,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 </Button>
               )}
 
-              {isFinalized && clientId && (detailedInvoiceData as any)?.status !== 'cancelled' && (
+            {!readOnly && isFinalized && clientId && (detailedInvoiceData as any)?.status !== 'cancelled' && (
                 <Button
                   id="invoice-apply-credit-button"
                   variant="secondary"
@@ -669,7 +680,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 </Button>
               )}
 
-              {isFinalized && (detailedInvoiceData as any)?.status !== 'cancelled' && (
+            {!readOnly && isFinalized && (detailedInvoiceData as any)?.status !== 'cancelled' && (
                 <Button
                   id="invoice-void-button"
                   variant="destructive"

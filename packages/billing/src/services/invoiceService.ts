@@ -1018,6 +1018,7 @@ export async function persistInvoiceCharges(
     const recurringChargeFamily = getRecurringChargeFamilyForInvoiceLinkage(charge);
     const shouldPersistDetail =
       recurringChargeFamily !== null
+      && Boolean(charge.config_id)
       && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
     const shouldLinkRecurringServicePeriod =
       shouldPersistDetail && requiresRecurringServicePeriodLinkage(charge);
@@ -1033,9 +1034,6 @@ export async function persistInvoiceCharges(
 
     if (shouldPersistDetail) {
       const detailId = uuidv4();
-      if (!charge.config_id) {
-        throw new Error(`Internal error: Recurring ${charge.type} charge must include a config_id.`);
-      }
 
       const detailQuantity = Number(charge.quantity ?? 1) || 1;
       const detailRate = Number(charge.rate ?? 0) || 0;

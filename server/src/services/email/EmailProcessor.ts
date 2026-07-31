@@ -1,5 +1,6 @@
 import { EmailQueueJob, EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { tenantDb } from '@alga-psa/db';
 
 /**
@@ -117,7 +118,7 @@ export class EmailProcessor {
   private async createProviderAdapter(config: EmailProviderConfig): Promise<MicrosoftGraphAdapter> {
     switch (config.provider_type) {
       case 'microsoft':
-        return new MicrosoftGraphAdapter(config);
+        return new MicrosoftGraphAdapter(await buildMicrosoftEmailProviderConfig(config));
       case 'google':
         // TODO: Implement GmailAdapter
         throw new Error('Gmail adapter not implemented yet');

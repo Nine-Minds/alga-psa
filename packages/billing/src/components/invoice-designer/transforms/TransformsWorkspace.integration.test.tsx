@@ -117,6 +117,7 @@ describe('TransformsWorkspace', () => {
   beforeEach(() => {
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
+      writable: true,
       value: () => undefined,
     });
     Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {

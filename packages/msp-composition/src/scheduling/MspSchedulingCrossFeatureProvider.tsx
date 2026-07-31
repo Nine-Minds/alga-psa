@@ -26,6 +26,8 @@ import {
 
 // Project imports
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
+// Billing imports
+import { getProjectTaskPaymentWarning } from '@alga-psa/billing/actions/projectBillingWarningActions';
 import { getTaskById } from '@alga-psa/projects/actions/projectTaskActions';
 import { getProjectMetadata, getProjectPhase, getProjectTreeData } from '@alga-psa/projects/actions/projectActions';
 
@@ -120,6 +122,7 @@ export function MspSchedulingCrossFeatureProvider({ children }: { children: Reac
       getProjectPhase,
       getProjectMetadata,
       getProjectTreeData,
+      getProjectTaskPaymentWarning,
     }),
     [renderTicketDetails, renderInteractionDetails, renderTaskEdit, getSchedulingInteractionById]
   );

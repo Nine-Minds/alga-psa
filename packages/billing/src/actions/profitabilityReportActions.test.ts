@@ -135,10 +135,14 @@ function seedRawMocks(options?: {
   ticketRevenue?: Array<Record<string, unknown>>;
   allocations?: Array<Record<string, unknown>>;
   weights?: Array<Record<string, unknown>>;
+  writeDowns?: Array<Record<string, unknown>>;
 }) {
   rawMock.mockImplementation(async (sql: string) => {
-    if (sql.includes('WITH charge_details')) {
+    if (sql.includes('WITH charge_classification')) {
       return { rows: options?.revenue ?? revenueRows };
+    }
+    if (sql.includes('project_billing_cap_deltas')) {
+      return { rows: options?.writeDowns ?? [] };
     }
     if (sql.includes('WITH so_cogs_movements')) {
       return { rows: options?.salesOrderCogs ?? [] };
@@ -177,10 +181,11 @@ describe('profitability report actions', () => {
       { startDate: '2026-01-01', endDate: '2026-01-31' },
     ];
 
-    await expect((getProfitabilitySummary as any)(...args)).rejects.toThrow('Permission denied: billing read required');
-    await expect((getClientProfitability as any)(...args)).rejects.toThrow('Permission denied: billing read required');
-    await expect((getAgreementProfitability as any)(...args)).rejects.toThrow('Permission denied: billing read required');
-    await expect((getTicketProfitability as any)(...args)).rejects.toThrow('Permission denied: billing read required');
+    const expected = { permissionError: 'Permission denied: billing read required' };
+    await expect((getProfitabilitySummary as any)(...args)).resolves.toEqual(expected);
+    await expect((getClientProfitability as any)(...args)).resolves.toEqual(expected);
+    await expect((getAgreementProfitability as any)(...args)).resolves.toEqual(expected);
+    await expect((getTicketProfitability as any)(...args)).resolves.toEqual(expected);
   });
 
   it('returns summary totals with actual-hour EHR and known revenue/cost fixture', async () => {
@@ -201,6 +206,65 @@ describe('profitability report actions', () => {
       effectiveHourlyRate: 13000,
       costRatesConfigured: true,
     });
+  });
+
+  it('T036: surfaces project cap write-downs without changing recognized revenue or margin', async () => {
+    seedRawMocks({
+      writeDowns: [{
+        config_id: 'config-1',
+        project_id: 'project-1',
+        client_id: 'client-1',
+        client_name: 'Acme',
+        client_contract_id: 'cc-1',
+        contract_id: 'contract-1',
+        contract_name: 'Managed Services',
+        amount_cents: 2500,
+      }],
+    });
+
+    const args = [
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31', clientId: 'client-1' },
+    ];
+    const summary = await (getProfitabilitySummary as any)(...args);
+    const clients = await (getClientProfitability as any)(...args);
+    const agreements = await (getAgreementProfitability as any)(...args);
+
+    expect(summary).toMatchObject({ revenue: 10000, margin: 4000, write_downs: 2500 });
+    expect(clients).toEqual([
+      expect.objectContaining({ clientId: 'client-1', revenue: 10000, margin: 4000, write_downs: 2500 }),
+    ]);
+    expect(agreements).toEqual([
+      expect.objectContaining({
+        clientContractId: 'cc-1',
+        revenue: 10000,
+        margin: 5000,
+        write_downs: 2500,
+        lines: expect.arrayContaining([
+          expect.objectContaining({ write_downs: 2500 }),
+        ]),
+      }),
+      expect.objectContaining({ rowType: 'unattributed', margin: -1000 }),
+    ]);
+  });
+
+  it('T036: classifies fixed-price project work out of rated revenue while retaining schedule charges', async () => {
+    await (getProfitabilitySummary as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+
+    const revenueSql = rawMock.mock.calls
+      .map(([sql]) => String(sql))
+      .find((sql) => sql.includes('WITH charge_classification'));
+    expect(revenueSql).toContain("config.billing_model = 'fixed_price'");
+    expect(revenueSql).toContain('is_project_schedule_charge');
+    expect(revenueSql).toContain('is_fixed_project_time_charge');
+    expect(revenueSql).toContain('is_fixed_project_material_charge');
+    expect(revenueSql).toContain('ROW_NUMBER() OVER');
+    expect(revenueSql).toContain('AND NOT cd.is_project_schedule_charge THEN 0::bigint');
   });
 
   it('folds sales-order hardware COGS into material cost at summary, client, and agreement grain', async () => {
@@ -671,7 +735,7 @@ describe('profitability report actions', () => {
   it('uses tenant-bound raw queries for multi-tenant report isolation', async () => {
     rawMock.mockImplementation(async (sql: string, bindings: unknown[] = []) => {
       const tenant = bindings.find((binding) => binding === 'tenant-a' || binding === 'tenant-b');
-      if (sql.includes('WITH charge_details')) {
+      if (sql.includes('WITH charge_classification')) {
         return {
           rows: tenant === 'tenant-a'
             ? [{ ...revenueRows[0], client_id: 'client-a', client_name: 'Tenant A', amount_cents: 1000 }]
@@ -684,6 +748,7 @@ describe('profitability report actions', () => {
       if (sql.includes('WITH so_cogs_movements')) return { rows: [] };
       if (sql.includes('WITH linked_time')) return { rows: [] };
       if (sql.includes('WITH allocation_charges')) return { rows: [] };
+      if (sql.includes('project_billing_cap_deltas')) return { rows: [] };
       throw new Error('Unexpected SQL');
     });
 

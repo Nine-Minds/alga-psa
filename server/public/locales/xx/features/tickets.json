@@ -882,7 +882,6 @@
     "resolveAndClose": "11111",
     "closeTicketResolutionPrompt": "11111",
     "selectCloseStatus": "11111",
-    "closeTicketResolutionPlaceholder": "11111",
     "cannotCloseYet": "11111",
     "closeRulesIntro": "11111",
     "viewChecklist": "11111",
@@ -1148,7 +1147,9 @@
     "clientRequired": "11111",
     "serialUnit": "11111",
     "selectUnit": "11111",
-    "onHandByLocation": "11111"
+    "onHandByLocation": "11111",
+    "catalogUnitCost": "11111",
+    "costNotConfigured": "11111"
   },
   "watchList": {
     "title": "11111",
@@ -1498,7 +1499,6 @@
       "pausedHint": "11111"
     },
     "tiles": {
-      "request": "11111",
       "openedBy": "11111 {{name}} 11111",
       "showMore": "11111",
       "showLess": "11111",

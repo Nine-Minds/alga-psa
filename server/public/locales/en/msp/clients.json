@@ -296,6 +296,155 @@
     "parentClientClear": "Clear",
     "parentClientLegacy": "Previously entered as text: {{name}}"
   },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Concerns",
+      "documents": "Documents",
+      "installBase": "Install base",
+      "locations": "Locations",
+      "money": "Money",
+      "notes": "Notes",
+      "people": "People",
+      "record": "Client record",
+      "service": "Service",
+      "timeline": "Everything, in order"
+    },
+    "csatEmpty": "No survey responses yet.",
+    "discardCancel": "Keep editing",
+    "discardConfirm": "Discard changes",
+    "discardMessage": "You have unsaved client record changes. Close and discard them?",
+    "discardTitle": "Unsaved changes",
+    "documents": {
+      "more": "+{{count}} more",
+      "none": "No documents yet."
+    },
+    "flags": {
+      "clientWaiting": "Client waiting {{days}}d — {{ref}}",
+      "draftInvoices_one": "1 draft invoice — {{amount}} unbilled · {{ref}}",
+      "draftInvoices_other": "{{count}} draft invoices — {{amount}} unbilled · {{ref}}",
+      "rmaOpen_one": "1 open RMA — {{days}}d",
+      "rmaOpen_other": "{{count}} open RMAs — oldest {{days}}d",
+      "slaAtRisk_one": "SLA at risk — {{ref}}",
+      "slaAtRisk_other": "{{count}} tickets at SLA risk — next {{ref}}",
+      "slaBreached_one": "SLA breached — {{ref}}",
+      "slaBreached_other": "{{count}} SLA breaches — worst {{ref}}",
+      "soPartial": "{{ref}}: {{fulfilled}} of {{total}} lines fulfilled",
+      "ticketOverdue_one": "1 overdue ticket — {{ref}} {{days}}d past due",
+      "ticketOverdue_other": "{{count}} overdue tickets — {{ref}} {{days}}d past due",
+      "ticketUnassigned_one": "1 unassigned ticket — {{ref}}",
+      "ticketUnassigned_other": "{{count}} unassigned tickets — oldest {{ref}}",
+      "wipAging_one": "1 unbilled item — {{days}}d old{{materials}}",
+      "wipAging_other": "{{count}} unbilled items — oldest {{days}}d{{materials}}"
+    },
+    "installBase": {
+      "assets": "managed assets",
+      "assetsLink": "Managed assets",
+      "none": "No delivered equipment yet.",
+      "rmas": "open RMAs",
+      "sold": "sold units",
+      "viewAsset": "asset",
+      "warrantyExpired_one": "1 out of warranty",
+      "warrantyExpired_other": "{{count}} out of warranty",
+      "warrantyExpiring_one": "1 expiring ≤90d",
+      "warrantyExpiring_other": "{{count}} expiring ≤90d",
+      "warrantyTracked": " (of {{count}} tracked)"
+    },
+    "locations": {
+      "billing": "Billing",
+      "manage": "Manage",
+      "more": "+{{count}} more",
+      "none": "No locations yet.",
+      "shipping": "Shipping"
+    },
+    "money": {
+      "activeContracts": "Active contracts",
+      "agingNote": "{{total}} outstanding · recorded payments deducted",
+      "billingSetup": "Billing setup",
+      "current": "current",
+      "draft": "draft",
+      "moreDrafts_one": "+1 more draft",
+      "moreDrafts_other": "+{{count}} more drafts",
+      "nothingOutstanding": "Nothing outstanding on finalized invoices.",
+      "taxSettings": "Tax settings",
+      "unbilledHours": "{{hours}}h",
+      "unbilledMaterials": "{{amount}} materials",
+      "unbilledWork": "Unbilled work"
+    },
+    "notes": {
+      "add": "Add note",
+      "lastEdited": "Shared client note · edited {{days}}d ago",
+      "none": "No notes yet."
+    },
+    "openView": "Open",
+    "people": {
+      "addContact": "Add contact",
+      "more": "+{{count}} more",
+      "noContactInfo": "no contact info on file",
+      "none": "No contacts yet.",
+      "primary": "Primary"
+    },
+    "pulseError": "Could not load the client snapshot.",
+    "rail": {
+      "close": "Close",
+      "installBase": "Install base",
+      "label": "Client views",
+      "money": "Money",
+      "more": "More",
+      "records": "Records",
+      "service": "Service"
+    },
+    "record": {
+      "accountManager": "Account manager",
+      "additionalInfo": "Additional info",
+      "clientSince": "Client since",
+      "defaultContact": "Default contact",
+      "edit": "Edit",
+      "unset": "not set"
+    },
+    "service": {
+      "newTicket": "New ticket",
+      "none": "No open tickets.",
+      "oldest": "oldest open",
+      "open": "open tickets",
+      "overdue": "overdue",
+      "overdueTag": "overdue",
+      "unassigned": "Unassigned"
+    },
+    "sla": {
+      "atRisk": "SLA at risk",
+      "atRiskLeft": "SLA {{left}} left",
+      "breached": "SLA breached",
+      "breachedAgo": "SLA breached {{over}} ago",
+      "onTrack": "SLA on track",
+      "onTrackLeft": "SLA {{left}} left",
+      "paused": "SLA paused"
+    },
+    "timeline": {
+      "daysAgo": "{{count}}d ago",
+      "empty": "Nothing recorded yet for this client.",
+      "error": "Could not load the timeline.",
+      "filterAll": "All",
+      "filterInteractions": "Interactions",
+      "filterInventory": "Inventory",
+      "filterMoney": "Money",
+      "filterService": "Service",
+      "hoursAgo": "{{count}}h ago",
+      "interaction": "Interaction",
+      "invoiceCreated": "Invoice drafted",
+      "invoiceFinalized": "Invoice finalized",
+      "justNow": "just now",
+      "loadMore": "Load more",
+      "loading": "Loading…",
+      "materialAdded": "Material used",
+      "quoteActivity": "Quote activity",
+      "rmaClosed": "RMA closed",
+      "rmaOpened": "RMA opened",
+      "soCreated": "Sales order created",
+      "ticketClosed": "Ticket closed",
+      "ticketOpened": "Ticket opened",
+      "unitDelivered": "Equipment delivered"
+    }
+  },
   "quickAddClient": {
     "lifecycleStatus": "Lifecycle",
     "title": "Add New Client",
@@ -759,6 +908,18 @@
     "updatedSuccess": "Credit expiration settings have been updated.",
     "updateError": "Failed to update settings",
     "useDefaultSuccess": "Client will now use default credit expiration settings."
+  },
+  "clientExternalCreditSettings": {
+    "title": "External Credit on File",
+    "enable": "Customer holds credit in the accounting system",
+    "enableHelp": "For customers whose credit balance lives in QuickBooks (e.g. paid ahead by check). Shows a notice on their portal billing page so open invoices are not mistaken for delinquency.",
+    "note": "Note shown to the customer",
+    "notePlaceholder": "e.g., Paid through December 2026",
+    "save": "Save",
+    "loadError": "Failed to load settings",
+    "saveError": "Failed to save settings",
+    "updatedSuccess": "External credit setting updated.",
+    "noteUpdatedSuccess": "External credit note updated."
   },
   "clientGridCard": {
     "actions": "Client Actions",
@@ -1302,7 +1463,10 @@
         "serialNumber": "Serial number",
         "status": "Status",
         "type": "Type",
-        "warrantyEnd": "Warranty End"
+        "warrantyEnd": "Warranty End",
+        "agent": "Agent",
+        "patching": "Patching",
+        "coverage": "Coverage"
       },
       "details": {
         "local": "Local",

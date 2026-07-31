@@ -23,9 +23,10 @@ describe('Credits control i18n wiring contract', () => {
   it('T009: AddCreditButton wires trigger, dialog title, body copy, and actions through msp/credits', () => {
     const source = read('../src/components/credits/AddCreditButton.tsx');
 
-    expect(source).toContain("const { t } = useTranslation('msp/credits');");
+    expect(source).toContain("const { t, i18n } = useTranslation('msp/credits');");
     expect(source).toContain("t('actions.addCredit', { defaultValue: 'Add Credit' })");
-    expect(source).toContain("t('management.addCreditPlaceholder', {");
+    expect(source).toContain("t('addCredit.fields.client', { defaultValue: 'Client' })");
+    expect(source).toContain("t('addCredit.fields.amount', { defaultValue: 'Amount' })");
     expect(source).toContain("t('actions.cancel', { defaultValue: 'Cancel' })");
   });
 
@@ -36,21 +37,6 @@ describe('Credits control i18n wiring contract', () => {
 
     expect(getLeaf(pseudo, 'actions.addCredit')).toBe('11111');
     expect(getLeaf(pseudo, 'actions.cancel')).toBe('11111');
-    expect(getLeaf(pseudo, 'management.addCreditPlaceholder')).toBe('11111');
-  });
-
-  it('T011: BackButton wires the visible label through msp/credits', () => {
-    const source = read('../src/components/credits/BackButton.tsx');
-
-    expect(source).toContain("const { t } = useTranslation('msp/credits');");
-    expect(source).toContain("t('actions.backToCredits', { defaultValue: 'Back to Credits' })");
-  });
-
-  it('T012: BackButton pseudo-locale label is backed by xx fill instead of English', () => {
-    const pseudo = readJson<Record<string, unknown>>(
-      '../../../server/public/locales/xx/msp/credits.json',
-    );
-
-    expect(getLeaf(pseudo, 'actions.backToCredits')).toBe('11111');
+    expect(getLeaf(pseudo, 'addCredit.fields.client')).toBe('11111');
   });
 });

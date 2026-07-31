@@ -300,7 +300,7 @@ export async function groupRowsIntoPhases(
       assigned_to: primaryAgentId,
       additional_agent_ids: additionalAgentIds,
       estimated_hours: parseImportNumber(row.estimated_hours),
-      actual_hours: parseImportNumber(row.actual_hours),
+      actual_hours: null,
       due_date: parseImportDate(row.due_date),
       priority_id: priorityLookup[priorityName] || null,
       service_id: serviceLookup[serviceName] || null,
@@ -334,7 +334,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Collect and document client requirements',
       assigned_to: 'John Smith',
       estimated_hours: '16',
-      actual_hours: '',
       due_date: '2024-02-15',
       priority: 'High',
       service: 'Consulting',
@@ -348,7 +347,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Design initial wireframes for review',
       assigned_to: 'Sarah Johnson',
       estimated_hours: '8',
-      actual_hours: '',
       due_date: '2024-02-20',
       priority: 'Medium',
       service: 'Design',
@@ -362,7 +360,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Implement REST API endpoints',
       assigned_to: 'Mike Wilson, Sarah Johnson',  // First = primary, rest = additional agents
       estimated_hours: '40',
-      actual_hours: '',
       due_date: '2024-03-15',
       priority: 'High',
       service: 'Development',
@@ -376,7 +373,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Create React UI components',
       assigned_to: 'Tom Brown',
       estimated_hours: '32',
-      actual_hours: '',
       due_date: '2024-03-20',
       priority: 'Medium',
       service: 'Development',
@@ -390,7 +386,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Final documentation review before delivery',
       assigned_to: 'John Smith',
       estimated_hours: '4',
-      actual_hours: '',
       due_date: '2024-03-25',
       priority: 'Low',
       service: '',
@@ -406,7 +401,6 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
     'task_description',
     'assigned_to',
     'estimated_hours',
-    'actual_hours',
     'due_date',
     'priority',
     'service',
@@ -621,10 +615,7 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     }
 
     if (row.actual_hours?.trim()) {
-      const parsed = parseImportNumber(row.actual_hours);
-      if (parsed === null || parsed < 0) {
-        warnings.push(`Invalid actual_hours: "${row.actual_hours}" - will be skipped`);
-      }
+      warnings.push('Actual Hours is derived from linked time entries and will be ignored');
     }
 
     return {
@@ -811,10 +802,7 @@ export const validatePhaseTaskImportData = withAuth(async (
     }
 
     if (row.actual_hours?.trim()) {
-      const parsed = parseImportNumber(row.actual_hours);
-      if (parsed === null || parsed < 0) {
-        warnings.push(`Invalid actual_hours: "${row.actual_hours}" - will be skipped`);
-      }
+      warnings.push('Actual Hours is derived from linked time entries and will be ignored');
     }
 
     return {
@@ -1120,7 +1108,6 @@ export const importPhasesAndTasks = withAuth(async (
               description_rich_text: null,
               assigned_to: taskData.assigned_to,
               estimated_hours: taskData.estimated_hours,
-              actual_hours: taskData.actual_hours,
               due_date: taskData.due_date,
               priority_id: taskData.priority_id,
               service_id: taskData.service_id,

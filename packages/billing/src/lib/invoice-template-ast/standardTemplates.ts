@@ -200,6 +200,8 @@ const buildStandardDetailedAst = (): TemplateAst => ({
                     width: '180px',
                     maxHeight: '72px',
                     margin: '0 0 6px 0',
+                    objectFit: 'contain',
+                    objectPosition: 'left',
                   },
                 },
               },
@@ -519,7 +521,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
                 type: 'image',
                 src: { type: 'binding', bindingId: 'tenantClientLogo' },
                 alt: { type: 'template', template: '{{name}} logo', args: { name: { type: 'binding', bindingId: 'tenantClientName' } } },
-                style: { inline: { width: '180px', maxHeight: '72px', margin: '0 0 6px 0' } },
+                style: { inline: { width: '180px', maxHeight: '72px', margin: '0 0 6px 0', objectFit: 'contain', objectPosition: 'left' } },
               },
               { id: 'issuer-name', type: 'text', content: { type: 'binding', bindingId: 'tenantClientName' }, style: { inline: { fontSize: '18px', fontWeight: 700, lineHeight: 1.2 } } },
               { id: 'issuer-address', type: 'text', content: { type: 'binding', bindingId: 'tenantClientAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
@@ -553,7 +555,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
             id: 'from-card',
             type: 'stack',
             direction: 'column',
-            style: { inline: { flex: '1', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
+            style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
             children: [
               { id: 'from-label', type: 'text', content: { type: 'literal', value: 'From' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
               { id: 'from-name', type: 'text', content: { type: 'binding', bindingId: 'tenantClientName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
@@ -564,7 +566,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
             id: 'bill-to-card',
             type: 'stack',
             direction: 'column',
-            style: { inline: { flex: '1', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
+            style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
             children: [
               { id: 'bill-to-label', type: 'text', content: { type: 'literal', value: 'Bill To' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
               { id: 'bill-to-name', type: 'text', content: { type: 'binding', bindingId: 'customerName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
@@ -626,7 +628,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
             id: 'notes-card',
             type: 'stack',
             direction: 'column',
-            style: { inline: { flex: '1', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px', minHeight: '80px' } },
+            style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px', minHeight: '80px' } },
             children: [
               { id: 'notes-label', type: 'text', content: { type: 'literal', value: 'Notes' }, style: { inline: { fontWeight: 700, fontSize: '14px', margin: '0 0 6px 0' } } },
               { id: 'notes-text', type: 'text', content: { type: 'binding', bindingId: 'notes' }, style: { inline: { color: '#374151', lineHeight: 1.5 } } },
@@ -635,7 +637,7 @@ const buildStandardGroupedAst = (): TemplateAst => ({
           {
             id: 'totals',
             type: 'totals',
-            style: { inline: { flex: '1', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', backgroundColor: '#f9fafb' } },
+            style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', backgroundColor: '#f9fafb' } },
             sourceBinding: { bindingId: 'lineItems' },
             rows: [
               { id: 'monthly-subtotal', label: 'Monthly', value: { type: 'binding', bindingId: 'recurringSubtotal' }, format: 'currency' },
@@ -693,7 +695,7 @@ const buildStandardByLocationAst = (): TemplateAst => ({
                 type: 'image',
                 src: { type: 'binding', bindingId: 'tenantClientLogo' },
                 alt: { type: 'template', template: '{{name}} logo', args: { name: { type: 'binding', bindingId: 'tenantClientName' } } },
-                style: { inline: { width: '180px', maxHeight: '72px', margin: '0 0 6px 0' } },
+                style: { inline: { width: '180px', maxHeight: '72px', margin: '0 0 6px 0', objectFit: 'contain', objectPosition: 'left' } },
               },
               { id: 'issuer-name', type: 'text', content: { type: 'binding', bindingId: 'tenantClientName' }, style: { inline: { fontSize: '18px', fontWeight: 700, lineHeight: 1.2 } } },
               { id: 'issuer-address', type: 'text', content: { type: 'binding', bindingId: 'tenantClientAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
@@ -726,7 +728,7 @@ const buildStandardByLocationAst = (): TemplateAst => ({
             id: 'from-card',
             type: 'stack',
             direction: 'column',
-            style: { inline: { flex: '1', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
+            style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
             children: [
               { id: 'from-label', type: 'text', content: { type: 'literal', value: 'From' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
               { id: 'from-name', type: 'text', content: { type: 'binding', bindingId: 'tenantClientName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
@@ -737,7 +739,7 @@ const buildStandardByLocationAst = (): TemplateAst => ({
             id: 'bill-to-card',
             type: 'stack',
             direction: 'column',
-            style: { inline: { flex: '1', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
+            style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
             children: [
               { id: 'bill-to-label', type: 'text', content: { type: 'literal', value: 'Bill To' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
               { id: 'bill-to-name', type: 'text', content: { type: 'binding', bindingId: 'customerName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },

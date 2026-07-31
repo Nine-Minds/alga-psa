@@ -52,6 +52,7 @@ import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, ISchedul
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
+import AiUsageSection from './AiUsageSection';
 import { signOut, useSession } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
 import { useProduct } from 'server/src/context/ProductContext';
@@ -71,6 +72,7 @@ const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
   [TIER_FEATURES.ENTRA_SYNC]: 'features.entraSync',
   [TIER_FEATURES.CIPP]: 'features.cipp',
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'features.teamsIntegration',
+  [TIER_FEATURES.SCIM_PROVISIONING]: 'features.scimProvisioning',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'features.advancedAuthorizationBundles',
 };
 
@@ -112,6 +114,10 @@ export default function AccountManagement() {
   const tierUpgradeFlowEnabled = typeof upgradeFlowFlag === 'boolean'
     ? upgradeFlowFlag
     : upgradeFlowFlag?.enabled ?? false;
+  const aiUsageBillingFlag = useFeatureFlag('ai-usage-billing');
+  const aiUsageBillingEnabled = typeof aiUsageBillingFlag === 'boolean'
+    ? aiUsageBillingFlag
+    : aiUsageBillingFlag?.enabled ?? false;
   const { isAlgaDesk } = useProduct();
   const { update: updateSession } = useSession();
 
@@ -886,7 +892,7 @@ export default function AccountManagement() {
       activeTitle: 'Enterprise add-on active',
       activeBody: 'Microsoft Entra Sync is available for this tenant.',
     },
-  ];
+  ].filter((card) => card.addOn !== ADD_ONS.ENTERPRISE || hasAddOn(ADD_ONS.ENTERPRISE));
 
   return (
     <div className="space-y-6">
@@ -1252,7 +1258,11 @@ export default function AccountManagement() {
                   {displayedTierFeatures.map((feature) => (
                     <li key={feature} className="flex items-center space-x-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>{t(FEATURE_TRANSLATION_KEYS[feature])}</span>
+                      <span>{t(FEATURE_TRANSLATION_KEYS[feature], {
+                        defaultValue: feature === TIER_FEATURES.SCIM_PROVISIONING
+                          ? 'SCIM user provisioning'
+                          : FEATURE_TRANSLATION_KEYS[feature],
+                      })}</span>
                     </li>
                   ))}
                 </ul>
@@ -1922,6 +1932,9 @@ export default function AccountManagement() {
           </CardContent>
         )}
       </Card>
+
+      {/* AI Usage billing (add-on) — gated by the ai-usage-billing rollout flag */}
+      {aiUsageBillingEnabled && <AiUsageSection />}
 
       {/* Danger Zone */}
       <Card className="border-destructive/50">

@@ -9,6 +9,7 @@ import type {
   UnifiedInboundEmailQueueJob,
 } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import {
   processInboundEmailInApp,
   type ProcessInboundEmailInAppDiagnostics,
@@ -275,6 +276,8 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
   const row = (await query
     .where('ep.id', job.providerId)
     .andWhere('ep.provider_type', 'microsoft')
+    .andWhere('ep.is_active', true)
+    .whereNull('ep.inbound_paused_at')
     .first(
       'ep.*',
       db.raw('mc.client_id as mc_client_id'),
@@ -306,7 +309,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
         }
       })();
 
-  return {
+  return buildMicrosoftEmailProviderConfig({
     id: row.id,
     tenant: row.tenant,
     name: row.provider_name || row.mailbox,
@@ -328,7 +331,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       refresh_token: (row as any).mc_refresh_token,
       token_expires_at: (row as any).mc_token_expires_at,
     },
-  } as any;
+  } as any);
 }
 
 async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<{
@@ -340,6 +343,8 @@ async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Prom
   const tenantScopedDb = tenantDb(db, job.tenantId);
   const provider = await tenantScopedDb.table('email_providers')
     .where({ id: job.providerId, provider_type: 'google' })
+    .andWhere('is_active', true)
+    .whereNull('inbound_paused_at')
     .first();
   if (!provider) {
     throw new SourceMessageUnavailableError('google_provider_not_found');
@@ -531,6 +536,8 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
   const provider = (await query
     .where('ep.id', job.providerId)
     .andWhere('ep.provider_type', 'imap')
+    .andWhere('ep.is_active', true)
+    .whereNull('ep.inbound_paused_at')
     .first(
       'ep.id',
       'ep.tenant',
@@ -763,6 +770,16 @@ async function persistGoogleHistoryCursor(job: UnifiedInboundEmailQueueJob): Pro
     });
 }
 
+async function recordSuccessfulProviderSync(job: UnifiedInboundEmailQueueJob): Promise<void> {
+  const db = await getAdminConnection();
+  await tenantDb(db, job.tenantId).table('email_providers')
+    .where({ id: job.providerId })
+    .update({
+      last_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+}
+
 async function insertProcessingRecord(params: {
   job: UnifiedInboundEmailQueueJob;
   externalIdentity: string;
@@ -858,9 +875,42 @@ function buildProcessingMetadata(params: {
   };
 }
 
+async function getInboundProviderGateReason(
+  job: UnifiedInboundEmailQueueJob
+): Promise<'inactive' | 'paused' | null> {
+  const db = await getAdminConnection();
+  const provider = await tenantDb(db, job.tenantId)
+    .table('email_providers')
+    .where({ id: job.providerId, provider_type: job.provider })
+    .first('is_active', 'inbound_paused_at');
+
+  if (!provider) return null;
+  if (!provider.is_active) return 'inactive';
+  if (provider.inbound_paused_at) return 'paused';
+  return null;
+}
+
 export async function processUnifiedInboundEmailQueueJob(
   job: UnifiedInboundEmailQueueJob
 ): Promise<UnifiedInboundEmailQueueProcessResult> {
+  const gateReason = await getInboundProviderGateReason(job);
+  if (gateReason) {
+    console.info('[UnifiedInboundEmailQueueJobProcessor] skipped gated provider job', {
+      event: 'inbound_email_provider_gated',
+      tenantId: job.tenantId,
+      providerId: job.providerId,
+      provider: job.provider,
+      reason: gateReason,
+    });
+    return {
+      outcome: 'skipped',
+      processedCount: 0,
+      dedupedCount: 0,
+      skippedCount: 1,
+      reason: `provider_${gateReason}`,
+    };
+  }
+
   let payloads: EmailMessageDetails[];
   try {
     payloads = await fetchEmailPayloadsForJob(job);
@@ -999,6 +1049,7 @@ export async function processUnifiedInboundEmailQueueJob(
 
   if (payloads.length > 0) {
     await persistGoogleHistoryCursor(job);
+    await recordSuccessfulProviderSync(job);
   }
 
   return {

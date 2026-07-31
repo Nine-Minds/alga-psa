@@ -8,7 +8,7 @@
 import { Knex } from 'knex';
 import crypto from 'crypto';
 import { createTenantKnex } from '@/lib/db';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { isTenantSuspended, tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { publishEvent } from '@shared/events/publisher';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -234,6 +234,23 @@ export async function handleNinjaOneWebhook(
   }
 
   const { tenantId, integration, mapping } = context;
+
+  // Suspended tenants (cancelled, pending deletion) are acked without any
+  // processing or events so NinjaOne neither retries nor alerts.
+  {
+    const { knex } = await createTenantKnex();
+    if (await isTenantSuspended(knex, tenantId)) {
+      logger.debug('Ignoring NinjaOne webhook for suspended tenant', {
+        tenantId,
+        organizationId: payload.organizationId,
+        event: 'rmm_webhook_tenant_suspended',
+      });
+      return {
+        success: true,
+        processed: false,
+      };
+    }
+  }
 
   // Emit webhook received event
   try {

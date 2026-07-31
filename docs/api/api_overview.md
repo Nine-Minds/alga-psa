@@ -128,7 +128,7 @@ The following REST API groups are available in the Community Edition under the b
 
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 - [Unified Full-Text Search](search.md)
-- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling and asset links (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`.
+- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, and agent/team assignment sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`.
 - **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
@@ -166,6 +166,22 @@ Assets and tickets can be linked to each other (the same association surfaced in
 | `DELETE` | `/tickets/{id}/assets/{assetId}` | Remove the link between a ticket and an asset |
 
 **Permissions:** the asset-side routes require `asset:update` plus `ticket:read`; the ticket-side routes require `ticket:update` plus `asset:read`. In each case you need *update* on the resource whose links you are changing and *read* on the one you reference.
+
+#### Ticket Agents and Team Assignment
+
+Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can have additional agents and a team. These sub-resources were previously only accessible as server actions (through the Alga PSA UI) and are now available via REST.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/tickets/{id}/agents` | List all additional agents assigned to the ticket |
+| `POST` | `/tickets/{id}/agents` | Add an additional agent. Requires `agent_id` (UUID) in the request body |
+| `DELETE` | `/tickets/{id}/agents/{userId}` | Remove an additional agent; returns `400` if `userId` is not a valid UUID |
+| `PUT` | `/tickets/{id}/team` | Assign a team to the ticket. Requires `team_id` (UUID) in the request body |
+| `DELETE` | `/tickets/{id}/team` | Remove the team assignment from the ticket |
+
+**Assignment consistency fix:** `PUT /tickets/{id}/assignment` previously failed with an "Invalid reference" FK error when the ticket already had additional agents. The endpoint now atomically clears and re-keys `ticket_resources` rows before updating `tickets.assigned_to`, making primary-assignee changes reliable regardless of how many additional agents are attached.
+
+**Permissions:** all five routes require `ticket:update`.
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.

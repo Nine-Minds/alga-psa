@@ -11,7 +11,14 @@ vi.mock('@alga-psa/core/logger', () => ({
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => (table: string) => {
     expect(table).toBe('tenants');
-    return { select: (_col: string) => Promise.resolve(listTenantsMock()) };
+    const builder = {
+      whereNull: (column: string) => {
+        expect(column).toBe('suspended_at');
+        return builder;
+      },
+      select: (_col: string) => Promise.resolve(listTenantsMock()),
+    };
+    return builder;
   },
 }));
 
@@ -19,7 +26,6 @@ vi.mock('@alga-psa/db/admin', () => ({
 // will try to load the real (heavy) handler graph.
 vi.mock('@alga-psa/jobs/handlers/expiredCreditsHandler', () => ({ expiredCreditsHandler: (...a: unknown[]) => tenantHandlerMock('expired-credits', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/expiringCreditsNotificationHandler', () => ({ expiringCreditsNotificationHandler: (...a: unknown[]) => tenantHandlerMock('expiring-credits-notification', ...a) }));
-vi.mock('@alga-psa/jobs/handlers/creditReconciliationHandler', () => ({ creditReconciliationHandler: (...a: unknown[]) => tenantHandlerMock('credit-reconciliation', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/reconcileBucketUsageHandler', () => ({ handleReconcileBucketUsage: (...a: unknown[]) => tenantHandlerMock('reconcile-bucket-usage', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/processRenewalQueueHandler', () => ({ processRenewalQueueHandler: (...a: unknown[]) => tenantHandlerMock('process-renewal-queue', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/autoCloseTicketsHandler', () => ({ autoCloseTicketsHandler: (...a: unknown[]) => tenantHandlerMock('auto-close-tickets', ...a) }));

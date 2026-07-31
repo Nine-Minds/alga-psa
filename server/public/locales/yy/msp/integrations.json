@@ -346,16 +346,363 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "55555",
+          "connect": "55555",
+          "connecting": "55555",
+          "test": "55555",
+          "testing": "55555"
+        },
+        "description": "55555",
+        "encryptionNote": "55555",
+        "errors": {
+          "missingFields": "55555",
+          "testFirst": "55555",
+          "unknown": "55555"
+        },
+        "fields": {
+          "apiToken": "55555",
+          "apiTokenHelp": "55555",
+          "apiTokenPlaceholder": "55555",
+          "baseUrl": "55555",
+          "baseUrlHelp": "55555",
+          "baseUrlPlaceholder": "55555"
+        },
+        "test": {
+          "passed": "55555 {{count}} 55555",
+          "required": "55555"
+        },
+        "title": "55555"
+      },
+      "console": {
+        "actions": {
+          "pause": "55555",
+          "resume": "55555",
+          "syncNeedsClients": "55555",
+          "syncNeedsConnection": "55555",
+          "syncNow": "55555",
+          "syncingNow": "55555"
+        },
+        "attention": {
+          "actions": {
+            "fixConnection": "55555",
+            "mapClients": "55555",
+            "openSchedule": "55555",
+            "review": "55555",
+            "viewClients": "55555"
+          },
+          "connection": "55555",
+          "connectionDetail": "55555",
+          "empty": "55555",
+          "failedClients": "55555 {{count}} 55555",
+          "failedClientsDetail": "55555 {{clients}} 55555",
+          "failedClientsOne": "55555 {{count}} 55555",
+          "neverSynced": "55555 {{count}} 55555",
+          "neverSyncedDetail": "55555 {{clients}} 55555",
+          "neverSyncedOne": "55555 {{count}} 55555",
+          "noClients": "55555",
+          "noClientsDetail": "55555",
+          "reviewQueue": "55555 {{count}} 55555",
+          "reviewQueueAtLeast": "55555 {{count}} 55555",
+          "reviewQueueDetail": "55555",
+          "reviewQueueOne": "55555 {{count}} 55555",
+          "scheduleNotApplied": "55555",
+          "scheduleNotAppliedDetail": "55555",
+          "scheduleOff": "55555",
+          "scheduleOffDetail": "55555",
+          "severity": {
+            "blocking": "55555",
+            "info": "55555",
+            "warning": "55555"
+          },
+          "title": "55555"
+        },
+        "clients": {
+          "columns": {
+            "lastSync": "55555",
+            "tenant": "55555",
+            "users": "55555"
+          },
+          "empty": "55555",
+          "filters": {
+            "all": "55555",
+            "failing": "55555",
+            "never-synced": "55555",
+            "synced": "55555"
+          },
+          "searchPlaceholder": "55555",
+          "sync": "55555",
+          "unlink": "55555",
+          "status": {
+            "failed": "55555",
+            "neverSynced": "55555",
+            "partlyFailed": "55555",
+            "synced": "55555",
+            "syncing": "55555"
+          },
+          "emptyTitle": "55555",
+          "emptyDescription": "55555",
+          "emptyAction": "55555",
+          "clearFilters": "55555",
+          "unlinkConfirm": {
+            "body": "55555 {{client}} 55555",
+            "title": "55555 {{client}} 55555"
+          },
+          "unlinked": "55555 {{client}} 55555",
+          "unlinkFailed": "55555",
+          "hidePreview": "55555",
+          "previewLoading": "55555 {{client}} 55555",
+          "previewLoadingHint": "55555",
+          "previousCount": "55555",
+          "syncFinished": "55555 {{client}} 55555",
+          "syncing": "55555",
+          "syncTrackingFailed": "55555"
+        },
+        "connection": {
+          "changeAction": "55555",
+          "exportRecord": "55555",
+          "mappingDescription": "55555",
+          "mappingTitle": "55555",
+          "methodLabel": "55555",
+          "permissionsTitle": "55555",
+          "rotate": "55555",
+          "validate": "55555",
+          "validated": "55555",
+          "validating": "55555"
+        },
+        "errors": {
+          "loadFailed": "55555",
+          "syncFailed": "55555",
+          "syncNotStarted": "55555",
+          "validateFailed": "55555"
+        },
+        "health": {
+          "checking": "55555",
+          "failingClients": "55555 {{count}} 55555",
+          "failingClientsOne": "55555 {{count}} 55555",
+          "healthy": "55555",
+          "unknown": "55555"
+        },
+        "history": {
+          "allClients": "55555",
+          "columns": {
+            "clients": "55555",
+            "failed": "55555",
+            "scope": "55555",
+            "succeeded": "55555",
+            "trigger": "55555",
+            "when": "55555"
+          },
+          "empty": "55555",
+          "export": "55555",
+          "includePreviews": "55555",
+          "next": "55555",
+          "onlyFailures": "55555",
+          "page": "55555 {{page}} 55555 {{pages}} 55555",
+          "previewBadge": "55555",
+          "previous": "55555",
+          "triggers": {
+            "all": "55555",
+            "manual": "55555",
+            "scheduled": "55555"
+          }
+        },
+        "lastRun": {
+          "columns": {
+            "client": "55555",
+            "created": "55555",
+            "inactivated": "55555",
+            "linked": "55555",
+            "result": "55555",
+            "updated": "55555"
+          },
+          "empty": "55555",
+          "progress": "55555 {{processed}} 55555 {{total}} 55555",
+          "results": {
+            "done": "55555",
+            "failed": "55555",
+            "partlyFailed": "55555",
+            "running": "55555",
+            "toReview": "55555 {{count}} 55555"
+          },
+          "showAll": "55555 {{count}} 55555",
+          "stats": {
+            "created": "55555",
+            "createdSub": "55555",
+            "failed": "55555",
+            "failedSub": "55555",
+            "inactivated": "55555",
+            "inactivatedSub": "55555",
+            "linked": "55555",
+            "linkedSub": "55555",
+            "updated": "55555",
+            "updatedSub": "55555"
+          },
+          "summaries": {
+            "completed": "55555 {{time}} 55555",
+            "failed": "55555 {{time}} 55555",
+            "partial": "55555 {{time}} 55555",
+            "running": "55555 {{time}} 55555",
+            "unknown": "55555 {{time}} 55555"
+          },
+          "title": "55555",
+          "unavailable": "55555"
+        },
+        "lead": "55555 {{clients}} 55555 {{method}} 55555",
+        "overwrites": {
+          "change": "55555",
+          "inactivateOff": "55555",
+          "inactivateOn": "55555",
+          "none": "55555",
+          "title": "55555"
+        },
+        "schedule": {
+          "cadence": {
+            "60": "55555",
+            "240": "55555",
+            "720": "55555",
+            "1440": "55555",
+            "10080": "55555"
+          },
+          "changeAction": "55555",
+          "description": "55555",
+          "enablePrompt": "55555",
+          "intervalLabel": "55555",
+          "intervals": {
+            "60": "55555",
+            "240": "55555",
+            "720": "55555",
+            "1440": "55555",
+            "10080": "55555"
+          },
+          "pause": "55555",
+          "pauseHint": "55555",
+          "paused": "55555",
+          "resumed": "55555",
+          "save": "55555",
+          "saveFailed": "55555",
+          "saved": "55555",
+          "savedPending": "55555",
+          "saving": "55555",
+          "title": "55555"
+        },
+        "sideRail": {
+          "runs": "55555 {{cadence}} 55555",
+          "runsMinutes": "55555 {{minutes}} 55555",
+          "scheduleOff": "55555"
+        },
+        "syncStarted": "55555",
+        "tabs": {
+          "clients": "55555",
+          "connection": "55555",
+          "fieldRules": "55555",
+          "history": "55555",
+          "overview": "55555",
+          "reviewQueue": "55555",
+          "schedule": "55555"
+        }
+      },
+      "pilot": {
+        "actions": {
+          "createAndSync": "55555",
+          "preview": "55555",
+          "previewing": "55555",
+          "syncOne": "55555",
+          "syncOneNamed": "55555 {{client}} 55555",
+          "syncRemaining": "55555 {{count}} 55555",
+          "syncingOne": "55555",
+          "syncingRemaining": "55555"
+        },
+        "clientLabel": "55555",
+        "empty": "55555",
+        "errors": {
+          "loadMappings": "55555",
+          "preflightFailed": "55555",
+          "syncFailed": "55555"
+        },
+        "gateNote": "55555",
+        "pendingCreate": "55555 {{count}} 55555",
+        "previewPrompt": "55555",
+        "remainingStarted": "55555 {{count}} 55555",
+        "started": "55555 {{client}} 55555"
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "link": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "markInactive": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "needsDecision": {
+            "description": "55555",
+            "label": "55555"
+          },
+          "noChange": {
+            "description": "55555",
+            "label": "55555"
+          }
+        },
+        "checkAgain": "55555",
+        "checkedLabel": "55555",
+        "hideNames": "55555",
+        "moreNames": "55555 {{count}} 55555",
+        "nothingWritten": "55555",
+        "showNames": "55555",
+        "summary": "55555 {{count}} 55555 {{time}} 55555",
+        "summaryNoTime": "55555 {{count}} 55555",
+        "title": "55555"
+      },
+      "reconciliation": {
+        "actions": {
+          "dismiss": "55555",
+          "refresh": "55555",
+          "resolveExisting": "55555",
+          "resolveNew": "55555"
+        },
+        "candidate": {
+          "fallback": "55555",
+          "label": "55555 {{count}} 55555"
+        },
+        "contactPicker": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "empty": "55555",
+        "errors": {
+          "enterContactId": "55555",
+          "loadQueue": "55555",
+          "resolveFailed": "55555"
+        },
+        "loading": "55555",
+        "noEmailIdentity": "55555",
+        "queuedAt": "55555 {{identity}} 55555 {{time}} 55555",
+        "scopedToMappedClient": "55555",
+        "success": {
+          "dismissed": "55555 {{identity}} 55555",
+          "resolvedExisting": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555",
+          "resolvedNew": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555"
+        },
+        "title": "55555"
+      },
       "settings": {
         "actions": {
+          "cancel": "55555",
           "disconnect": "55555",
-          "reconnect": "55555",
+          "hideReviewRemap": "55555",
+          "reconnect": "55555 {{connectionType}} 55555",
           "reconnecting": "55555",
           "refresh": "55555",
           "resetFieldSync": "55555",
           "reviewMappings": "55555",
           "reviewRemap": "55555",
-          "hideReviewRemap": "55555",
           "runDiscovery": "55555",
           "runDiscoveryAgain": "55555",
           "runDiscoveryRunning": "55555",
@@ -367,21 +714,30 @@
           "syncAllStarting": "55555"
         },
         "badges": {
-          "enterprise": "55555",
+          "pro": "55555",
           "reviewBeforeInitialSync": "55555"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "55555",
+            "expired": "55555",
+            "generic": "55555",
+            "validationFailed": "55555"
+          },
+          "cippServerLabel": "55555",
           "connectingSuffix": "55555",
           "details": "55555",
           "directCredentialSourceLabel": "55555",
           "directTenantDefault": "55555",
           "directTenantLabel": "55555",
-          "cippServerLabel": "55555",
           "notAvailable": "55555",
           "notConfigured": "55555",
-          "notConnectedStatus": "55555",
           "optionsTitle": "55555",
-          "promptDetails": "55555"
+          "promptDetails": "55555",
+          "types": {
+            "cipp": "55555",
+            "direct": "55555"
+          }
         },
         "currentStep": {
           "connect": {
@@ -408,6 +764,12 @@
           "description": "55555",
           "title": "55555"
         },
+        "disconnectConfirm": {
+          "keeps": "55555",
+          "reconnect": "55555",
+          "stops": "55555",
+          "title": "55555"
+        },
         "discovery": {
           "completed": "55555 {{count}} 55555",
           "completedOne": "55555 {{count}} 55555",
@@ -432,6 +794,10 @@
               "description": "55555",
               "label": "55555"
             },
+            "markInactiveWhenDisabled": {
+              "description": "55555",
+              "label": "55555"
+            },
             "phone": {
               "description": "55555",
               "label": "55555"
@@ -445,11 +811,22 @@
               "label": "55555"
             }
           },
+          "preview": "55555",
+          "previewClientEmpty": "55555",
+          "previewClientLabel": "55555",
+          "previewClientSearch": "55555",
+          "previewDescription": "55555",
+          "previewTitle": "55555",
+          "previewing": "55555",
+          "save": "55555",
+          "saveFailed": "55555",
+          "saved": "55555",
+          "saving": "55555",
           "title": "55555"
         },
         "guidedStep": {
-          "current": "55555",
           "complete": "55555",
+          "current": "55555",
           "locked": "55555",
           "stepLabel": "55555 {{number}} 55555",
           "thisIsCurrent": "55555"
@@ -483,12 +860,9 @@
           "title": "55555"
         },
         "overview": {
-          "connectionLabel": "55555",
           "connectionTypeLabel": "55555",
           "label": "55555",
-          "mappedTenantsLabel": "55555",
-          "nextSyncIntervalEvery": "55555 {{minutes}} 55555",
-          "nextSyncIntervalLabel": "55555"
+          "mappedTenantsLabel": "55555"
         },
         "skipped": {
           "empty": "55555",
@@ -498,7 +872,14 @@
         },
         "status": {
           "connectionHealth": "55555",
-          "label": "55555"
+          "label": "55555",
+          "values": {
+            "connected": "55555",
+            "disconnected": "55555",
+            "not_connected": "55555",
+            "unknown": "55555",
+            "validation_failed": "55555"
+          }
         },
         "syncAll": {
           "failed": "55555",
@@ -506,6 +887,10 @@
           "startedNoId": "55555"
         },
         "title": "55555",
+        "unmapConfirm": {
+          "body": "55555 {{tenant}} 55555",
+          "title": "55555"
+        },
         "validation": {
           "label": "55555",
           "lastDiscoveryLabel": "55555",
@@ -533,8 +918,144 @@
           }
         }
       },
+      "setup": {
+        "backToCurrentStep": "55555 {{step}} 55555",
+        "chooser": {
+          "cipp": {
+            "description": "55555",
+            "label": "55555",
+            "prerequisites": {
+              "apiHost": "55555",
+              "apiKey": "55555",
+              "instance": "55555"
+            }
+          },
+          "cippReassurance": "55555",
+          "continue": "55555",
+          "continueCipp": "55555",
+          "continueDirect": "55555",
+          "continuing": "55555",
+          "direct": {
+            "description": "55555",
+            "label": "55555",
+            "prerequisites": {
+              "appRegistration": "55555",
+              "globalAdmin": "55555",
+              "partnerRelationship": "55555"
+            }
+          },
+          "directReassurance": "55555",
+          "prerequisitesTitle": "55555",
+          "recommendation": "55555",
+          "recommendedBadge": "55555",
+          "title": "55555"
+        },
+        "connectedVia": "55555 {{method}} 55555",
+        "description": "55555",
+        "directConsent": {
+          "adminNote": "55555",
+          "cancel": "55555",
+          "continue": "55555",
+          "intro": "55555",
+          "redirecting": "55555",
+          "servicePrincipalNote": "55555",
+          "title": "55555"
+        },
+        "disclosure": {
+          "capabilities": {
+            "noMailbox": "55555",
+            "noWrite": "55555",
+            "readTenants": "55555",
+            "readUsers": "55555"
+          },
+          "capabilitiesTitle": "55555",
+          "contacts": {
+            "ambiguous": "55555",
+            "creation": "55555",
+            "deletion": "55555",
+            "matching": "55555",
+            "overwrite": "55555"
+          },
+          "contactsTitle": "55555",
+          "copied": "55555",
+          "copy": "55555",
+          "description": "55555",
+          "inactiveNote": "55555",
+          "recordGeneratedAt": "55555 {{time}} 55555",
+          "recordHeading": "55555",
+          "scopes": {
+            "directory": "55555",
+            "managedTenants": "55555",
+            "offlineAccess": "55555",
+            "unknown": "55555",
+            "userRead": "55555"
+          },
+          "scopesAllReadOnly": "55555",
+          "scopesTitle": "55555",
+          "title": "55555"
+        },
+        "stepLabel": "55555 {{number}} 55555",
+        "steps": {
+          "connect": {
+            "description": "55555",
+            "short": "55555",
+            "title": "55555"
+          },
+          "discover": {
+            "description": "55555",
+            "short": "55555",
+            "title": "55555"
+          },
+          "map": {
+            "description": "55555",
+            "short": "55555",
+            "title": "55555"
+          },
+          "sync": {
+            "description": "55555",
+            "short": "55555",
+            "title": "55555"
+          }
+        },
+        "title": "55555"
+      },
+      "summary": {
+        "backToIntegrations": "55555",
+        "description": "55555",
+        "open": "55555",
+        "title": "55555"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "55555",
+          "refresh": "55555",
+          "viewDetails": "55555"
+        },
+        "details": {
+          "noResults": "55555",
+          "stats": "55555 {{created}} 55555 {{linked}} 55555 {{updated}} 55555 {{ambiguous}} 55555 {{inactivated}} 55555",
+          "summarySkipped": "55555 {{count}} 55555",
+          "tenantHeader": "55555 {{tenant}} 55555 {{status}} 55555",
+          "unknownTenant": "55555"
+        },
+        "empty": "55555",
+        "errors": {
+          "loadDetailFailed": "55555",
+          "loadFailed": "55555",
+          "loadRunFailed": "55555 {{runId}} 55555"
+        },
+        "loading": "55555",
+        "run": {
+          "header": "55555 {{runType}} 55555 {{status}} 55555",
+          "inProgress": "55555",
+          "tenants": "55555 {{processed}} 55555 {{total}} 55555 {{success}} 55555 {{failed}} 55555",
+          "timing": "55555 {{started}} 55555 {{completed}} 55555"
+        },
+        "title": "55555"
+      },
       "tenantMapping": {
         "actions": {
+          "cancel": "55555",
           "confirmSelected": "55555",
           "confirming": "55555",
           "import": "55555",
@@ -547,8 +1068,11 @@
         "columns": {
           "actions": "55555",
           "confidence": "55555",
+          "defaultRole": "55555",
           "entraTenant": "55555",
+          "portalAccessGroup": "55555",
           "primaryDomain": "55555",
+          "provisioningModeOverride": "55555",
           "selectClient": "55555",
           "status": "55555",
           "suggestedClient": "55555"
@@ -565,10 +1089,25 @@
           "confirmed": "55555 {{count}} 55555",
           "confirmedOne": "55555 {{count}} 55555"
         },
+        "importConfirm": {
+          "body": "55555 {{tenant}} 55555",
+          "similarWarning": "55555",
+          "title": "55555"
+        },
         "noSuggestion": "55555",
         "picker": {
           "placeholder": "55555",
           "unknownClient": "55555"
+        },
+        "portal": {
+          "broadGroupWarning": "55555",
+          "defaultRolePlaceholder": "55555",
+          "groupLoading": "55555",
+          "modeBuiltIn": "55555",
+          "modeDisabled": "55555",
+          "modeInherit": "55555",
+          "modeWorkflowManaged": "55555",
+          "noGroupSelected": "55555"
         },
         "reasons": {
           "exactDomain": "55555",
@@ -581,82 +1120,6 @@
           "needsReview": "55555",
           "skipped": "55555",
           "unmatched": "55555"
-        },
-        "title": "55555"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "55555",
-          "connect": "55555",
-          "connecting": "55555"
-        },
-        "description": "55555",
-        "errors": {
-          "missingFields": "55555",
-          "unknown": "55555"
-        },
-        "fields": {
-          "apiToken": "55555",
-          "apiTokenPlaceholder": "55555",
-          "baseUrl": "55555",
-          "baseUrlPlaceholder": "55555"
-        },
-        "title": "55555"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "55555",
-          "resolveExisting": "55555",
-          "resolveNew": "55555"
-        },
-        "candidate": {
-          "fallback": "55555",
-          "label": "55555 {{count}} 55555"
-        },
-        "contactPicker": {
-          "label": "55555",
-          "placeholder": "55555"
-        },
-        "errors": {
-          "enterContactId": "55555",
-          "loadQueue": "55555",
-          "resolveFailed": "55555"
-        },
-        "empty": "55555",
-        "loading": "55555",
-        "noEmailIdentity": "55555",
-        "queuedAt": "55555 {{identity}} 55555 {{time}} 55555",
-        "scopedToMappedClient": "55555",
-        "success": {
-          "resolvedExisting": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555",
-          "resolvedNew": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555"
-        },
-        "title": "55555"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "55555",
-          "refresh": "55555",
-          "viewDetails": "55555"
-        },
-        "details": {
-          "noResults": "55555",
-          "stats": "55555 {{created}} 55555 {{linked}} 55555 {{updated}} 55555 {{ambiguous}} 55555 {{inactivated}} 55555",
-          "tenantHeader": "55555 {{tenant}} 55555 {{status}} 55555",
-          "unknownTenant": "55555"
-        },
-        "empty": "55555",
-        "errors": {
-          "loadDetailFailed": "55555",
-          "loadFailed": "55555",
-          "loadRunFailed": "55555 {{runId}} 55555"
-        },
-        "loading": "55555",
-        "run": {
-          "header": "55555 {{runType}} 55555 {{status}} 55555",
-          "inProgress": "55555",
-          "tenants": "55555 {{processed}} 55555 {{total}} 55555 {{success}} 55555 {{failed}} 55555",
-          "timing": "55555 {{started}} 55555 {{completed}} 55555"
         },
         "title": "55555"
       }

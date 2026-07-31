@@ -80,14 +80,31 @@ vi.mock('next/headers.js', () => ({
   }),
 }));
 vi.mock('./sso/mspSsoResolution', () => ({
+  // clientPortalSsoResolution re-exports several of these, so the mock has to
+  // carry them even though nextAuthOptions itself only reads the cookie helpers.
+  MSP_SSO_DISCOVERY_TTL_SECONDS: 300,
+  MSP_SSO_GENERIC_FAILURE_MESSAGE:
+    "We couldn't start SSO sign-in. Please verify provider setup and try again.",
   MSP_SSO_RESOLUTION_COOKIE: 'msp_sso_resolution',
+  MSP_SSO_RESOLUTION_TTL_SECONDS: 300,
   getMspSsoSigningSecret: async () => 'unit-test-secret',
+  hasAppFallbackProviderCredentials: vi.fn(async () => false),
+  hasTenantProviderCredentials: vi.fn(async () => false),
+  isValidClientPortalResolverCallbackUrl: vi.fn(() => true),
+  normalizeResolverEmail: (value: string) => value.trim().toLowerCase(),
   parseAndVerifyMspSsoResolutionCookie: vi.fn(() => null),
+  parseResolverProvider: vi.fn((value: string) => value),
 }));
-vi.mock('@alga-psa/db/models/UserSession', () => ({ UserSession: {} }));
+vi.mock('@alga-psa/db/models/UserSession', () => ({
+  UserSession: {
+    create: vi.fn(async () => 'session-1'),
+    isRevoked: vi.fn(async () => false),
+    updateLocation: vi.fn(),
+  },
+}));
 vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
 vi.mock('./deviceFingerprint', () => ({ generateDeviceFingerprint: vi.fn(), getDeviceInfo: vi.fn() }));
-vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn() }));
+vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn(async () => null) }));
 vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(),
   tenantDb: (conn: any, tenant: string) => ({

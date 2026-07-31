@@ -1,0 +1,15 @@
+name: demo-billing-cycle
+description: Seed a QBO customer with an invoice and open credit, plus a Graph mailbox
+steps:
+  - seed: qbo/client
+    params: { clientId: alga-app, clientSecret: alga-secret }
+  - seed: qbo/customer
+    params: { name: Acme Rockets }
+  - seed: qbo/invoice
+    params: { customerId: customer-1, amountCents: 25000 }
+  - seed: qbo/credit-memo
+    params: { customerId: customer-1, amountCents: 5000 }
+  - seed: msgraph/client
+    params: { clientId: premise-app, clientSecret: premise-secret }
+  - seed: msgraph/message
+    params: { subject: "Server down at Acme", from: ops@acme.test }

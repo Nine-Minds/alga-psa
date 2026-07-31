@@ -22,9 +22,22 @@ describe("parseServerHostPayload", () => {
     expect(parseServerHostPayload("helpdesk.acme.com")).toBe("https://helpdesk.acme.com");
   });
 
-  it("rejects http targets", () => {
-    expect(parseServerHostPayload("alga://server?url=http%3A%2F%2F192.168.64.2%3A3000")).toBeNull();
-    expect(parseServerHostPayload("http://192.168.64.2:3000")).toBeNull();
+  it("accepts http targets in dev builds", () => {
+    // vitest.setup.ts sets __DEV__ = true
+    expect(parseServerHostPayload("alga://server?url=http%3A%2F%2F192.168.64.2%3A3000")).toBe(
+      "http://192.168.64.2:3000",
+    );
+  });
+
+  it("rejects http targets in release builds", () => {
+    const testGlobals = globalThis as { __DEV__?: boolean };
+    testGlobals.__DEV__ = false;
+    try {
+      expect(parseServerHostPayload("alga://server?url=http%3A%2F%2F192.168.64.2%3A3000")).toBeNull();
+      expect(parseServerHostPayload("http://192.168.64.2:3000")).toBeNull();
+    } finally {
+      testGlobals.__DEV__ = true;
+    }
   });
 
   it("rejects other alga:// deep links", () => {

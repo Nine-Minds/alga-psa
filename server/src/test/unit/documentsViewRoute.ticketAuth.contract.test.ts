@@ -54,9 +54,6 @@ vi.mock('@alga-psa/storage', () => ({
   StorageProviderFactory: {
     createProvider: createProviderMock,
   },
-}));
-
-vi.mock('server/src/models/storage', () => ({
   FileStoreModel: {
     findById: fileStoreFindByIdMock,
   },

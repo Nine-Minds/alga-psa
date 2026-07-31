@@ -1,12 +1,13 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { IOpportunityDetail, OpportunityConfidence } from '@alga-psa/types';
+import type { IOpportunityDetail, OpportunityConfidence, OpportunityStage } from '@alga-psa/types';
 import { EvidenceLadder } from '../EvidenceLadder';
 import { WhySentenceText } from '../WhySentenceText';
 
@@ -24,7 +25,7 @@ export interface OpportunityDetailViewProps {
   /** EE commitments ledger, injected by the host app when the management tier allows it. */
   commitments?: React.ReactNode;
   onCompleteAction: (opportunityId: string) => void;
-  onDeclareQualified: (opportunityId: string) => void;
+  onStageSelect: (stage: Exclude<OpportunityStage, 'lost'>) => void;
   onConfidenceChange: (opportunityId: string, confidence: OpportunityConfidence) => void;
   onWin: (opportunityId: string) => void;
   onLose: (opportunityId: string) => void;
@@ -49,7 +50,7 @@ export function OpportunityDetailView({
   timeline,
   commitments,
   onCompleteAction,
-  onDeclareQualified,
+  onStageSelect,
   onConfidenceChange,
   onWin,
   onLose,
@@ -62,12 +63,11 @@ export function OpportunityDetailView({
   onEditDetails,
   onDraftFollowUp,
 }: OpportunityDetailViewProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const fmt = (cents: number) => formatCurrencyFromMinorUnits(cents, undefined, detail.currency_code);
   const open = detail.status === 'open';
   const overdue =
     open && detail.next_action_due != null && new Date(detail.next_action_due).getTime() < Date.now();
-  const qualifiedPending = detail.ladder.some((s) => s.checkpoint === 'qualified' && s.state !== 'reached');
 
   const confidenceOptions = (['low', 'medium', 'high', 'committed'] as OpportunityConfidence[]).map((c) => ({
     value: c,
@@ -98,7 +98,12 @@ export function OpportunityDetailView({
           ) : null}
         </div>
         <div className="mt-0.5 text-sm text-[rgb(var(--color-text-500))]">
-          {detail.client_name}
+          <Link
+            href={`/msp/clients/${detail.client_id}`}
+            className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+          >
+            {detail.client_name}
+          </Link>
           {detail.client_lifecycle_status === 'prospect' ? (
             <Badge variant="default-muted" size="sm" className="ml-2">
               {t('opportunities.prospect', 'Prospect')}
@@ -126,23 +131,18 @@ export function OpportunityDetailView({
       </header>
 
       {/* Evidence ladder */}
-      <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
+      <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
             {t('opportunities.detail.evidence', 'Evidence')}
           </h2>
-          {open && qualifiedPending ? (
-            <Button
-              id="opportunity-detail-declare-qualified"
-              size="xs"
-              variant="outline"
-              onClick={() => onDeclareQualified(detail.opportunity_id)}
-            >
-              {t('opportunities.detail.declareQualified', 'Mark qualified')}
-            </Button>
+          {open ? (
+            <span className="text-[11px] text-[rgb(var(--color-text-400))]">
+              {t('opportunities.detail.setStageHint', 'Select a checkpoint to set the stage')}
+            </span>
           ) : null}
         </div>
-        <EvidenceLadder steps={detail.ladder} />
+        <EvidenceLadder steps={detail.ladder} onStageSelect={open ? onStageSelect : undefined} />
       </section>
 
       {/* Next action — the screen's one primary */}
@@ -151,7 +151,7 @@ export function OpportunityDetailView({
           className={`rounded-xl border p-4 ${
             overdue
               ? 'border-[rgb(var(--color-accent-200,254_202_202))] bg-[rgb(var(--color-accent-50,254_242_242))]'
-              : 'border-[rgb(var(--color-border-200))] bg-white'
+              : 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]'
           }`}
         >
           <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
@@ -198,7 +198,7 @@ export function OpportunityDetailView({
 
       {/* Values + confidence */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
+        <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
               {t('opportunities.detail.value', 'Value')}
@@ -238,7 +238,7 @@ export function OpportunityDetailView({
             </div>
           </dl>
         </div>
-        <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
+        <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
           <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
             {t('opportunities.detail.confidence', 'Your confidence')}
           </h2>
@@ -259,7 +259,7 @@ export function OpportunityDetailView({
       </section>
 
       {/* Linked quotes */}
-      <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
+      <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
             {t('opportunities.detail.quotes', 'Quotes')}
@@ -351,7 +351,7 @@ export function OpportunityDetailView({
 
       {/* Timeline */}
       {timeline ? (
-        <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4">
+        <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
           <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
             {t('opportunities.detail.timeline', 'Timeline')}
           </h2>

@@ -422,6 +422,24 @@ const withTransactionSpy = vi.fn(async (_knex: unknown, callback: (trx: MockTran
 });
 dbHoisted.withTransactionSpy = withTransactionSpy;
 
+// Session identity for the withAuth-wrapped actions: the actions now derive
+// tenant/user from the authenticated session and ignore caller-supplied
+// values, so tests set the session user here when they need a non-default
+// identity.
+const authHoisted = vi.hoisted(() => ({
+  sessionUser: {
+    user_id: 'user-1',
+    user_type: 'internal',
+    tenant: 'tenant-1',
+    roles: [] as any[],
+  },
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: any) => async (...args: any[]) =>
+    action(authHoisted.sessionUser, { tenant: authHoisted.sessionUser.tenant }, ...args),
+}));
+
 vi.mock('@alga-psa/db', () => ({
   withTransaction: (...args: any[]) => dbHoisted.withTransactionSpy(...args),
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
@@ -488,6 +506,8 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   currentDb = null;
+  authHoisted.sessionUser.user_id = 'user-1';
+  authHoisted.sessionUser.tenant = 'tenant-1';
   broadcastNotificationMock.mockResolvedValue(undefined);
   broadcastNotificationReadMock.mockResolvedValue(undefined);
   broadcastAllNotificationsReadMock.mockResolvedValue(undefined);
@@ -956,6 +976,7 @@ describe('internalNotificationActions data access', () => {
     it('returns zero counts for users without notifications', async () => {
       currentDb = createMockDb([]);
 
+      authHoisted.sessionUser.user_id = 'missing-user';
       const response = await getUnreadCountAction('tenant-1', 'missing-user');
       expect(response.unread_count).toBe(0);
     });
@@ -999,6 +1020,7 @@ describe('internalNotificationActions data access', () => {
         })
       ]);
 
+      authHoisted.sessionUser.user_id = 'other-user';
       await expect(markAsReadAction('tenant-1', 'other-user', NOTIFICATION_UUID_1)).resolves.toEqual({
         actionError: 'Notification not found. It may have already been updated or deleted.',
       });
@@ -1077,7 +1099,9 @@ describe('internalNotificationActions data access', () => {
         })
       ]);
 
+      authHoisted.sessionUser.user_id = 'another-user';
       await deleteNotificationAction('tenant-1', 'another-user', NOTIFICATION_UUID_1);
+      authHoisted.sessionUser.user_id = 'owner-user';
       await deleteNotificationAction('tenant-1', 'owner-user', NOTIFICATION_UUID_2);
 
       const [firstRow, secondRow] = currentDb.tables.internal_notifications;

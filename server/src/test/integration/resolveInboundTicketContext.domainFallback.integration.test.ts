@@ -104,7 +104,9 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
       city: 'City',
       country_code: 'US',
       country_name: 'United States',
-      is_default: true,
+      // The defaults row below pins this location by id; the seeded client already
+      // owns the single allowed default (ux_client_locations_default_per_client).
+      is_default: false,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });

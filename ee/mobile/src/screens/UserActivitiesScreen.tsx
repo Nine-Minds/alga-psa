@@ -43,12 +43,12 @@ import {
   reorderActivitiesInGroup,
   setAdHocDone,
   updateAdHocEntry,
-  isAdHocActivity,
   type Activity,
   type ActivityGroup,
   type MobileActivityType,
   type ScheduleActivity,
 } from "../api/activities";
+import { scheduleActivityTarget } from "../features/userActivities/scheduleActivityTarget";
 import { buildCustomGroups, UNGROUPED_KEY } from "../features/userActivities/activityHelpers";
 import { DraggableGroupedList } from "../features/userActivities/components/DraggableGroupedList";
 import type { GroupDragPlan } from "../features/userActivities/groupDragPlan";
@@ -613,17 +613,27 @@ export function UserActivitiesScreen({ navigation }: Props) {
         case "workflowTask":
           navigation.navigate("WorkflowTaskDetail", { taskId: activity.id });
           return;
-        case "schedule":
-          if (isAdHocActivity(activity)) {
-            openEditAdHoc(activity);
-            return;
+        case "schedule": {
+          const target = scheduleActivityTarget(activity);
+          switch (target.kind) {
+            case "adhoc":
+              openEditAdHoc(activity);
+              return;
+            case "opportunity":
+              navigation.navigate("OpportunityDetail", {
+                opportunityId: target.opportunityId,
+                title: target.title,
+              });
+              return;
+            case "ticket":
+              navigation.navigate("TicketDetail", { ticketId: target.ticketId });
+              return;
+            case "calendar":
+              navigation.navigate("ScheduleTab");
+              return;
           }
-          if (activity.workItemType === "ticket" && activity.workItemId) {
-            navigation.navigate("TicketDetail", { ticketId: activity.workItemId });
-            return;
-          }
-          navigation.navigate("ScheduleTab");
           return;
+        }
         default:
           // notification / document / timeEntry have no dedicated mobile detail in this release.
           return;

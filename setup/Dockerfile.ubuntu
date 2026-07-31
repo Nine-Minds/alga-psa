@@ -1,7 +1,7 @@
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    NODE_VERSION=22 \
+    NODE_VERSION=22.23.1 \
     PATH=/usr/local/bin:/usr/bin:/bin
 
 WORKDIR /app
@@ -14,14 +14,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     sqlite3 \
     git \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# 2) Install Node.js (NodeSource) – default to current active LTS (22)
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/* \
-    && node --version && npm --version
+# 2) Install Node.js from the official nodejs.org tarball.
+#    Not NodeSource: deb.nodesource.com started serving 403 for setup_*.x and
+#    the gpg key, and because `curl | bash` cannot fail a /bin/sh pipeline the
+#    build silently fell through to Ubuntu's nodejs 18 — which ships no npm, so
+#    the break surfaced as a baffling "npm: not found" two commands later.
+#    `set -eux` keeps any future download failure loud and local.
+RUN set -eux; \
+    case "$(dpkg --print-architecture)" in \
+      amd64) node_arch=x64 ;; \
+      arm64) node_arch=arm64 ;; \
+      *) echo "unsupported architecture: $(dpkg --print-architecture)" >&2; exit 1 ;; \
+    esac; \
+    tarball="node-v${NODE_VERSION}-linux-${node_arch}.tar.xz"; \
+    curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/${tarball}"; \
+    curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt"; \
+    grep " ${tarball}\$" SHASUMS256.txt | sha256sum -c -; \
+    tar -xJf "${tarball}" -C /usr/local --strip-components=1 --no-same-owner; \
+    rm -f "${tarball}" SHASUMS256.txt; \
+    node --version; \
+    npm --version
 
 # 3) Copy minimal workspace manifests first for better layer caching
 COPY package.json package-lock.json tsconfig.base.json ./

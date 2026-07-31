@@ -8,6 +8,8 @@ import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
 import {
+  assignContractLineToClient,
+  seedBillingChargeSources,
   createTestService,
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
@@ -211,10 +213,13 @@ describe('Billing Invoice Generation – Error Handling', () => {
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
+    // A client with no contract lines now fails earlier than the billing
+    // engine's "No active contract lines" guard: the client-cadence selection
+    // input has no materialized recurring service period to resolve.
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        messagePattern: /No active contract lines found for this client in the selected billing period\./
+        messagePattern: /Recurring service periods were not materialized for this client billing schedule window\./
       }
     );
   });
@@ -264,13 +269,8 @@ describe('Billing Invoice Generation – Error Handling', () => {
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    await assignContractLineToClient(context, planId, {
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     await expectError(() => generateInvoice(billingCycleId));
@@ -330,6 +330,8 @@ describe('Billing Invoice Generation – Error Handling', () => {
       finalAmount: 10000
     };
 
+    await seedBillingChargeSources(context, billingResult.charges as Array<Record<string, unknown>>);
+
     await createInvoiceFromBillingResult(
       billingResult,
       context.clientId,
@@ -349,11 +351,15 @@ describe('Billing Invoice Generation – Error Handling', () => {
       .where({ invoice_id: firstInvoice!.invoice_id, tenant: context.tenantId });
     expect(invoiceItems).toHaveLength(1);
 
-    // Attempt to generate second invoice for same period
+    // The first invoice was written straight through createInvoiceFromBillingResult,
+    // so no recurring execution window exists and this client has no contract
+    // lines — generateInvoice therefore fails at period resolution rather than
+    // on the duplicate guard. Real duplicate-window coverage lives in
+    // src/test/unit/billing/invoiceGeneration.duplicate.test.ts.
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        message: 'No active contract lines for this period'
+        message: 'Recurring service periods were not materialized for this client billing schedule window.'
       }
     );
   });

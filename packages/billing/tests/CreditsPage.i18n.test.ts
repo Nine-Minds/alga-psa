@@ -22,41 +22,35 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 describe('CreditsPage i18n wiring contract', () => {
   it('T005: CreditsPage client wrapper wires translated credits-table column titles through msp/credits', () => {
     const pageSource = read('../src/components/credits/CreditsPage.tsx');
-    const clientSource = read('../src/components/credits/CreditsPageClient.tsx');
+    const clientSource = read('../src/components/credits/CreditsTable.tsx');
 
     expect(pageSource).toContain("import CreditsPageClient from './CreditsPageClient';");
     expect(clientSource).toContain("const { t } = useTranslation('msp/credits');");
-    expect(clientSource).toContain("t('columns.creditId', { defaultValue: 'Credit ID' })");
-    expect(clientSource).toContain("t('columns.created', { defaultValue: 'Created' })");
+    expect(clientSource).toContain("t('columns.client', { defaultValue: 'Client' })");
     expect(clientSource).toContain("t('columns.description', { defaultValue: 'Description' })");
-    expect(clientSource).toContain("t('columns.originalAmount', { defaultValue: 'Original Amount' })");
-    expect(clientSource).toContain("t('columns.remaining', { defaultValue: 'Remaining' })");
+    expect(clientSource).toContain("t('columns.balance', { defaultValue: 'Balance' })");
     expect(clientSource).toContain("t('columns.expires', { defaultValue: 'Expires' })");
     expect(clientSource).toContain("t('columns.status', { defaultValue: 'Status' })");
     expect(clientSource).toContain("t('columns.actions', { defaultValue: 'Actions' })");
   });
 
-  it('T006: CreditsPage client wrapper wires status labels and tab labels through msp/credits', () => {
-    const source = read('../src/components/credits/CreditsPageClient.tsx');
+  it('T006: CreditsPage table wires status labels through msp/credits', () => {
+    const tableSource = read('../src/components/credits/CreditsTable.tsx');
 
-    expect(source).toContain("t('status.expired', { defaultValue: 'Expired' })");
-    expect(source).toContain("t('status.active', { defaultValue: 'Active' })");
-    expect(source).toContain("t('status.expiringSoon', {");
-    expect(source).toContain("t('tabs.activeCredits', { defaultValue: 'Active Credits' })");
-    expect(source).toContain("t('tabs.allCredits', { defaultValue: 'All Credits' })");
-    expect(source).toContain("t('tabs.expiredCredits', { defaultValue: 'Expired Credits' })");
+    expect(tableSource).toContain("t('status.expired', { defaultValue: 'Expired' })");
+    expect(tableSource).toContain("t('status.active', { defaultValue: 'Active' })");
+    expect(tableSource).toContain("t('status.expiringSoon', {");
+    expect(tableSource).toContain("t('status.depleted', { defaultValue: 'Depleted' })");
   });
 
-  it('T007: CreditsPage settings summary resolves all settings labels through msp/credits', () => {
+  it('T007: CreditsPage expiration caption resolves its labels through msp/credits', () => {
     const source = read('../src/components/credits/CreditsPageClient.tsx');
 
-    expect(source).toContain("t('settings.title', { defaultValue: 'Credit Expiration Settings' })");
-    expect(source).toContain("t('settings.creditExpiration', { defaultValue: 'Credit Expiration:' })");
-    expect(source).toContain("t('settings.enabled', { defaultValue: 'Enabled' })");
-    expect(source).toContain("t('settings.disabled', { defaultValue: 'Disabled' })");
-    expect(source).toContain("t('settings.expirationPeriod', { defaultValue: 'Expiration Period:' })");
-    expect(source).toContain("t('settings.notificationDays', { defaultValue: 'Notification Days:' })");
-    expect(source).toContain("t('settings.none', { defaultValue: 'None' })");
+    expect(source).toContain("t('settings.captionEnabled', {");
+    expect(source).toContain("t('settings.captionDisabled', {");
+    expect(source).toContain("t('settings.captionReminders', {");
+    expect(source).toContain("t('settings.editInSettings', {");
+    expect(source).toContain("t('settings.loadErrorPrefix', {");
   });
 
   it('T008: xx pseudo-locale backs the representative CreditsPage shell keys', () => {
@@ -66,21 +60,17 @@ describe('CreditsPage i18n wiring contract', () => {
 
     const pseudoKeys = [
       'page.title',
-      'page.creditsOverview',
-      'tabs.activeCredits',
-      'tabs.allCredits',
-      'tabs.expiredCredits',
-      'settings.title',
-      'columns.creditId',
+      'settings.editInSettings',
+      'columns.client',
       'columns.status',
-      'page.expirationSummary',
-      'page.usageTrends',
+      'status.depleted',
+      'filters.allClients',
     ];
 
     for (const key of pseudoKeys) {
       expect(getLeaf(pseudo, key)).toBe('11111');
     }
 
-    expect(getLeaf(pseudo, 'status.expiringSoon')).toBe('11111 {{days}} 11111');
+    expect(getLeaf(pseudo, 'status.expiringSoon_other')).toBe('11111 {{count}} 11111');
   });
 });

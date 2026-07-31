@@ -7,7 +7,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { processRmmAlertEvent, type NormalizedRmmAlertEvent } from '@alga-psa/shared/rmm/alerts';
@@ -74,6 +74,17 @@ export async function POST(req: Request) {
 
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
+
+    // Suspended tenants (cancelled, pending deletion) get a 200 ack with no
+    // processing so the remote RMM neither retries nor alerts.
+    if (await isTenantSuspended(knex, tenant)) {
+      console.debug('[LevelIO webhook] Ignoring alert for suspended tenant', {
+        tenant,
+        event: 'rmm_webhook_tenant_suspended',
+      });
+      return NextResponse.json({ ok: true, recorded: false, reason: 'tenant_suspended' }, { status: 200 });
+    }
+
     const integration = await db.table('rmm_integrations')
       .where({ provider: PROVIDER })
       .first(['integration_id']);

@@ -26,6 +26,14 @@ export default defineConfig({
       // the alias tickets/integrations already carry.
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
+      // TaskForm imports `./billing/ProjectPaymentWarningBanner`, which is being
+      // moved to @alga-psa/billing on this branch. Until TaskForm's import is
+      // updated, point the specifier at a null-render test stub so the TaskForm*
+      // suites stay green and isolated from billing server actions.
+      {
+        find: /^.*\/billing\/ProjectPaymentWarningBanner$/,
+        replacement: path.resolve(__dirname, 'src/components/__tests__/__mocks__/ProjectPaymentWarningBanner.tsx'),
+      },
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
       // Resolve workspace packages (including self-references) from src so
       // tests do not depend on built dist output.

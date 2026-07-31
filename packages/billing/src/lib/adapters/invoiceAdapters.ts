@@ -319,7 +319,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const rawTax = toFiniteNumber((dbData as any).tax);
       const rawTotal = toFiniteNumber((dbData as any).total ?? (dbData as any).total_amount);
       const rawItemTotalsSum = (dbData.invoice_charges ?? []).reduce(
-        (sum: number, item: IInvoiceCharge) => sum + toFiniteNumber(item.total_price),
+        (sum: number, item: IInvoiceCharge) => sum + toFiniteNumber(item.net_amount ?? item.total_price),
         0
       );
       const useLegacyMajorUnits = looksLikeLegacyMajorUnitPayload({
@@ -368,12 +368,19 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           description: String(item.description ?? ''),
           quantity: toFiniteNumber(item.quantity),
           unitPrice: toMinorUnits(item.unit_price),
-          total: toMinorUnits(item.total_price),
+          total: toMinorUnits(item.net_amount ?? item.total_price),
           taxAmount: toMinorUnits(item.tax_amount),
           servicePeriodStart: summaryStart,
           servicePeriodEnd: summaryEnd,
           billingTiming: summaryBillingTiming,
           recurringDetailPeriods: normalizedDetailPeriods,
+          ...((item as any).item_type === 'project'
+            ? {
+                category: (item as any).category ?? undefined,
+                itemType: 'project' as const,
+                projectPhaseName: (item as any).project_phase_name ?? null,
+              }
+            : {}),
           location_id: item.location_id ?? null,
           location: null,
         };
@@ -393,6 +400,14 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        ...((dbData as any).project_name
+          ? {
+              projectName: String((dbData as any).project_name),
+              projectNumber: (dbData as any).project_number
+                ? String((dbData as any).project_number)
+                : null,
+            }
+          : {}),
         recurringServicePeriodStart: recurringServicePeriodSummary.recurringServicePeriodStart,
         recurringServicePeriodEnd: recurringServicePeriodSummary.recurringServicePeriodEnd,
         recurringServicePeriodLabel: recurringServicePeriodSummary.recurringServicePeriodLabel,

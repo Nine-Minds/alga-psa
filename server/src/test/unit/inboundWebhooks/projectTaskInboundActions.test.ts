@@ -191,7 +191,6 @@ describe('project task inbound webhook actions', () => {
         description: 'Cutover task from external PM system',
         assigned_to: 'user-1',
         estimated_hours: 4,
-        actual_hours: null,
         due_date: new Date('2026-05-18T00:00:00.000Z'),
         project_status_mapping_id: 'status-1',
         priority_id: 'priority-1',

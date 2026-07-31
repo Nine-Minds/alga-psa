@@ -55,6 +55,13 @@ describe('TierContext', () => {
     expect(result.current.tier).toBe('pro');
   });
 
+  it('grants Pro tenants access to Entra Sync and CIPP by tier', () => {
+    const { result } = renderHook(() => useTier(), { wrapper });
+
+    expect(result.current.hasFeature(TIER_FEATURES.ENTRA_SYNC)).toBe(true);
+    expect(result.current.hasFeature(TIER_FEATURES.CIPP)).toBe(true);
+  });
+
   it('defaults to hosted when no self-host licensing prop is supplied', () => {
     const { result } = renderHook(() => useTier(), { wrapper });
 

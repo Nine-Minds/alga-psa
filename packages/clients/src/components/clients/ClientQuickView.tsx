@@ -61,6 +61,7 @@ import {
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
+import { useEntraSyncPermission } from './useEntraSyncPermission';
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
 
 function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
@@ -74,6 +75,12 @@ interface ClientQuickViewProps {
   isInDrawer?: boolean;
   quickView?: boolean;
   onClose?: () => void;
+  /**
+   * Opens a sub-panel on mount. 'locations' opens the manage-locations dialog,
+   * so callers deep-linking to locations keep that intent when the client is
+   * shown in a drawer instead of navigating to ?panel=locations.
+   */
+  initialPanel?: 'locations';
 }
 
 export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
@@ -82,6 +89,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   id = 'client-quick-view',
   isInDrawer = true,
   onClose,
+  initialPanel,
 }) => {
   const { t } = useTranslation('msp/clients');
   const router = useRouter();
@@ -103,7 +111,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
-  const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+  const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(initialPanel === 'locations');
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
@@ -128,10 +136,12 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     defaultValue: false,
   });
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const entraSyncPermission = useEntraSyncPermission();
   const showEntraSyncAction = shouldShowEntraSyncAction(
     isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
     entraClientSyncFlag.enabled,
-    editedClient
+    editedClient,
+    entraSyncPermission.canManage
   );
 
   useEffect(() => {

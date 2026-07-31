@@ -1,15 +1,29 @@
 'use server';
 
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import type { IClient, IInteraction } from '@alga-psa/types';
+import type { IClient, IInteraction, IUserWithRoles } from '@alga-psa/types';
+
+// MSP-only lookups: these actions back internal scheduling/time-entry UIs
+// and expose tenant-wide client and interaction data, so client-portal
+// callers (user_type 'client') are rejected and the caller must hold the
+// matching read permission.
+async function assertInternalReadAccess(user: IUserWithRoles, resource: 'client' | 'interaction'): Promise<void> {
+  if (user.user_type !== 'internal') {
+    throw new Error('Permission denied: scheduling lookup actions are internal-only');
+  }
+  if (!await hasPermission(user, resource, 'read')) {
+    throw new Error(`Permission denied: cannot read ${resource}`);
+  }
+}
 
 export const getSchedulingClients = withAuth(async (
-  _user,
+  user,
   { tenant },
   includeInactive: boolean = true
 ): Promise<IClient[]> => {
+  await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -26,10 +40,11 @@ export const getSchedulingClients = withAuth(async (
 });
 
 export const getSchedulingClientById = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<IClient | null> => {
+  await assertInternalReadAccess(user, 'client');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -43,10 +58,11 @@ export const getSchedulingClientById = withAuth(async (
 });
 
 export const getSchedulingInteractionById = withAuth(async (
-  _user,
+  user,
   { tenant },
   interactionId: string
 ): Promise<IInteraction> => {
+  await assertInternalReadAccess(user, 'interaction');
   const { knex } = await createTenantKnex();
 
   const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const requireEntraUiFlagEnabledMock = vi.fn();
+const requireEntraAccessMock = vi.fn();
 const getEntraSyncRunProgressMock = vi.fn();
 const serializeEntraSyncRunProgressMock = vi.fn();
 
 vi.mock('@ee/app/api/integrations/entra/_guards', () => ({
-  requireEntraUiFlagEnabled: requireEntraUiFlagEnabledMock,
+  requireEntraAccess: requireEntraAccessMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/entraWorkflowClient', () => ({
@@ -19,13 +19,13 @@ vi.mock('@ee/lib/integrations/entra/sync/syncResultSerializer', () => ({
 describe('Entra sync run progress route', () => {
   beforeEach(() => {
     vi.resetModules();
-    requireEntraUiFlagEnabledMock.mockReset();
+    requireEntraAccessMock.mockReset();
     getEntraSyncRunProgressMock.mockReset();
     serializeEntraSyncRunProgressMock.mockReset();
   });
 
   it('T082: returns run-level and tenant-level status payload for polling', async () => {
-    requireEntraUiFlagEnabledMock.mockResolvedValue({
+    requireEntraAccessMock.mockResolvedValue({
       tenantId: 'tenant-82',
       userId: 'user-82',
     });

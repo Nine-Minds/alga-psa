@@ -162,6 +162,7 @@ const contact = {
   contact_name_id: 'contact-1',
   full_name: 'Taylor Client',
   email: 'taylor@example.com',
+  client_id: 'client-1',
   is_client_admin: false,
   portal_visibility_group_id: 'group-1',
 } as any;
@@ -256,6 +257,9 @@ describe('ContactPortalTab visibility groups', () => {
       });
     });
 
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(2);
+    }, { timeout: 5_000 });
     fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[1]);
 
     await waitFor(() => {
@@ -282,5 +286,28 @@ describe('ContactPortalTab visibility groups', () => {
         }
       );
     });
+  });
+
+  it('shows an informational state for a contact with no assigned client, without erroring', async () => {
+    const clientlessContact = { ...contact, client_id: null };
+
+    render(
+      <ContactPortalTab
+        contact={clientlessContact}
+        currentUserPermissions={{ canInvite: true, canUpdateRoles: true, canRead: true }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Assign this contact to a client to manage portal access.')
+      ).toBeInTheDocument();
+    });
+
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(getUserByContactIdMock).not.toHaveBeenCalled();
+    expect(getClientPortalVisibilityGroupsForContactMock).not.toHaveBeenCalled();
+    expect(getClientPortalVisibilityBoardsByClientMock).not.toHaveBeenCalled();
+    expect(getPortalInvitationsMock).not.toHaveBeenCalled();
   });
 });

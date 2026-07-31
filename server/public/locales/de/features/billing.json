@@ -11,6 +11,7 @@
   "viewContractLineDetails": "Tarifdetails anzeigen",
   "viewAllInvoices": "Alle Rechnungen anzeigen",
   "failedToLoad": "Rechnungen konnten nicht geladen werden. Bitte versuche es erneut.",
+  "externalCreditNotice": "Für Ihr Konto ist bei unserer Buchhaltung ein Guthaben hinterlegt. Aktuelle Rechnungen können als offen angezeigt werden, bis dieses Guthaben verrechnet wurde.",
   "invoices": {
     "locations": {
       "groupHeading": "Standort",

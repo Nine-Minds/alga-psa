@@ -49,7 +49,8 @@ export interface SSOProviderRegistry {
    */
   findOAuthAccountLink: (
     provider: OAuthLinkProvider,
-    providerAccountId: string
+    providerAccountId: string,
+    tenant?: string
   ) => Promise<OAuthAccountLinkRecord | undefined>;
 
   /**

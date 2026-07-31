@@ -874,7 +874,6 @@
     "resolveAndClose": "Oplossen en sluiten",
     "closeTicketResolutionPrompt": "Kies een afsluitstatus en voeg een oplossing voor dit ticket toe.",
     "selectCloseStatus": "Selecteer een afsluitstatus",
-    "closeTicketResolutionPlaceholder": "Vat de oplossing samen voor de ticketgeschiedenis en de klant.",
     "cannotCloseYet": "Dit ticket kan nog niet worden gesloten",
     "closeRulesIntro": "De sluitregels van het board vereisen het volgende voordat dit ticket kan worden gesloten:",
     "viewChecklist": "Checklist bekijken",
@@ -1140,7 +1139,9 @@
     "clientRequired": "Er moet een klant aan dit ticket zijn toegewezen voordat materialen kunnen worden toegevoegd.",
     "serialUnit": "Serienummer / MAC (geserialiseerd product)",
     "selectUnit": "Selecteer een eenheid om te leveren...",
-    "onHandByLocation": "Voorraad per locatie"
+    "onHandByLocation": "Voorraad per locatie",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Volglijst",
@@ -1490,7 +1491,6 @@
       "pausedHint": "De klok is gepauzeerd terwijl het ticket in een gepauzeerde status wacht."
     },
     "tiles": {
-      "request": "Verzoek",
       "openedBy": "Geopend door {{name}}",
       "showMore": "Meer weergeven",
       "showLess": "Minder weergeven",

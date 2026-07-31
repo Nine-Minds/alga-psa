@@ -144,6 +144,7 @@
     },
     "badges": {
       "disabled": "Desactivado",
+      "paused": "En pausa",
       "connected": "Conectado",
       "disconnected": "Desconectado",
       "error": "Error",
@@ -167,15 +168,29 @@
       "reconnectOauth": "Reconectar OAuth",
       "resyncing": "Resincronizando…",
       "resyncMailbox": "Resincronizar buzón",
+      "pause": "Pausar correo entrante",
+      "resume": "Reanudar correo entrante",
       "delete": "Eliminar proveedor"
     },
+    "feedback": {
+      "paused": "Correo entrante en pausa.",
+      "resumed": "Correo entrante reanudado.",
+      "pauseError": "No se pudo cambiar el estado de pausa del correo entrante."
+    },
+    "pausedHelp": "Los mensajes recibidos mientras esta bandeja está en pausa no se importan retroactivamente.",
     "fields": {
       "status": "Estado",
       "lastSync": "Última sincronización",
+      "lastIngested": "Última ingesta",
+      "delivery": "Entrega",
       "created": "Creado",
       "subscription": "Suscripción",
       "defaults": "Valores predeterminados del ticket",
       "error": "Error:"
+    },
+    "delivery": {
+      "polling": "Sondeo cada 3 minutos",
+      "webhook": "Entrega en tiempo real: activa"
     },
     "values": {
       "active": "Activo",

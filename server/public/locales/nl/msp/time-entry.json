@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Zoeken...",
       "noWorkItems": "Geen werkitems gevonden"
-    }
+    },
+    "paymentWarningTitle": "Waarschuwing betalingsvoorwaarde",
+    "paymentWarning": "Betaling is vereist voor een gemarkeerde factureringsmijlpaal en is nog niet bevestigd. Bevestig de betaling voordat het werk wordt voortgezet."
   },
   "workItemList": {
     "meta": {

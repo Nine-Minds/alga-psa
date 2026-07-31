@@ -10,10 +10,12 @@ import { OpportunitiesHubHost } from '@/components/opportunities/OpportunitiesHu
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient, IOpportunityListItem, IWorkQueue } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export const metadata: Metadata = {
-  title: 'Opportunities',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'msp/opportunities');
+  return { title: t('opportunities.pageTitle', 'Opportunities') };
+}
 
 export default async function OpportunitiesPage() {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/opportunities', scope: 'msp' });
@@ -63,11 +65,12 @@ export default async function OpportunitiesPage() {
     getOpportunityDraftingAvailability().catch(() => false),
     getManagementAvailability().catch(() => false),
   ]);
+  const { t } = await getServerTranslation(undefined, 'msp/opportunities');
 
   const eeTabs = managementAvailable
     ? [
-        { id: 'meeting', label: 'Meeting', content: <OpportunityMeetingMode /> },
-        { id: 'forecast', label: 'Forecast', content: <OpportunityForecastView currencyCode={queue.currency_code} /> },
+        { id: 'meeting', label: t('opportunities.tabs.meeting', 'Meeting'), content: <OpportunityMeetingMode /> },
+        { id: 'forecast', label: t('opportunities.tabs.forecast', 'Forecast'), content: <OpportunityForecastView currencyCode={queue.currency_code} /> },
       ]
     : [];
 
@@ -79,6 +82,7 @@ export default async function OpportunitiesPage() {
       initialClients={clients}
       draftingAvailable={draftingAvailable}
       eeTabs={eeTabs}
+      userPreferenceKey={String((session.user as any).user_id ?? session.user.email ?? 'current-user')}
     />
   );
 }

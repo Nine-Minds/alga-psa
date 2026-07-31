@@ -1,8 +1,16 @@
 import axios, { AxiosError } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { refreshEntraDirectToken } from '../../auth/refreshDirectToken';
+import { getMicrosoftGraphBaseUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
+  refreshEntraDirectAccessTokenForTenant,
+  refreshEntraDirectToken,
+} from '../../auth/refreshDirectToken';
 import { ENTRA_DIRECT_SECRET_KEYS } from '../../secrets';
 import { normalizeEntraSyncUser } from '../../sync/types';
+import {
+  EntraOperatorError,
+  isTimeoutError,
+} from '../../entraOperatorError';
 import type {
   EntraListManagedTenantsInput,
   EntraListUsersForTenantInput,
@@ -11,7 +19,13 @@ import type {
   EntraProviderAdapter,
 } from '../types';
 
-const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
+/** How long one Graph page has to arrive before we call it a timeout. */
+const GRAPH_REQUEST_TIMEOUT_MS = 20_000;
+
+// Resolved per call: MICROSOFT_GRAPH_BASE_URL points the whole adapter at the
+// Graph emulator (test-harness/graph-emulator) so the integration can be walked
+// end to end without a CSP tenant.
+const graphBaseUrl = (): string => getMicrosoftGraphBaseUrl();
 
 // Smoke-only: when enabled, swap the GDAP-backed managedTenants/* endpoints for
 // /organization and /users so the partner's own tenant acts as a single managed
@@ -194,6 +208,11 @@ function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
 
 export class DirectProviderAdapter implements EntraProviderAdapter {
   public readonly connectionType = 'direct' as const;
+  private readonly managedTenantTokenCache = new Map<
+    string,
+    { accessToken: string; expiresAt: number }
+  >();
+  private readonly managedTenantTokenRefreshes = new Map<string, Promise<string>>();
 
   private async getAccessToken(tenant: string): Promise<string> {
     const secretProvider = await getSecretProviderInstance();
@@ -216,6 +235,45 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     return refreshed.accessToken;
   }
 
+  private async getManagedTenantAccessToken(
+    tenant: string,
+    managedTenantId: string
+  ): Promise<string> {
+    if (IS_SELF_TENANT_SMOKE) {
+      return this.getAccessToken(tenant);
+    }
+
+    const cacheKey = `${tenant}:${managedTenantId}`;
+    const cached = this.managedTenantTokenCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now() + 30_000) {
+      return cached.accessToken;
+    }
+
+    const pendingRefresh = this.managedTenantTokenRefreshes.get(cacheKey);
+    if (pendingRefresh) {
+      return pendingRefresh;
+    }
+
+    const refreshPromise = refreshEntraDirectAccessTokenForTenant(tenant, managedTenantId)
+      .then((refreshed) => {
+        const expiresAt = Date.parse(refreshed.expiresAt);
+        if (Number.isFinite(expiresAt)) {
+          this.managedTenantTokenCache.set(cacheKey, {
+            accessToken: refreshed.accessToken,
+            expiresAt,
+          });
+        }
+        return refreshed.accessToken;
+      })
+      .finally(() => {
+        this.managedTenantTokenRefreshes.delete(cacheKey);
+      });
+
+    this.managedTenantTokenRefreshes.set(cacheKey, refreshPromise);
+    const accessToken = await refreshPromise;
+    return accessToken;
+  }
+
   private async graphGet(
     tenant: string,
     url: string
@@ -223,7 +281,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     const request = async (accessToken: string) =>
       axios.get(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
-        timeout: 20_000,
+        timeout: GRAPH_REQUEST_TIMEOUT_MS,
       });
 
     let accessToken = await this.getAccessToken(tenant);
@@ -239,6 +297,15 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
         const retry = await request(accessToken);
         return toObject(retry.data);
       }
+      // A timeout is not a refusal. Graph is up and the directory read is
+      // simply taking longer than one request is allowed to; the remedy is to
+      // try again, not to go looking at the connection.
+      if (isTimeoutError(error)) {
+        throw new EntraOperatorError(
+          'timeout',
+          `Microsoft did not answer within ${Math.round(GRAPH_REQUEST_TIMEOUT_MS / 1000)} seconds. Large directories are read in pages — try again in a moment.`
+        );
+      }
       throw error;
     }
   }
@@ -252,7 +319,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
     const tenants: EntraManagedTenantRecord[] = [];
     const seenTenantIds = new Set<string>();
-    let nextUrl = `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/tenants?$top=999`;
+    let nextUrl = `${graphBaseUrl()}/tenantRelationships/managedTenants/tenants?$top=999`;
 
     while (nextUrl) {
       const payload = await this.graphGet(input.tenant, nextUrl);
@@ -309,7 +376,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     ].join(',');
 
     let nextUrl =
-      `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/users` +
+      `${graphBaseUrl()}/tenantRelationships/managedTenants/users` +
       `?$filter=tenantId eq '${encodedTenant}'&$select=${select}&$top=999`;
 
     while (nextUrl) {
@@ -365,7 +432,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       }));
     }
 
-    const payload = await this.graphGet(input.tenant, `${GRAPH_BASE_URL}/organization`);
+    const payload = await this.graphGet(input.tenant, `${graphBaseUrl()}/organization`);
     const rows = Array.isArray(payload.value) ? payload.value : [];
     const tenants: EntraManagedTenantRecord[] = [];
 
@@ -462,7 +529,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       'businessPhones',
     ].join(',');
 
-    let nextUrl = `${GRAPH_BASE_URL}/users?$select=${select}&$top=999`;
+    let nextUrl = `${graphBaseUrl()}/users?$select=${select}&$top=999`;
 
     while (nextUrl) {
       const payload = await this.graphGet(tenant, nextUrl);
@@ -498,6 +565,63 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     }
 
     return users;
+  }
+
+  public async listSecurityGroupsForTenant(
+    input: EntraListUsersForTenantInput
+  ): Promise<Array<{ id: string; displayName: string | null }>> {
+    const groups: Array<{ id: string; displayName: string | null }> = [];
+    const seen = new Set<string>();
+    let nextUrl = `${graphBaseUrl()}/groups?$select=id,displayName,securityEnabled&$top=200`;
+    const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
+
+    while (nextUrl) {
+      const response = await axios.get(nextUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 20_000,
+      });
+      const payload = toObject(response.data);
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+      for (const row of rows) {
+        const raw = toObject(row);
+        const id = getNullableString(raw.id);
+        if (!id || seen.has(id)) continue;
+        const securityEnabled = getBoolean(raw.securityEnabled, true);
+        if (!securityEnabled) continue;
+        seen.add(id);
+        groups.push({
+          id,
+          displayName: getNullableString(raw.displayName),
+        });
+      }
+      const candidateNextLink = getNullableString(payload['@odata.nextLink']);
+      nextUrl = candidateNextLink || '';
+    }
+
+    return groups;
+  }
+
+  public async isUserInSecurityGroup(input: {
+    tenant: string;
+    managedTenantId: string;
+    userEntraObjectId: string;
+    groupId: string;
+    membershipMode: 'transitive';
+  }): Promise<boolean> {
+    const encodedUser = encodeURIComponent(input.userEntraObjectId);
+    const endpoint = `${graphBaseUrl()}/users/${encodedUser}/checkMemberGroups`;
+    const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
+    const response = await axios.post(
+      endpoint,
+      { groupIds: [input.groupId] },
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 20_000,
+      }
+    );
+    const payload = toObject(response.data);
+    const values = Array.isArray(payload.value) ? payload.value : [];
+    return values.some((value) => getNullableString(value) === input.groupId);
   }
 }
 

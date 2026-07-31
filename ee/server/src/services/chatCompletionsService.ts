@@ -30,6 +30,7 @@ import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
+import { toAiCreditsError } from '../lib/aiGateway/errors';
 import {
   resolveChatProvider,
   type ChatProviderId,
@@ -298,8 +299,9 @@ export class ChatCompletionsService {
 
   static async createRawCompletionStream(
     conversation: ChatCompletionMessage[],
+    tenantId: string,
   ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider(tenantId, 'chat');
     return this.generateStreamingCompletion(provider, conversation);
   }
 
@@ -317,7 +319,6 @@ export class ChatCompletionsService {
       currentUser?: Record<string, unknown>;
     } = {},
   ): AsyncGenerator<ChatCompletionStreamEvent> {
-    const provider = await resolveChatProvider();
     let conversation = this.normalizeConversationHistory(messages);
     const promptContext = await this.buildPromptContext(options.uiContext, options.mentions);
     const currentUser = options.currentUser ?? ((await getCurrentUser()) as unknown as Record<string, unknown> | null);
@@ -325,6 +326,7 @@ export class ChatCompletionsService {
     const userId = options.userId ?? (typeof currentUser?.user_id === 'string' ? currentUser.user_id : undefined);
     const baseUrl = options.baseUrl ?? '';
     const chatId = options.chatId ?? null;
+    const provider = await resolveChatProvider(tenantId, 'chat');
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
       if (options.signal?.aborted) {
@@ -772,6 +774,17 @@ export class ChatCompletionsService {
           JSON.stringify((error as any).error, null, 2),
         );
       }
+      const creditsError = toAiCreditsError(error);
+      if (creditsError) {
+        return new Response(JSON.stringify({
+          type: 'ai_credits',
+          reason: creditsError.reason,
+        }), {
+          status: 402,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       const message = error instanceof Error ? error.message : 'Internal Server Error';
       const status =
         message === 'Invalid messages payload' || message === 'Invalid uiContext payload'
@@ -853,6 +866,17 @@ export class ChatCompletionsService {
           JSON.stringify((error as any).error, null, 2),
         );
       }
+      const creditsError = toAiCreditsError(error);
+      if (creditsError) {
+        return new Response(JSON.stringify({
+          type: 'ai_credits',
+          reason: creditsError.reason,
+        }), {
+          status: 402,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       const message = error instanceof Error ? error.message : 'Internal Server Error';
       const status =
         message === 'Missing function call information' ||
@@ -1574,7 +1598,7 @@ export class ChatCompletionsService {
     cookieHeader?: string;
   }): Promise<CompletionResponse> {
     const { messages, chatId, baseUrl, tenantId, userId, uiContext, cookieHeader } = params;
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider(tenantId, 'chat');
     let conversation = this.normalizeConversationHistory(messages);
     const promptContext = await this.buildPromptContext(uiContext);
 
@@ -2573,7 +2597,6 @@ export class ChatCompletionsService {
             if (client.billing_cycle) lines.push(`  billing_cycle: ${client.billing_cycle}`);
             if (client.tax_region) lines.push(`  tax_region: ${client.tax_region}`);
             if (client.is_tax_exempt) lines.push(`  tax_exempt: true`);
-            if (client.credit_balance) lines.push(`  credit_balance: ${client.credit_balance}`);
             if (client.notes) lines.push(`  notes: ${client.notes.slice(0, 300)}`);
             if (client.tags?.length) {
               lines.push(`  tags: ${client.tags.map((tag: any) => tag.tag_text || tag.tag_name || tag).join(', ')}`);
@@ -3055,6 +3078,10 @@ export class ChatCompletionsService {
       try {
         return await createRequest();
       } catch (error) {
+        const creditsError = toAiCreditsError(error);
+        if (creditsError) {
+          throw creditsError;
+        }
         if (!this.isRateLimitError(error) || attempt >= MAX_RATE_LIMIT_RETRIES) {
           throw error;
         }

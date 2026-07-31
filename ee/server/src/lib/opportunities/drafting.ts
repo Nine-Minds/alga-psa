@@ -4,6 +4,7 @@ import type {
   IOpportunityFollowUpDraft,
   IOpportunityVoiceProfile,
 } from '@alga-psa/types';
+import { toAiCreditsError } from '../aiGateway/errors';
 import { resolveChatProvider } from '../../services/chatProviderResolver';
 
 export const OPPORTUNITY_VOICE_PROFILE_SETTING = 'opportunity_voice_profile';
@@ -237,17 +238,29 @@ async function callExistingChatProvider(
   tenant: string,
   messages: DraftMessage[],
 ): Promise<string> {
-  const provider = await resolveChatProvider();
-  // No max_tokens cap: reasoning models (e.g. glm-5) spend completion tokens on
-  // reasoning_content before the answer — a small cap returns finish_reason
-  // 'length' with empty content.
-  const completion = await provider.client.chat.completions.create({
-    model: provider.model,
-    messages,
-    temperature: 0.4,
-    response_format: { type: 'json_object' },
-    ...provider.requestOverrides.resolveTurnOverrides(),
-  });
+  const provider = await resolveChatProvider(tenant, 'opportunity-drafting');
+  let completion;
+  try {
+    // No max_tokens cap: reasoning models (e.g. glm-5) spend completion tokens on
+    // reasoning_content before the answer — a small cap returns finish_reason
+    // 'length' with empty content.
+    completion = await provider.client.chat.completions.create({
+      model: provider.model,
+      messages,
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
+      ...provider.requestOverrides.resolveTurnOverrides(),
+    });
+  } catch (error) {
+    const creditsError = toAiCreditsError(error);
+    if (!creditsError) {
+      throw error;
+    }
+
+    const { notifyAiCreditsUnavailable } = await import('../aiGateway/notifications');
+    await notifyAiCreditsUnavailable(tenant, 'opportunity-drafting', creditsError);
+    throw new Error(`AI follow-up drafting is unavailable: ${creditsError.reason}`);
+  }
   if (completion.usage) {
     console.info('opportunityFollowUpDraft: token usage', {
       tenantId: tenant,

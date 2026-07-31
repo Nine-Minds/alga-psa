@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { PartialBlock } from '@blocknote/core';
 import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -15,13 +16,18 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TagManager } from '@alga-psa/tags/components';
-import type { ITag, ITicket, ITeam, ITicketResource, IUserWithRoles } from '@alga-psa/types';
+import type { ITag, ITicket, ITeam, ITicketResource, IUser, IUserWithRoles } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
+import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
+import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
+import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../../lib/ticketRichText';
+import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getTicketCategoriesByBoard, type BoardCategoryData } from '../../../actions/ticketCategoryActions';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
@@ -61,7 +67,7 @@ interface BentoHeroProps {
   id: string;
   /** Observed by TicketDetails' sticky header to float the title on scroll. */
   titleRef?: React.Ref<HTMLHeadingElement>;
-  ticket: ITicket & TicketSlaFields & { escalated?: boolean; escalation_level?: number | null };
+  ticket: ITicket & TicketSlaFields & { source?: string | null; escalated?: boolean; escalation_level?: number | null };
   statusOptions: HeroSelectOption[];
   priorityOptions: HeroSelectOption[];
   boardOptions: HeroSelectOption[];
@@ -87,9 +93,11 @@ interface BentoHeroProps {
    * onSelectChange when absent.
    */
   onBatchSelectChange?: (
-    changes: Record<string, string | null>,
+    changes: Record<string, unknown>,
     options?: TicketNotificationSuppressionValue
   ) => Promise<boolean | void> | boolean | void;
+  /** Persists the description on its own; used only when no batch handler exists. */
+  onUpdateDescription?: (content: string) => Promise<boolean>;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
   /** Locks workflow fields when the ticket is a bundle child. */
@@ -119,6 +127,21 @@ interface BentoHeroProps {
   onLiveEditingFieldChange?: (field: string | null) => void;
   /** Reports locally dirty hero fields for live update conflict/highlight filtering. */
   onLiveDirtyFieldsChange?: (fields: string[]) => void;
+  // Description editing (same pipeline TicketInfo uses for pasted images).
+  /** Who opened the ticket; rendered as the description caption. */
+  createdByUser?: IUser | null;
+  /** Current user id; required for clipboard-image uploads. */
+  userId?: string;
+  onClipboardImageUploaded?: () => void;
+  uploadTicketAttachmentAction?: (
+    formData: FormData,
+    params: { userId: string; ticketId: string }
+  ) => Promise<any>;
+  deleteDraftTicketAttachmentImagesAction?: (input: {
+    ticketId: string;
+    documentIds: string[];
+  }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+  resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
 }
 
 function HeroField({ label, children }: { label: string; children: React.ReactNode }) {
@@ -155,6 +178,7 @@ export function BentoHero({
   onAgentClick,
   onSelectChange,
   onBatchSelectChange,
+  onUpdateDescription,
   responseStateTrackingEnabled,
   hideSlaStatus,
   workflowLocked,
@@ -172,6 +196,12 @@ export function BentoHero({
   liveEditingUsers,
   onLiveEditingFieldChange,
   onLiveDirtyFieldsChange,
+  createdByUser,
+  userId,
+  onClipboardImageUploaded,
+  uploadTicketAttachmentAction,
+  deleteDraftTicketAttachmentImagesAction,
+  resolveTicketAttachmentViewUrl,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -197,7 +227,9 @@ export function BentoHero({
 
   const [originalTicketValues, setOriginalTicketValues] = useState<HeroPendingChanges>(() => buildOriginalTicketValues());
   const [pendingChanges, setPendingChanges] = useState<HeroPendingChanges>({});
-  const hasUnsavedChanges = Object.keys(pendingChanges).length > 0;
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [hasDescriptionContentChanged, setHasDescriptionContentChanged] = useState(false);
+  const hasUnsavedChanges = Object.keys(pendingChanges).length > 0 || hasDescriptionContentChanged;
   const hasActiveLiveConflict = Boolean(liveFieldConflicts && Object.keys(liveFieldConflicts).length > 0);
 
   useRegisterUnsavedChanges(`ticket-bento-hero-${id}`, hasUnsavedChanges);
@@ -266,6 +298,66 @@ export function BentoHero({
   }, [liveFieldConflicts]);
 
   const [titleDraft, setTitleDraft] = useState(ticket.title ?? '');
+
+  // --- Description (entry-view parity: same editor + clipboard pipeline) ---
+  const { deleteDocument } = useDocumentsCrossFeature();
+  const originalDescriptionRef = useRef<PartialBlock[] | null>(null);
+  const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
+    parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined),
+  );
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [descriptionOverflows, setDescriptionOverflows] = useState(false);
+  const descriptionBodyRef = useRef<HTMLDivElement>(null);
+
+  const discardDescriptionEdit = useCallback(() => {
+    const originalDescription =
+      originalDescriptionRef.current ??
+      parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined);
+    setDescriptionContent(originalDescription);
+    setHasDescriptionContentChanged(false);
+    setIsEditingDescription(false);
+  }, [ticket.attributes?.description]);
+
+  const descriptionUploadSession = useTicketRichTextUploadSession({
+    componentLabel: 'BentoHero',
+    ticketId: ticket.ticket_id,
+    userId,
+    trackDraftUploads: true,
+    onDocumentsChanged: onClipboardImageUploaded,
+    onDiscard: discardDescriptionEdit,
+    uploadDocumentAction: uploadTicketAttachmentAction,
+    deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
+    resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
+    deleteDocumentFn: deleteDocument,
+  });
+
+  // The persisted description wins whenever this user isn't editing it, so live
+  // updates from other sessions land without clobbering an in-flight draft.
+  useEffect(() => {
+    if (isEditingDescription) return;
+    const parsedDescription = parseTicketRichTextContent(
+      ticket.attributes?.description as string | object | undefined,
+    );
+    setDescriptionContent(parsedDescription);
+    originalDescriptionRef.current = parsedDescription;
+    setHasDescriptionContentChanged(false);
+  }, [ticket.attributes?.description, isEditingDescription]);
+
+  const hasDescription = useMemo(
+    () =>
+      descriptionContent.some((block) =>
+        Array.isArray((block as { content?: unknown }).content)
+          ? ((block as { content: unknown[] }).content.length > 0)
+          : Boolean((block as { content?: unknown }).content),
+      ),
+    [descriptionContent],
+  );
+
+  useEffect(() => {
+    const el = descriptionBodyRef.current;
+    if (!el || descriptionExpanded) return;
+    setDescriptionOverflows(el.scrollHeight > el.clientHeight + 4);
+  }, [descriptionContent, descriptionExpanded, hasDescription]);
 
   const responseStateOptions = useMemo<SelectOption[]>(
     () => [
@@ -553,7 +645,15 @@ export function BentoHero({
 
     setIsSaving(true);
     try {
-      const changes = { ...pendingChanges };
+      const changes: Record<string, unknown> = { ...pendingChanges };
+      // attributes also carries the watch list, so merge onto the LATEST
+      // persisted attributes rather than a buffered copy.
+      if (hasDescriptionContentChanged) {
+        changes.attributes = {
+          ...(ticket.attributes ?? {}),
+          description: serializeTicketRichTextContent(descriptionContent),
+        };
+      }
       const saveOptions = notificationSuppression.suppressContactNotifications
         ? notificationSuppression
         : undefined;
@@ -566,13 +666,25 @@ export function BentoHero({
           return;
         }
       } else {
-        for (const [field, value] of Object.entries(changes)) {
+        for (const [field, value] of Object.entries(pendingChanges)) {
           await onSelectChange(field as keyof ITicket, value);
+        }
+        if (hasDescriptionContentChanged && onUpdateDescription) {
+          const descriptionSaved = await onUpdateDescription(
+            serializeTicketRichTextContent(descriptionContent),
+          );
+          if (descriptionSaved === false) {
+            return;
+          }
         }
       }
 
-      setOriginalTicketValues((prev) => ({ ...prev, ...changes }));
+      setOriginalTicketValues((prev) => ({ ...prev, ...pendingChanges }));
       setPendingChanges({});
+      originalDescriptionRef.current = descriptionContent;
+      descriptionUploadSession.resetDraftTracking();
+      setHasDescriptionContentChanged(false);
+      setIsEditingDescription(false);
       setNotificationSuppression(defaultNotificationSuppression());
       setIsEditingTitle(false);
       setSaveSuccess(true);
@@ -586,13 +698,18 @@ export function BentoHero({
       setIsSaving(false);
     }
   }, [
+    descriptionContent,
+    descriptionUploadSession,
     hasActiveLiveConflict,
+    hasDescriptionContentChanged,
     hasUnsavedChanges,
     notificationSuppression,
     onBatchSelectChange,
     onSelectChange,
+    onUpdateDescription,
     pendingChanges,
     requiresDestinationStatusSelection,
+    ticket.attributes,
   ]);
 
   usePageSaveShortcut(handleSaveChanges, {
@@ -605,7 +722,12 @@ export function BentoHero({
     setIsEditingTitle(false);
     setNotificationSuppression(defaultNotificationSuppression());
     setShowCancelConfirm(false);
-  }, [ticket.title]);
+    // Routes through the upload session so pasted images get the keep/delete
+    // prompt before the draft is thrown away.
+    if (isEditingDescription) {
+      descriptionUploadSession.requestDiscard();
+    }
+  }, [descriptionUploadSession, isEditingDescription, ticket.title]);
 
   const handleCancelClick = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -858,7 +980,7 @@ export function BentoHero({
           </Alert>
         ) : null}
 
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
           <HeroField label={t('bento.hero.status', 'Status')}>
             {renderLiveField('status_id', '', (
               <CustomSelect
@@ -983,6 +1105,7 @@ export function BentoHero({
                 onChange={handleDueDateChange}
                 placeholder={t('bento.hero.noDueDate', 'No due date')}
                 disabled={isFrozen('due_date')}
+                collapsible
               />
             ))}
           </HeroField>
@@ -1020,7 +1143,81 @@ export function BentoHero({
           </div>
         ) : null}
 
-        {hasUnsavedChanges ? (
+        <div id={`${id}-description-section`} className="mt-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+              {t('fields.description', 'Description')}
+            </span>
+            {!isEditingDescription ? (
+              <button
+                id={`${id}-description-edit`}
+                type="button"
+                aria-label={t('bento.tiles.editDescription', 'Edit description')}
+                className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))]"
+                onClick={() => {
+                  originalDescriptionRef.current = descriptionContent;
+                  setHasDescriptionContentChanged(false);
+                  setIsEditingDescription(true);
+                }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+
+          {isEditingDescription ? (
+            <div className="min-w-0 w-full">
+              <TextEditor
+                id={`${id}-description-editor`}
+                initialContent={descriptionContent}
+                searchMentions={searchUsersForMentions}
+                uploadFile={descriptionUploadSession.uploadFile}
+                onContentChange={(content: PartialBlock[]) => {
+                  setDescriptionContent(content);
+                  if (originalDescriptionRef.current) {
+                    const originalStr = serializeTicketRichTextContent(originalDescriptionRef.current);
+                    const currentStr = serializeTicketRichTextContent(content);
+                    setHasDescriptionContentChanged(originalStr !== currentStr);
+                  }
+                }}
+              />
+            </div>
+          ) : hasDescription ? (
+            <>
+              <div
+                ref={descriptionBodyRef}
+                className={`text-sm ${descriptionExpanded ? '' : 'max-h-40 overflow-hidden'}`}
+              >
+                <RichTextViewer id={`${id}-description-view`} content={descriptionContent} />
+              </div>
+              {descriptionOverflows || descriptionExpanded ? (
+                <button
+                  id={`${id}-description-expand`}
+                  type="button"
+                  className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
+                  onClick={() => setDescriptionExpanded((value) => !value)}
+                >
+                  {descriptionExpanded ? t('bento.tiles.showLess', 'Show less') : t('bento.tiles.showMore', 'Show more')}
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <BentoTileEmpty id={`${id}-description-empty`}>
+              {t('bento.tiles.noDescriptionYet', 'No description yet')}
+            </BentoTileEmpty>
+          )}
+
+          <p className="text-xs text-[rgb(var(--color-text-400))] mt-2">
+            {createdByUser
+              ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: `${createdByUser.first_name} ${createdByUser.last_name}` })
+              : t('bento.tiles.opened', 'Opened')}
+            {ticket.source ? ` · ${t('bento.tiles.viaSource', 'via {{source}}', { source: String(ticket.source).replace(/_/g, ' ') })}` : ''}
+          </p>
+        </div>
+
+        {/* The bar is also the only exit from an open description editor, so it
+            shows while editing even before anything is typed. */}
+        {hasUnsavedChanges || isEditingDescription ? (
           <div
             id={`${id}-save-bar`}
             className="mt-4 flex flex-wrap items-center gap-3 border-t border-[rgb(var(--color-border-200))] pt-3"
@@ -1049,7 +1246,7 @@ export function BentoHero({
               id={`${id}-save-changes-btn`}
               type="button"
               onClick={handleSaveChanges}
-              disabled={isSaving || requiresDestinationStatusSelection || hasActiveLiveConflict}
+              disabled={isSaving || !hasUnsavedChanges || requiresDestinationStatusSelection || hasActiveLiveConflict}
             >
               <span className="font-bold">
                 {isSaving
@@ -1075,6 +1272,19 @@ export function BentoHero({
         message={t('info.discardChangesMessage', 'Are you sure you want to discard your unsaved changes?')}
         confirmLabel={t('info.discardChanges', 'Discard Changes')}
         cancelLabel={t('actions.cancel', 'Cancel')}
+      />
+      <ConfirmationDialog
+        id={`${id}-description-clipboard-draft-cancel-dialog`}
+        isOpen={descriptionUploadSession.showDraftCancelDialog}
+        onClose={() => descriptionUploadSession.setShowDraftCancelDialog(false)}
+        onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}
+        onCancel={descriptionUploadSession.keepDraftClipboardImages}
+        title={t('conversation.clipboardDraftCancelTitle', 'Pasted Images Detected')}
+        message={t('info.clipboardDraftMessage', 'This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?')}
+        confirmLabel={t('conversation.deleteUploadedImages', 'Delete Images')}
+        thirdButtonLabel={t('conversation.keepUploadedImages', 'Keep Images')}
+        cancelLabel={t('quickAdd.continueEditing', 'Continue Editing')}
+        isConfirming={descriptionUploadSession.isDeletingDraftImages}
       />
     </BentoTile>
   );

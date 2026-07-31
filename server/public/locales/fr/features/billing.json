@@ -11,6 +11,7 @@
   "viewContractLineDetails": "Voir les détails du forfait",
   "viewAllInvoices": "Voir toutes les factures",
   "failedToLoad": "Échec du chargement des factures. Veuillez réessayer.",
+  "externalCreditNotice": "Votre compte dispose d'un solde créditeur enregistré auprès de notre service de facturation. Les factures récentes peuvent apparaître comme ouvertes jusqu'à ce que ce crédit soit appliqué.",
   "invoices": {
     "locations": {
       "groupHeading": "Emplacement",

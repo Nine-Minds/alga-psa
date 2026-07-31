@@ -6,6 +6,8 @@ const taskIdSchema = uuidSchema('Task ID');
 const userIdSchema = uuidSchema('User ID');
 
 const assignedToTypeSchema = z.enum(['user', 'team']).describe('Assignee type');
+const projectBillingStatusSchema = z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']);
+const projectBillingPaymentStateSchema = z.enum(['outstanding', 'satisfied', 'replacement_needed']);
 
 export const projectCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   projectId: projectIdSchema,
@@ -130,3 +132,61 @@ export const projectApprovalRejectedEventPayloadSchema = BaseDomainEventPayloadS
 }).describe('Payload for PROJECT_APPROVAL_REJECTED');
 
 export type ProjectApprovalRejectedEventPayload = z.infer<typeof projectApprovalRejectedEventPayloadSchema>;
+
+export const projectMilestoneReadyEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  projectId: projectIdSchema,
+  entryId: uuidSchema('Project billing schedule entry ID'),
+  description: z.string().min(1),
+  computedAmount: z.number().int().nonnegative(),
+  trigger: z.enum(['phase', 'date', 'manual']),
+}).describe('Payload for PROJECT_MILESTONE_READY');
+
+export const projectBudgetThresholdReachedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  projectId: projectIdSchema,
+  threshold: z.number().int().nonnegative(),
+  billed: z.number().int().nonnegative(),
+  cap: z.number().int().nonnegative(),
+}).describe('Payload for PROJECT_BUDGET_THRESHOLD_REACHED');
+
+export const projectBudgetExceededEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  projectId: projectIdSchema,
+  invoiceId: uuidSchema('Invoice ID'),
+  billed: z.number().int().nonnegative(),
+  attempted: z.number().int().positive(),
+  cap: z.number().int().nonnegative(),
+  writtenDown: z.number().int().positive(),
+}).describe('Payload for PROJECT_BUDGET_EXCEEDED');
+
+export const projectBillingConfigEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  projectId: projectIdSchema,
+  configId: uuidSchema('Project billing configuration ID'),
+  billingModel: z.enum(['fixed_price', 'time_and_materials']),
+  invoiceMode: z.enum(['recurring', 'standalone']),
+  userId: userIdSchema.optional(),
+  changes: z.record(z.unknown()).optional(),
+}).describe('Payload for project billing configuration lifecycle events');
+
+export const projectBillingScheduleEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  projectId: projectIdSchema,
+  configId: uuidSchema('Project billing configuration ID'),
+  entryId: uuidSchema('Project billing schedule entry ID'),
+  description: z.string().min(1),
+  status: projectBillingStatusSchema,
+  previousStatus: projectBillingStatusSchema.nullable().optional(),
+  requiresPaymentBeforeWork: z.boolean(),
+  userId: userIdSchema.optional(),
+  changes: z.record(z.unknown()).optional(),
+}).describe('Payload for project billing schedule lifecycle events');
+
+export const projectBillingPaymentStatusEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  projectId: projectIdSchema,
+  configId: uuidSchema('Project billing configuration ID'),
+  entryId: uuidSchema('Project billing schedule entry ID'),
+  invoiceId: uuidSchema('Invoice ID'),
+  previousState: projectBillingPaymentStateSchema,
+  newState: projectBillingPaymentStateSchema,
+  previousInvoiceStatus: z.string().min(1),
+  newInvoiceStatus: z.string().min(1),
+  requiresPaymentBeforeWork: z.literal(true),
+  userId: userIdSchema.optional(),
+}).describe('Payload for PROJECT_BILLING_PAYMENT_STATUS_CHANGED');

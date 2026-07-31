@@ -37,17 +37,19 @@ describe('MSP credits namespace and route i18n contract', () => {
     expect(Object.keys(en)).toEqual([
       'page',
       'columns',
+      'filters',
       'status',
       'actions',
-      'tabs',
       'settings',
-      'charts',
       'stats',
       'management',
-      'reconciliation',
+      'addCredit',
       'application',
       'expiration',
       'expirationDialog',
+      'viewDialog',
+      'expireDialog',
+      'transferDialog',
       'context',
     ]);
   });

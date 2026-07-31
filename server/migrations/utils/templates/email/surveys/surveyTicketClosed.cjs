@@ -36,7 +36,7 @@ const COPY = {
   fr: {
     salutation: 'Bonjour {{contact_name}},',
     summary: 'Ticket n\u00b0{{ticket_number}} \u00b7 {{ticket_subject}}',
-    technicianLine: 'Technicien : {{technicien_name}}',
+    technicianLine: 'Technicien : {{technician_name}}',
     ratingIntro: '{{prompt_text}}',
     buttonHelp: 'S\u00e9lectionnez une note ci-dessous pour nous donner votre avis :',
     fallback: "Si les boutons ne s'affichent pas correctement, utilisez ce lien s\u00e9curis\u00e9 :",
@@ -127,7 +127,7 @@ function buildBodyHtml(lang, c, subject) {
               <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;">${c.ratingIntro}</p>
               <p style="margin:0 0 20px 0;font-size:15px;color:#475569;">${c.buttonHelp}</p>
               <div style="text-align:center;margin:24px 0;">
-                {{rating_buttons_html}}
+                {{{rating_buttons_html}}}
               </div>
               <div style="background-color:#f1f5f9;border-radius:10px;padding:16px 20px;margin:24px 0;">
                 <p style="margin:0;font-size:14px;color:#475569;">${c.fallback}</p>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { ArrowLeft, CheckCircle, Clock, FileText, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -15,6 +16,7 @@ interface PaymentSuccessContentProps {
 type PaymentStatus = 'verifying' | 'success' | 'pending' | 'failed';
 
 export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentSuccessContentProps) {
+  const { money } = useCurrencyFormat();
   const [status, setStatus] = useState<PaymentStatus>('verifying');
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
   const [amount, setAmount] = useState<number>(0);
@@ -64,12 +66,9 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
     verifyPayment();
   }, [invoiceId, sessionId]);
 
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currencyCode,
-    }).format(cents / 100);
-  };
+  // Tenant locale via CurrencyFormatProvider; the paid invoice's own currency
+  // (from the verify response) overrides the tenant default.
+  const formatCurrency = (cents: number) => money(cents, currencyCode);
 
   return (
     <div className="max-w-lg mx-auto py-12 px-4">

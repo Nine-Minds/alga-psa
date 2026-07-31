@@ -4,9 +4,11 @@
 
 import { z } from 'zod';
 import { getHierarchicalLocaleAction } from '@alga-psa/tenancy/actions';
+import { hasPermission, withAuth } from '@alga-psa/auth';
 import { ReportEngine } from '../core/ReportEngine';
 import { ReportRegistry } from '../core/ReportRegistry';
-import { ReportResult, ReportValidationError, ReportExecutionError } from '../core/types';
+import { ReportDefinition, ReportResult, ReportValidationError, ReportExecutionError } from '../core/types';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 const ExecuteReportSchema = z.object({
   reportId: z.string().min(1, 'Report ID is required'),
@@ -24,9 +26,46 @@ export type ExecuteReportInput = z.infer<typeof ExecuteReportSchema>;
 /**
  * Execute a report by ID with optional parameters
  */
-export async function executeReport(
+async function validateReportAccess(
+  user: IUserWithRoles,
+  definition: ReportDefinition
+): Promise<void> {
+  if (user.user_type !== 'internal') {
+    throw new ReportValidationError(`Access denied for report: ${definition.id}`, definition.id);
+  }
+
+  const allowedRoles = definition.permissions.roles;
+  const hasRequiredRole = user.roles.some(role => allowedRoles.includes(role.role_name));
+  if (!hasRequiredRole) {
+    throw new ReportValidationError(`Access denied for report: ${definition.id}`, definition.id);
+  }
+
+  const hasAllRequiredPermissions = await Promise.all(
+    definition.permissions.resources.map(resourcePermission => {
+      const separatorIndex = resourcePermission.lastIndexOf('.');
+      const resource = resourcePermission.slice(0, separatorIndex);
+      const action = resourcePermission.slice(separatorIndex + 1);
+      if (separatorIndex <= 0 || !action) {
+        throw new ReportValidationError(
+          `Invalid report permission: ${resourcePermission}`,
+          definition.id
+        );
+      }
+
+      return hasPermission(user, resource, action);
+    })
+  );
+
+  if (!hasAllRequiredPermissions.every(Boolean)) {
+    throw new ReportValidationError(`Access denied for report: ${definition.id}`, definition.id);
+  }
+}
+
+export const executeReport = withAuth(async (
+  user,
+  _ctx,
   input: ExecuteReportInput
-): Promise<ReportResult> {
+): Promise<ReportResult> => {
   
   // Validate input
   const validationResult = ExecuteReportSchema.safeParse(input);
@@ -45,6 +84,8 @@ export async function executeReport(
     if (!definition) {
       throw new ReportValidationError(`Report definition not found: ${reportId}`);
     }
+
+    await validateReportAccess(user, definition);
     
     // Execute the report, formatting values in the viewer's locale
     const locale = options.locale ?? (await getHierarchicalLocaleAction());
@@ -64,7 +105,7 @@ export async function executeReport(
       reportId
     );
   }
-}
+});
 
 /**
  * Get available report metadata

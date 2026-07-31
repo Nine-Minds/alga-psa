@@ -143,7 +143,21 @@
       "title": "Ad hoc item",
       "toggleDoneError": "Failed to update item."
     },
-    "enterpriseOnly": "Workflow tasks are an Enterprise feature."
+    "enterpriseOnly": "Workflow tasks are an Enterprise feature.",
+    "nextAction": "Next action",
+    "overdueSince": "Overdue since {{date}}",
+    "dueOn": "Due {{date}}",
+    "stage": "Stage",
+    "confidence": "Confidence",
+    "owner": "Owner",
+    "expectedClose": "Expected close",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "contact": "Contact",
+    "linkedQuotes": "Linked quotes",
+    "openOpportunity": "Open Opportunity",
+    "opportunityNotFound": "Opportunity not found."
   },
   "groupedView": {
     "addGroup": "Add Group",

@@ -8,8 +8,13 @@ import type {
   IUserWithRoles,
   IUser,
   IClient,
+  ProjectPaymentWarning,
 } from '@alga-psa/types';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import type {
+  ActionMessageErrorShape,
+  ActionPermissionError,
+  ActionPermissionErrorShape,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // ── Render-prop interfaces ──────────────────────────────────────────────
 
@@ -65,6 +70,15 @@ export interface SchedulingCrossFeatureCallbacks {
   getProjectPhase: (phaseId: string) => Promise<IProjectPhase | null>;
   getProjectMetadata: (projectId: string) => Promise<ActionPermissionError | ProjectMetadata>;
   getProjectTreeData: (projectId: string) => Promise<any>;
+
+  /**
+   * Optional: billing-owned payment-prerequisite warning for a project task
+   * (F142). scheduling must not import billing, so the composition layer
+   * injects the action; when absent, no warning is shown.
+   */
+  getProjectTaskPaymentWarning?: (
+    taskId: string,
+  ) => Promise<ProjectPaymentWarning | ActionMessageErrorShape | ActionPermissionErrorShape | null>;
 }
 
 // ── Context ─────────────────────────────────────────────────────────────
@@ -80,6 +94,15 @@ export function useSchedulingCrossFeature(): SchedulingCrossFeatureCallbacks {
     );
   }
   return ctx;
+}
+
+/**
+ * Non-throwing variant for surfaces that can render outside the provider
+ * (e.g. dialogs rendered in isolation or tests); cross-feature integrations
+ * simply stay hidden.
+ */
+export function useSchedulingCrossFeatureOptional(): SchedulingCrossFeatureCallbacks | null {
+  return useContext(SchedulingCrossFeatureContext);
 }
 
 export function SchedulingCrossFeatureProvider({

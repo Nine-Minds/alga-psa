@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Configuración general",
-    "description": "Administre el nombre de su organización y el cliente predeterminado. El cliente predeterminado se utiliza con fines de configuración y representa a su MSP.",
+    "description": "Administre el nombre de su organización y elija qué registro de cliente representa a su propia empresa. Los datos de ese cliente aparecen en facturas, presupuestos y comunicaciones con los clientes.",
     "fields": {
       "organizationName": {
         "label": "Nombre de la organización"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Guardar zona horaria predeterminada"
     },
     "clients": {
-      "title": "Clientes",
+      "title": "Su empresa",
+      "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, presupuestos y comunicaciones con los clientes.",
+      "currentDefault": "Actualmente su empresa es {{name}}.",
+      "yourCompanyBadge": "Su empresa",
       "table": {
         "name": "Nombre",
-        "default": "Predeterminado",
+        "default": "Su empresa (predeterminado)",
         "actions": "Acciones"
       },
       "placeholder": "Seleccione un cliente para agregar",
-      "addClient": "Agregar cliente"
+      "addClient": "Agregar cliente",
+      "confirmDialog": {
+        "title": "¿Cambiar su empresa?",
+        "message": "Esto cambiará su empresa de {{current}} a {{next}}. {{next}} representará a su propia organización en facturas, presupuestos y en los correos e invitaciones dirigidos a los clientes.",
+        "messageInitial": "Esto establecerá {{next}} como su empresa. {{next}} representará a su propia organización en facturas, presupuestos y en los correos e invitaciones dirigidos a los clientes.",
+        "confirm": "Cambiar empresa",
+        "cancel": "Cancelar"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Error al actualizar la zona horaria",
         "selectClient": "Seleccione un cliente",
         "clientNotFound": "Cliente no encontrado",
+        "clientAlreadyAdded": "Ese cliente ya está en la lista",
         "addClient": "Error al agregar el cliente",
         "removeClient": "Error al eliminar el cliente",
         "setDefaultClient": "Error al establecer el cliente predeterminado",
@@ -150,6 +161,7 @@
       "copying": "Copiando...",
       "createUser": "Crear usuario",
       "sendInvitation": "Enviar invitación al portal",
+      "sendTeamInvitation": "Enviar invitación",
       "cancel": "Cancelar"
     },
     "form": {
@@ -183,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "Establecer una contraseña creará el usuario de inmediato. Podrá iniciar sesión de inmediato.",
-        "withoutPassword": "No se requiere contraseña; enviaremos una invitación al portal para que el usuario la establezca."
+        "withoutPassword": "No se requiere contraseña; enviaremos una invitación al portal para que el usuario la establezca.",
+        "withoutPasswordMsp": "No se requiere contraseña; le enviaremos una invitación por correo electrónico para que la establezca usted mismo."
       },
       "requirePasswordChange": "Requerir cambio de contraseña en el primer inicio de sesión"
     },
@@ -208,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Invitación al portal enviada correctamente.",
+        "teamInvitationSent": "¡Invitación enviada correctamente!",
         "clientPortalUserCreated": "Usuario del portal del cliente creado correctamente.",
         "copiedVanityLink": "Enlace personalizado de inicio de sesión del portal copiado al portapapeles",
-        "copiedCanonicalLink": "Enlace canónico de inicio de sesión del portal copiado al portapapeles"
+        "copiedCanonicalLink": "Enlace canónico de inicio de sesión del portal copiado al portapapeles",
+        "invitationRevoked": "Invitación revocada"
       },
       "error": {
         "fetchUsers": "Error al obtener los usuarios",
@@ -237,6 +252,7 @@
         "contactNotFound": "Contacto no encontrado.",
         "contactMissingEmailGeneric": "El contacto no tiene dirección de correo electrónico. Agrega una dirección de correo al contacto antes de enviar una invitación.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualiza el contacto con una dirección válida antes de enviar una invitación.",
+        "invalidEmail": "Por favor ingrese una dirección de correo electrónico válida",
         "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configura un cliente predeterminado en Configuración General.",
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
@@ -245,8 +261,17 @@
         "roleRequired": "Se requiere un rol",
         "invalidRole": "El rol seleccionado no es válido",
         "licenseLimitReached": "Ha alcanzado el límite de licencias de usuario MSP.",
-        "soloPlanLimit": "El plan Solo está limitado a 1 usuario. Actualice a Pro para agregar más usuarios."
+        "soloPlanLimit": "El plan Solo está limitado a 1 usuario. Actualice a Pro para agregar más usuarios.",
+        "revokeInvitation": "No se pudo revocar la invitación",
+        "invitationNotFound": "Invitación no encontrada o ya utilizada"
       }
+    },
+    "invitations": {
+      "title": "Invitaciones pendientes",
+      "description": "Miembros del equipo invitados que aún no han configurado su cuenta.",
+      "expiresPrefix": "Expira:",
+      "revoke": "Revocar",
+      "revoking": "Revocando..."
     }
   },
   "userDetails": {
@@ -267,6 +292,27 @@
       "reportsTo": {
         "label": "Reporta a",
         "placeholder": "Seleccionar gerente"
+      },
+      "workSchedule": {
+        "label": "Horario laboral",
+        "help": "Cuándo esta persona está de servicio. Se usa en los informes de utilización. No es la disponibilidad de reserva para clientes.",
+        "setHours": "Definir horario laboral",
+        "clear": "Borrar",
+        "weeklyTotal": "{{hours}} h por semana",
+        "days": {
+          "0": "Domingo",
+          "1": "Lunes",
+          "2": "Martes",
+          "3": "Miércoles",
+          "4": "Jueves",
+          "5": "Viernes",
+          "6": "Sábado"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Capacidad semanal (horas)",
+        "placeholder": "p. ej., 40",
+        "help": "Solo se usa como alternativa cuando no hay horario laboral definido arriba."
       },
       "lastLogin": "Último inicio de sesión",
       "roles": "Roles",
@@ -312,7 +358,9 @@
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular",
-        "permissionDenied": "No tienes permiso para cambiar los roles de usuario."
+        "permissionDenied": "No tienes permiso para cambiar los roles de usuario.",
+        "invalidCapacity": "La capacidad semanal debe ser un número positivo.",
+        "invalidWorkSchedule": "El horario laboral debe ser un intervalo válido que termine después de comenzar."
       }
     },
     "loading": "Cargando detalles del usuario..."
@@ -1042,6 +1090,15 @@
     "openMenu": "Abrir menú"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funciones del portal",
+      "description": "Elija a qué funciones de autoservicio pueden acceder los clientes.",
+      "appointmentsLabel": "Citas",
+      "appointmentsHelp": "Permita que los clientes vean y soliciten citas desde el portal del cliente.",
+      "appointmentsEnabled": "Las citas ya están disponibles en el portal del cliente",
+      "appointmentsDisabled": "Las citas ahora están ocultas en el portal del cliente",
+      "updateFailed": "No se pudieron actualizar las funciones del portal del cliente"
+    },
     "branding": {
       "title": "Marca y apariencia",
       "description": "Personalice la apariencia de su portal del cliente con la marca de su empresa.",
@@ -1809,11 +1866,17 @@
       "notConfigured": "Not configured"
     },
     "autoLink": {
-      "title": "Configurar SSO automáticamente para nuevos usuarios internos",
-      "description": "Active esta opción para aprovisionar cada nueva cuenta de personal con su proveedor SSO corporativo de inmediato, de modo que nunca necesiten un inicio de sesión basado en contraseña.",
       "body": "Cuando está habilitado, los nuevos usuarios MSP añadidos pueden iniciar sesión con Google o Microsoft utilizando su correo electrónico de trabajo. No tendrán que vincular su cuenta manualmente.",
-      "toggleLabel": "Alternar coincidencia automática de SSO",
-      "disabledInfo": "Active este interruptor para permitir que el personal nuevo y existente omita el flujo de \"Conectar SSO\" cuando su correo electrónico ya coincide con un proveedor configurado. Aún registraremos cada vínculo automático."
+      "clientBody": "When enabled, matching client portal users are automatically linked to their SSO identities on login.",
+      "clientTitle": "Auto-link client portal users",
+      "clientToggleLabel": "Toggle client auto-linking",
+      "description": "Active esta opción para aprovisionar cada nueva cuenta de personal con su proveedor SSO corporativo de inmediato, de modo que nunca necesiten un inicio de sesión basado en contraseña.",
+      "disabledInfo": "Active este interruptor para permitir que el personal nuevo y existente omita el flujo de \"Conectar SSO\" cuando su correo electrónico ya coincide con un proveedor configurado. Aún registraremos cada vínculo automático.",
+      "internalBody": "When enabled, matching MSP/internal users are automatically linked to their SSO identities on login.",
+      "internalTitle": "Auto-link internal users",
+      "internalToggleLabel": "Toggle internal auto-linking",
+      "title": "Configurar SSO automáticamente para nuevos usuarios internos",
+      "toggleLabel": "Alternar coincidencia automática de SSO"
     },
     "bulk": {
       "title": "Asignación masiva de inicio de sesión único",
@@ -1902,6 +1965,21 @@
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
       }
+    },
+    "clientPortalProvisioning": {
+      "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
+      "deactivateLabel": "Toggle deactivation on entitlement removal",
+      "deactivateTitle": "Deactivate Entra-managed users on entitlement removal",
+      "defaultRoleBody": "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
+      "defaultRoleLabel": "MSP workspace default client portal role",
+      "defaultRoleTitle": "MSP workspace default client portal role",
+      "modeBody": "Choose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.",
+      "modeBuiltIn": "Built-in",
+      "modeDisabled": "Disabled",
+      "modeLabel": "Client portal Entra provisioning mode",
+      "modeTitle": "Client portal Entra provisioning mode",
+      "modeWorkflowManaged": "Workflow-managed",
+      "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
     }
   },
   "profile": {

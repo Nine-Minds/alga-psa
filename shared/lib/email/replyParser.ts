@@ -108,6 +108,54 @@ interface TrimResult {
   heuristic?: string;
 }
 
+type QuotedHeaderField = 'from' | 'sent' | 'to' | 'cc' | 'subject';
+
+/**
+ * Classify fields that commonly appear in a plain-text quoted-message envelope.
+ * A single matching line is not enough evidence: structured email/form bodies
+ * frequently contain legitimate fields such as `Subject:` or `From:`.
+ */
+function classifyQuotedHeaderField(line: string): QuotedHeaderField | null {
+  if (/^(?:from|de)\s*:/i.test(line)) return 'from';
+  if (/^(?:sent|date|envoyé)\s*:/i.test(line)) return 'sent';
+  if (/^(?:to|répondre à)\s*:/i.test(line)) return 'to';
+  if (/^cc\s*:/i.test(line)) return 'cc';
+  if (/^subject\s*:/i.test(line)) return 'subject';
+  return null;
+}
+
+/**
+ * Recognize the coherent envelope emitted by plain-text Outlook-style replies.
+ * Requiring From + Sent/Date + To + Subject avoids truncating authored content
+ * merely because one form field happens to look like an email header.
+ */
+function isCoherentQuotedHeaderBlock(lines: string[], startIndex: number): boolean {
+  if (classifyQuotedHeaderField(lines[startIndex].trim()) !== 'from') {
+    return false;
+  }
+
+  const fields = new Set<QuotedHeaderField>();
+  const endIndex = Math.min(lines.length, startIndex + 10);
+
+  for (let i = startIndex; i < endIndex; i += 1) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+    if (!line) break;
+
+    const field = classifyQuotedHeaderField(line);
+    if (field) {
+      fields.add(field);
+      continue;
+    }
+
+    // Permit folded header values, but stop as soon as normal body text begins.
+    if (/^\s/.test(rawLine)) continue;
+    break;
+  }
+
+  return fields.has('from') && fields.has('sent') && fields.has('to') && fields.has('subject');
+}
+
 const blockquoteRegex = /<blockquote[\s\S]*?$/i;
 const htmlCommentTokenRegex = /<!--\s*alga:reply-token:(?<payload>[^-]+)-->?/i;
 const htmlTokenAttributeRegex = /data-alga-reply-token="(?<token>[^"]+)"/i;
@@ -267,6 +315,12 @@ function stripProviderHeaders(text: string, config: ReplyParserConfig): TrimResu
     }
 
     if (config.providerReplyHeaders.some((regex) => regex.test(line))) {
+      const headerField = classifyQuotedHeaderField(line);
+      if (headerField && !isCoherentQuotedHeaderBlock(lines, i)) {
+        kept.push(rawLine);
+        continue;
+      }
+
       matched = line;
       heuristic = 'provider-header';
       break;

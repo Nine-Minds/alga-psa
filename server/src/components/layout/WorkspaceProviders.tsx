@@ -8,6 +8,7 @@ import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/
 // Keep granular msp-composition imports: package index barrels pull broad feature trees
 // into every wrapped route's RSC manifest.
 import { MspTicketIntegrationProvider } from '@alga-psa/msp-composition/projects/MspTicketIntegrationProvider';
+import { MspProjectBillingIntegrationProvider } from '@alga-psa/msp-composition/projects/MspProjectBillingIntegrationProvider';
 import { MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects/MspClientIntegrationProvider';
 import { MspClientDrawerProvider } from '@alga-psa/msp-composition/clients/MspClientDrawerProvider';
 import { MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients/MspClientCrossFeatureProvider';
@@ -38,6 +39,7 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
   return (
     <SchedulingProviderWithCallbacks>
       <MspTicketIntegrationProvider>
+       <MspProjectBillingIntegrationProvider>
         <MspClientIntegrationProvider>
           <ActivityDrawerProvider>
             <MspClientDrawerProvider>
@@ -58,6 +60,7 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
             </MspClientDrawerProvider>
           </ActivityDrawerProvider>
         </MspClientIntegrationProvider>
+       </MspProjectBillingIntegrationProvider>
       </MspTicketIntegrationProvider>
     </SchedulingProviderWithCallbacks>
   );

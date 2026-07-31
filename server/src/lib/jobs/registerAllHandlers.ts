@@ -2,11 +2,16 @@ import { Job } from 'pg-boss';
 import logger from '@alga-psa/core/logger';
 import { JobHandlerRegistry } from './jobHandlerRegistry';
 import { BaseJobData } from './interfaces';
-import { StorageService } from '../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobService } from '../../services/job.service';
 
 // Import all job handlers
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
+import {
+  PROJECT_DATE_READINESS_JOB,
+  projectDateReadinessHandler,
+  ProjectDateReadinessJobData,
+} from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import {
@@ -17,10 +22,6 @@ import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuote
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
 import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
-import {
-  creditReconciliationHandler,
-  CreditReconciliationJobData,
-} from '@alga-psa/jobs/handlers/creditReconciliationHandler';
 import { InvoiceZipJobHandler, InvoiceZipJobData } from './handlers/invoiceZipHandler';
 import { InvoiceEmailHandler, InvoiceEmailJobData } from './handlers/invoiceEmailHandler';
 import {
@@ -104,6 +105,15 @@ import {
   searchReconcileHandler,
   SearchReconcileJobData,
 } from '@alga-psa/jobs/handlers/searchReconcileHandler';
+import {
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  marketingFlipDuePostsHandler,
+  marketingExpireStaleTargetsHandler,
+  marketingSendSequenceStepsHandler,
+  MarketingJobData,
+} from './handlers/marketingJobs';
 
 /**
  * Options for registering handlers
@@ -162,6 +172,18 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 3 },
       timeoutMs: 300000, // 5 minutes
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<ProjectDateReadinessJobData & BaseJobData>(
+    {
+      name: PROJECT_DATE_READINESS_JOB,
+      handler: async (_jobId, data) => {
+        await projectDateReadinessHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000,
     },
     registerOpts
   );
@@ -262,17 +284,6 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
-  // Credit reconciliation handler
-  JobHandlerRegistry.register<CreditReconciliationJobData & BaseJobData>(
-    {
-      name: 'credit-reconciliation',
-      handler: async (_jobId, data) => {
-        await creditReconciliationHandler(data);
-      },
-      retry: { maxAttempts: 3 },
-    },
-    registerOpts
-  );
 
   // ============================================================================
   // ASSET & IMPORT HANDLERS
@@ -610,6 +621,46 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // ============================================================================
+  // MARKETING HANDLERS
+  // ============================================================================
+  // Each handler self-gates on the `marketing-module` feature flag and no-ops
+  // when the module is off for the tenant.
+
+  JobHandlerRegistry.register<MarketingJobData & BaseJobData>(
+    {
+      name: MARKETING_FLIP_DUE_POSTS_JOB,
+      handler: async (_jobId, data) => {
+        await marketingFlipDuePostsHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<MarketingJobData & BaseJobData>(
+    {
+      name: MARKETING_EXPIRE_STALE_TARGETS_JOB,
+      handler: async (_jobId, data) => {
+        await marketingExpireStaleTargetsHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<MarketingJobData & BaseJobData>(
+    {
+      name: MARKETING_SEND_SEQUENCE_STEPS_JOB,
+      handler: async (_jobId, data) => {
+        await marketingSendSequenceStepsHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000, // 5 minutes
+    },
+    registerOpts
+  );
+
   // Mark registry as initialized
   JobHandlerRegistry.markInitialized();
 
@@ -628,10 +679,10 @@ export function getAvailableJobHandlers(): string[] {
     'generate-invoice',
     'invoice_zip',
     'invoice_email',
+    PROJECT_DATE_READINESS_JOB,
     // Credits
     'expired-credits',
     'expiring-credits-notification',
-    'credit-reconciliation',
     'opportunity-discipline',
     'opportunity-weekly-digest',
     'opportunity-generators',
@@ -642,6 +693,10 @@ export function getAvailableJobHandlers(): string[] {
     SEARCH_RECONCILE_JOB_NAME,
     'reconcile-bucket-usage',
     'process-renewal-queue',
+    // Marketing
+    MARKETING_FLIP_DUE_POSTS_JOB,
+    MARKETING_EXPIRE_STALE_TARGETS_JOB,
+    MARKETING_SEND_SEQUENCE_STEPS_JOB,
     // Cleanup
     'cleanup-temporary-workflow-forms',
     // Calendar

@@ -4,6 +4,7 @@ import { Card } from "@alga-psa/ui/components/Card";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { Table } from "@alga-psa/ui/components/Table";
 import { Button } from "@alga-psa/ui/components/Button";
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
@@ -41,6 +42,7 @@ interface ValidationErrors {
 }
 
 export default function BillingSection() {
+  const { money } = useCurrencyFormat();
   const { t: tAccount } = useTranslation('client-portal');
   const { t: tBilling } = useTranslation('features/billing');
   const { t: tCommon } = useTranslation('common');
@@ -221,21 +223,13 @@ export default function BillingSection() {
     });
   };
 
-  const formatAmount = (amount: number, currencyCode: string = 'USD') => {
+  // money() takes minor units and formats with the tenant's locale + currency
+  // from CurrencyFormatProvider; amounts here are major units.
+  const formatAmount = (amount: number, currencyCode?: string) => {
     try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(Number(amount));
+      return money(Math.round(Number(amount) * 100), currencyCode);
     } catch (err) {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(0);
+      return money(0);
     }
   };
 

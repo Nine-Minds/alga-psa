@@ -88,7 +88,9 @@ export function coverageGroupKey(rel) {
 // that visible instead of letting the percentages read complete.
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'coverage', '.next', 'migrations', 'seeds']);
 const SRC_FILE = /\.(js|ts|jsx|tsx)$/;
-const NOT_SRC = /\.d\.ts$|[.-](test|spec)\.[cm]?[jt]sx?$/;
+// .generated.* mirrors the vitest coverage exclude — codegen output is
+// intentionally unmeasured, so it shouldn't inflate files_total either.
+const NOT_SRC = /\.d\.ts$|\.generated\.[cm]?[jt]sx?$|[.-](test|spec)\.[cm]?[jt]sx?$/;
 
 function walkSourceFiles(absDir, relDir, counts) {
   let entries;

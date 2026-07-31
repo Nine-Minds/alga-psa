@@ -47,7 +47,7 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
   const worker = await Worker.create({
     connection: env.nativeConnection,
     taskQueue,
-    workflowsPath: path.resolve(__dirname, '../..'),
+    workflowsPath: path.resolve(__dirname, '../sla-ticket-workflow.ts'),
     activities,
   });
 
@@ -136,7 +136,17 @@ describe('slaTicketWorkflow', () => {
   });
 
   it('pause and resume update pause state', async () => {
-    const { env, worker, taskQueue, calculateCalls } = await setupWorkflowTest();
+    let signalFirstCalculate!: () => void;
+    const firstCalculateDone = new Promise<void>((resolve) => {
+      signalFirstCalculate = resolve;
+    });
+    const { env, worker, taskQueue, calculateCalls } = await setupWorkflowTest({
+      calculateNextWakeTime: async ({ targetMinutes, pauseMinutes }: { targetMinutes: number; pauseMinutes: number }) => {
+        calculateCalls.push({ targetMinutes, pauseMinutes });
+        signalFirstCalculate();
+        return new Date(Date.now() + targetMinutes * 60000).toISOString();
+      },
+    });
     try {
       await worker.runUntil(async () => {
         const handle = await env.client.workflow.start(slaTicketWorkflow, {
@@ -152,6 +162,9 @@ describe('slaTicketWorkflow', () => {
           workflowId: 'sla-ticket-tenant-4-ticket-4',
         });
 
+        // Pause only after the workflow has entered its first sleep race;
+        // pausing earlier is a different interleaving where no pause time accrues
+        await firstCalculateDone;
         await handle.signal('pause', { reason: 'status_pause' });
         const paused = await handle.query('getState');
         expect(paused.pauseState.isPaused).toBe(true);
@@ -164,10 +177,11 @@ describe('slaTicketWorkflow', () => {
         expect(resumed.pauseState.isPaused).toBe(false);
         expect(resumed.pauseState.pauseStartedAt).toBeNull();
         expect(resumed.pauseState.totalPauseMinutes).toBeGreaterThanOrEqual(1);
-        expect(calculateCalls.some((call) => call.pauseMinutes > 0)).toBe(true);
 
         await handle.signal('cancel');
         await handle.result();
+
+        expect(calculateCalls.some((call) => call.pauseMinutes > 0)).toBe(true);
       });
     } finally {
       await env.teardown();

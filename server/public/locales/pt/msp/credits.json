@@ -1,17 +1,12 @@
 {
   "page": {
-    "title": "Gestão de Crédito",
-    "creditsOverview": "Visão geral dos créditos",
-    "overviewDescription": "Gerencie os créditos e transferências de seus clientes",
-    "overviewDescriptionWithExpiration": "Gerencie os créditos de seus clientes, incluindo datas de vencimento e transferências",
-    "expirationSummary": "Resumo de expiração de crédito",
-    "expirationSummaryDescription": "Visão geral dos créditos que expiram em breve",
-    "usageTrends": "Tendências de uso de crédito",
-    "usageTrendsDescription": "Padrões históricos de uso de crédito"
+    "title": "Gestão de Crédito"
   },
   "columns": {
     "creditId": "ID de crédito",
     "client": "Cliente",
+    "balance": "Saldo",
+    "balanceOf": "de {{amount}}",
     "created": "Criado",
     "description": "Descrição",
     "context": "Contexto",
@@ -20,34 +15,31 @@
     "expires": "Expira",
     "status": "Status",
     "actions": "Ações",
-    "discrepancy": "Discrepância",
-    "detected": "Detectado",
-    "expectedBalance": "Saldo Esperado",
-    "actualBalance": "Saldo Real",
     "amountAvailable": "Quantidade disponível",
     "expiration": "Expiração",
     "select": "Selecione"
   },
+  "filters": {
+    "allClients": "Todos os clientes",
+    "allStatuses": "Todos os status"
+  },
   "status": {
     "active": "Ativo",
     "expired": "Expirado",
-    "expiringSoon": "Expira em breve (dias {{days}})",
-    "open": "Abrir",
-    "inReview": "Em revisão",
-    "resolved": "Resolvido",
     "never": "Nunca",
-    "na": "N / D"
+    "na": "N / D",
+    "depleted": "Esgotado",
+    "expiringSoonShort": "Expira em breve",
+    "expiringSoon_one": "Expira em {{count}} dia",
+    "expiringSoon_other": "Expira em {{count}} dias"
   },
   "actions": {
     "view": "Visualizar",
     "edit": "Editar",
     "expire": "Expirar",
-    "resolve": "Resolver",
     "addCredit": "Adicionar crédito",
     "cancel": "Cancelar",
-    "backToCredits": "Voltar aos créditos",
     "viewAllCredits": "Ver todos os créditos",
-    "runReconciliation": "Executar reconciliação",
     "running": "Em execução...",
     "reset": "Reiniciar",
     "applyCredit": "Aplicar crédito",
@@ -55,85 +47,27 @@
     "select": "Selecione",
     "selected": "Selecionado",
     "saveChanges": "Salvar alterações",
-    "saving": "Salvando..."
-  },
-  "tabs": {
-    "activeCredits": "Créditos Ativos",
-    "allCredits": "Todos os créditos",
-    "expiredCredits": "Créditos expirados"
+    "saving": "Salvando...",
+    "transfer": "Transferir"
   },
   "settings": {
-    "title": "Configurações de expiração de crédito",
-    "creditExpiration": "Expiração do crédito:",
-    "enabled": "Habilitado",
-    "disabled": "Desabilitado",
-    "expirationPeriod": "Período de expiração:",
-    "daysUnit": "{{count}} dias",
-    "notificationDays": "Dias de notificação:",
-    "none": "Nenhum",
-    "loadErrorPrefix": "Error loading credit expiration settings:"
-  },
-  "charts": {
-    "expirationSummary": "Resumo de expiração de crédito",
-    "expirationSummaryDescription": "Visão geral dos créditos que expiram em breve",
-    "usageTrends": "Tendências de uso de crédito",
-    "usageTrendsDescription": "Padrões históricos de uso de crédito",
-    "lessThan7Days": "<7 dias",
-    "lessThan30Days": "<30 dias",
-    "lessThan90Days": "<90 dias",
-    "greaterThan90Days": "> 90 dias",
-    "creditsIssued": "Créditos emitidos",
-    "creditsApplied": "Créditos aplicados",
-    "creditsExpired": "Créditos expirados",
-    "statusDistribution": "Distribuição de status",
-    "statusDistributionDescription": "Visão geral dos status do relatório de reconciliação",
-    "discrepancyTrends": "Tendências de discrepância",
-    "discrepancyTrendsDescription": "Tendências mensais em discrepâncias de crédito",
-    "numberOfDiscrepancies": "Número de discrepâncias",
-    "totalAmount": "Montante total",
-    "months": {
-      "jan": "janeiro",
-      "feb": "fevereiro",
-      "mar": "março",
-      "apr": "abril",
-      "may": "Poderia",
-      "jun": "junho"
-    }
+    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "captionEnabled": "Expiração do crédito: {{days}} dias",
+    "captionDisabled": "Expiração do crédito: desativada",
+    "captionReminders": "lembretes {{reminders}} dias antes",
+    "editInSettings": "Editar em Configurações de cobrança"
   },
   "stats": {
     "totalActiveCredits": "Total de créditos ativos",
     "expiringIn30Days": "Expira em 30 dias",
     "totalCreditsApplied": "Total de créditos aplicados",
-    "totalCreditsExpired": "Total de créditos expirados",
-    "totalDiscrepancies": "Discrepâncias totais",
-    "totalDiscrepancyAmount": "Valor total de discrepância",
-    "openIssues": "Problemas em aberto"
+    "totalCreditsExpired": "Total de créditos expirados"
   },
   "management": {
     "title": "Gestão de Crédito",
-    "recentCredits": "Créditos recentes",
-    "recentCreditsDescription": "Visualize e gerencie seus créditos de clientes. Os créditos permanecem como artefatos financeiros e os períodos de serviço recorrentes aparecem apenas quando a fatura de origem possui cobertura canônica.",
-    "addCreditPlaceholder": "O valor do crédito e o formulário de detalhes seriam implementados aqui.",
-    "loadErrorPrefix": "Erro ao carregar créditos:",
-    "noDataReturned": "Nenhum dado retornado do servidor",
-    "noCreditsFound": "Nenhum crédito encontrado"
-  },
-  "reconciliation": {
-    "title": "Painel de reconciliação de crédito",
-    "selectClient": "Selecione o cliente",
-    "status": "Status",
-    "allStatuses": "Todos os status",
-    "fromDate": "Da data",
-    "toDate": "A data",
-    "reconciliationReports": "Relatórios de reconciliação",
-    "reconciliationReportsDescription": "Visualize e gerencie discrepâncias de saldo de crédito",
-    "validationResult": "Validação concluída: discrepâncias de saldo {{balanceCount}} encontradas e problemas de rastreamento {{trackingCount}}.",
-    "tabs": {
-      "all": "Todos",
-      "open": "Abrir",
-      "inReview": "Em revisão",
-      "resolved": "Resolvido"
-    }
+    "noCreditsFound": "Nenhum crédito encontrado",
+    "noMatchingCredits": "Nenhum crédito corresponde a estes filtros",
+    "loadFailed": "Falha ao carregar créditos. Tente novamente."
   },
   "application": {
     "title": "Aplicar crédito",
@@ -161,17 +95,67 @@
     "creditOrderNote": "Os créditos são aplicados em ordem de data de vencimento (os mais antigos primeiro)"
   },
   "expirationDialog": {
-    "title": "Modificar expiração de crédito",
-    "description": "Atualize a data de vencimento deste crédito.",
-    "creditAmount": "Valor do crédito:",
-    "remainingAmount": "Valor restante:",
+    "title": "Editar data de expiração",
+    "creditAmount": "Original",
+    "remainingAmount": "Restante",
     "created": "Criado:",
-    "currentExpiration": "Expiração atual:",
+    "currentExpiration": "Expiração atual",
     "noExpiration": "Sem expiração",
-    "removeExpiration": "Remover data de validade",
     "newExpirationDate": "Nova data de expiração",
     "pastDateError": "A data de expiração não pode estar no passado",
-    "updateError": "Ocorreu um erro ao atualizar a data de validade"
+    "updateError": "Ocorreu um erro ao atualizar a data de validade",
+    "updateSuccess": "Expiração do crédito atualizada",
+    "clearHint": "Limpe a data para remover a expiração."
+  },
+  "viewDialog": {
+    "title": "Detalhes do crédito",
+    "loadFailed": "Falha ao carregar os detalhes do crédito.",
+    "invoice": "Fatura",
+    "transactions": "Transações relacionadas",
+    "transactionType": "Tipo",
+    "date": "Data",
+    "amount": "Valor",
+    "noTransactions": "Nenhuma transação relacionada encontrada."
+  },
+  "expireDialog": {
+    "title": "Expirar crédito",
+    "reasonLabel": "Motivo (opcional)",
+    "reasonPlaceholder": "Explique por que este crédito está expirando...",
+    "success": "Crédito expirado",
+    "error": "Ocorreu um erro ao expirar o crédito",
+    "expiring": "Expirando...",
+    "confirm": "Expirar crédito",
+    "creditAmount": "Original",
+    "remainingAmount": "Restante",
+    "warning": "O cliente perde o restante de {{amount}}. Você não pode desfazer isso."
+  },
+  "transferDialog": {
+    "title": "Transferir crédito",
+    "description": "Transfira crédito deste cliente para outro.",
+    "fields": {
+      "targetClient": "Para o cliente",
+      "amount": "Valor",
+      "reason": "Motivo (opcional)"
+    },
+    "placeholders": {
+      "reason": "Por que este crédito está sendo transferido?"
+    },
+    "hints": {
+      "amount": "Até {{amount}} disponível"
+    },
+    "impact": {
+      "current": "Restante atual",
+      "after": "Restante após a transferência"
+    },
+    "errors": {
+      "selectClient": "Selecione um cliente para a transferência",
+      "validAmount": "Insira um valor maior que zero",
+      "exceedsRemaining": "A transferência não pode exceder o restante de {{amount}}"
+    },
+    "success": "Crédito transferido",
+    "error": "Ocorreu um erro ao transferir o crédito",
+    "transferring": "Transferindo...",
+    "confirm": "Transferir crédito"
   },
   "context": {
     "lineageMissing": "Linhagem ausente",
@@ -182,5 +166,30 @@
     "recurringLineagePreserved": "Linhagem de origem recorrente preservada",
     "financialOnly": "Somente financeiro",
     "noRecurringServicePeriod": "Nenhum período de serviço recorrente"
+  },
+  "addCredit": {
+    "description": "O crédito fica disponível para o cliente imediatamente.",
+    "fields": {
+      "client": "Cliente",
+      "amount": "Valor",
+      "description": "Descrição (opcional)",
+      "expirationDate": "Data de expiração (opcional)"
+    },
+    "placeholders": {
+      "amount": "Insira o valor",
+      "description": "Motivo do crédito",
+      "expirationDate": "Selecione a data de expiração"
+    },
+    "hints": {
+      "expirationDate": "Deixe em branco para usar a expiração padrão."
+    },
+    "submitting": "Adicionando...",
+    "success": "Crédito adicionado com sucesso",
+    "errors": {
+      "allFieldsRequired": "Selecione um cliente e insira um valor",
+      "validAmount": "Insira um valor válido",
+      "loadClientsFailed": "Não foi possível carregar os clientes. Tente novamente.",
+      "submitFailed": "Não foi possível adicionar o crédito. Tente novamente."
+    }
   }
 }

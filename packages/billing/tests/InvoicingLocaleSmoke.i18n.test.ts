@@ -49,6 +49,7 @@ describe('Invoicing locale smoke', () => {
       'purchaseOrder',
       'common',
       'designer',
+      'projectBilling',
     ]);
   });
 

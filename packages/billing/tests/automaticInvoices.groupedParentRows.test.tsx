@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
@@ -303,11 +303,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(
         document.getElementById('select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
       ).not.toBeNull();
-      expect(screen.getAllByText('Assigned work item').length).toBeGreaterThan(0);
-      // Cadence and billing timing share one compact line in the grouped grid.
-      expect(screen.getAllByText('Contract anniversary · Advance').length).toBeGreaterThan(0);
-      expect(screen.getByText('$125.00')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    });
+    expect((await screen.findAllByText('Assigned work item')).length).toBeGreaterThan(0);
+    // Cadence and billing timing share one compact line in the grouped grid.
+    expect((await screen.findAllByText('Contract anniversary · Advance')).length).toBeGreaterThan(0);
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
   });
 
   it('is combinable only when all ready children share client/currency/PO/tax/export scope (T004)', async () => {
@@ -694,6 +694,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
         'select-parent-group:client-1:2026-03-01:2026-04-01',
       ) as HTMLInputElement | null;
       expect(checkbox).not.toBeNull();
+      expect(checkbox).toBeEnabled();
       return checkbox as HTMLInputElement;
     });
     fireEvent.click(parentCheckbox);
@@ -701,7 +702,20 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(parentCheckbox.checked).toBe(true);
     }, { timeout: 5000 });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
+    await waitFor(() => {
+      expect(parentCheckbox).toBeChecked();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    expect(parentCheckbox).toBeChecked();
+    const previewButton = await screen.findByRole('button', { name: 'Preview Selected' });
+    const generateButton = await screen.findByRole('button', { name: 'Generate Invoices (1)' });
+    await waitFor(() => {
+      expect(previewButton).toBeEnabled();
+      expect(generateButton).toBeEnabled();
+    });
+    fireEvent.click(previewButton);
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
         'This selection will generate one combined invoice.',
@@ -709,7 +723,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
     }, { timeout: 5000 });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Invoices (1)' }));
+    const liveGenerateButton = await screen.findByRole('button', { name: 'Generate Invoices (1)' });
+    await waitFor(() => {
+      expect(liveGenerateButton).toBeEnabled();
+    });
+    fireEvent.click(liveGenerateButton);
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
     }, { timeout: 5000 });

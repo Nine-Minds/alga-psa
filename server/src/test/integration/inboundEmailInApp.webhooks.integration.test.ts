@@ -3354,7 +3354,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       city: 'City',
       country_code: 'US',
       country_name: 'United States',
-      is_default: true,
+      // Non-default: the location is pinned via inbound_ticket_defaults.location_id,
+      // and ux_client_locations_default_per_client allows only one default per client.
+      is_default: false,
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
     });

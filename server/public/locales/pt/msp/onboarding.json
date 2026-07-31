@@ -30,7 +30,7 @@
     "title": "Assistente de onboarding",
     "description": "Shell do assistente para configuração de locatário MSP com diálogo/apresentação de página inteira, progresso, validação e fluxos de conclusão",
     "steps": {
-      "clientInfo": "Informações do cliente",
+      "clientInfo": "Sua empresa",
       "teamMembers": "Membros da equipe",
       "addClient": "Adicionar cliente",
       "clientContact": "Contato do cliente",
@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "O cliente será criado com configurações fiscais padrão não tributáveis ​​(0%). Você pode configurar as taxas de imposto posteriormente nas configurações do cliente.",
-      "optional": "Você pode pular esta etapa e adicionar clientes posteriormente em seu painel."
+      "optional": "Você pode pular esta etapa e adicionar ou alterar clientes a qualquer momento no seu painel."
     }
   },
   "billingSetupStep": {
@@ -141,7 +141,7 @@
         "confirmAdd": "Adicionar tipo de serviço"
       },
       "noteLabel": "Observação:",
-      "description": "Os tipos de serviço são rótulos de taxonomia para organização e filtragem. O modo de cobrança é configurado separadamente em cada serviço.",
+      "description": "Os tipos de serviço são rótulos de taxonomia para organização e filtragem. O modo de faturamento é configurado separadamente em cada serviço. Você pode renomear, adicionar ou remover tipos a qualquer momento depois nas Configurações.",
       "addForm": {
         "title": "Adicionar novo tipo de serviço",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Importar tipos de serviço padrão",
-        "description": "Selecione os tipos de serviço padrão para importar para o seu sistema:",
+        "title": "Tipos de serviço sugeridos",
+        "description": "Estes são padrão para a maioria dos MSPs. Desmarque os que não quiser e confirme para adicionar o restante. Você pode renomeá-los ou removê-los depois.",
         "success": {
           "titleOne": "Tipo de serviço importado com sucesso!",
           "titleOther": "Tipos de serviço importados com sucesso!",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} ignorado."
         },
         "actions": {
-          "importing": "Importando...",
-          "importSelected": "Importação selecionada ({{count}})"
+          "importing": "Adicionando...",
+          "importSelected": "Confirmar e adicionar ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Crie seu primeiro serviço",
-      "description": "Adicione um serviço e escolha como ele deve ser cobrado. O tipo de serviço identifica a categoria de serviço, enquanto o modo de cobrança controla o comportamento dos preços.",
+      "title": "Configuração de faturamento",
+      "description": "Defina sua moeda padrão e crie seu primeiro serviço.",
       "serviceTitle": "Crie seu primeiro serviço",
       "serviceDescription": "Adicione um serviço e escolha como ele deve ser cobrado. O tipo de serviço identifica a categoria de serviço, enquanto o modo de cobrança controla o comportamento dos preços."
     },
@@ -215,7 +215,7 @@
         "required": "(Obrigatório)",
         "emptyPlaceholder": "Criar ou importar tipos de serviço",
         "placeholder": "Selecione um tipo de serviço",
-        "emptyHelp": "Clique em \"Gerenciar tipos de serviço\" para criar ou importar tipos de serviço"
+        "emptyHelp": "Confirme um tipo de serviço sugerido abaixo ou adicione o seu. Você pode alterá-los depois."
       },
       "billingMode": {
         "label": "Modo de cobrança"
@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Moeda padrão *",
-        "description": "Essa moeda será usada como padrão em todas as cobranças – serviços, contratos, cotações e faturas. Você pode substituí-lo por cliente posteriormente."
+        "description": "Essa moeda será usada como padrão em todas as cobranças: serviços, contratos, cotações e faturas. Você pode substituí-la por cliente posteriormente."
       }
     },
     "billingMethods": {
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Ação necessária:",
-      "actionRequiredDescription": "Clique em “Gerenciar tipos de serviço” acima para criar ou importar pelo menos um tipo de serviço antes de criar um serviço."
+      "actionRequiredDescription": "Confirme um tipo de serviço sugerido acima, ou adicione o seu próprio, antes de criar um serviço."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Opcional:"
     },
     "footer": {
-      "optional": "Você pode pular esta etapa e adicionar contatos posteriormente a partir do perfil do cliente."
+      "optional": "Você pode pular esta etapa e adicionar ou alterar contatos a qualquer momento no perfil do cliente."
     }
   },
   "clientInfoStep": {
@@ -302,8 +302,8 @@
       "noteLabel": "Observação:"
     },
     "header": {
-      "title": "Informações do cliente",
-      "description": "Vamos começar configurando seu perfil de cliente."
+      "title": "Sua empresa e conta de administrador",
+      "description": "Vamos começar com os dados da sua própria empresa MSP e o seu login de administrador, não com um cliente que você atende."
     },
     "fields": {
       "firstName": {
@@ -326,7 +326,7 @@
       "language": {
         "label": "Linguagem",
         "placeholder": "Selecione um idioma",
-        "help": "Torna-se o padrão da organização para todos — funcionários do MSP e usuários do portal do cliente. Usuários e clientes individuais podem substituí-lo posteriormente."
+        "help": "Torna-se o padrão da organização para todos: funcionários do MSP e usuários do portal do cliente. Usuários e clientes individuais podem substituí-lo posteriormente."
       }
     },
     "password": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Por favor preencha todos os campos obrigatórios, incluindo senha",
+      "requiredFieldsNoPassword": "Por favor preencha todos os campos obrigatórios",
       "invalidEmail": "Por favor insira um endereço de e-mail válido",
       "passwordLength": "A senha deve ter pelo menos 8 caracteres",
       "saveFailed": "Falha ao salvar membro da equipe",
+      "inviteFailed": "Falha ao enviar convite",
+      "roleRequired": "Selecione uma função",
       "generic": "Ocorreu um erro"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "Membros da equipe {{count}} criados com sucesso!",
       "users": "Usuários criados: {{users}}"
     },
+    "invited": {
+      "titleOne": "1 convite enviado com sucesso!",
+      "titleOther": "{{count}} convites enviados com sucesso!",
+      "users": "Convidados: {{users}}. Eles receberão um e-mail com um link para definir sua própria senha."
+    },
     "member": {
       "title": "Membro da equipe {{index}}",
       "createdBadge": "Criado",
+      "invitedBadge": "Convidado",
       "actions": {
         "saving": "Salvando...",
-        "save": "Salvar"
+        "save": "Salvar",
+        "sending": "Enviando...",
+        "sendInvite": "Enviar convite"
       }
     },
     "fields": {
@@ -416,10 +427,17 @@
       },
       "email": {
         "label": "E-mail",
-        "placeholder": "jane@client.com"
+        "placeholder": "joao@suaempresadeti.com.br"
       },
       "role": {
         "label": "Papel"
+      },
+      "setupMethod": {
+        "label": "Como eles devem obter acesso?",
+        "email": "Enviar convite por e-mail",
+        "password": "Vou definir uma senha eu mesmo",
+        "emailHelp": "Eles receberão um e-mail com um link para definir sua própria senha. Nenhuma senha para compartilhar.",
+        "passwordHelp": "Você define uma senha temporária agora e a compartilha diretamente com eles."
       },
       "password": {
         "label": "Senha temporária",
@@ -447,7 +465,7 @@
     },
     "optional": {
       "label": "Opcional:",
-      "description": "Você pode pular esta etapa e convidar membros da equipe posteriormente na página de configurações."
+      "description": "Você pode pular esta etapa e convidar ou gerenciar membros da equipe a qualquer momento em Configurações > Usuários."
     }
   },
   "ticketingConfigStep": {
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "Ordem de exibição",
             "placeholder": "Deixe em branco para geração automática",
-            "help": "Controla a ordem em que os status aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro."
+            "help": "Controla a ordem em que os status aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro.",
+            "reassigned": "A ordem de exibição {{requested}} já está em uso neste quadro, então {{assigned}} foi usada em vez disso."
           },
           "state": {
+            "label": "Tipo de status",
             "closedLabel": "Status Fechado",
             "openLabel": "Status aberto",
             "closedHelp": "Este status indica que o ticket foi resolvido e fechado",
@@ -860,12 +880,50 @@
     },
     "supportEmail": {
       "label": "E-mail de suporte",
-      "placeholder": "suporte@seucliente.com",
-      "help": "Este endereço de e-mail será usado para criar tickets de suporte. Os e-mails enviados para este endereço gerarão tickets automaticamente em seu sistema."
+      "placeholder": "suporte@suaempresadeti.com.br",
+      "help": "Salvo como seu endereço de contato de suporte — exibido aos clientes no portal e usado nos e-mails de compromissos. Para transformar automaticamente e-mails recebidos em tickets, conecte uma caixa de correio depois em Configurações > E-mail."
     },
     "finalRequirement": {
       "label": "Obrigatório:",
       "description": "Configure pelo menos um quadro e uma prioridade para concluir a configuração. Importe configurações padrão para configurar rapidamente seu sistema de tickets."
+    }
+  },
+  "teamSetup": {
+    "title": "Configure sua conta",
+    "subtitle": "Conclua a configuração da conta do membro da equipe",
+    "accountInformation": "Informações da conta",
+    "name": "Nome:",
+    "email": "E-mail:",
+    "role": "Função:",
+    "password": "Senha",
+    "passwordPlaceholder": "Digite sua senha",
+    "confirmPassword": "Confirmar senha",
+    "confirmPasswordPlaceholder": "Confirme sua senha",
+    "passwordRequirements": "Requisitos da senha",
+    "requirements": {
+      "minLength": "Pelo menos 8 caracteres",
+      "hasUppercase": "Uma letra maiúscula",
+      "hasLowercase": "Uma letra minúscula",
+      "hasNumber": "Um número",
+      "hasSpecialChar": "Um caractere especial",
+      "passwordsMatch": "As senhas coincidem"
+    },
+    "creatingAccount": "Criando conta...",
+    "createAccount": "Criar conta",
+    "alreadyHaveAccount": "Já tem uma conta?",
+    "signIn": "Entrar",
+    "invalidInvitation": "Convite inválido",
+    "invalidInvitationDescription": "Houve um problema com o convite da sua equipe",
+    "invalidTokenMessage": "O link do convite é inválido ou expirou. Peça ao seu administrador para reenviar o convite.",
+    "goToSignIn": "Ir para o login",
+    "accountReady": "Conta pronta. Faça login.",
+    "welcome": "Bem-vindo à equipe!",
+    "errors": {
+      "noToken": "Nenhum token de convite fornecido",
+      "invalidOrExpired": "Token de convite inválido ou expirado",
+      "verificationFailed": "Falha ao verificar o token de convite",
+      "requirementsNotMet": "Certifique-se de que todos os requisitos de senha sejam atendidos",
+      "createFailed": "Falha ao criar a conta"
     }
   }
 }

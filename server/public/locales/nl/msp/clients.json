@@ -296,6 +296,155 @@
     "parentClientClear": "Wissen",
     "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}"
   },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Aandachtspunten",
+      "documents": "Documenten",
+      "installBase": "Geïnstalleerde basis",
+      "locations": "Locaties",
+      "money": "Financiën",
+      "notes": "Notities",
+      "people": "Personen",
+      "record": "Klantrecord",
+      "service": "Service",
+      "timeline": "Alles, op volgorde"
+    },
+    "csatEmpty": "Nog geen enquêtereacties.",
+    "discardCancel": "Verder bewerken",
+    "discardConfirm": "Wijzigingen verwerpen",
+    "discardMessage": "Je hebt niet-opgeslagen wijzigingen in het klantrecord. Sluiten en verwerpen?",
+    "discardTitle": "Niet-opgeslagen wijzigingen",
+    "documents": {
+      "more": "+{{count}} meer",
+      "none": "Nog geen documenten."
+    },
+    "flags": {
+      "clientWaiting": "Klant wacht {{days}} d — {{ref}}",
+      "draftInvoices_one": "1 conceptfactuur — {{amount}} niet gefactureerd · {{ref}}",
+      "draftInvoices_other": "{{count}} conceptfacturen — {{amount}} niet gefactureerd · {{ref}}",
+      "rmaOpen_one": "1 open RMA — {{days}} d",
+      "rmaOpen_other": "{{count}} open RMA’s — oudste {{days}} d",
+      "slaAtRisk_one": "SLA loopt risico — {{ref}}",
+      "slaAtRisk_other": "{{count}} tickets met SLA-risico — volgende {{ref}}",
+      "slaBreached_one": "SLA overschreden — {{ref}}",
+      "slaBreached_other": "{{count}} SLA-overschrijdingen — ernstigste {{ref}}",
+      "soPartial": "{{ref}}: {{fulfilled}} van {{total}} regels geleverd",
+      "ticketOverdue_one": "1 achterstallig ticket — {{ref}} {{days}} d te laat",
+      "ticketOverdue_other": "{{count}} achterstallige tickets — {{ref}} {{days}} d te laat",
+      "ticketUnassigned_one": "1 niet-toegewezen ticket — {{ref}}",
+      "ticketUnassigned_other": "{{count}} niet-toegewezen tickets — oudste {{ref}}",
+      "wipAging_one": "1 niet-gefactureerd item — {{days}} d oud{{materials}}",
+      "wipAging_other": "{{count}} niet-gefactureerde items — oudste {{days}} d{{materials}}"
+    },
+    "installBase": {
+      "assets": "beheerde assets",
+      "assetsLink": "Beheerde assets",
+      "none": "Nog geen geleverde apparatuur.",
+      "rmas": "open RMA’s",
+      "sold": "verkochte eenheden",
+      "viewAsset": "asset",
+      "warrantyExpired_one": "1 buiten garantie",
+      "warrantyExpired_other": "{{count}} buiten garantie",
+      "warrantyExpiring_one": "1 verloopt binnen ≤90 d",
+      "warrantyExpiring_other": "{{count}} verlopen binnen ≤90 d",
+      "warrantyTracked": " (van {{count}} bijgehouden)"
+    },
+    "locations": {
+      "billing": "Facturatie",
+      "manage": "Beheren",
+      "more": "+{{count}} meer",
+      "none": "Nog geen locaties.",
+      "shipping": "Verzending"
+    },
+    "money": {
+      "activeContracts": "Actieve contracten",
+      "agingNote": "{{total}} openstaand · geregistreerde betalingen afgetrokken",
+      "billingSetup": "Facturatie-instellingen",
+      "current": "actueel",
+      "draft": "concept",
+      "moreDrafts_one": "+1 concept meer",
+      "moreDrafts_other": "+{{count}} concepten meer",
+      "nothingOutstanding": "Niets openstaand op definitieve facturen.",
+      "taxSettings": "Belastinginstellingen",
+      "unbilledHours": "{{hours}} u",
+      "unbilledMaterials": "{{amount}} aan materialen",
+      "unbilledWork": "Niet-gefactureerd werk"
+    },
+    "notes": {
+      "add": "Notitie toevoegen",
+      "lastEdited": "Gedeelde klantnotitie · {{days}} d geleden bewerkt",
+      "none": "Nog geen notities."
+    },
+    "openView": "Openen",
+    "people": {
+      "addContact": "Contact toevoegen",
+      "more": "+{{count}} meer",
+      "noContactInfo": "geen contactgegevens vastgelegd",
+      "none": "Nog geen contacten.",
+      "primary": "Primair"
+    },
+    "pulseError": "Het klantoverzicht kon niet worden geladen.",
+    "rail": {
+      "close": "Sluiten",
+      "installBase": "Geïnstalleerde basis",
+      "label": "Klantweergaven",
+      "money": "Financiën",
+      "more": "Meer",
+      "records": "Records",
+      "service": "Service"
+    },
+    "record": {
+      "accountManager": "Accountmanager",
+      "additionalInfo": "Aanvullende informatie",
+      "clientSince": "Klant sinds",
+      "defaultContact": "Standaardcontact",
+      "edit": "Bewerken",
+      "unset": "niet ingesteld"
+    },
+    "service": {
+      "newTicket": "Nieuw ticket",
+      "none": "Geen open tickets.",
+      "oldest": "oudste open",
+      "open": "open tickets",
+      "overdue": "achterstallig",
+      "overdueTag": "achterstallig",
+      "unassigned": "Niet toegewezen"
+    },
+    "sla": {
+      "atRisk": "SLA loopt risico",
+      "atRiskLeft": "SLA: nog {{left}}",
+      "breached": "SLA overschreden",
+      "breachedAgo": "SLA {{over}} geleden overschreden",
+      "onTrack": "SLA op schema",
+      "onTrackLeft": "SLA: nog {{left}}",
+      "paused": "SLA gepauzeerd"
+    },
+    "timeline": {
+      "daysAgo": "{{count}} d geleden",
+      "empty": "Er is nog niets vastgelegd voor deze klant.",
+      "error": "De tijdlijn kon niet worden geladen.",
+      "filterAll": "Alles",
+      "filterInteractions": "Interacties",
+      "filterInventory": "Voorraad",
+      "filterMoney": "Financiën",
+      "filterService": "Service",
+      "hoursAgo": "{{count}} u geleden",
+      "interaction": "Interactie",
+      "invoiceCreated": "Factuur als concept",
+      "invoiceFinalized": "Factuur definitief",
+      "justNow": "zojuist",
+      "loadMore": "Meer laden",
+      "loading": "Laden…",
+      "materialAdded": "Materiaal gebruikt",
+      "quoteActivity": "Offerteactiviteit",
+      "rmaClosed": "RMA gesloten",
+      "rmaOpened": "RMA geopend",
+      "soCreated": "Verkooporder aangemaakt",
+      "ticketClosed": "Ticket gesloten",
+      "ticketOpened": "Ticket geopend",
+      "unitDelivered": "Apparatuur geleverd"
+    }
+  },
   "quickAddClient": {
     "lifecycleStatus": "Levenscyclus",
     "title": "Nieuwe klant toevoegen",
@@ -759,6 +908,18 @@
     "updatedSuccess": "Instellingen voor het verlopen van tegoeden zijn bijgewerkt.",
     "updateError": "Kan de instellingen niet updaten",
     "useDefaultSuccess": "Klant gebruikt nu de standaardinstellingen voor het verlopen van het krediet."
+  },
+  "clientExternalCreditSettings": {
+    "title": "Extern tegoed geregistreerd",
+    "enable": "Klant heeft tegoed in het boekhoudsysteem",
+    "enableHelp": "Voor klanten van wie het tegoed in QuickBooks staat (bijvoorbeeld vooruitbetaald per cheque). Toont een melding op de facturatiepagina van hun portaal zodat openstaande facturen niet worden aangezien voor wanbetaling.",
+    "note": "Notitie die aan de klant wordt getoond",
+    "notePlaceholder": "bijvoorbeeld betaald tot december 2026",
+    "save": "Opslaan",
+    "loadError": "Kan instellingen niet laden",
+    "saveError": "Kan instellingen niet opslaan",
+    "updatedSuccess": "De instelling voor extern tegoed is bijgewerkt.",
+    "noteUpdatedSuccess": "De notitie over het externe tegoed is bijgewerkt."
   },
   "clientGridCard": {
     "actions": "Klantacties",
@@ -1302,7 +1463,10 @@
         "serialNumber": "Serienummer",
         "status": "Status",
         "type": "Type",
-        "warrantyEnd": "Einde garantie"
+        "warrantyEnd": "Einde garantie",
+        "agent": "Agent",
+        "patching": "Patches",
+        "coverage": "Dekking"
       },
       "details": {
         "local": "Lokaal",

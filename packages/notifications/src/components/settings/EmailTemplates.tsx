@@ -1,7 +1,8 @@
 'use client';
 
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent, DialogTitle } from "@alga-psa/ui/components/Dialog";
@@ -11,7 +12,7 @@ import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
-import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle, Send } from "lucide-react";
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle, Send, BookOpen } from "lucide-react";
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getTemplatesAction,
@@ -35,6 +36,14 @@ import {
 } from "@alga-psa/ui/components/DropdownMenu";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { getErrorMessage } from "@alga-psa/ui/lib/errorHandling";
+import { templateVariableRegistry, type VariableDef } from "../../lib/templateVariables";
+import {
+  getTemplateVariableCompletions,
+  getTemplateVariableToken,
+  TemplateVariablePanel,
+  VariableReferenceDialog,
+} from "./TemplateVariableReference";
+import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
 
 // Language names mapping (shared across component)
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -185,6 +194,7 @@ export function EmailTemplates() {
   const [isCloning, setIsCloning] = useState(false);
   const [viewingTemplate, setViewingTemplate] = useState<SystemEmailTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<TenantEmailTemplate | null>(null);
+  const [isVariableReferenceOpen, setIsVariableReferenceOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   // Language filter state - empty means show all languages
@@ -435,6 +445,11 @@ export function EmailTemplates() {
                 <div className="text-xs text-gray-500">
                   {tplRecord.isCustom ? t('notifications.emailTemplatesUi.list.usingCustom', 'Using custom template') : t('notifications.emailTemplatesUi.list.usingStandard', 'Using standard template')}
                 </div>
+                {templateVariableRegistry[tplRecord.name]?.contractInferred && (
+                  <div className="mt-1 text-xs text-[rgb(var(--badge-warning-text))]">
+                    Not currently sent
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -540,14 +555,26 @@ export function EmailTemplates() {
           {t('notifications.emailTemplatesUi.description', 'Each event type has a standard template that can be customized. You can either use the standard template or create a custom version.')}
         </p>
 
-        {/* Language Filter */}
-        <DropdownMenu>
+        <div className="ml-4 flex shrink-0 items-center gap-2">
+          <Button
+            id="open-email-template-variable-reference"
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 whitespace-nowrap"
+            onClick={() => setIsVariableReferenceOpen(true)}
+          >
+            <BookOpen className="h-4 w-4" />
+            Variable reference
+          </Button>
+
+          {/* Language Filter */}
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               id="language-filter-btn"
               variant="outline"
               size="sm"
-              className="ml-4 flex items-center gap-2 whitespace-nowrap"
+              className="flex items-center gap-2 whitespace-nowrap"
             >
               <Filter className="h-4 w-4" />
               {t('notifications.emailTemplatesUi.filter.languages', 'Languages')}
@@ -592,7 +619,8 @@ export function EmailTemplates() {
               </>
             )}
           </DropdownMenuContent>
-        </DropdownMenu>
+          </DropdownMenu>
+        </div>
       </div>
 
       <DataTable
@@ -623,6 +651,11 @@ export function EmailTemplates() {
         template={editingTemplate}
         tenant={tenant}
         onTemplatesChange={setTemplates}
+      />
+
+      <VariableReferenceDialog
+        isOpen={isVariableReferenceOpen}
+        onClose={() => setIsVariableReferenceOpen(false)}
       />
     </div>
   );
@@ -688,10 +721,11 @@ function ViewTemplateDialog({
   );
 
   return (
-    <Dialog isOpen={!!template} onClose={onClose} footer={footer}>
+    <Dialog isOpen={!!template} onClose={onClose} className="max-w-6xl" footer={footer}>
       <DialogTitle>{t('notifications.emailTemplatesUi.view.title', { defaultValue: 'Standard Template: {{name}}', name: formatTemplateName(template.name) })}</DialogTitle>
 
-      <DialogContent className="space-y-4 px-6">
+      <DialogContent className="grid gap-5 px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-4">
         <div>
           <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
           <div className="p-2 bg-gray-50 rounded border">
@@ -742,6 +776,8 @@ function ViewTemplateDialog({
             {testResult.message}
           </div>
         )}
+        </div>
+        <TemplateVariablePanel templateName={template.name} />
       </DialogContent>
     </Dialog>
   );
@@ -760,6 +796,7 @@ function EditTemplateDialog({
   tenant: string;
   onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
 }) {
+  type EditableField = 'subject' | 'html_content' | 'text_content';
   const { t } = useTranslation('msp/settings');
   const [formData, setFormData] = useState<Partial<TenantEmailTemplate>>({
     name: template?.name ?? "",
@@ -771,6 +808,17 @@ function EditTemplateDialog({
   const [htmlTab, setHtmlTab] = useState<string>('source');
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const htmlRef = useRef<HTMLTextAreaElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const lastFocusedField = useRef<EditableField>('html_content');
+  const pendingCaret = useRef<{ field: EditableField; offset: number } | null>(null);
+  const [autocomplete, setAutocomplete] = useState<{
+    field: EditableField;
+    query: string;
+    opening: number;
+    position: CaretMenuPosition;
+  } | null>(null);
 
   // Update form data when template changes
   useEffect(() => {
@@ -784,9 +832,122 @@ function EditTemplateDialog({
       });
       setHtmlTab('source');
       setTestResult(null);
+      setAutocomplete(null);
     }
   }, [template]);
   const [isSaving, setIsSaving] = useState(false);
+
+  const getFieldRef = (field: EditableField) => {
+    if (field === 'subject') return subjectRef.current;
+    if (field === 'html_content') return htmlRef.current;
+    return textRef.current;
+  };
+
+  useLayoutEffect(() => {
+    if (!pendingCaret.current) return;
+    const { field, offset } = pendingCaret.current;
+    pendingCaret.current = null;
+    const timeout = window.setTimeout(() => {
+      const element = getFieldRef(field);
+      element?.focus();
+      element?.setSelectionRange(offset, offset);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [formData.subject, formData.html_content, formData.text_content]);
+
+  const replaceSelection = (
+    field: EditableField,
+    replacement: string,
+    replacementStart?: number,
+  ) => {
+    const element = getFieldRef(field);
+    const currentValue = String(formData[field] ?? '');
+    const selectionStart = replacementStart ?? element?.selectionStart ?? currentValue.length;
+    const selectionEnd = element?.selectionEnd ?? selectionStart;
+    const nextValue = `${currentValue.slice(0, selectionStart)}${replacement}${currentValue.slice(selectionEnd)}`;
+    pendingCaret.current = { field, offset: selectionStart + replacement.length };
+    setFormData((previous) => ({ ...previous, [field]: nextValue }));
+    lastFocusedField.current = field;
+    setAutocomplete(null);
+  };
+
+  const insertVariable = (token: string) => replaceSelection(lastFocusedField.current, token);
+
+  const detectAutocomplete = (
+    field: EditableField,
+    element: HTMLInputElement | HTMLTextAreaElement,
+  ) => {
+    lastFocusedField.current = field;
+    const caret = element.selectionStart ?? element.value.length;
+    const match = element.value.slice(0, caret).match(/\{\{([a-zA-Z0-9._]*)$/);
+    setAutocomplete(match ? {
+      field,
+      query: match[1],
+      opening: caret - match[0].length,
+      position: measureCaretMenuPosition(element, caret),
+    } : null);
+  };
+
+  const repositionAutocomplete = (
+    field: EditableField,
+    element: HTMLInputElement | HTMLTextAreaElement,
+  ) => {
+    setAutocomplete((current) => current?.field === field ? {
+      ...current,
+      position: measureCaretMenuPosition(
+        element,
+        element.selectionStart ?? element.value.length,
+      ),
+    } : current);
+  };
+
+  const completeVariable = (field: EditableField, variable: VariableDef) => {
+    const element = getFieldRef(field);
+    const value = String(formData[field] ?? '');
+    const caret = element?.selectionStart ?? value.length;
+    const opening = autocomplete?.field === field
+      ? autocomplete.opening
+      : value.slice(0, caret).lastIndexOf('{{');
+    replaceSelection(field, getTemplateVariableToken(variable), opening >= 0 ? opening : caret);
+  };
+
+  const autocompleteChoices = autocomplete && template
+    ? getTemplateVariableCompletions(template.name, autocomplete.query)
+    : [];
+
+  const handleAutocompleteKeyDown = (event: React.KeyboardEvent, field: EditableField) => {
+    if (autocomplete?.field !== field || autocompleteChoices.length === 0) return;
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault();
+      completeVariable(field, autocompleteChoices[0]);
+    } else if (event.key === 'Escape') {
+      setAutocomplete(null);
+    }
+  };
+
+  const autocompleteMenu = (field: EditableField) => typeof document !== 'undefined' && autocomplete?.field === field && autocompleteChoices.length > 0 ? createPortal(
+    <div
+      className="fixed z-[100] max-h-64 w-80 overflow-y-auto rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-1 shadow-lg"
+      style={{ left: autocomplete.position.left, top: autocomplete.position.top }}
+      role="listbox"
+      aria-label="Template variable suggestions"
+    >
+      {autocompleteChoices.map((variable) => (
+        <button
+          id={`autocomplete-${field}-${variable.path.replace(/[^a-zA-Z0-9]+/g, '-')}`}
+          key={variable.path}
+          type="button"
+          className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs hover:bg-[rgb(var(--color-primary-50))] dark:hover:bg-[rgb(var(--color-primary-400)/0.2)]"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => completeVariable(field, variable)}
+        >
+          <code>{variable.path}</code>
+          <span className="text-[rgb(var(--color-text-500))]">{variable.type}</span>
+        </button>
+      ))}
+    </div>,
+    document.body,
+  ) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -855,11 +1016,12 @@ function EditTemplateDialog({
   );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} footer={footer}>
+    <Dialog isOpen={isOpen} onClose={onClose} className="max-w-6xl" footer={footer}>
       <form id="edit-template-form" onSubmit={handleSubmit}>
         <DialogTitle>{t('notifications.emailTemplatesUi.edit.title', { defaultValue: 'Edit Custom Template: {{name}}', name: formatTemplateName(template?.name ?? '') })}</DialogTitle>
 
-        <DialogContent className="space-y-4 px-6">
+        <DialogContent className="grid gap-5 px-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="min-w-0 space-y-4">
           <div>
             <Label>{t('notifications.emailTemplatesUi.fields.language', 'Language')}</Label>
             <div className="p-2 bg-gray-50 rounded border text-gray-700">
@@ -871,10 +1033,18 @@ function EditTemplateDialog({
             <Label htmlFor="subject">{t('notifications.emailTemplatesUi.fields.subject', 'Subject')}</Label>
             <Input
               id="subject"
+              ref={subjectRef}
               value={formData.subject}
-              onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+              onFocus={() => { lastFocusedField.current = 'subject'; }}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, subject: e.target.value }));
+                detectAutocomplete('subject', e.currentTarget);
+              }}
+              onScroll={(event) => repositionAutocomplete('subject', event.currentTarget)}
+              onKeyDown={(event) => handleAutocompleteKeyDown(event, 'subject')}
               required
             />
+            {autocompleteMenu('subject')}
           </div>
 
           <div>
@@ -887,12 +1057,20 @@ function EditTemplateDialog({
               <TabsContent value="source">
                 <TextArea
                   id="html-content"
+                  ref={htmlRef}
                   value={formData.html_content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                  onFocus={() => { lastFocusedField.current = 'html_content'; }}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, html_content: e.target.value }));
+                    detectAutocomplete('html_content', e.currentTarget);
+                  }}
+                  onScroll={() => setAutocomplete(null)}
+                  onKeyDown={(event) => handleAutocompleteKeyDown(event, 'html_content')}
                   required
                   rows={10}
                   className="mt-2"
                 />
+                {autocompleteMenu('html_content')}
               </TabsContent>
               <TabsContent value="preview">
                 <div className="mt-2">
@@ -911,11 +1089,19 @@ function EditTemplateDialog({
               <Label htmlFor="text-content">{t('notifications.emailTemplatesUi.fields.textContent', 'Text Content')}</Label>
               <TextArea
                 id="text-content"
+                ref={textRef}
                 value={formData.text_content}
-                onChange={(e) => setFormData(prev => ({ ...prev, text_content: e.target.value }))}
+                onFocus={() => { lastFocusedField.current = 'text_content'; }}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, text_content: e.target.value }));
+                  detectAutocomplete('text_content', e.currentTarget);
+                }}
+                onScroll={() => setAutocomplete(null)}
+                onKeyDown={(event) => handleAutocompleteKeyDown(event, 'text_content')}
                 required
                 rows={10}
               />
+              {autocompleteMenu('text_content')}
             </div>
           )}
 
@@ -924,6 +1110,11 @@ function EditTemplateDialog({
               {testResult.message}
             </div>
           )}
+          </div>
+          <TemplateVariablePanel
+            templateName={template?.name ?? ''}
+            onInsert={insertVariable}
+          />
         </DialogContent>
       </form>
     </Dialog>

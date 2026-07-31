@@ -24,6 +24,7 @@ import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEn
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -57,6 +58,7 @@ export function FixedPresetConfiguration({
   className = '',
 }: FixedPresetConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [plan, setPlan] = useState<IContractLinePreset | null>(null);
   const [services, setServices] = useState<IService[]>([]);
@@ -345,7 +347,7 @@ export function FixedPresetConfiguration({
                   })}
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                   <Input
                     id="base-rate"
                     type="text"

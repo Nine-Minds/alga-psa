@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { withTenantScope } from '../utils/tenantScopedBuilderDouble';
 import type { EntraSyncUser } from '@ee/lib/integrations/entra/sync/types';
 
 const createTenantKnexMock = vi.fn();
@@ -64,9 +65,9 @@ function setupReconcilerKnexHarness(params?: {
         first: linkedFirstMock,
       };
       chain.orderBy.mockReturnValue(chain);
-      return {
+      return withTenantScope({
         where: vi.fn(() => chain),
-      };
+      });
     }
 
     if (table === 'contacts') {
@@ -78,9 +79,23 @@ function setupReconcilerKnexHarness(params?: {
       };
       chain.andWhereRaw.mockReturnValue(chain);
       chain.orderBy.mockReturnValue(chain);
-      return {
+      return withTenantScope({
         where: vi.fn(() => chain),
+      });
+    }
+
+    if (table === 'contact_phone_numbers') {
+      // The reconciler compares stored phone rows before deciding a phone
+      // change is a real update; no rows means "different", which is what the
+      // phone-sync cases here exercise.
+      const chain = {
+        orderBy: vi.fn(),
+        select: vi.fn(async () => [] as Array<Record<string, unknown>>),
       };
+      chain.orderBy.mockReturnValue(chain);
+      return withTenantScope({
+        where: vi.fn(() => chain),
+      });
     }
 
     throw new Error(`Unexpected table ${table}`);
@@ -415,31 +430,34 @@ describe('reconcileEntraUserToContact', () => {
       `${tenant}|${entraTenantId}|${entraObjectId}`;
 
     const contactsUpdateMock = vi.fn(async () => 1);
+    // tenantDb scopes the builder before the query adds its own filters, so the
+    // tenant arrives through the facade rather than in the where clause below.
+    const linkTable: ReturnType<typeof withTenantScope> = withTenantScope({
+      where: vi.fn((whereInput: {
+        entra_tenant_id: string;
+        entra_object_id: string;
+      }) => ({
+        orderBy: vi.fn(() => ({
+          first: vi.fn(async () => {
+            const key = makeLinkKey(
+              String(linkTable.scopedTenant),
+              String(whereInput.entra_tenant_id),
+              String(whereInput.entra_object_id)
+            );
+            const contactId = linkStore.get(key);
+            return contactId ? { contact_name_id: contactId } : null;
+          }),
+        })),
+      })),
+    });
+
     const trxMock = vi.fn((table: string) => {
       if (table === 'entra_contact_links') {
-        return {
-          where: vi.fn((whereInput: {
-            tenant: string;
-            entra_tenant_id: string;
-            entra_object_id: string;
-          }) => ({
-            orderBy: vi.fn(() => ({
-              first: vi.fn(async () => {
-                const key = makeLinkKey(
-                  String(whereInput.tenant),
-                  String(whereInput.entra_tenant_id),
-                  String(whereInput.entra_object_id)
-                );
-                const contactId = linkStore.get(key);
-                return contactId ? { contact_name_id: contactId } : null;
-              }),
-            })),
-          })),
-        };
+        return linkTable;
       }
 
       if (table === 'contacts') {
-        return {
+        return withTenantScope({
           where: vi.fn(() => ({
             andWhereRaw: vi.fn(() => ({
               orderBy: vi.fn(() => ({
@@ -448,7 +466,7 @@ describe('reconcileEntraUserToContact', () => {
             })),
             update: contactsUpdateMock,
           })),
-        };
+        });
       }
 
       throw new Error(`Unexpected table ${table}`);

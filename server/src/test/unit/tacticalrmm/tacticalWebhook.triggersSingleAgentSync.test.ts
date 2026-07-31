@@ -95,6 +95,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  isTenantSuspended: vi.fn(async () => false),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (t: string) => conn(t),
     scoped: (t: string) => conn(t),

@@ -41,6 +41,9 @@ import { getClientById } from '@alga-psa/clients/actions';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import ClientQuickView from '../clients/ClientQuickView';
 import { ContactPortalTab } from './ContactPortalTab';
+import { EntraContactBadge } from './EntraContactBadge';
+import { readEntraContactLinkage, findOverwritingEntraRule } from './entraContactLinkage';
+import { useEntraContactFieldRules } from './useEntraContactFieldRules';
 import { ContactNotesPanel } from './panels/ContactNotesPanel';
 import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
 import ContactEmailAddressesEditor, {
@@ -351,12 +354,34 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     fetchAvatarAndTags();
   }, [contact.contact_name_id, contact.tenant, userId]);
 
+  // Only Entra-linked contacts pay for this; everyone else skips the fetch.
+  const entraLinkage = readEntraContactLinkage(contact as unknown as Record<string, unknown>);
+  const entraFieldRules = useEntraContactFieldRules(entraLinkage.isLinked);
+  const [entraOverwriteWarnings, setEntraOverwriteWarnings] = useState<Record<string, string>>({});
+
   const handleFieldChange = (field: string, value: string | boolean | ContactPhoneNumberInput[]) => {
     setEditedContact(prevContact => ({
       ...prevContact,
       [field]: value
     }));
     setHasUnsavedChanges(true);
+
+    // Warn while the edit is being made, not after it silently reverts on the
+    // next sync.
+    const rule = findOverwritingEntraRule({
+      contact: contact as unknown as Record<string, unknown>,
+      field,
+      fieldSyncConfig: entraFieldRules,
+    });
+    setEntraOverwriteWarnings((current) => {
+      if (!rule) {
+        if (!current[field]) return current;
+        const next = { ...current };
+        delete next[field];
+        return next;
+      }
+      return { ...current, [field]: rule };
+    });
   };
 
   const handleEmailAddressesChange = (value: Pick<
@@ -739,6 +764,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 onValidationChange={setPhoneValidationErrors}
               />
             </div>
+            {Object.keys(entraOverwriteWarnings).length > 0 ? (
+              <p
+                className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-2 text-sm text-[rgb(var(--color-text-700))]"
+                id="entra-overwrite-warning"
+              >
+                Microsoft Entra syncs this field. Your change will be overwritten on the next
+                sync unless that rule is turned off in Integrations → Identity → Field rules.
+              </p>
+            ) : null}
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
               label={t('contactDetails.status.label', { defaultValue: 'Status' })}
@@ -747,6 +781,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               inactiveLabel={t('contactDetails.status.inactive', { defaultValue: 'Inactive' })}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
             />
+            {/* Provenance for a contact a directory maintains: renders nothing
+                for the contacts that are not linked, which is most of them. */}
+            <EntraContactBadge contact={contact as unknown as Record<string, unknown>} variant="detail" />
           </div>
 
           {/* Tags Section */}

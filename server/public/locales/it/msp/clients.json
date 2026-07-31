@@ -296,6 +296,155 @@
     "parentClientClear": "Cancella",
     "parentClientLegacy": "Inserito in precedenza come testo: {{name}}"
   },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Criticità",
+      "documents": "Documenti",
+      "installBase": "Parco installato",
+      "locations": "Sedi",
+      "money": "Finanze",
+      "notes": "Note",
+      "people": "Persone",
+      "record": "Scheda cliente",
+      "service": "Servizio",
+      "timeline": "Tutto, in ordine"
+    },
+    "csatEmpty": "Ancora nessuna risposta ai sondaggi.",
+    "discardCancel": "Continua a modificare",
+    "discardConfirm": "Annulla modifiche",
+    "discardMessage": "Ci sono modifiche non salvate nella scheda cliente. Chiudere e annullarle?",
+    "discardTitle": "Modifiche non salvate",
+    "documents": {
+      "more": "+{{count}} altri",
+      "none": "Ancora nessun documento."
+    },
+    "flags": {
+      "clientWaiting": "Cliente in attesa da {{days}} gg — {{ref}}",
+      "draftInvoices_one": "1 fattura in bozza — {{amount}} non fatturato · {{ref}}",
+      "draftInvoices_other": "{{count}} fatture in bozza — {{amount}} non fatturato · {{ref}}",
+      "rmaOpen_one": "1 RMA aperta — {{days}} gg",
+      "rmaOpen_other": "{{count}} RMA aperte — la più vecchia {{days}} gg",
+      "slaAtRisk_one": "SLA a rischio — {{ref}}",
+      "slaAtRisk_other": "{{count}} ticket con SLA a rischio — prossimo {{ref}}",
+      "slaBreached_one": "SLA violato — {{ref}}",
+      "slaBreached_other": "{{count}} violazioni di SLA — la più grave {{ref}}",
+      "soPartial": "{{ref}}: {{fulfilled}} righe su {{total}} evase",
+      "ticketOverdue_one": "1 ticket scaduto — {{ref}} {{days}} gg di ritardo",
+      "ticketOverdue_other": "{{count}} ticket scaduti — {{ref}} {{days}} gg di ritardo",
+      "ticketUnassigned_one": "1 ticket non assegnato — {{ref}}",
+      "ticketUnassigned_other": "{{count}} ticket non assegnati — il più vecchio {{ref}}",
+      "wipAging_one": "1 voce non fatturata — {{days}} gg{{materials}}",
+      "wipAging_other": "{{count}} voci non fatturate — la più vecchia {{days}} gg{{materials}}"
+    },
+    "installBase": {
+      "assets": "asset gestiti",
+      "assetsLink": "Asset gestiti",
+      "none": "Ancora nessuna apparecchiatura consegnata.",
+      "rmas": "RMA aperte",
+      "sold": "unità vendute",
+      "viewAsset": "asset",
+      "warrantyExpired_one": "1 fuori garanzia",
+      "warrantyExpired_other": "{{count}} fuori garanzia",
+      "warrantyExpiring_one": "1 in scadenza entro ≤90 gg",
+      "warrantyExpiring_other": "{{count}} in scadenza entro ≤90 gg",
+      "warrantyTracked": " (su {{count}} tracciati)"
+    },
+    "locations": {
+      "billing": "Fatturazione",
+      "manage": "Gestisci",
+      "more": "+{{count}} altre",
+      "none": "Ancora nessuna sede.",
+      "shipping": "Spedizione"
+    },
+    "money": {
+      "activeContracts": "Contratti attivi",
+      "agingNote": "{{total}} da incassare · pagamenti registrati dedotti",
+      "billingSetup": "Configurazione fatturazione",
+      "current": "corrente",
+      "draft": "bozza",
+      "moreDrafts_one": "+1 altra bozza",
+      "moreDrafts_other": "+{{count}} altre bozze",
+      "nothingOutstanding": "Nessun importo aperto sulle fatture finalizzate.",
+      "taxSettings": "Impostazioni fiscali",
+      "unbilledHours": "{{hours}} h",
+      "unbilledMaterials": "{{amount}} di materiali",
+      "unbilledWork": "Lavoro non fatturato"
+    },
+    "notes": {
+      "add": "Aggiungi nota",
+      "lastEdited": "Nota cliente condivisa · modificata {{days}} gg fa",
+      "none": "Ancora nessuna nota."
+    },
+    "openView": "Apri",
+    "people": {
+      "addContact": "Aggiungi contatto",
+      "more": "+{{count}} altri",
+      "noContactInfo": "nessun recapito registrato",
+      "none": "Ancora nessun contatto.",
+      "primary": "Principale"
+    },
+    "pulseError": "Impossibile caricare il riepilogo del cliente.",
+    "rail": {
+      "close": "Chiudi",
+      "installBase": "Parco installato",
+      "label": "Viste cliente",
+      "money": "Finanze",
+      "more": "Altro",
+      "records": "Anagrafiche",
+      "service": "Servizio"
+    },
+    "record": {
+      "accountManager": "Account manager",
+      "additionalInfo": "Informazioni aggiuntive",
+      "clientSince": "Cliente dal",
+      "defaultContact": "Contatto predefinito",
+      "edit": "Modifica",
+      "unset": "non impostato"
+    },
+    "service": {
+      "newTicket": "Nuovo ticket",
+      "none": "Nessun ticket aperto.",
+      "oldest": "più vecchio aperto",
+      "open": "ticket aperti",
+      "overdue": "scaduti",
+      "overdueTag": "scaduto",
+      "unassigned": "Non assegnato"
+    },
+    "sla": {
+      "atRisk": "SLA a rischio",
+      "atRiskLeft": "SLA: {{left}} rimasti",
+      "breached": "SLA violato",
+      "breachedAgo": "SLA violato {{over}} fa",
+      "onTrack": "SLA nei tempi",
+      "onTrackLeft": "SLA: {{left}} rimasti",
+      "paused": "SLA in pausa"
+    },
+    "timeline": {
+      "daysAgo": "{{count}} gg fa",
+      "empty": "Non è ancora stato registrato nulla per questo cliente.",
+      "error": "Impossibile caricare la cronologia.",
+      "filterAll": "Tutto",
+      "filterInteractions": "Interazioni",
+      "filterInventory": "Magazzino",
+      "filterMoney": "Finanze",
+      "filterService": "Servizio",
+      "hoursAgo": "{{count}} h fa",
+      "interaction": "Interazione",
+      "invoiceCreated": "Fattura in bozza",
+      "invoiceFinalized": "Fattura finalizzata",
+      "justNow": "proprio ora",
+      "loadMore": "Carica altro",
+      "loading": "Caricamento…",
+      "materialAdded": "Materiale utilizzato",
+      "quoteActivity": "Attività preventivo",
+      "rmaClosed": "RMA chiusa",
+      "rmaOpened": "RMA aperta",
+      "soCreated": "Ordine di vendita creato",
+      "ticketClosed": "Ticket chiuso",
+      "ticketOpened": "Ticket aperto",
+      "unitDelivered": "Apparecchiatura consegnata"
+    }
+  },
   "quickAddClient": {
     "lifecycleStatus": "Ciclo di vita",
     "title": "Aggiungi nuovo cliente",
@@ -759,6 +908,18 @@
     "updatedSuccess": "Le impostazioni di scadenza del credito sono state aggiornate.",
     "updateError": "Impossibile aggiornare le impostazioni",
     "useDefaultSuccess": "Il cliente ora utilizzerà le impostazioni predefinite di scadenza del credito."
+  },
+  "clientExternalCreditSettings": {
+    "title": "Credito esterno registrato",
+    "enable": "Il cliente ha un credito nel sistema contabile",
+    "enableHelp": "Per i clienti il cui saldo a credito è in QuickBooks (ad esempio pagato in anticipo con assegno). Mostra un avviso nella pagina di fatturazione del loro portale affinché le fatture aperte non vengano scambiate per insolvenza.",
+    "note": "Nota mostrata al cliente",
+    "notePlaceholder": "ad esempio, pagato fino a dicembre 2026",
+    "save": "Salva",
+    "loadError": "Impossibile caricare le impostazioni",
+    "saveError": "Impossibile salvare le impostazioni",
+    "updatedSuccess": "L'impostazione del credito esterno è stata aggiornata.",
+    "noteUpdatedSuccess": "La nota sul credito esterno è stata aggiornata."
   },
   "clientGridCard": {
     "actions": "Azioni del cliente",
@@ -1302,7 +1463,10 @@
         "serialNumber": "Numero di serie",
         "status": "Stato",
         "type": "Tipo",
-        "warrantyEnd": "Fine della garanzia"
+        "warrantyEnd": "Fine della garanzia",
+        "agent": "Agente",
+        "patching": "Patch",
+        "coverage": "Copertura"
       },
       "details": {
         "local": "Locale",

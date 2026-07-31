@@ -1,12 +1,12 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../_responses';
-import { requireEntraUiFlagEnabled } from '../_guards';
+import { requireEntraAccess } from '../_guards';
 
 export { dynamic, runtime };
 
 export async function POST(request: Request): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('update');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('update');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
   const body = await parseJsonBody(request);

@@ -12,8 +12,8 @@ Thank you for your interest in contributing to Alga PSA! We appreciate contribut
 
 ## Getting Started
 
-1. **Fork the repository** and clone it locally
-2. **Set up your development environment** following the [Setup Guide](getting-started/setup_guide.md)
+1. **Fork the repository** and clone it locally (`git clone https://github.com/nine-minds/alga-psa.git`)
+2. **Set up your development environment** following the [Development Guide](getting-started/development_guide.md). (To run a production-like deployment with prebuilt images instead, see the [Setup Guide](getting-started/setup_guide.md).)
 3. **Create a branch** for your changes:
    ```bash
    git checkout -b feature/your-feature-name

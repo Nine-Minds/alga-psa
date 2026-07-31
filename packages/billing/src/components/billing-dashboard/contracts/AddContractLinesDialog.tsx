@@ -19,6 +19,7 @@ import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   useContractLineTypeOptions,
   useFormatBillingFrequency,
@@ -57,6 +58,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
   onAdd,
 }) => {
   const { t } = useTranslation('msp/contracts');
+  const { money, symbol } = useCurrencyFormat();
   const contractLineTypeOptions = useContractLineTypeOptions();
   const formatContractLineType = useFormatContractLineType();
   const formatBillingFrequency = useFormatBillingFrequency();
@@ -582,7 +584,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                 </span>
                                 <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
                                   {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
-                                    ? `$${(fixedConfig.base_rate / 100).toFixed(2)}`
+                                    ? money(Number(fixedConfig.base_rate))
                                     : t('addLines.fixedConfig.notSet', { defaultValue: 'Not set' })}
                                 </span>
                               </div>
@@ -591,7 +593,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                   {t('addLines.fixedConfig.overrideBaseRate', { defaultValue: 'Override Base Rate' })}
                                 </Label>
                                 <div className="relative mt-1.5">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                   <Input
                                     id={`rate-override-${preset.preset_id}`}
                                     type="text"
@@ -802,7 +804,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                             {t('addLines.hourlyConfig.hourlyRate', { defaultValue: 'Hourly Rate' })}
                                           </Label>
                                           <div className="relative mt-1">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                             <Input
                                               id={`hourly-rate-${preset.preset_id}-${service.service_id}`}
                                               type="text"
@@ -934,7 +936,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                           {t('addLines.usageConfig.ratePerUnit', { defaultValue: 'Rate (per unit)' })}
                                         </Label>
                                         <div className="relative mt-1">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                           <Input
                                             id={`rate-${preset.preset_id}-${service.service_id}`}
                                             type="text"

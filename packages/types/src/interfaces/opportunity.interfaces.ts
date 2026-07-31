@@ -19,13 +19,13 @@ export type OpportunityStage =
   | 'won'
   | 'lost';
 
-/** Checkpoints that evidence can attest. 'qualified' is the one declared-type checkpoint. */
+/** Checkpoints that evidence can attest. Every checkpoint may be declared by a user. */
 export type OpportunityCheckpoint = 'qualified' | 'assessment' | 'proposed' | 'verbal' | 'won';
 
 /** Rep-declared confidence. Deliberately an enum — no percentages anywhere. Never alters derived stage. */
 export type OpportunityConfidence = 'low' | 'medium' | 'high' | 'committed';
 
-export type OpportunityEvidenceSource = 'system' | 'declared';
+export type OpportunityEvidenceSource = 'system' | 'declared' | 'user_declared';
 
 export type OpportunityEvidenceRefType =
   | 'quote'
@@ -43,7 +43,7 @@ export type OpportunityLossReason =
   | 'not_a_fit'
   | 'other';
 
-export type OpportunityGeneratorKey = 'renewal' | 'tm_conversion' | 'whitespace' | 'asset_aging';
+export type OpportunityGeneratorKey = 'renewal' | 'tm_conversion' | 'whitespace' | 'asset_aging' | 'inbound-lead';
 
 export type OpportunitySuggestionStatus = 'pending' | 'accepted' | 'dismissed' | 'snoozed';
 
@@ -241,13 +241,17 @@ export interface IOpportunityDashboardSnapshot {
 /* Why-sentences (the design language's fact-templated copy)           */
 /* ------------------------------------------------------------------ */
 
+export interface TranslatableText {
+  key: string;
+  params?: Record<string, string | number>;
+}
+
 /**
- * A composed why-sentence, rendered as segments so the UI can bold exactly
- * one clause. Composed server-side by the fact-templating engine — never
- * stored, always derived from current facts, no AI dependency.
+ * A structured why-sentence, rendered as translated segments so the UI can
+ * bold the clause that matters without receiving server-composed English.
  */
 export interface WhySentence {
-  segments: Array<{ text: string; emphasis?: boolean }>;
+  segments: Array<{ message: TranslatableText; emphasis?: boolean }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -288,6 +292,8 @@ export interface IOpportunityDetail extends IOpportunity {
   client_name: string;
   client_lifecycle_status: ClientLifecycleStatus;
   contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
   owner_name: string;
   ladder: IOpportunityEvidenceLadderStep[];
   linked_quotes: Array<{
@@ -332,12 +338,12 @@ export interface IQueueSuggestionItem {
   kind: 'suggestion';
   suggestion_id: string;
   generator_key: OpportunityGeneratorKey;
-  title: string;
+  title: TranslatableText;
   client_name: string;
   mrr_cents: number;
   nrr_cents: number;
   currency_code: string;
-  how: string;
+  how: TranslatableText;
   why: WhySentence;
 }
 
@@ -345,7 +351,7 @@ export interface IQueueLesson {
   /** e.g. 'assessment_conversion', 'quote_velocity' — from the insight library. */
   insight_key: string;
   why: WhySentence;
-  action_label: string;
+  action_label: TranslatableText;
   action_href: string;
 }
 

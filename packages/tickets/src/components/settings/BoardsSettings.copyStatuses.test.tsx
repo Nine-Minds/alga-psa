@@ -366,6 +366,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     });
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+      expect(document.getElementById('inline-ticket-status-name-0')).toBeTruthy();
     });
 
     fireEvent.change(document.getElementById('inline-ticket-status-name-0') as HTMLInputElement, {
@@ -532,6 +533,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     });
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+      expect(screen.getByDisplayValue('Support Open')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('save-board-button'));
@@ -747,11 +749,17 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Support Renamed' },
     });
+    // Re-query on every poll. Holding one node across waitFor is what made this
+    // flaky: the dirty-state re-render can swap the button, leaving the captured
+    // reference detached and permanently disabled="" — which no timeout can fix.
+    await waitFor(() => {
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
+    }, { timeout: 5_000 });
     fireEvent.click(screen.getByTestId('save-board-button'));
 
     await waitFor(() => {
       expect(updateBoardMock).toHaveBeenCalled();
-    });
+    }, { timeout: 5_000 });
 
     // The editor stays open (no return to the list) and the header reflects the saved name.
     await waitFor(() => {

@@ -143,7 +143,21 @@
       "title": "11111",
       "toggleDoneError": "11111"
     },
-    "enterpriseOnly": "11111"
+    "enterpriseOnly": "11111",
+    "nextAction": "11111",
+    "overdueSince": "11111 {{date}} 11111",
+    "dueOn": "11111 {{date}} 11111",
+    "stage": "11111",
+    "confidence": "11111",
+    "owner": "11111",
+    "expectedClose": "11111",
+    "mrr": "11111",
+    "nrr": "11111",
+    "hardware": "11111",
+    "contact": "11111",
+    "linkedQuotes": "11111",
+    "openOpportunity": "11111",
+    "opportunityNotFound": "11111"
   },
   "groupedView": {
     "addGroup": "11111",

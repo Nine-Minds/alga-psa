@@ -17,6 +17,12 @@ const providerQueryMock = {
   andWhere: vi.fn(function andWhere() {
     return this;
   }),
+  whereNull: vi.fn(function whereNull() {
+    return this;
+  }),
+  forUpdate: vi.fn(function forUpdate() {
+    return this;
+  }),
   first: vi.fn(),
 };
 // tenantDb(trx, tenant).table('tenants') → conn('tenants').where(tenant).first(...)
@@ -25,6 +31,12 @@ const tenantsQueryMock = {
     return this;
   }),
   first: vi.fn(async () => ({ product_code: 'psa' })),
+};
+const updateQueryMock = {
+  where: vi.fn(function where() {
+    return this;
+  }),
+  update: vi.fn().mockResolvedValue(1),
 };
 
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
@@ -55,6 +67,8 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     providerQueryMock.join.mockClear();
     providerQueryMock.where.mockClear();
     providerQueryMock.andWhere.mockClear();
+    providerQueryMock.whereNull.mockClear();
+    providerQueryMock.forUpdate.mockClear();
     providerQueryMock.first.mockReset();
 
     enqueueUnifiedInboundEmailQueueJobMock.mockResolvedValue({
@@ -72,6 +86,8 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
 
     tenantsQueryMock.where.mockClear();
     tenantsQueryMock.first.mockClear();
+    updateQueryMock.where.mockClear();
+    updateQueryMock.update.mockClear();
 
     trxMock.mockImplementation((table: string) => {
       if (table === 'microsoft_email_provider_config as mc') {
@@ -79,6 +95,9 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       }
       if (table === 'tenants') {
         return tenantsQueryMock;
+      }
+      if (table === 'microsoft_email_provider_config' || table === 'email_provider_health') {
+        return updateQueryMock;
       }
       throw new Error(`Unexpected table in test transaction: ${table}`);
     });
@@ -132,6 +151,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
 
     // Provider lookup stays tenant-scoped through the facade join.
     expect(providerQueryMock.join).toHaveBeenCalledWith('email_providers as ep', expect.any(Function));
+    expect(providerQueryMock.forUpdate).toHaveBeenCalledWith('mc');
 
     expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
     const enqueuePayload = enqueueUnifiedInboundEmailQueueJobMock.mock.calls[0][0];
@@ -149,6 +169,10 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     expect(enqueuePayload).not.toHaveProperty('emailData');
     expect(enqueuePayload).not.toHaveProperty('attachments');
     expect(enqueuePayload).not.toHaveProperty('rawMimeBase64');
+    expect(updateQueryMock.update).toHaveBeenCalledWith(expect.objectContaining({
+      last_webhook_delivery_at: expect.any(String),
+      webhook_silent_runs: 0,
+    }));
   });
 
   it('T004: Microsoft callback success waits for durable enqueue completion', async () => {
@@ -280,5 +304,73 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       unifiedQueuedCount: 0,
     });
     expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['T003', 'inactive'],
+    ['T004', 'paused'],
+  ])('%s: Microsoft %s providers are acknowledged without enqueueing', async (_id, _state) => {
+    providerQueryMock.first.mockResolvedValueOnce(null);
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [{
+          changeType: 'created',
+          clientState: 'expected-client-state',
+          resource: '/users/user-1/messages/msg-gated',
+          resourceData: { id: 'msg-gated' },
+          subscriptionId: 'sub-ms-gated',
+          tenantId: 'tenant-ms-1',
+        }],
+      }),
+    });
+
+    const response = await handleMicrosoftWebhookPost(request);
+
+    expect(response.status).toBe(202);
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+    expect(providerQueryMock.andWhere).toHaveBeenCalledWith('ep.is_active', true);
+    expect(providerQueryMock.whereNull).toHaveBeenCalledWith('ep.inbound_paused_at');
+  });
+
+  it('logs a warning event for subscriptions with no provider record at all', async () => {
+    providerQueryMock.first
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [{
+          changeType: 'created',
+          clientState: 'expected-client-state',
+          resource: '/users/user-1/messages/msg-rogue',
+          resourceData: { id: 'msg-rogue' },
+          subscriptionId: 'sub-ms-rogue',
+          tenantId: 'tenant-ms-1',
+        }],
+      }),
+    });
+
+    try {
+      const response = await handleMicrosoftWebhookPost(request);
+
+      expect(response.status).toBe(202);
+      expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[MicrosoftWebhook] Ignoring notification for unknown subscription',
+        expect.objectContaining({ event: 'microsoft_email_unknown_subscription' }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 });

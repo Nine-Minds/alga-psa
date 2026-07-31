@@ -11,6 +11,8 @@ export interface EmailProvider {
   senderDisplayName?: string | null;
   mailbox: string;
   isActive: boolean;
+  inboundPausedAt?: string | null;
+  inboundPauseReason?: 'manual' | 'tenant_cancelled' | null;
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;
@@ -28,6 +30,8 @@ export interface MicrosoftEmailProviderConfig {
   tenant: string;
   client_id: string | null;
   client_secret: string | null;
+  microsoft_profile_id?: string | null;
+  client_secret_ref?: string | null;
   tenant_id: string;
   redirect_uri: string;
   auto_process_emails: boolean;
@@ -40,6 +44,10 @@ export interface MicrosoftEmailProviderConfig {
   webhook_verification_token?: string; // Added to match database
   webhook_expires_at?: string;
   last_subscription_renewal?: string; // Added to match database
+  delivery_mode?: 'webhook' | 'polling';
+  last_webhook_delivery_at?: string;
+  webhook_silent_runs?: number;
+  next_subscription_probe_at?: string;
   created_at: string;
   updated_at: string;
 }

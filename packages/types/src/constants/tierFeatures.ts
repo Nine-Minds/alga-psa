@@ -22,6 +22,7 @@ export enum TIER_FEATURES {
   ENTRA_SYNC = 'ENTRA_SYNC',
   CIPP = 'CIPP',
   TEAMS_INTEGRATION = 'TEAMS_INTEGRATION',
+  SCIM_PROVISIONING = 'SCIM_PROVISIONING',
   ADVANCED_AUTHORIZATION_BUNDLES = 'ADVANCED_AUTHORIZATION_BUNDLES',
 }
 
@@ -29,6 +30,7 @@ export enum TIER_FEATURES {
 // remain source-compatible while edition-gated server code gets a distinct key.
 export namespace TIER_FEATURES {
   export const OPPORTUNITY_MANAGEMENT = 'OPPORTUNITY_MANAGEMENT' as TIER_FEATURES;
+  export const CONTRACT_SIMULATOR = 'CONTRACT_SIMULATOR' as TIER_FEATURES;
 }
 
 /**
@@ -48,15 +50,16 @@ export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   // Available to all tiers; a usage cap (planned: 150 workflow steps) will be enforced separately rather than tier-gated.
   [TIER_FEATURES.WORKFLOW_DESIGNER]: 'solo',
   [TIER_FEATURES.MOBILE_ACCESS]: 'solo',
-  [TIER_FEATURES.ENTRA_SYNC]: 'premium',
-  [TIER_FEATURES.CIPP]: 'premium',
+  [TIER_FEATURES.ENTRA_SYNC]: 'pro',
+  [TIER_FEATURES.CIPP]: 'pro',
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'pro',
+  [TIER_FEATURES.SCIM_PROVISIONING]: 'pro',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'premium',
   [TIER_FEATURES.OPPORTUNITY_MANAGEMENT]: 'premium',
+  [TIER_FEATURES.CONTRACT_SIMULATOR]: 'pro',
 } as const;
 
 const ADD_ON_ONLY_FEATURES = new Set<TIER_FEATURES>([
-  TIER_FEATURES.ENTRA_SYNC,
   TIER_FEATURES.TEAMS_INTEGRATION,
 ]);
 

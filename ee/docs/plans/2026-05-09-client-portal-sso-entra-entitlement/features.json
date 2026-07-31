@@ -1,0 +1,700 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a client portal SSO discovery endpoint at POST /api/auth/client-portal/sso/discover.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add a client portal SSO resolution endpoint at POST /api/auth/client-portal/sso/resolve.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Resolve client portal tenant context from a valid tenant slug.",
+    "implemented": true,
+    "prdRefs": [
+      "Architecture",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Resolve client portal tenant context from an active portal domain.",
+    "implemented": true,
+    "prdRefs": [
+      "Architecture",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Resolve client portal tenant context from a trusted client portal callback URL when applicable.",
+    "implemented": true,
+    "prdRefs": [
+      "Architecture",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Return a neutral no-provider discovery response when tenant context cannot be resolved.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Failure Behavior"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Return tenant-configured SSO providers from client portal discovery when tenant context is resolved.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Rate-limit client portal SSO discovery using anti-enumeration-safe keys and responses.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Issue signed client portal SSO discovery state with an explicit client-portal audience.",
+    "implemented": true,
+    "prdRefs": [
+      "Architecture",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Validate client portal SSO resolution against signed discovery state, provider, tenant, and callback URL.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Issue signed client portal SSO resolution state that cannot be reused by MSP SSO.",
+    "implemented": true,
+    "prdRefs": [
+      "Architecture",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Make SsoProviderButtons configurable by auth surface, discovery endpoint, resolution endpoint, and storage key.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Wire ClientLoginForm to render client portal SSO buttons only when tenant context is available.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Pass client portal email, callback URL, tenant slug, and portal domain context into SSO button discovery and resolution.",
+    "implemented": true,
+    "prdRefs": [
+      "Login Flow"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Start OAuth with client portal login state including mode=login, user_type=client, and tenant hint.",
+    "implemented": true,
+    "prdRefs": [
+      "Login Flow",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Require client portal OAuth profile mapping to use user_type=client.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Require client portal OAuth profile mapping to match the resolved tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Prevent client portal OAuth mapping from falling back to global client-user lookup.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Ensure internal users cannot authenticate through the client portal OAuth flow.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Failure Behavior"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Apply existing vanity-domain handoff redirect logic to successful OAuth client portal sign-ins.",
+    "implemented": true,
+    "prdRefs": [
+      "Login Flow",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Finalize and clear client portal SSO state after OAuth sign-in succeeds or fails.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Preserve existing client portal credentials login behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Preserve existing MSP SSO discovery and resolution behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Expose autoLinkClient in the SSO settings UI separately from internal auto-linking.",
+    "implemented": true,
+    "prdRefs": [
+      "Configuration",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Add MSP workspace default client portal Entra provisioning mode configuration defaulting to disabled, with built-in and workflow-managed modes.",
+    "implemented": true,
+    "prdRefs": [
+      "Configuration",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Add tenant setting deactivateEntraManagedPortalUsersOnEntitlementRemoval defaulting to true.",
+    "implemented": true,
+    "prdRefs": [
+      "Configuration",
+      "Lifecycle"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Add settings UI controls for MSP workspace default client portal Entra provisioning mode and entitlement-removal deactivation.",
+    "implemented": true,
+    "prdRefs": [
+      "Configuration",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Persist per-client mapping override for client portal provisioning mode with inherit-workspace-default, disabled, built-in, and workflow-managed choices.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Configuration"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Persist selected Entra group ID as the client portal access entitlement source for a mapped client.",
+    "implemented": true,
+    "prdRefs": [
+      "Entitlement Model",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Persist group membership mode for entitlement checks with transitive membership as the default.",
+    "implemented": true,
+    "prdRefs": [
+      "Entitlement Model",
+      "Configuration"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Load selectable Entra groups for a managed tenant/client entitlement configuration UI.",
+    "implemented": true,
+    "prdRefs": [
+      "Configuration",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Validate that selected entitlement groups belong to the configured managed Entra tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Extend Entra sync user data or sync context with portal access group membership information.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Entitlement Model"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Check transitive group membership for client portal entitlement during Entra sync.",
+    "implemented": true,
+    "prdRefs": [
+      "Entitlement Model",
+      "Entra Provisioning"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Run client portal provisioning only after contact reconciliation succeeds without ambiguity.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Skip portal user provisioning and workflow events when the effective client portal Entra provisioning mode resolves to disabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Configuration"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Skip portal user provisioning when no entitlement group is configured for the mapped client.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Entitlement Model"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Skip portal user provisioning when the Entra user lacks email and UPN.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Skip or deactivate portal access when the Entra account is disabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Lifecycle",
+      "Entra Provisioning"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Skip portal user provisioning when the Entra user is not in the configured access group.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Entitlement Model"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Find an existing client portal user for a reconciled contact before creating a new one.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Find an existing client portal user by tenant and email only when it is safe and non-conflicting.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Create a client portal user for an entitled reconciled contact when no portal user exists.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Set created portal users to user_type=client with tenant, contact_id, client ID, and normalized email.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Mark provisioned portal users as email-verified or otherwise OAuth-ready without requiring password setup.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Upsert Microsoft OAuth account links for Entra-provisioned portal users using stable Entra identity data.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "OAuth Account Link"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Store durable metadata identifying portal users as Entra-managed.",
+    "implemented": true,
+    "prdRefs": [
+      "Portal User Metadata",
+      "Lifecycle"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Store source Entra tenant ID, managed tenant mapping, Entra object ID, and entitlement source metadata for Entra-managed portal users.",
+    "implemented": true,
+    "prdRefs": [
+      "Portal User Metadata"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Detect conflicting portal users by tenant, contact, email, and link state before provisioning.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Skip provisioning and record a skipped/conflict result when conflicting portal users are found.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Failure Behavior"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Deactivate Entra-managed portal users when group entitlement is removed and the deactivation setting is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Lifecycle"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Deactivate Entra-managed portal users when their Entra account is disabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Lifecycle"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Do not deactivate manually managed portal users when Entra entitlement is missing.",
+    "implemented": true,
+    "prdRefs": [
+      "Lifecycle",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Track whether a portal user was deactivated by Entra lifecycle versus manually disabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Lifecycle",
+      "Portal User Metadata"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Reactivate Entra-managed portal users only when entitlement returns and prior deactivation was lifecycle-owned.",
+    "implemented": true,
+    "prdRefs": [
+      "Lifecycle"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Return or persist sync provisioning counts for created, linked, deactivated, skipped, and ambiguous outcomes.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Show client portal provisioning counts in the existing Entra sync results UI where available.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Extend portal invitation flow to optionally pre-link an Entra identity for an invited contact.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Support invitation completion through OAuth without forcing password setup when an Entra pre-link exists.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Login Flow"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Keep invitation-created manual portal users outside Entra deactivation unless explicitly marked Entra-managed.",
+    "implemented": true,
+    "prdRefs": [
+      "Lifecycle"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Update client portal SSO tests that previously asserted SSO was disabled to assert tenant-gated behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Testing"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Update OpenAPI route inventory or auth API docs for new client portal SSO endpoints if the repo generation path requires it.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Persist workspace default role and optional per-client default role override for built-in Entra-provisioned users, defaulting to User.",
+    "implemented": true,
+    "prdRefs": [
+      "Configuration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Assign the configured default Alga client portal role only when creating a new portal user in built-in provisioning mode.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Entra Provisioning"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Preserve manual Alga role changes on existing Entra-managed portal users during later Entra sync runs.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Show warning copy when an MSP selects a broad Entra entitlement group, explaining that every enabled user in the group is eligible for portal access.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Ensure built-in provisioning and workflow-managed provisioning are mutually exclusive for each mapped client sync decision.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Persist workflow target/configuration for workflow-managed client portal Entra provisioning mode.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Workflow Events and Actions"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Publish an idempotent workflow event when an entitled Entra user becomes eligible for client portal access in workflow-managed mode.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow Events and Actions",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Publish an idempotent workflow event when Entra group entitlement is removed or the Entra account is disabled in workflow-managed mode.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow Events and Actions",
+      "Lifecycle"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Include tenant, client, contact, Entra identity, entitlement, account status, configured group, recommended default role, and sync run context in workflow-managed provisioning events.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow Events and Actions",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Add or expose a workflow action that safely creates or links a client portal user using the same idempotent primitives as built-in provisioning.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow Events and Actions",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Add or expose workflow actions for assigning a client portal role and upserting the Microsoft OAuth account link.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow Events and Actions",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Add or expose workflow actions for deactivating and reactivating Entra-managed client portal access without changing manually managed users.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow Events and Actions",
+      "Lifecycle"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Show workflow-managed mode copy explaining that the selected workflow is responsible for provisioning, role assignment, invitations, and lifecycle changes.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Resolve effective client portal provisioning mode by using the per-client mapping override when set, otherwise the MSP workspace default.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Entra Entitlement Configuration"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Keep portal access group selection explicit per client mapping; do not inherit a group globally across managed Microsoft tenants.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Entitlement Configuration",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Update configuration UI terminology to distinguish MSP workspace, Alga client, managed Microsoft tenant, and client mapping.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Thread workspace default provisioning mode and default role into Entra sync activity context so sync can compute effective per-client behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Settings"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Treat workflow-managed mode as the effective mode only after default/override resolution, so built-in mutations and workflow events remain mutually exclusive.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow Events and Actions",
+      "Security / Permissions"
+    ]
+  }
+]

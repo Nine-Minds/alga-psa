@@ -118,7 +118,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         custom_rate: null
       });
 
-    if (clientContractLineId) {
+    if (clientContractLineId && await context.db.schema.hasTable('client_contract_lines')) {
       await context.db('client_contract_lines')
         .where({
           tenant: context.tenantId,

@@ -68,11 +68,15 @@ function applyEmailSearchClause(
 
 function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, tenant: string, contactAlias = 'c'): Knex.QueryBuilder {
   const scopedDb = tenantDb(knex, tenant);
-  scopedDb.tenantJoin(query, 'contact_phone_numbers as cpn_default', `${contactAlias}.contact_name_id`, 'cpn_default.contact_name_id', {
+  scopedDb.tenantJoinFirstMatching(query, 'contact_phone_numbers', 'cpn_default', `${contactAlias}.contact_name_id`, 'contact_name_id', {
     type: 'left',
-    on(join) {
-      join.andOn('cpn_default.is_default', '=', knex.raw('true'));
-    },
+    rootTenantColumn: `${contactAlias}.tenant`,
+    where: (childQuery, alias) => childQuery.where(`${alias}.is_default`, true),
+    orderBy: [
+      { column: 'updated_at', order: 'desc' },
+      { column: 'created_at', order: 'desc' },
+      { column: 'contact_phone_number_id', order: 'desc' },
+    ],
   });
   scopedDb.tenantJoin(query, 'contact_phone_type_definitions as cptd_default', 'cpn_default.custom_phone_type_id', 'cptd_default.contact_phone_type_id', {
     type: 'left',
@@ -192,12 +196,18 @@ export class ContactService extends BaseService<IContact> {
       const scopedDb = tenantDb(trx, context.tenant);
       const contactQuery = scopedDb.table('contacts as c');
       scopedDb.tenantJoin(contactQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
-      scopedDb.tenantJoin(contactQuery, 'client_locations as cl', 'comp.client_id', 'cl.client_id', {
+      scopedDb.tenantJoinFirstMatching(contactQuery, 'client_locations', 'cl', 'comp.client_id', 'client_id', {
         type: 'left',
         rootTenantColumn: 'comp.tenant',
-        on(join) {
-          join.andOn('cl.is_default', '=', knex.raw('true'));
-        },
+        where: (childQuery, alias) => childQuery.where({
+          [`${alias}.is_default`]: true,
+          [`${alias}.is_active`]: true,
+        }),
+        orderBy: [
+          { column: 'updated_at', order: 'desc' },
+          { column: 'created_at', order: 'desc' },
+          { column: 'location_id', order: 'desc' },
+        ],
       });
       const baseContact = await applyDefaultPhoneJoins(contactQuery, trx, context.tenant)
         .where('c.contact_name_id', id)

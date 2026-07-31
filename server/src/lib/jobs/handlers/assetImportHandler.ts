@@ -5,7 +5,7 @@ import { registerDefaultImporters } from '@/lib/imports/registerDefaultImporters
 import { getAssetFieldDefinitions } from '@/lib/imports/assetFieldDefinitions';
 import { FieldMapper } from '@/lib/imports/FieldMapper';
 import { DuplicateDetector } from '@/lib/imports/DuplicateDetector';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { computeRecordHash } from '@/lib/imports/ExternalEntityMappingRepository';
 import { AssetImportJobContext } from '@/lib/imports/importJobContext';
 import { createAsset } from '@alga-psa/assets/actions';

@@ -32,6 +32,7 @@ import { RichTextViewer, TextEditor } from "@alga-psa/ui/editor";
 import { PartialBlock } from '@blocknote/core';
 import { useActivityCrossFeature } from "@alga-psa/ui/context";
 import { AdHocDetailPanel } from "./AdHocDetailPanel";
+import { OpportunityActivityPanel } from "./OpportunityActivityPanel";
 
 interface ActivityDetailViewerDrawerProps {
   activityType: ActivityType;
@@ -279,6 +280,17 @@ export function ActivityDetailViewerDrawer({
                 onClose={onClose}
                 onActionComplete={onActionComplete}
               />
+            );
+            break;
+          }
+
+          // Opportunity next-action activities reuse the SCHEDULE type (there is
+          // no dedicated OPPORTUNITY type) but are NOT schedule entries — their
+          // activityId is the opportunity_id. Looking them up as a schedule entry
+          // always fails ("Schedule entry not found"), so render the deal summary.
+          if (workItemType === 'opportunity') {
+            setContent(
+              <OpportunityActivityPanel opportunityId={activityId} onClose={onClose} />
             );
             break;
           }

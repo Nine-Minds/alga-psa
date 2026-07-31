@@ -39,6 +39,7 @@ export default defineConfig({
       // Match tsconfig-style subpath overrides before the generic `@/` mapping.
       { find: /^@\/lib\/db\/db$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/db.tsx')}` },
       { find: /^@\/lib\/db\/index$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/index.ts')}` },
+      { find: /^@\/lib\/tenant$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/tenant.ts')}` },
       { find: /^@\/lib\/iap\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/iap')}/$1` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
@@ -123,6 +124,8 @@ export default defineConfig({
       { find: /^@alga-psa\/analytics\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/analytics/src')}/$1` },
       { find: /^@alga-psa\/event-schemas$/, replacement: `${path.resolve(__dirname, '../../packages/event-schemas/src/index.ts')}` },
       { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/event-schemas/src')}/$1` },
+      { find: /^@alga-psa\/email$/, replacement: `${path.resolve(__dirname, '../../packages/email/src/index.ts')}` },
+      { find: /^@alga-psa\/email\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/email/src')}/$1` },
       { find: /^@alga-psa\/core\/server$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/server.ts')}` },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/lib')}/$1` },
       { find: /^@alga-psa\/core$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/index.ts')}` },

@@ -346,16 +346,363 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Cancelar",
+          "connect": "Conectar",
+          "connecting": "Conectando...",
+          "test": "Probar conexión",
+          "testing": "Probando…"
+        },
+        "description": "Introduzca la URL de su instancia CIPP y un token de API para permitir que Alga descubra y sincronice los datos de Entra.",
+        "encryptionNote": "La clave de API se cifra en reposo y no se vuelve a mostrar después de guardar.",
+        "errors": {
+          "missingFields": "Se requieren tanto la URL base como el token de API.",
+          "testFirst": "Pruebe la conexión antes de guardar.",
+          "unknown": "Se produjo un error desconocido."
+        },
+        "fields": {
+          "apiToken": "Token de API",
+          "apiTokenHelp": "En CIPP: Configuración → CIPP → Acceso a API. Copie la clave de API, no un secreto de cliente de Azure.",
+          "apiTokenPlaceholder": "Introduzca el token...",
+          "baseUrl": "URL base de CIPP",
+          "baseUrlHelp": "Este es el host de la function app CIPP-API (por ejemplo my-cipp-api.azurewebsites.net), no el frontend de CIPP donde inicia sesión.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "test": {
+          "passed": "CIPP respondió. {{count}} inquilinos visibles.",
+          "required": "Pruebe la conexión antes de guardar."
+        },
+        "title": "Conectar CIPP"
+      },
+      "console": {
+        "actions": {
+          "pause": "Pausar sincronización",
+          "resume": "Reanudar sincronización",
+          "syncNeedsClients": "Asigne al menos un cliente antes de sincronizar.",
+          "syncNeedsConnection": "Repare la conexión antes de sincronizar.",
+          "syncNow": "Sincronizar ahora",
+          "syncingNow": "Iniciando…"
+        },
+        "attention": {
+          "actions": {
+            "fixConnection": "Arreglar conexión",
+            "mapClients": "Asignar clientes",
+            "openSchedule": "Activarla",
+            "review": "Revisar",
+            "viewClients": "Ver clientes"
+          },
+          "connection": "La conexión no funciona. No se sincronizará nada hasta arreglarla.",
+          "connectionDetail": "Arregle primero la conexión: hasta entonces todos los clientes fallan igual.",
+          "empty": "Nada requiere atención.",
+          "failedClients": "{{count}} clientes no se sincronizaron correctamente.",
+          "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} cliente no se sincronizó correctamente.",
+          "neverSynced": "{{count}} clientes asignados nunca se han sincronizado.",
+          "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} cliente asociado nunca se ha sincronizado.",
+          "noClients": "No hay clientes asignados, por lo que no se puede sincronizar nada.",
+          "noClientsDetail": "Asocie un inquilino de Microsoft a un cliente para empezar a sincronizar contactos.",
+          "reviewQueue": "{{count}} identidades esperan una decisión.",
+          "reviewQueueAtLeast": "Al menos {{count}} identidades esperan una decisión.",
+          "reviewQueueDetail": "Dos o más contactos comparten un correo de Microsoft, así que no les pasa nada hasta que usted elija.",
+          "reviewQueueOne": "{{count}} identidad espera una decisión.",
+          "scheduleNotApplied": "La sincronización automática está activada, pero la programación nunca se aplicó.",
+          "scheduleNotAppliedDetail": "Hasta entonces no se ejecutará nada solo. Guarde la programación de nuevo para reintentarlo.",
+          "scheduleOff": "La sincronización automática está desactivada.",
+          "scheduleOffDetail": "Los contactos solo cambian cuando alguien ejecuta una sincronización a mano.",
+          "severity": {
+            "blocking": "Bloqueante",
+            "info": "Para información",
+            "warning": "Advertencia"
+          },
+          "title": "Requiere atención"
+        },
+        "clients": {
+          "columns": {
+            "lastSync": "Última sincronización",
+            "tenant": "Inquilino de Microsoft",
+            "users": "Usuarios"
+          },
+          "empty": "Ningún cliente coincide con esta búsqueda.",
+          "filters": {
+            "all": "Todos",
+            "failing": "Con fallos",
+            "never-synced": "Nunca sincronizados",
+            "synced": "Sincronizado"
+          },
+          "searchPlaceholder": "Buscar clientes o dominios",
+          "sync": "Sincronizar",
+          "unlink": "Desvincular",
+          "status": {
+            "failed": "Con fallos",
+            "neverSynced": "Nunca sincronizado",
+            "partlyFailed": "Parcialmente fallido",
+            "synced": "Sincronizado",
+            "syncing": "Sincronizando"
+          },
+          "emptyTitle": "Aún no hay clientes asociados",
+          "emptyDescription": "Asocie un inquilino de Microsoft a un cliente en la pestaña Conexión. Los clientes aparecen aquí una vez asociados.",
+          "emptyAction": "Abrir la pestaña Conexión",
+          "clearFilters": "Borrar filtros",
+          "unlinkConfirm": {
+            "body": "{{client}} deja de sincronizarse, ahora y según la programación. Sus contactos quedan tal cual y conservan su vínculo con Microsoft. El inquilino vuelve a la tabla de asociación en la pestaña Conexión.",
+            "title": "¿Dejar de sincronizar {{client}}?"
+          },
+          "unlinked": "{{client}} ya no se sincroniza.",
+          "unlinkFailed": "No se pudo desvincular ese cliente.",
+          "hidePreview": "Ocultar vista previa",
+          "previewLoading": "Leyendo el directorio de {{client}} desde Microsoft…",
+          "previewLoadingHint": "El tiempo depende de cuántos usuarios tenga el cliente.",
+          "previousCount": "Anterior",
+          "syncFinished": "Sincronización finalizada para {{client}}.",
+          "syncing": "Sincronizando…",
+          "syncTrackingFailed": "La sincronización se inició, pero esta página no pudo seguirla hasta el final. Actualice para ver el resultado más reciente."
+        },
+        "connection": {
+          "changeAction": "Cambiar conexión",
+          "exportRecord": "Exportar registro de conexión",
+          "mappingDescription": "Revise o cambie a qué cliente pertenece cada inquilino de Microsoft.",
+          "mappingTitle": "Asignación de inquilinos",
+          "methodLabel": "Método",
+          "permissionsTitle": "Permisos vigentes",
+          "rotate": "Rotar credencial",
+          "validate": "Probar conexión",
+          "validated": "La conexión funciona.",
+          "validating": "Probando…"
+        },
+        "errors": {
+          "loadFailed": "Esta pantalla no se pudo cargar, por lo que lo que muestra puede estar incompleto.",
+          "syncFailed": "No se pudo iniciar la sincronización.",
+          "syncNotStarted": "La sincronización no se inició: el procesador en segundo plano no está disponible. No ha cambiado nada; inténtelo de nuevo cuando vuelva.",
+          "validateFailed": "No se pudo validar la conexión."
+        },
+        "health": {
+          "checking": "Comprobando…",
+          "failingClients": "{{count}} clientes con fallos",
+          "failingClientsOne": "{{count}} cliente con fallos",
+          "healthy": "Correcto",
+          "unknown": "Estado desconocido"
+        },
+        "history": {
+          "allClients": "Todos los clientes",
+          "columns": {
+            "clients": "Clientes",
+            "failed": "Con fallos",
+            "scope": "Alcance",
+            "succeeded": "Correctos",
+            "trigger": "Desencadenante",
+            "when": "Cuándo"
+          },
+          "empty": "Ninguna ejecución coincide con estos filtros.",
+          "export": "Exportar CSV",
+          "includePreviews": "Incluir previsualizaciones",
+          "next": "Siguiente",
+          "onlyFailures": "Solo fallos",
+          "page": "Página {{page}} de {{pages}}",
+          "previewBadge": "previsualización",
+          "previous": "Anterior",
+          "triggers": {
+            "all": "Todas las ejecuciones",
+            "manual": "Manuales",
+            "scheduled": "Programadas"
+          }
+        },
+        "lastRun": {
+          "columns": {
+            "client": "Cliente",
+            "created": "Creados",
+            "inactivated": "Desactivados",
+            "linked": "Vinculados",
+            "result": "Resultado",
+            "updated": "Cambiado"
+          },
+          "empty": "Todavía no se ha ejecutado ninguna sincronización.",
+          "progress": "{{processed}} de {{total}} clientes completados hasta ahora.",
+          "results": {
+            "done": "Hecho",
+            "failed": "Con fallos",
+            "partlyFailed": "Parcialmente fallido",
+            "running": "Sincronizando",
+            "toReview": "{{count}} por revisar"
+          },
+          "showAll": "Ver los {{count}} clientes de esta ejecución",
+          "stats": {
+            "created": "Creados",
+            "createdSub": "contactos nuevos",
+            "failed": "Con fallos",
+            "failedSub": "clientes",
+            "inactivated": "Marcados inactivos",
+            "inactivatedSub": "cuentas deshabilitadas",
+            "linked": "Vinculados",
+            "linkedSub": "contactos existentes",
+            "updated": "Cambiados",
+            "updatedSub": "donde usted lo permitió"
+          },
+          "summaries": {
+            "completed": "Finalizó {{time}}.",
+            "failed": "Falló {{time}}.",
+            "partial": "Finalizó {{time}}, con errores.",
+            "running": "Comenzó {{time}} y sigue en curso.",
+            "unknown": "Última ejecución {{time}}."
+          },
+          "title": "Última sincronización",
+          "unavailable": "No se pudo leer el historial de ejecuciones."
+        },
+        "lead": "{{clients}} clientes asociados · conectado mediante {{method}}",
+        "overwrites": {
+          "change": "Cambiar reglas de campos",
+          "inactivateOff": "Las cuentas de Microsoft deshabilitadas se dejan como están.",
+          "inactivateOn": "Las cuentas de Microsoft deshabilitadas se marcan como inactivas.",
+          "none": "No se sobrescribe nada.",
+          "title": "Sobrescrituras permitidas"
+        },
+        "schedule": {
+          "cadence": {
+            "10080": "cada semana",
+            "1440": "cada día",
+            "240": "cada 4 horas",
+            "60": "cada hora",
+            "720": "cada 12 horas"
+          },
+          "changeAction": "Cambiar programación",
+          "description": "Cuando está activada, Alga sincroniza cada cliente asignado con esta cadencia. Al desactivarla se detienen las ejecuciones programadas; puede seguir sincronizando manualmente.",
+          "enablePrompt": "El piloto funcionó. Active la sincronización automática para mantener los contactos al día sin ejecutarla a mano.",
+          "intervalLabel": "Ejecutar cada",
+          "intervals": {
+            "10080": "Semana",
+            "1440": "Día",
+            "240": "4 horas",
+            "60": "Hora",
+            "720": "12 horas"
+          },
+          "pause": "Pausar",
+          "pauseHint": "En pausa. Guarde para aplicar.",
+          "paused": "Sincronización automática pausada.",
+          "resumed": "Sincronización automática reanudada.",
+          "save": "Guardar programación",
+          "saveFailed": "No se pudo guardar la programación.",
+          "saved": "Programación guardada.",
+          "savedPending": "Ajuste guardado. La programación se actualizará cuando el worker vuelva a reconciliar.",
+          "saving": "Guardando…",
+          "title": "Sincronización automática"
+        },
+        "sideRail": {
+          "runs": "Se ejecuta {{cadence}}",
+          "runsMinutes": "Se ejecuta cada {{minutes}} minutos",
+          "scheduleOff": "Desactivado"
+        },
+        "syncStarted": "Sincronización iniciada para todos los clientes asignados.",
+        "tabs": {
+          "clients": "Clientes",
+          "connection": "Conexión",
+          "fieldRules": "Reglas de campo",
+          "history": "Historial",
+          "overview": "Resumen",
+          "reviewQueue": "Cola de revisión",
+          "schedule": "Sincronización y programación"
+        }
+      },
+      "pilot": {
+        "actions": {
+          "createAndSync": "Crear clientes aprobados y sincronizar",
+          "preview": "Previsualizar cambios",
+          "previewing": "Previsualizando…",
+          "syncOne": "Sincronizar este cliente",
+          "syncOneNamed": "Sincronizar solo {{client}}",
+          "syncRemaining": "Sincronizar los {{count}} restantes",
+          "syncingOne": "Iniciando…",
+          "syncingRemaining": "Iniciando…"
+        },
+        "clientLabel": "Cliente piloto",
+        "empty": "Confirme primero una asignación de inquilino a cliente; todavía no hay nada que pilotar.",
+        "errors": {
+          "loadMappings": "No se pudieron cargar los clientes asignados.",
+          "preflightFailed": "No se pudo completar la previsualización.",
+          "syncFailed": "No se pudo iniciar la sincronización."
+        },
+        "gateNote": "Sincronice un cliente primero. El resto se desbloquea cuando termine su ejecución.",
+        "pendingCreate": "Los nuevos clientes aprobados ({{count}}) se crearán mediante esta sincronización explícita. Las sincronizaciones programadas no pueden crearlos.",
+        "previewPrompt": "Previsualice los cambios de este cliente antes de escribir nada.",
+        "remainingStarted": "Sincronización iniciada para los {{count}} clientes restantes.",
+        "started": "Sincronización iniciada para {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "Ningún contacto de este cliente coincide con el correo, así que se crearía uno.",
+            "label": "Contactos nuevos"
+          },
+          "link": {
+            "description": "Un contacto existente coincide por correo y se vincularía, y se actualizaría donde sus reglas de campo lo permitan.",
+            "label": "Vinculados a contactos existentes"
+          },
+          "markInactive": {
+            "description": "La cuenta de Microsoft está deshabilitada, así que el contacto vinculado se marcaría inactivo. No se elimina nada.",
+            "label": "Marcados como inactivos"
+          },
+          "needsDecision": {
+            "description": "Coincide más de un contacto, así que la sincronización no adivina. Estos van a la cola de revisión.",
+            "label": "Necesita una decisión"
+          },
+          "noChange": {
+            "description": "Ya vinculado, y nada de lo que sus reglas sincronizan ha cambiado.",
+            "label": "Sin cambios"
+          }
+        },
+        "checkAgain": "Comprobar de nuevo",
+        "checkedLabel": "Comprobado",
+        "hideNames": "Ocultar nombres",
+        "moreNames": "y {{count}} más",
+        "nothingWritten": "Todavía no se ha escrito nada",
+        "showNames": "Mostrar nombres",
+        "summary": "{{count}} identidades comprobadas a las {{time}}. No se cambió nada.",
+        "summaryNoTime": "{{count}} identidades comprobadas. No se cambió nada.",
+        "title": "Qué haría esta sincronización"
+      },
+      "reconciliation": {
+        "actions": {
+          "dismiss": "Descartar",
+          "refresh": "Actualizar",
+          "resolveExisting": "Resolver en existente",
+          "resolveNew": "Resolver en nuevo"
+        },
+        "candidate": {
+          "fallback": "candidato",
+          "label": "Contactos candidatos: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Contacto existente",
+          "placeholder": "Seleccionar contacto existente..."
+        },
+        "empty": "No hay coincidencias ambiguas en espera de revisión.",
+        "errors": {
+          "enterContactId": "Introduzca un ID de contacto para resolverlo en un contacto existente.",
+          "loadQueue": "No se pudo cargar la cola de conciliación.",
+          "resolveFailed": "No se pudo resolver el elemento de la cola."
+        },
+        "loading": "Cargando cola…",
+        "noEmailIdentity": "Sin identidad de correo",
+        "queuedAt": "{{identity}} · en cola {{time}}",
+        "scopedToMappedClient": "Las opciones de contacto existente están limitadas a este cliente asignado.",
+        "success": {
+          "dismissed": "{{identity}} descartado. No volverá en la próxima sincronización.",
+          "resolvedExisting": "Elemento de cola {{queueItemId}} resuelto en el contacto existente {{contactNameId}}.",
+          "resolvedNew": "Elemento de cola {{queueItemId}} resuelto creando el contacto {{contactNameId}}."
+        },
+        "title": "Cola de coincidencias ambiguas"
+      },
       "settings": {
         "actions": {
+          "cancel": "Cancelar",
           "disconnect": "Desconectar",
-          "reconnect": "Reconectar",
+          "hideReviewRemap": "Ocultar revisión / reasignación",
+          "reconnect": "Volver a conectar {{connectionType}}",
           "reconnecting": "Reconectando…",
           "refresh": "Actualizar",
           "resetFieldSync": "Restablecer",
           "reviewMappings": "Revisar asignaciones",
           "reviewRemap": "Revisar / Reasignar",
-          "hideReviewRemap": "Ocultar revisión / reasignación",
           "runDiscovery": "Ejecutar descubrimiento",
           "runDiscoveryAgain": "Volver a ejecutar descubrimiento",
           "runDiscoveryRunning": "Ejecutando descubrimiento…",
@@ -367,21 +714,30 @@
           "syncAllStarting": "Iniciando…"
         },
         "badges": {
-          "enterprise": "Enterprise",
+          "pro": "Pro",
           "reviewBeforeInitialSync": "Revisar antes de la sincronización inicial"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft inició su sesión, pero denegó el acceso a su lista de inquilinos gestionados. Un administrador global debe conceder el consentimiento de administrador para los permisos solicitados. No se guardó nada: inténtelo de nuevo cuando se conceda el consentimiento.",
+            "expired": "El intento de conexión caducó antes de completarse. No se guardó nada: inicie la conexión de nuevo.",
+            "generic": "Microsoft Entra no se conectó y no se guardó nada. Inténtelo de nuevo.",
+            "validationFailed": "Microsoft inició su sesión, pero no se pudo leer su lista de inquilinos gestionados, por lo que no se guardó nada. Revise los permisos de la conexión e inténtelo de nuevo."
+          },
+          "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": " (Conectando...)",
           "details": "Detalles de conexión",
           "directCredentialSourceLabel": "Origen de credenciales:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Microsoft Tenant:",
-          "cippServerLabel": "Servidor CIPP:",
+          "directTenantLabel": "Inquilino de Microsoft",
           "notAvailable": "No disponible",
           "notConfigured": "No configurado",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Opciones de conexión",
-          "promptDetails": "Conecte Entra para completar los detalles del proveedor."
+          "promptDetails": "Conecte Entra para completar los detalles del proveedor.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Directo"
+          }
         },
         "currentStep": {
           "connect": {
@@ -408,6 +764,12 @@
           "description": "La interfaz de integración con Entra está actualmente deshabilitada para este inquilino.",
           "title": "Integración con Microsoft Entra"
         },
+        "disconnectConfirm": {
+          "keeps": "Los contactos, las asignaciones de clientes y el historial de sincronización se conservan tal cual. No se elimina nada.",
+          "reconnect": "Volver a conectar más adelante restaura la sincronización sin rehacer las asignaciones.",
+          "stops": "Las sincronizaciones programadas y manuales se detienen y se elimina la credencial almacenada.",
+          "title": "¿Desconectar Microsoft Entra?"
+        },
         "discovery": {
           "completed": "Descubrimiento completado. Se descubrieron {{count}} inquilinos.",
           "completedOne": "Descubrimiento completado. Se descubrió {{count}} inquilino.",
@@ -426,11 +788,15 @@
           "options": {
             "displayName": {
               "description": "Permitir que el nombre visible de Entra sobrescriba el nombre completo en los contactos vinculados.",
-              "label": "Nombre visible"
+              "label": "Nombre para mostrar"
             },
             "email": {
               "description": "Permitir que el correo/UPN de Entra sobrescriba el correo del contacto en los contactos vinculados.",
               "label": "Correo electrónico"
+            },
+            "markInactiveWhenDisabled": {
+              "description": "Los contactos vinculados se marcan como inactivos, nunca se eliminan. Desactive esto para no tocar los contactos cuando se deshabilite su cuenta.",
+              "label": "Marcar contactos como inactivos cuando la cuenta de Microsoft esté deshabilitada"
             },
             "phone": {
               "description": "Permitir que los valores de teléfono de Entra sobrescriban el número de teléfono del contacto en los contactos vinculados.",
@@ -445,11 +811,22 @@
               "label": "UPN"
             }
           },
-          "title": "Controles de sincronización de campos"
+          "preview": "Previsualizar efecto",
+          "previewClientEmpty": "Ningún cliente asignado coincide con esa búsqueda.",
+          "previewClientLabel": "Cliente",
+          "previewClientSearch": "Buscar clientes asignados",
+          "previewDescription": "Aplica las reglas tal como están editadas a un cliente y no escribe nada, para ver el efecto antes de que afecte a todos.",
+          "previewTitle": "Pruebe las reglas antes de guardarlas",
+          "previewing": "Previsualizando…",
+          "save": "Guardar reglas",
+          "saveFailed": "No se pudieron guardar las reglas de campo.",
+          "saved": "Reglas de campo guardadas.",
+          "saving": "Guardando…",
+          "title": "Reglas de campos"
         },
         "guidedStep": {
-          "current": "actual",
           "complete": "completo",
+          "current": "actual",
           "locked": "bloqueado",
           "stepLabel": "Paso {{number}}",
           "thisIsCurrent": "Este es su paso actual de incorporación."
@@ -483,12 +860,9 @@
           "title": "Operaciones continuas"
         },
         "overview": {
-          "connectionLabel": "Conexión:",
           "connectionTypeLabel": "Tipo de conexión:",
           "label": "Resumen",
-          "mappedTenantsLabel": "Inquilinos asignados:",
-          "nextSyncIntervalEvery": "Cada {{minutes}} minutos",
-          "nextSyncIntervalLabel": "Próximo intervalo de sincronización:"
+          "mappedTenantsLabel": "Inquilinos asignados:"
         },
         "skipped": {
           "empty": "Actualmente no hay inquilinos marcados como omitidos.",
@@ -498,7 +872,14 @@
         },
         "status": {
           "connectionHealth": "Estado de la conexión",
-          "label": "Estado"
+          "label": "Estado",
+          "values": {
+            "connected": "Conectado",
+            "disconnected": "Desconectado",
+            "not_connected": "No conectado",
+            "unknown": "Desconocido",
+            "validation_failed": "Conectado, pero la validación falla"
+          }
         },
         "syncAll": {
           "failed": "No se pudo iniciar la sincronización completa de Entra.",
@@ -506,10 +887,14 @@
           "startedNoId": "Solicitud de inicio de sincronización aceptada."
         },
         "title": "Integración con Microsoft Entra",
+        "unmapConfirm": {
+          "body": "Esto elimina la decisión de asignación guardada para {{tenant}}, de modo que vuelva a aparecer en la tabla de asignaciones. Los contactos ya sincronizados no se modifican.",
+          "title": "¿Reasignar este inquilino?"
+        },
         "validation": {
           "label": "Validación y descubrimiento",
           "lastDiscoveryLabel": "Último descubrimiento:",
-          "lastValidatedLabel": "Última validación:",
+          "lastValidatedLabel": "Última comprobación",
           "neverFormatted": "Nunca",
           "noneValidationError": "Ninguno",
           "validationErrorLabel": "Error de validación:"
@@ -533,105 +918,112 @@
           }
         }
       },
-      "tenantMapping": {
-        "actions": {
-          "confirmSelected": "Confirmar asignaciones seleccionadas",
-          "confirming": "Confirmando…",
-          "import": "Importar como nuevo cliente",
-          "importing": "Importando…",
-          "preselectExact": "Preseleccionar coincidencias exactas",
-          "refresh": "Actualizar vista previa",
-          "skip": "Omitir",
-          "skipped": "Omitido"
+      "setup": {
+        "backToCurrentStep": "Volver a {{step}}",
+        "chooser": {
+          "cipp": {
+            "description": "Alga lee los inquilinos a través de la instancia de CIPP que ya ejecuta.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "El host de la function app CIPP-API, no el frontend de CIPP.",
+              "apiKey": "Una clave de API de CIPP con acceso a la lista de inquilinos.",
+              "instance": "Una instancia de CIPP en funcionamiento."
+            }
+          },
+          "cippReassurance": "Alga probará la conexión antes de guardarla.",
+          "continue": "Continuar",
+          "continueCipp": "Configurar la conexión CIPP",
+          "continueDirect": "Continuar con Directo",
+          "continuing": "Continuando…",
+          "direct": {
+            "description": "Alga habla con Microsoft Graph mediante su relación de partner.",
+            "label": "Partner directo de Microsoft",
+            "prerequisites": {
+              "appRegistration": "Credenciales OAuth de Microsoft configuradas para este inquilino.",
+              "globalAdmin": "Un administrador global que pueda aprobar los permisos.",
+              "partnerRelationship": "Una relación de partner (GDAP) con los inquilinos que gestiona."
+            }
+          },
+          "directReassurance": "Revisará la solicitud de permisos antes de conceder nada.",
+          "prerequisitesTitle": "Necesitará",
+          "recommendation": "La mayoría de los MSP deberían elegir Directo. Elija CIPP solo si ya tiene una instancia.",
+          "recommendedBadge": "Recomendado",
+          "title": "Elija cómo conectarse"
         },
-        "columns": {
-          "actions": "Acciones",
-          "confidence": "Confianza",
-          "entraTenant": "Inquilino de Entra",
-          "primaryDomain": "Dominio principal",
-          "selectClient": "Seleccionar cliente",
-          "status": "Estado",
-          "suggestedClient": "Cliente sugerido"
-        },
-        "empty": "No hay inquilinos descubiertos disponibles para la vista previa de asignación.",
-        "errors": {
-          "confirmFailed": "No se pudieron confirmar las asignaciones seleccionadas.",
-          "importFailed": "No se pudo importar el inquilino como cliente.",
-          "loadFailed": "No se pudo cargar la vista previa de asignación de inquilinos.",
-          "selectAtLeastOne": "Seleccione al menos un cliente para confirmar una asignación.",
-          "skipFailed": "No se pudo omitir esta asignación de inquilino."
-        },
-        "feedback": {
-          "confirmed": "Se confirmaron {{count}} asignaciones.",
-          "confirmedOne": "Se confirmó {{count}} asignación."
-        },
-        "noSuggestion": "Sin sugerencia",
-        "picker": {
-          "placeholder": "Seleccionar cliente...",
-          "unknownClient": "Cliente desconocido"
-        },
-        "reasons": {
-          "exactDomain": "Dominio exacto",
-          "fuzzyName": "Nombre aproximado",
-          "secondaryDomain": "Dominio secundario"
-        },
-        "states": {
-          "autoMatched": "Emparejado automáticamente",
-          "imported": "Importado",
-          "needsReview": "Requiere revisión",
-          "skipped": "Omitido",
-          "unmatched": "Sin coincidencia"
-        },
-        "title": "Vista previa de asignación de inquilinos"
-      },
-      "cippDialog": {
-        "actions": {
+        "connectedVia": "Conectado mediante {{method}}",
+        "description": "Traiga a Alga como contactos de cliente a las personas de los inquilinos de Microsoft que gestiona. No se escribe nada en sus contactos hasta que haya visto una vista previa y la haya aprobado.",
+        "directConsent": {
+          "adminNote": "Un administrador global debe aprobar estos permisos. Si no lo es, el inicio de sesión se completará pero la conexión será rechazada y no se guardará nada.",
           "cancel": "Cancelar",
-          "connect": "Conectar",
-          "connecting": "Conectando..."
+          "continue": "Continuar a Microsoft",
+          "intro": "Va a salir de Alga e iniciar sesión en Microsoft. Estos son los permisos que se solicitarán.",
+          "redirecting": "Redirigiendo…",
+          "servicePrincipalNote": "Después la conexión funciona como entidad de servicio, no con su inicio de sesión, por lo que sigue activa cuando usted no está.",
+          "title": "Antes de continuar a Microsoft"
         },
-        "description": "Introduzca la URL de su instancia CIPP y un token de API para permitir que Alga descubra y sincronice los datos de Entra.",
-        "errors": {
-          "missingFields": "Se requieren tanto la URL base como el token de API.",
-          "unknown": "Se produjo un error desconocido."
+        "disclosure": {
+          "capabilities": {
+            "noMailbox": "Nunca lee correo, archivos, calendarios ni mensajes de Teams",
+            "noWrite": "Nunca escribe nada de vuelta en Microsoft",
+            "readTenants": "Leer la lista de inquilinos de Microsoft que gestiona",
+            "readUsers": "Leer los usuarios de esos inquilinos: nombre, correo, teléfono, puesto"
+          },
+          "capabilitiesTitle": "Lo que Alga podrá hacer",
+          "contacts": {
+            "ambiguous": "¿Dos contactos comparten un correo? Se aparta para que usted decida: nunca se adivina.",
+            "creation": "Una identidad sin coincidencia se convierte en un contacto nuevo de ese cliente.",
+            "deletion": "Nunca se elimina nada.",
+            "matching": "Los contactos se emparejan por dirección de correo dentro del cliente al que asigne el inquilino.",
+            "overwrite": "Los nombres, correos, teléfonos y cargos existentes no se sobrescriben salvo que lo active."
+          },
+          "contactsTitle": "Qué ocurre con sus contactos",
+          "copied": "Copiado",
+          "copy": "Copiar para un registro de cambios",
+          "description": "Léalo antes de autorizar. Puede copiarlo en un registro de cambios.",
+          "inactiveNote": "Una cuenta de Microsoft deshabilitada marca el contacto como inactivo. Puede desactivarlo en el paso 4.",
+          "recordGeneratedAt": "Preparado {{time}}",
+          "recordHeading": "Integración de Microsoft Entra — registro de cambios",
+          "scopes": {
+            "directory": "Lee datos de directorio de su propio inquilino. Solo lo usa el modo de prueba de inquilino propio.",
+            "managedTenants": "Enumera los inquilinos de cliente que cubre su relación de partner y sus usuarios. Así se detectan clientes y contactos.",
+            "offlineAccess": "Mantiene la conexión activa tras cerrar el navegador, para que las sincronizaciones programadas puedan ejecutarse.",
+            "unknown": "Solicitado por la conexión.",
+            "userRead": "Confirma quién inicia sesión. Solo lee su propio perfil."
+          },
+          "scopesAllReadOnly": "Todos de solo lectura.",
+          "scopesTitle": "Permisos solicitados",
+          "title": "Qué leerá Alga y qué cambiará"
         },
-        "fields": {
-          "apiToken": "Token de API",
-          "apiTokenPlaceholder": "Introduzca el token...",
-          "baseUrl": "URL base de CIPP",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        "stepLabel": "Paso {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Elija cómo llega Alga a Microsoft y autorícelo.",
+            "short": "Conectar",
+            "title": "Conectar Microsoft Entra"
+          },
+          "discover": {
+            "description": "Pregunte a Microsoft qué inquilinos de cliente cubre su relación de partner.",
+            "short": "Buscar inquilinos",
+            "title": "Detectar inquilinos gestionados"
+          },
+          "map": {
+            "description": "Decida a qué cliente de Alga pertenece cada inquilino de Microsoft. No se sincroniza nada hasta confirmarlo.",
+            "short": "Asociar a clientes",
+            "title": "Asignar inquilinos a clientes"
+          },
+          "sync": {
+            "description": "Incorpore los contactos de los clientes asignados.",
+            "short": "Vista previa y piloto",
+            "title": "Ejecutar la primera sincronización"
+          }
         },
-        "title": "Conectar CIPP"
+        "title": "Configurar Microsoft Entra"
       },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Actualizar",
-          "resolveExisting": "Resolver en existente",
-          "resolveNew": "Resolver en nuevo"
-        },
-        "candidate": {
-          "fallback": "candidato",
-          "label": "Contactos candidatos: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Contacto existente",
-          "placeholder": "Seleccionar contacto existente..."
-        },
-        "errors": {
-          "enterContactId": "Introduzca un ID de contacto para resolverlo en un contacto existente.",
-          "loadQueue": "No se pudo cargar la cola de conciliación.",
-          "resolveFailed": "No se pudo resolver el elemento de la cola."
-        },
-        "empty": "No hay coincidencias ambiguas en espera de revisión.",
-        "loading": "Cargando cola…",
-        "noEmailIdentity": "Sin identidad de correo",
-        "queuedAt": "{{identity}} · en cola {{time}}",
-        "scopedToMappedClient": "Las opciones de contacto existente están limitadas a este cliente asignado.",
-        "success": {
-          "resolvedExisting": "Elemento de cola {{queueItemId}} resuelto en el contacto existente {{contactNameId}}.",
-          "resolvedNew": "Elemento de cola {{queueItemId}} resuelto creando el contacto {{contactNameId}}."
-        },
-        "title": "Cola de coincidencias ambiguas"
+      "summary": {
+        "backToIntegrations": "Volver a integraciones",
+        "description": "Detecte los inquilinos que gestiona, asígnelos a clientes y mantenga los contactos al día.",
+        "open": "Abrir",
+        "title": "Microsoft Entra"
       },
       "syncHistory": {
         "actions": {
@@ -642,6 +1034,7 @@
         "details": {
           "noResults": "No se registraron resultados de inquilino.",
           "stats": "creados {{created}}, vinculados {{linked}}, actualizados {{updated}}, ambiguos {{ambiguous}}, inactivados {{inactivated}}",
+          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
           "tenantHeader": "Inquilino {{tenant}} · {{status}}",
           "unknownTenant": "desconocido"
         },
@@ -659,6 +1052,76 @@
           "timing": "Iniciado {{started}} · Completado {{completed}}"
         },
         "title": "Ejecuciones de sincronización recientes"
+      },
+      "tenantMapping": {
+        "actions": {
+          "cancel": "Cancelar",
+          "confirmSelected": "Confirmar asignaciones seleccionadas",
+          "confirming": "Confirmando…",
+          "import": "Importar como nuevo cliente",
+          "importing": "Importando…",
+          "preselectExact": "Preseleccionar coincidencias exactas",
+          "refresh": "Actualizar vista previa",
+          "skip": "Omitir",
+          "skipped": "Omitido"
+        },
+        "columns": {
+          "actions": "Acciones",
+          "confidence": "Confianza",
+          "defaultRole": "Default Role",
+          "entraTenant": "Inquilino de Entra",
+          "portalAccessGroup": "Portal Access Group",
+          "primaryDomain": "Dominio principal",
+          "provisioningModeOverride": "Provisioning Mode Override",
+          "selectClient": "Seleccionar cliente",
+          "status": "Estado",
+          "suggestedClient": "Cliente sugerido"
+        },
+        "empty": "No hay inquilinos descubiertos disponibles para la vista previa de asignación.",
+        "errors": {
+          "confirmFailed": "No se pudieron confirmar las asignaciones seleccionadas.",
+          "importFailed": "No se pudo importar el inquilino como cliente.",
+          "loadFailed": "No se pudo cargar la vista previa de asignación de inquilinos.",
+          "selectAtLeastOne": "Seleccione al menos un cliente para confirmar una asignación.",
+          "skipFailed": "No se pudo omitir esta asignación de inquilino."
+        },
+        "feedback": {
+          "confirmed": "Se confirmaron {{count}} asignaciones.",
+          "confirmedOne": "Se confirmó {{count}} asignación."
+        },
+        "importConfirm": {
+          "body": "Se creará un nuevo cliente a partir del inquilino de Entra {{tenant}} y el inquilino se asignará a él.",
+          "similarWarning": "Estos clientes existentes tienen nombres similares: asigne a uno de ellos si se trata de la misma organización:",
+          "title": "¿Importar como nuevo cliente?"
+        },
+        "noSuggestion": "Sin sugerencia",
+        "picker": {
+          "placeholder": "Seleccionar cliente...",
+          "unknownClient": "Cliente desconocido"
+        },
+        "portal": {
+          "broadGroupWarning": "Warning: every enabled user in this Entra group will be eligible for client portal access.",
+          "defaultRolePlaceholder": "Inherit workspace role",
+          "groupLoading": "Loading groups…",
+          "modeBuiltIn": "Built-in",
+          "modeDisabled": "Disabled",
+          "modeInherit": "Inherit MSP workspace default",
+          "modeWorkflowManaged": "Workflow-managed",
+          "noGroupSelected": "No group selected"
+        },
+        "reasons": {
+          "exactDomain": "Dominio exacto",
+          "fuzzyName": "Nombre aproximado",
+          "secondaryDomain": "Dominio secundario"
+        },
+        "states": {
+          "autoMatched": "Emparejado automáticamente",
+          "imported": "Importado",
+          "needsReview": "Requiere revisión",
+          "skipped": "Omitido",
+          "unmatched": "Sin coincidencia"
+        },
+        "title": "Vista previa de asignación de inquilinos"
       }
     },
     "google": {

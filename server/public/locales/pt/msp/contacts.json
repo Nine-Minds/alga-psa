@@ -366,6 +366,9 @@
       "title": "Sem acesso ao portal",
       "description": "Este contato ainda não tem acesso ao portal do cliente"
     },
+    "noClient": {
+      "description": "Atribua este contato a um cliente para gerenciar o acesso ao portal."
+    },
     "portalAdmin": {
       "label": "Administrador do Portal",
       "helper": "Quando ativado, o usuário será criado com a função de administrador do cliente. Quando desativados, eles receberão a função de usuário cliente."

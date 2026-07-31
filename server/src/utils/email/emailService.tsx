@@ -1,8 +1,10 @@
 import nodemailer from 'nodemailer';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 interface EmailAttachment {
   filename: string;
@@ -120,6 +122,11 @@ export class EmailService {
     }
   ) {
     const hasPaymentLink = !!options?.paymentLink;
+    // Tenant default locale for the email; last-resort en-US when the caller
+    // did not thread a tenant id.
+    const emailLocale = invoice.tenantId
+      ? await getTenantDefaultLocale(invoice.tenantId, 'client')
+      : 'en-US';
     const template = await this.getInvoiceEmailTemplate(hasPaymentLink);
     const attachments = [{
       filename: `invoice_${invoice.invoice_number}.pdf`,
@@ -132,7 +139,7 @@ export class EmailService {
       subject: template.subject
         .replace('{{invoice_number}}', invoice.invoice_number)
         .replace('{{company_name}}', options?.companyName || 'Your Company'),
-      html: this.renderInvoiceTemplate(template.body, invoice, options),
+      html: this.renderInvoiceTemplate(template.body, invoice, emailLocale, options),
       attachments
     });
   }
@@ -168,6 +175,7 @@ export class EmailService {
   private renderInvoiceTemplate(
     template: string,
     invoice: InvoiceViewModel,
+    emailLocale: string,
     options?: {
       paymentLink?: string;
       companyName?: string;
@@ -176,7 +184,14 @@ export class EmailService {
     let result = template
       .replace(/{{client_name}}/g, invoice.client.name)
       .replace(/{{invoice_number}}/g, invoice.invoice_number)
-      .replace(/{{total_amount}}/g, `$${((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100).toFixed(2)}`)
+      .replace(
+        /{{total_amount}}/g,
+        formatCurrencyFromMinorUnits(
+          invoice.total_amount - (invoice.credit_applied ?? 0),
+          emailLocale,
+          invoice.currencyCode || 'USD',
+        ),
+      )
       .replace(/{{company_name}}/g, options?.companyName || 'Your Company');
 
     if (options?.paymentLink) {

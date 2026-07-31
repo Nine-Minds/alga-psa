@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IOpportunityListItem } from '@alga-psa/types';
@@ -21,22 +22,25 @@ export function BoardCard({
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent, item: IOpportunityListItem) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const value = opportunityValueParts(item.mrr_cents, item.nrr_cents, item.hardware_cents, item.currency_code);
 
   return (
-    <button
-      type="button"
+    <div
       id={`opportunity-board-card-${item.opportunity_id}`}
-      className="mb-2 w-full rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-3 text-left shadow-sm transition-colors hover:border-[rgb(var(--color-primary-300))]"
-      onClick={() => onOpen(item.opportunity_id)}
+      className="mb-2 w-full rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3 text-left shadow-sm transition-colors hover:border-[rgb(var(--color-primary-300))]"
       draggable={draggable}
       onDragStart={onDragStart ? (e) => onDragStart(e, item) : undefined}
     >
       <div className="mb-1 flex items-start justify-between gap-2">
-        <span className="text-[13px] font-semibold leading-snug text-[rgb(var(--color-text-900))]">
+        <button
+          id={`opportunity-board-open-${item.opportunity_id}`}
+          type="button"
+          className="text-[13px] font-semibold leading-snug text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-primary-600))] hover:underline"
+          onClick={() => onOpen(item.opportunity_id)}
+        >
           {item.title}
-        </span>
+        </button>
         {item.is_stalled ? (
           <Badge variant="warning" size="sm">
             {t('opportunities.board.daysQuiet', '{{count}}d quiet', { count: item.days_since_activity })}
@@ -44,7 +48,9 @@ export function BoardCard({
         ) : null}
       </div>
       <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-500))]">
-        {item.client_name}
+        <Link href={`/msp/clients/${item.client_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
+          {item.client_name}
+        </Link>
         {item.client_lifecycle_status === 'prospect' ? (
           <Badge variant="default-muted" size="sm">{t('opportunities.prospect', 'Prospect')}</Badge>
         ) : null}
@@ -62,6 +68,6 @@ export function BoardCard({
           </span>
         ) : null}
       </div>
-    </button>
+    </div>
   );
 }

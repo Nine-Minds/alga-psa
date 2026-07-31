@@ -40,6 +40,18 @@ db:
     key: DB_PASSWORD_SUPERUSER
 
 applicationUrl: http://alga-core.msp.svc.cluster.local:3000
+publicBaseUrl: https://alga.local
+
+extraEnv:
+  - name: REDIS_HOST
+    value: redis.msp.svc.cluster.local
+  - name: REDIS_PORT
+    value: "6379"
+  - name: REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: redis-credentials
+        key: REDIS_PASSWORD
 
 autoscaling:
   enabled: true

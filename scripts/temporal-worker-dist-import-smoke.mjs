@@ -51,6 +51,22 @@ async function importModule(absPath) {
   await import(pathToFileURL(absPath).href);
 }
 
+async function assertMarketingRuntimeExports() {
+  const posts = await import('@alga-psa/marketing/lib/posts');
+  const sequences = await import('@alga-psa/marketing/lib/sequences');
+  const requiredExports = [
+    ['flipDuePostsInternal', posts.flipDuePostsInternal],
+    ['expireStaleTargetsInternal', posts.expireStaleTargetsInternal],
+    ['sendDueSequenceStepsInternal', sequences.sendDueSequenceStepsInternal],
+  ];
+
+  for (const [name, value] of requiredExports) {
+    if (typeof value !== 'function') {
+      throw new Error(`@alga-psa/marketing runtime export ${name} is missing`);
+    }
+  }
+}
+
 async function main() {
   // The Temporal worker statically references the job handlers in @alga-psa/jobs,
   // which fan out across the vertical domain packages (billing/tickets/integrations/
@@ -126,6 +142,7 @@ async function main() {
   await importModule(workerEntry);
   await importModule(activitiesEntry);
   await importModule(workflowsEntry);
+  await assertMarketingRuntimeExports();
   console.log('Temporal worker dist import smoke check passed.');
 }
 

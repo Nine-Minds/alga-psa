@@ -43,6 +43,10 @@ export interface BillingSettings {
   enableCreditExpiration?: boolean;
   creditExpirationDays?: number;
   creditExpirationNotificationDays?: number[];
+  /** The customer holds a credit balance in the external accounting system (e.g. QBO). */
+  hasExternalCredit?: boolean;
+  /** Free-text shown alongside the flag (e.g. "Paid through Dec 2026 by check"). */
+  externalCreditNote?: string | null;
   defaultRenewalMode?: RenewalMode;
   defaultNoticePeriodDays?: number;
   renewalDueDateActionPolicy?: RenewalDueDateActionPolicy;
@@ -127,25 +131,31 @@ export const getDefaultBillingSettings = withAuth(async (
 export const updateDefaultBillingSettings = withAuth(async (
   user,
   { tenant },
-  data: BillingSettings
+  data: Partial<BillingSettings>
 ): Promise<{ success: boolean } | BillingSettingsActionError> => {
   const denied = await requireBillingSettingsUpdatePermission(user);
   if (denied) return denied;
 
   const { knex } = await createTenantKnex();
+  // The billing settings page's sections save independently against this one
+  // row; only keys present in `data` are written, so one section's save can't
+  // clobber another section's just-saved values with its stale snapshot.
+  const has = (key: keyof BillingSettings) => Object.prototype.hasOwnProperty.call(data, key);
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       const existingSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
         .first();
 
-    await assertBoardScopedTicketStatusSelection({
-      trx,
-      tenant,
-      boardId: data.renewalTicketBoardId ?? null,
-      statusId: data.renewalTicketStatusId ?? null,
-      statusLabel: 'Renewal ticket status',
-    });
+    if (has('renewalTicketBoardId') || has('renewalTicketStatusId')) {
+      await assertBoardScopedTicketStatusSelection({
+        trx,
+        tenant,
+        boardId: (has('renewalTicketBoardId') ? data.renewalTicketBoardId : existingSettings?.renewal_ticket_board_id) ?? null,
+        statusId: (has('renewalTicketStatusId') ? data.renewalTicketStatusId : existingSettings?.renewal_ticket_status_id) ?? null,
+        statusLabel: 'Renewal ticket status',
+      });
+    }
 
     const renewalMode =
       data.defaultRenewalMode === 'none' ||
@@ -165,37 +175,44 @@ export const updateDefaultBillingSettings = withAuth(async (
         ? data.renewalDueDateActionPolicy
         : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY;
 
-    const columnValues = {
-      default_currency_code: data.defaultCurrencyCode || 'USD',
-      default_renewal_mode: renewalMode,
-      default_notice_period_days: noticePeriodDays,
-      renewal_due_date_action_policy: renewalDueDateActionPolicy,
-      renewal_ticket_board_id: data.renewalTicketBoardId ?? null,
-      renewal_ticket_status_id: data.renewalTicketStatusId ?? null,
-      renewal_ticket_priority: data.renewalTicketPriority ?? null,
-      renewal_ticket_assignee_id: data.renewalTicketAssigneeId ?? null,
-    };
+    const columnValues: Record<string, unknown> = {};
+    if (has('defaultCurrencyCode')) columnValues.default_currency_code = data.defaultCurrencyCode || 'USD';
+    if (has('defaultRenewalMode')) columnValues.default_renewal_mode = renewalMode;
+    if (has('defaultNoticePeriodDays')) columnValues.default_notice_period_days = noticePeriodDays;
+    if (has('renewalDueDateActionPolicy')) columnValues.renewal_due_date_action_policy = renewalDueDateActionPolicy;
+    if (has('renewalTicketBoardId')) columnValues.renewal_ticket_board_id = data.renewalTicketBoardId ?? null;
+    if (has('renewalTicketStatusId')) columnValues.renewal_ticket_status_id = data.renewalTicketStatusId ?? null;
+    if (has('renewalTicketPriority')) columnValues.renewal_ticket_priority = data.renewalTicketPriority ?? null;
+    if (has('renewalTicketAssigneeId')) columnValues.renewal_ticket_assignee_id = data.renewalTicketAssigneeId ?? null;
+    if (has('zeroDollarInvoiceHandling')) columnValues.zero_dollar_invoice_handling = data.zeroDollarInvoiceHandling;
+    if (has('suppressZeroDollarInvoices')) columnValues.suppress_zero_dollar_invoices = data.suppressZeroDollarInvoices;
+    if (has('enableCreditExpiration')) columnValues.enable_credit_expiration = data.enableCreditExpiration;
+    if (has('creditExpirationDays')) columnValues.credit_expiration_days = data.creditExpirationDays;
+    if (has('creditExpirationNotificationDays')) columnValues.credit_expiration_notification_days = data.creditExpirationNotificationDays;
 
     if (existingSettings) {
+      if (Object.keys(columnValues).length === 0) return;
       return await tenantScopedTable(trx, tenant, 'default_billing_settings')
         .update({
-          zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
-          suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,
-          enable_credit_expiration: data.enableCreditExpiration,
-          credit_expiration_days: data.creditExpirationDays,
-          credit_expiration_notification_days: data.creditExpirationNotificationDays,
           ...columnValues,
           updated_at: trx.fn.now()
         });
     } else {
       return await tenantScopedTable(trx, tenant, 'default_billing_settings').insert({
         tenant,
-        zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
-        suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,
+        zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling ?? 'normal',
+        suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices ?? false,
         enable_credit_expiration: data.enableCreditExpiration ?? true,
         credit_expiration_days: data.creditExpirationDays ?? 365,
         credit_expiration_notification_days: data.creditExpirationNotificationDays ?? [30, 7, 1],
-        ...columnValues,
+        default_currency_code: data.defaultCurrencyCode || 'USD',
+        default_renewal_mode: renewalMode,
+        default_notice_period_days: noticePeriodDays,
+        renewal_due_date_action_policy: renewalDueDateActionPolicy,
+        renewal_ticket_board_id: data.renewalTicketBoardId ?? null,
+        renewal_ticket_status_id: data.renewalTicketStatusId ?? null,
+        renewal_ticket_priority: data.renewalTicketPriority ?? null,
+        renewal_ticket_assignee_id: data.renewalTicketAssigneeId ?? null,
       });
     }
     });
@@ -237,6 +254,8 @@ export const getClientContractLineSettings = withAuth(async (
     enableCreditExpiration: settings.enable_credit_expiration,
     creditExpirationDays: settings.credit_expiration_days,
     creditExpirationNotificationDays: settings.credit_expiration_notification_days,
+    hasExternalCredit: settings.has_external_credit,
+    externalCreditNote: settings.external_credit_note,
     defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
     recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
     recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
@@ -266,6 +285,8 @@ export const updateClientContractLineSettings = withAuth(async (
             enableCreditExpiration: data.enableCreditExpiration,
             creditExpirationDays: data.creditExpirationDays,
             creditExpirationNotificationDays: data.creditExpirationNotificationDays,
+            hasExternalCredit: data.hasExternalCredit,
+            externalCreditNote: data.externalCreditNote,
           }
         : null
     );

@@ -66,8 +66,10 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
+import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
@@ -135,6 +137,8 @@ export default function TaskForm({
   printTitle,
 }: TaskFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  const billingIntegration = useProjectBillingIntegration();
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
@@ -178,7 +182,7 @@ export default function TaskForm({
       ? Number(task?.estimated_hours) / 60
       : prefillData?.estimated_hours ?? 0
   );
-  const [actualHours, setActualHours] = useState<number>(Number(task?.actual_hours) / 60 || 0);
+  const actualHours = Number(task?.actual_hours) / 60 || 0;
   const [dueDate, setDueDate] = useState<Date | undefined>(
     task?.due_date
       ? new Date(task.due_date)
@@ -668,7 +672,6 @@ export default function TaskForm({
           assigned_to: assignedUser || null,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
-          actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null,
           checklist_items: checklistItems,
           phase_id: selectedPhaseId,
@@ -895,7 +898,6 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
-          actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null,
           priority_id: selectedPriorityId,
           checklist_items: checklistItems,
@@ -934,7 +936,6 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
-          actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null, // Use selected due date or null
           priority_id: selectedPriorityId,
           phase_id: phase.phase_id,
@@ -1042,7 +1043,6 @@ export default function TaskForm({
       if (assignedTeamId !== null) return true;
       if (checklistItems.length > 0) return true;
       if (estimatedHours > 0) return true; // Only if actually entered a value
-      if (actualHours > 0) return true; // Only if actually entered a value
       if (dueDate !== undefined) return true;
       if (tempTaskResources.length > 0) return true;
       if (pendingTicketLinks.length > 0) return true;
@@ -1080,7 +1080,6 @@ export default function TaskForm({
     if (selectedStatusId !== task.project_status_mapping_id) return true;
     // Use || 0 to handle null/undefined consistently with initial state
     if (estimatedHours !== (Number(task.estimated_hours) / 60 || 0)) return true;
-    if (actualHours !== (Number(task.actual_hours) / 60 || 0)) return true;
     if (normalizeNullable(assignedUser) !== normalizeNullable(task.assigned_to)) return true;
     if (normalizeNullable(assignedTeamId) !== normalizeNullable(task.assigned_team_id)) return true;
     if (normalizeNullable(selectedPriorityId) !== normalizeNullable(task.priority_id)) return true;
@@ -1657,6 +1656,9 @@ export default function TaskForm({
           {printableHeader && (
             <div className="app-print-section">{printableHeader}</div>
           )}
+          {projectBillingUiEnabled && billingIntegration && (
+            <billingIntegration.PaymentWarningBanner projectId={phase.project_id} />
+          )}
           {/* Full width Title with Status dropdown */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -1852,6 +1854,7 @@ export default function TaskForm({
                 {taskFormT('estimatedHoursLabel', 'Estimated Hours')}
               </label>
               <Input
+                id="task-estimated-hours-input"
                 type="number"
                 min="0"
                 step="0.5"
@@ -1865,13 +1868,18 @@ export default function TaskForm({
                 {taskFormT('actualHoursLabel', 'Actual Hours')}
               </label>
               <Input
+                id="task-actual-hours-input"
                 type="number"
                 min="0"
                 step="0.5"
                 value={actualHours}
-                onChange={(e) => setActualHours(Number(e.target.value))}
+                readOnly
+                aria-readonly="true"
                 className="w-full"
               />
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+                {taskFormT('actualHoursDerivedHelp', 'Calculated from linked time entries')}
+              </p>
             </div>
             {/* Row 5: Assigned To and Additional Agents in one row */}
             <div className="col-span-2">

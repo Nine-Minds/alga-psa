@@ -39,7 +39,7 @@ export function LoseOpportunityDialog({
   onClose: () => void;
   onSubmit: (input: { loss_reason: OpportunityLossReason; loss_notes?: string; lost_to?: string }) => Promise<void> | void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [reason, setReason] = useState<OpportunityLossReason | ''>('');
   const [notes, setNotes] = useState('');
   const [lostTo, setLostTo] = useState('');

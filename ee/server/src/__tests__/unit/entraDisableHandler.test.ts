@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { withTenantScope } from '../utils/tenantScopedBuilderDouble';
 
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn();
@@ -20,26 +21,25 @@ function buildDbMocks() {
     return Object.assign(
       vi.fn((table: string) => {
         if (table === 'entra_contact_links') {
-          return {
+          return withTenantScope({
             where: vi.fn(() => {
               linkTableCalls += 1;
               return linkTableCalls === 1
                 ? { select: linksSelectMock, del: linksDeleteMock, delete: linksDeleteMock }
                 : { update: linkUpdateMock, del: linksDeleteMock, delete: linksDeleteMock };
             }),
-          };
+          });
         }
 
         if (table === 'contacts') {
-          return {
-            where: vi.fn(() => ({
-              whereIn: vi.fn(() => ({
-                update: contactsUpdateMock,
-                del: contactsDeleteMock,
-                delete: contactsDeleteMock,
-              })),
+          // tenantDb already scoped the builder, so the handler calls whereIn on it directly.
+          return withTenantScope({
+            whereIn: vi.fn(() => ({
+              update: contactsUpdateMock,
+              del: contactsDeleteMock,
+              delete: contactsDeleteMock,
             })),
-          };
+          });
         }
 
         throw new Error(`Unexpected table ${table}`);

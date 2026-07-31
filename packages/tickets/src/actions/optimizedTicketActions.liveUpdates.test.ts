@@ -64,6 +64,10 @@ vi.mock('@alga-psa/validation', () => ({
   validateData: (_schema: unknown, value: unknown) => value,
 }));
 
+vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
+  convertBlockNoteToMarkdown: vi.fn(async () => 'Resolution text'),
+}));
+
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
@@ -117,6 +121,10 @@ vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
 
 vi.mock('../lib/validateTicketClosure', () => ({
   enforceTicketCloseRules: vi.fn(async () => undefined),
+}));
+
+vi.mock('./ticketBundleUtils', () => ({
+  maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined),
 }));
 
 import {
@@ -180,6 +188,13 @@ function buildTrx(params: {
   const bundleSettings = params.bundleSettings;
 
   const ticketsTable = {
+    select() {
+      return {
+        where: vi.fn(() => ({
+          first: vi.fn(async () => ({ response_state: currentTicket.response_state ?? null })),
+        })),
+      };
+    },
     where(whereArgs: Record<string, unknown>) {
       if ('ticket_id' in whereArgs) {
         return {
@@ -232,7 +247,7 @@ function buildTrx(params: {
     })),
   };
 
-  return ((table: string) => {
+  const trx = ((table: string) => {
     if (table === 'tickets') {
       return ticketsTable;
     }
@@ -263,8 +278,26 @@ function buildTrx(params: {
       };
     }
 
+    if (table === 'comment_threads') {
+      return {
+        insert: vi.fn(async () => undefined),
+      };
+    }
+
+    if (table === 'comments') {
+      return {
+        insert: vi.fn((row: Record<string, unknown>) => ({
+          returning: vi.fn(async () => [{ ...row, comment_id: 'comment-1' }]),
+        })),
+      };
+    }
+
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
+  trx.raw = vi.fn(async () => ({
+    rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
+  }));
+  return trx;
 }
 
 describe('updateTicketWithCache live updates', () => {
@@ -612,6 +645,49 @@ describe('updateTicketWithCache live updates', () => {
         }),
         idempotencyKey: 'sla:ticket-1:resolution:met',
       })
+    );
+  });
+
+  it.each([
+    {
+      label: 'contact notifications',
+      options: { suppressContactNotifications: true },
+      expectedInternalSuppression: false,
+    },
+    {
+      label: 'contact and internal notifications',
+      options: {
+        suppressContactNotifications: true,
+        suppressInternalNotifications: true,
+      },
+      expectedInternalSuppression: true,
+    },
+  ])('publishes selected suppression flags for a closing resolution comment ($label)', async ({
+    options,
+    expectedInternalSuppression,
+  }) => {
+    const { addTicketCommentWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      addTicketCommentWithCache(
+        'ticket-1',
+        '[{"type":"paragraph","content":"Resolution text"}]',
+        false,
+        true,
+        true,
+        options,
+      ),
+    ).resolves.toEqual(expect.objectContaining({ comment_id: 'comment-1' }));
+
+    expect(publishEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_COMMENT_ADDED',
+        payload: expect.objectContaining({
+          ticketId: 'ticket-1',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: expectedInternalSuppression,
+        }),
+      }),
     );
   });
 

@@ -135,6 +135,14 @@ vi.mock('@alga-psa/ui', () => ({
   useDrawer: () => ({ openDrawer: vi.fn(), closeDrawer: vi.fn() })
 }));
 
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: () => ({
+    enabled: false,
+    loading: false,
+    error: null,
+  }),
+}));
+
 vi.mock('../TaskTicketLinks', () => ({
   __esModule: true,
   default: (props: any) => {

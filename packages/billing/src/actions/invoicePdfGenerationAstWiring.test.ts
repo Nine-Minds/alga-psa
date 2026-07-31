@@ -1,18 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repoPath } from '../test-utils/repoPaths';
 
 const readPdfServiceSource = (): string => {
-  const servicePath = path.resolve(
-    process.cwd(),
-    'packages/billing/src/services/pdfGenerationService.ts'
-  );
+  const servicePath = repoPath('packages/billing/src/services/pdfGenerationService.ts');
   return fs.readFileSync(servicePath, 'utf8');
 };
 
 const readInvoiceTemplateActionsSource = (): string => {
-  const actionsPath = path.resolve(
-    process.cwd(),
+  const actionsPath = repoPath(
     'packages/billing/src/actions/invoiceTemplates.ts'
   );
   return fs.readFileSync(actionsPath, 'utf8');
@@ -37,7 +34,7 @@ describe('invoice PDF generation AST wiring', () => {
 
   it('keeps preview and PDF server rendering paths on the same evaluator/renderer modules', () => {
     const previewSource = fs.readFileSync(
-      path.resolve(process.cwd(), 'packages/billing/src/actions/invoiceTemplatePreview.ts'),
+      repoPath('packages/billing/src/actions/invoiceTemplatePreview.ts'),
       'utf8'
     );
     const pdfSource = readPdfServiceSource();

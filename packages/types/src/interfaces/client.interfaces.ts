@@ -51,7 +51,8 @@ export interface IClient extends TenantEntity, ITaggable {
   contract_line_id?: string | null;
   is_default?: boolean | null;
 
-  credit_balance: number;
+  // Derived from credit_tracking at read time; not a stored column.
+  credit_balance?: number;
   tax_id_number?: string;
   notes_document_id?: string | null;
   payment_terms?: string;

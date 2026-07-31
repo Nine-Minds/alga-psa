@@ -3,10 +3,20 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { generateICS, type ICSEventData } from '@alga-psa/scheduling';
+import {
+  getAppointmentIcsSigningSecret,
+  verifyAppointmentIcsToken,
+} from '@alga-psa/scheduling/lib/appointmentIcsSigning';
 
 /**
  * GET /api/calendar/appointment/[id].ics
  * Generate and download an ICS file for an approved appointment
+ *
+ * Public by design (emailed to contacts who may have no portal session), so
+ * access is authorized by an HMAC token minted into the link at send time —
+ * see generateICSLink in @alga-psa/scheduling. The cross-tenant entry lookup
+ * below only runs after the token verifies, so entry IDs cannot be enumerated
+ * for other tenants' appointment details.
  */
 export async function GET(
   request: NextRequest,
@@ -19,6 +29,22 @@ export async function GET(
       return NextResponse.json(
         { error: 'Schedule entry ID is required' },
         { status: 400 }
+      );
+    }
+
+    // Fail closed on token problems — a missing secret or a missing/invalid
+    // token both get the same generic refusal, before any tenant data is read.
+    const token = request.nextUrl.searchParams.get('token');
+    const signingSecret = await getAppointmentIcsSigningSecret();
+    const verified = Boolean(signingSecret) && Boolean(token) && await verifyAppointmentIcsToken(
+      signingSecret!,
+      scheduleEntryId,
+      token!,
+    );
+    if (!verified) {
+      return NextResponse.json(
+        { error: 'Invalid or missing token' },
+        { status: 401 }
       );
     }
 

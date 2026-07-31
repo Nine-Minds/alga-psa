@@ -20,9 +20,10 @@ type TenantBranding = {
 
 interface ClientPortalSignInProps {
   branding?: TenantBranding | null;
+  portalDomain?: string;
 }
 
-export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps) {
+export default function ClientPortalSignIn({ branding, portalDomain }: ClientPortalSignInProps) {
   const { t } = useTranslation('client-portal');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
@@ -36,6 +37,10 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
     const slug = searchParams?.get('tenant') || '';
     return isValidTenantSlug(slug) ? slug.toLowerCase() : undefined;
   })();
+  // The page can hand us the tenant's vanity host directly; the OAuth handoff
+  // instead round-trips it through the query string. Prefer the server-supplied
+  // prop, and fall back to the parameter only when there is no prop.
+  const resolvedPortalDomain = portalDomain || searchParams?.get('portalDomain') || undefined;
 
   // Handle error and success messages from URL parameters
   useEffect(() => {
@@ -285,6 +290,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
                 onError={handleError}
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
                 tenantSlug={tenantSlug}
+                portalDomain={resolvedPortalDomain}
               />
               <div className="mt-6 pt-6 border-t text-center">
                 <a href="/auth/msp/signin" className="text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">

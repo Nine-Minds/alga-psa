@@ -11,7 +11,6 @@ import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuote
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
 import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
-import { creditReconciliationHandler, CreditReconciliationJobData } from '@alga-psa/jobs/handlers/creditReconciliationHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
@@ -20,6 +19,11 @@ import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } fr
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
+import {
+  PROJECT_DATE_READINESS_JOB,
+  projectDateReadinessHandler,
+  ProjectDateReadinessJobData,
+} from './handlers/projectDateReadinessHandler';
 import { cleanupTemporaryFormsJob } from '@alga-psa/jobs/handlers/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from '@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler';
@@ -47,6 +51,12 @@ import {
 } from '@alga-psa/jobs/handlers/teamsMeetingSweepHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import {
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  MarketingJobData,
+} from './handlers/marketingJobs';
+import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
 } from '@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler';
@@ -62,7 +72,7 @@ import {
 } from '@alga-psa/jobs/handlers/searchReconcileHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
-import { StorageService } from '../../lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import logger from '@alga-psa/core/logger';
 import type { IRecurringRunExecutionWindowIdentity } from '@alga-psa/types';
 import type { IRecurringDueSelectionInput } from '@alga-psa/types';
@@ -140,6 +150,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<LowStockNotificationJobData>('inventory-low-stock-notification', async (job: Job<LowStockNotificationJobData>) => {
       await lowStockNotificationHandler(job.data);
     });
+
+    jobScheduler.registerJobHandler<ProjectDateReadinessJobData>(PROJECT_DATE_READINESS_JOB, async (job: Job<ProjectDateReadinessJobData>) => {
+      await projectDateReadinessHandler(job.data);
+    });
     
     jobScheduler.registerJobHandler<ExpireQuotesJobData>('expire-quotes', async (job: Job<ExpireQuotesJobData>) => {
       await expireQuotesHandler(job.data);
@@ -157,11 +171,6 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await opportunityGeneratorsHandler(job.data);
     });
 
-    // Register credit reconciliation handler
-    jobScheduler.registerJobHandler<CreditReconciliationJobData>('credit-reconciliation', async (job: Job<CreditReconciliationJobData>) => {
-      await creditReconciliationHandler(job.data);
-    });
-    
     // Register invoice handlers if storageService is provided
     if (storageService && jobService) {
       const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
@@ -317,7 +326,6 @@ export type {
   GenerateInvoiceData,
   ExpiredCreditsJobData,
   ExpiringCreditsNotificationJobData,
-  CreditReconciliationJobData,
   ReconcileBucketUsageJobData,
   CleanupAiSessionKeysJobData,
   MicrosoftWebhookRenewalJobData,
@@ -530,6 +538,67 @@ export const scheduleOpportunityGeneratorsJob = async (
   return result.jobId;
 };
 
+export const scheduleProjectDateReadinessJob = async (
+  tenantId: string,
+  cronExpression: string = '15 0 * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<ProjectDateReadinessJobData>(
+    PROJECT_DATE_READINESS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${PROJECT_DATE_READINESS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+/**
+ * Marketing module recurring jobs (F027/F049). Every handler self-gates on the
+ * `marketing-module` feature flag, so these are scheduled for all tenants and
+ * no-op where the module is off.
+ */
+export const scheduleMarketingFlipDuePostsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/5 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_FLIP_DUE_POSTS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_FLIP_DUE_POSTS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleMarketingExpireStaleTargetsJob = async (
+  tenantId: string,
+  cronExpression: string = '11 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_EXPIRE_STALE_TARGETS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_EXPIRE_STALE_TARGETS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleMarketingSendSequenceStepsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/5 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_SEND_SEQUENCE_STEPS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_SEND_SEQUENCE_STEPS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
 /**
  * Schedule a recurring job to reconcile bucket usage records.
  * This job recalculates usage based on time entries and usage tracking.
@@ -683,31 +752,6 @@ export const scheduleCleanupAiSessionKeysJob = async (
     'cleanup-ai-session-keys',
     cronExpression,
     { tenantId: 'system', trigger: 'cron' }
-  );
-};
-
-/**
- * Schedule a recurring job to run credit reconciliation
- * This job validates credit balances and creates reconciliation reports for any discrepancies
- *
- * @param tenantId The tenant ID
- * @param clientId Optional client ID to limit processing to a specific client
- * @param cronExpression Cron expression for job scheduling (e.g., '0 2 * * *' for daily at 2:00 AM)
- * @returns Job ID if successful, null otherwise
- */
-export const scheduleCreditReconciliationJob = async (
-  tenantId: string,
-  clientId?: string,
-  cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
-): Promise<string | null> => {
-  if (isEnterpriseWorkflowEdition()) {
-    return null; // EE runs this as a global Temporal Schedule (maintenanceJobWorkflow)
-  }
-  const scheduler = await initializeScheduler();
-  return await scheduler.scheduleRecurringJob<CreditReconciliationJobData>(
-    'credit-reconciliation',
-    cronExpression,
-    { tenantId, clientId }
   );
 };
 

@@ -30,7 +30,7 @@
     "title": "Asistente de onboarding",
     "description": "Contenedor del asistente para la configuración del inquilino MSP con presentación en diálogo/página completa, progreso, validación y flujos de finalización",
     "steps": {
-      "clientInfo": "Información del cliente",
+      "clientInfo": "Tu empresa",
       "teamMembers": "Miembros del equipo",
       "addClient": "Añadir cliente",
       "clientContact": "Contacto del cliente",
@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "El cliente se creará con la configuración fiscal predeterminada no imponible (0 %). Puedes configurar los tipos impositivos más tarde en los ajustes del cliente.",
-      "optional": "Puedes omitir este paso y añadir clientes más tarde desde tu panel."
+      "optional": "Puedes omitir este paso y añadir o cambiar clientes en cualquier momento desde tu panel."
     }
   },
   "billingSetupStep": {
@@ -141,7 +141,7 @@
         "confirmAdd": "Añadir tipo de servicio"
       },
       "noteLabel": "Nota:",
-      "description": "Los tipos de servicio son etiquetas taxonómicas para organización y filtrado. El modo de facturación se configura por separado en cada servicio.",
+      "description": "Los tipos de servicio son etiquetas taxonómicas para organización y filtrado. El modo de facturación se configura por separado en cada servicio. Puedes renombrar, añadir o eliminar tipos cuando quieras desde Configuración.",
       "addForm": {
         "title": "Añadir nuevo tipo de servicio",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Importar tipos de servicio estándar",
-        "description": "Selecciona los tipos de servicio estándar que deseas importar a tu sistema:",
+        "title": "Tipos de servicio sugeridos",
+        "description": "Estos son estándar para la mayoría de los MSP. Desmarca los que no quieras y luego confirma para añadir el resto. Puedes renombrarlos o eliminarlos más tarde.",
         "success": {
           "titleOne": "¡Tipo de servicio importado correctamente!",
           "titleOther": "¡Tipos de servicio importados correctamente!",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} omitidos."
         },
         "actions": {
-          "importing": "Importando...",
-          "importSelected": "Importar seleccionados ({{count}})"
+          "importing": "Añadiendo...",
+          "importSelected": "Confirmar y añadir ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Crea tu primer servicio",
-      "description": "Añade un servicio y elige cómo se facturará. El tipo de servicio identifica la categoría del servicio, mientras que el modo de facturación controla el comportamiento del precio.",
+      "title": "Configurar facturación",
+      "description": "Define tu moneda predeterminada y crea tu primer servicio.",
       "serviceTitle": "Cree su primer servicio",
       "serviceDescription": "Agregue un servicio y elija cómo debe facturarse. El tipo de servicio identifica la categoría del servicio, mientras que el modo de facturación controla el comportamiento de precios."
     },
@@ -215,7 +215,7 @@
         "required": "(Obligatorio)",
         "emptyPlaceholder": "Crear o importar tipos de servicio",
         "placeholder": "Selecciona un tipo de servicio",
-        "emptyHelp": "Haz clic en \"Gestionar tipos de servicio\" para crear o importar tipos de servicio"
+        "emptyHelp": "Confirma un tipo de servicio sugerido abajo o añade el tuyo propio. Puedes cambiarlos más tarde."
       },
       "billingMode": {
         "label": "Modo de facturación"
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Acción requerida:",
-      "actionRequiredDescription": "Haz clic arriba en \"Gestionar tipos de servicio\" para crear o importar al menos un tipo de servicio antes de crear un servicio."
+      "actionRequiredDescription": "Confirma un tipo de servicio sugerido más arriba, o añade el tuyo propio, antes de crear un servicio."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Opcional:"
     },
     "footer": {
-      "optional": "Puedes omitir este paso y añadir contactos más tarde desde el perfil del cliente."
+      "optional": "Puedes omitir este paso y añadir o cambiar contactos en cualquier momento desde el perfil del cliente."
     }
   },
   "clientInfoStep": {
@@ -302,8 +302,8 @@
       "noteLabel": "Nota:"
     },
     "header": {
-      "title": "Información del cliente",
-      "description": "Empecemos configurando el perfil de tu cliente."
+      "title": "Tu empresa y cuenta de administrador",
+      "description": "Empecemos con los datos de tu propia empresa MSP y tu inicio de sesión de administrador, no con un cliente al que das soporte."
     },
     "fields": {
       "firstName": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Completa todos los campos obligatorios, incluida la contraseña",
+      "requiredFieldsNoPassword": "Completa todos los campos obligatorios",
       "invalidEmail": "Por favor, introduce una dirección de correo electrónico válida",
       "passwordLength": "La contraseña debe tener al menos 8 caracteres",
       "saveFailed": "No se pudo guardar el miembro del equipo",
+      "inviteFailed": "No se pudo enviar la invitación",
+      "roleRequired": "Selecciona un rol",
       "generic": "Se produjo un error"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "¡{{count}} miembros del equipo creados correctamente!",
       "users": "Usuarios creados: {{users}}"
     },
+    "invited": {
+      "titleOne": "¡1 invitación enviada correctamente!",
+      "titleOther": "¡{{count}} invitaciones enviadas correctamente!",
+      "users": "Invitados: {{users}}. Recibirán un correo con un enlace para establecer su propia contraseña."
+    },
     "member": {
       "title": "Miembro del equipo {{index}}",
       "createdBadge": "Creado",
+      "invitedBadge": "Invitado",
       "actions": {
         "saving": "Guardando...",
-        "save": "Guardar"
+        "save": "Guardar",
+        "sending": "Enviando...",
+        "sendInvite": "Enviar invitación"
       }
     },
     "fields": {
@@ -416,10 +427,17 @@
       },
       "email": {
         "label": "Correo",
-        "placeholder": "jane@client.com"
+        "placeholder": "jane@tuempresa.com"
       },
       "role": {
         "label": "Rol"
+      },
+      "setupMethod": {
+        "label": "¿Cómo debería acceder?",
+        "email": "Enviar invitación por correo",
+        "password": "Establecer una contraseña yo mismo",
+        "emailHelp": "Recibirá un correo con un enlace para establecer su propia contraseña. Sin contraseñas que compartir.",
+        "passwordHelp": "Estableces ahora una contraseña temporal y se la compartes directamente."
       },
       "password": {
         "label": "Contraseña temporal",
@@ -447,7 +465,7 @@
     },
     "optional": {
       "label": "Opcional:",
-      "description": "Puedes omitir este paso e invitar a miembros del equipo más tarde desde la página de ajustes."
+      "description": "Puedes omitir este paso e invitar o gestionar miembros del equipo en cualquier momento desde Configuración > Usuarios."
     }
   },
   "ticketingConfigStep": {
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "Orden de visualización",
             "placeholder": "Dejar vacío para autogenerar",
-            "help": "Controla el orden en que los estados aparecen en los menús desplegables de la plataforma. Los números más bajos aparecen primero."
+            "help": "Controla el orden en que los estados aparecen en los menús desplegables de la plataforma. Los números más bajos aparecen primero.",
+            "reassigned": "El orden de visualización {{requested}} ya se está usando en este tablero, por lo que se usó {{assigned}} en su lugar."
           },
           "state": {
+            "label": "Tipo de estado",
             "closedLabel": "Estado cerrado",
             "openLabel": "Estado abierto",
             "closedHelp": "Este estado indica que el ticket está resuelto y cerrado",
@@ -860,12 +880,50 @@
     },
     "supportEmail": {
       "label": "Correo de soporte",
-      "placeholder": "support@yourclient.com",
-      "help": "Esta dirección de correo se utilizará para crear tickets de soporte. Los correos enviados a esta dirección generarán automáticamente tickets en tu sistema."
+      "placeholder": "support@tuempresa.com",
+      "help": "Se guarda como tu dirección de contacto de soporte: visible para los clientes en el portal y usada en los correos de citas. Para convertir automáticamente los correos entrantes en tickets, conecta un buzón más adelante en Configuración > Correo."
     },
     "finalRequirement": {
       "label": "Obligatorio:",
       "description": "Configura al menos un tablero y una prioridad para completar la configuración. Importa configuraciones estándar para poner en marcha rápidamente tu sistema de tickets."
+    }
+  },
+  "teamSetup": {
+    "title": "Configura tu cuenta",
+    "subtitle": "Completa la configuración de tu cuenta de miembro del equipo",
+    "accountInformation": "Información de la cuenta",
+    "name": "Nombre:",
+    "email": "Correo electrónico:",
+    "role": "Rol:",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Introduce tu contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "confirmPasswordPlaceholder": "Confirma tu contraseña",
+    "passwordRequirements": "Requisitos de la contraseña",
+    "requirements": {
+      "minLength": "Al menos 8 caracteres",
+      "hasUppercase": "Una letra mayúscula",
+      "hasLowercase": "Una letra minúscula",
+      "hasNumber": "Un número",
+      "hasSpecialChar": "Un carácter especial",
+      "passwordsMatch": "Las contraseñas coinciden"
+    },
+    "creatingAccount": "Creando cuenta...",
+    "createAccount": "Crear cuenta",
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "signIn": "Iniciar sesión",
+    "invalidInvitation": "Invitación no válida",
+    "invalidInvitationDescription": "Hubo un problema con tu invitación al equipo",
+    "invalidTokenMessage": "El enlace de invitación no es válido o ha caducado. Pide a tu administrador que reenvíe la invitación.",
+    "goToSignIn": "Ir a iniciar sesión",
+    "accountReady": "Cuenta lista. Por favor, inicia sesión.",
+    "welcome": "¡Bienvenido al equipo!",
+    "errors": {
+      "noToken": "No se proporcionó un token de invitación",
+      "invalidOrExpired": "Token de invitación no válido o caducado",
+      "verificationFailed": "No se pudo verificar el token de invitación",
+      "requirementsNotMet": "Asegúrate de cumplir todos los requisitos de la contraseña",
+      "createFailed": "No se pudo crear la cuenta"
     }
   }
 }

@@ -1,5 +1,11 @@
 import { Knex } from 'knex';
-import { IProjectMaterial, IServicePrice, IStockUnit, ITicketMaterial } from '@alga-psa/types';
+import {
+  IProjectMaterial,
+  IServicePrice,
+  IStockUnit,
+  ITicketMaterial,
+  type ProjectMaterialBillingDestination,
+} from '@alga-psa/types';
 import { recordStockConsumption, reverseStockConsumption } from './consume';
 import { publishInventoryEvent } from './inventoryEvents';
 import { collectDefaultLocationStockLowSignalAfterConsume } from './stockLowSignal';
@@ -72,8 +78,48 @@ export interface AddMaterialInput {
   rate: number; // cents
   currency_code?: string | null;
   description?: string | null;
+  /** Project-only invoice routing. Defaults from the project billing currency when omitted. */
+  billing_destination?: ProjectMaterialBillingDestination;
+  /** Project-only schedule link; required only for the schedule_entry destination. */
+  billing_schedule_entry_id?: string | null;
   /** Serialized: the picked stock unit to deliver. Required for serialized tracked products. */
   unit_id?: string | null;
+}
+
+export interface UpdateProjectMaterialBillingInput {
+  rate: number;
+  billing_destination: ProjectMaterialBillingDestination;
+  billing_schedule_entry_id?: string | null;
+}
+
+export interface ProjectMaterialEligibilityContext {
+  mode: 'project_invoice' | 'separate_invoice';
+  selectedScheduleEntryIds?: ReadonlySet<string>;
+  projectClosed?: boolean;
+}
+
+export function isProjectMaterialEligible(
+  material: Pick<IProjectMaterial, 'billing_destination' | 'billing_schedule_entry_id'>,
+  context: ProjectMaterialEligibilityContext,
+): boolean {
+  switch (material.billing_destination) {
+    case 'next_project_invoice':
+      return context.mode === 'project_invoice';
+    case 'schedule_entry':
+      return context.mode === 'project_invoice'
+        && Boolean(material.billing_schedule_entry_id)
+        && Boolean(context.selectedScheduleEntryIds?.has(material.billing_schedule_entry_id!));
+    case 'separate':
+      return context.mode === 'separate_invoice';
+    case 'project_completion':
+      return context.mode === 'project_invoice' && context.projectClosed === true;
+    case 'on_hold':
+      return false;
+    default: {
+      const exhaustive: never = material.billing_destination;
+      throw new MaterialValidationError(`Unknown project material billing destination: ${String(exhaustive)}`, 'billing_destination');
+    }
+  }
 }
 
 export async function listMaterials(
@@ -89,7 +135,13 @@ export async function listMaterials(
         this.on('m.service_id', '=', 'sc.service_id').andOn('m.tenant', '=', 'sc.tenant');
       })
       .where({ 'm.tenant': tenant, [`m.${cfg.parentCol}`]: parentId })
-      .select('m.*', 'sc.service_name as service_name', 'sc.sku as sku')
+      .select(
+        'm.*',
+        'sc.service_name as service_name',
+        'sc.sku as sku',
+        'sc.cost as catalog_unit_cost',
+        'sc.cost_currency as catalog_cost_currency',
+      )
       .orderBy('m.created_at', 'desc');
     return rows as MaterialRow[];
   });
@@ -146,6 +198,54 @@ export async function addMaterial(
       }
     }
 
+    const materialCurrency = input.currency_code || await resolveTenantCurrency(trx, tenant);
+    let projectBillingDestination: ProjectMaterialBillingDestination | undefined;
+    let projectBillingScheduleEntryId: string | null = null;
+    if (input.parent_type === 'project') {
+      const billingConfig = await trx('project_billing_configs')
+        .where({ tenant, project_id: input.parent_id })
+        .select('config_id', 'currency')
+        .first();
+      projectBillingDestination = input.billing_destination ?? (billingConfig?.currency
+        && billingConfig.currency !== materialCurrency
+        ? 'separate'
+        : 'next_project_invoice');
+      projectBillingScheduleEntryId = input.billing_schedule_entry_id ?? null;
+      if (billingConfig?.currency && billingConfig.currency !== materialCurrency && projectBillingDestination !== 'separate') {
+        throw new MaterialValidationError(
+          `Products in ${materialCurrency} must use a separate product invoice because the project bills in ${billingConfig.currency}`,
+          'billing_destination',
+        );
+      }
+      if (projectBillingDestination === 'schedule_entry') {
+        if (!projectBillingScheduleEntryId) {
+          throw new MaterialValidationError('A billing schedule entry is required', 'billing_schedule_entry_id');
+        }
+        if (!billingConfig) {
+          throw new MaterialValidationError('This project does not have a billing schedule', 'billing_destination');
+        }
+        const scheduleEntry = await trx('project_billing_schedule_entries')
+          .where({
+            tenant,
+            schedule_entry_id: projectBillingScheduleEntryId,
+            config_id: billingConfig.config_id,
+          })
+          .whereNot('status', 'canceled')
+          .first('schedule_entry_id');
+        if (!scheduleEntry) {
+          throw new MaterialValidationError(
+            'The selected billing schedule entry does not belong to this project or is canceled',
+            'billing_schedule_entry_id',
+          );
+        }
+      } else if (projectBillingScheduleEntryId) {
+        throw new MaterialValidationError(
+          'billing_schedule_entry_id is only valid for the schedule entry destination',
+          'billing_schedule_entry_id',
+        );
+      }
+    }
+
     const [row] = await trx(cfg.table)
       .insert({
         tenant,
@@ -154,9 +254,15 @@ export async function addMaterial(
         service_id: input.service_id,
         quantity,
         rate,
-        currency_code: input.currency_code || await resolveTenantCurrency(trx, tenant),
+        currency_code: materialCurrency,
         description: input.description ?? null,
         is_billed: false,
+        ...(projectBillingDestination ? {
+          billing_destination: projectBillingDestination,
+          billing_schedule_entry_id: projectBillingDestination === 'schedule_entry'
+            ? projectBillingScheduleEntryId
+            : null,
+        } : {}),
       })
       .returning('*');
 
@@ -195,6 +301,88 @@ export async function addMaterial(
     await publishInventoryEvent('INVENTORY_STOCK_LOW', pendingStockLow);
   }
   return row as MaterialRow;
+}
+
+export async function updateProjectMaterialBilling(
+  db: Knex,
+  tenant: string,
+  projectMaterialId: string,
+  input: UpdateProjectMaterialBillingInput,
+): Promise<MaterialRow> {
+  const rate = Math.round(Number(input.rate));
+  if (!Number.isFinite(rate) || rate < 0) {
+    throw new MaterialValidationError('rate must be 0 or greater', 'rate');
+  }
+
+  return runInTransaction(db, async (trx) => {
+    const material = await trx('project_materials as material')
+      .innerJoin('projects as project', function joinProject() {
+        this.on('project.tenant', '=', 'material.tenant')
+          .andOn('project.project_id', '=', 'material.project_id');
+      })
+      .leftJoin('project_billing_configs as config', function joinBillingConfig() {
+        this.on('config.tenant', '=', 'material.tenant')
+          .andOn('config.project_id', '=', 'material.project_id');
+      })
+      .where({ 'material.tenant': tenant, 'material.project_material_id': projectMaterialId })
+      .select('material.*', 'config.config_id', 'config.currency as project_currency')
+      .forUpdate()
+      .first();
+
+    if (!material) {
+      throw new MaterialValidationError('Project material not found', 'project_material_id');
+    }
+    if (material.is_billed) {
+      throw new MaterialValidationError('Billed project materials cannot be edited', 'project_material_id');
+    }
+
+    const scheduleEntryId = input.billing_schedule_entry_id ?? null;
+    if (input.billing_destination === 'schedule_entry') {
+      if (!scheduleEntryId) {
+        throw new MaterialValidationError('A billing schedule entry is required', 'billing_schedule_entry_id');
+      }
+      const scheduleEntry = await trx('project_billing_schedule_entries')
+        .where({ tenant, schedule_entry_id: scheduleEntryId, config_id: material.config_id })
+        .whereNot('status', 'canceled')
+        .first('schedule_entry_id');
+      if (!scheduleEntry) {
+        throw new MaterialValidationError(
+          'The selected billing schedule entry does not belong to this project or is canceled',
+          'billing_schedule_entry_id',
+        );
+      }
+    } else if (scheduleEntryId) {
+      throw new MaterialValidationError(
+        'billing_schedule_entry_id is only valid for the schedule entry destination',
+        'billing_schedule_entry_id',
+      );
+    }
+
+    if (
+      material.project_currency
+      && material.currency_code !== material.project_currency
+      && input.billing_destination !== 'separate'
+    ) {
+      throw new MaterialValidationError(
+        `Products in ${material.currency_code} must use a separate product invoice because the project bills in ${material.project_currency}`,
+        'billing_destination',
+      );
+    }
+
+    const [updated] = await trx('project_materials')
+      .where({ tenant, project_material_id: projectMaterialId, is_billed: false })
+      .update({
+        rate,
+        billing_destination: input.billing_destination,
+        billing_schedule_entry_id: input.billing_destination === 'schedule_entry' ? scheduleEntryId : null,
+        updated_at: new Date().toISOString(),
+      })
+      .returning('*');
+    if (!updated) {
+      throw new MaterialValidationError('Project material changed before it could be updated', 'project_material_id');
+    }
+    return updated as MaterialRow;
+  });
 }
 
 /** Returns false when the material does not exist. Throws on billed materials. */
@@ -250,6 +438,8 @@ export interface CatalogPickerQueryRow {
   item_kind: string;
   sku: string | null;
   default_rate: number;
+  cost: number | null;
+  cost_currency: string | null;
   track_stock?: boolean;
   on_hand_total?: number | null;
   reorder_point?: number | null;
@@ -300,6 +490,8 @@ export async function queryCatalogPickerItems(
       'sc.item_kind',
       'sc.sku',
       trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+      trx.raw('CAST(sc.cost AS FLOAT) as cost'),
+      'sc.cost_currency',
       'pis.track_stock',
       'pis.reorder_point',
       trx.raw(

@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -60,6 +61,7 @@ export interface RecentActivity {
 type RecentInvoiceActivityRow = {
   invoice_number: string;
   total: string | number | null;
+  currency_code?: string | null;
   timestamp: string;
   service_period_start?: string | Date | null;
   service_period_end?: string | Date | null;
@@ -145,15 +147,19 @@ function normalizeDateOnly(value: string | Date | null | undefined): string | nu
   return null;
 }
 
-function formatCurrencyFromCents(value: string | number | null | undefined): string {
-  return new Intl.NumberFormat('en-US', {
+function formatCurrencyFromCents(
+  value: string | number | null | undefined,
+  locale: string,
+  currencyCode?: string | null,
+): string {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'USD',
+    currency: currencyCode || 'USD',
   }).format((Number(value ?? 0) || 0) / 100);
 }
 
-function formatRecentInvoiceDescription(invoice: RecentInvoiceActivityRow): string {
-  const totalLabel = formatCurrencyFromCents(invoice.total);
+function formatRecentInvoiceDescription(invoice: RecentInvoiceActivityRow, locale: string): string {
+  const totalLabel = formatCurrencyFromCents(invoice.total, locale, invoice.currency_code);
   const servicePeriodStart = normalizeDateOnly(invoice.service_period_start);
   const servicePeriodEnd = normalizeDateOnly(invoice.service_period_end);
 
@@ -304,7 +310,11 @@ export const getRecentActivity = withAuth(async (
       const clientId = contact.client_id;
       const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
-      // Get recent tickets with their initial descriptions
+      // Get recent tickets with their initial descriptions.
+      // MSP-internal notes (and notes on internal threads) must never surface
+      // as the activity excerpt — exclude them at the query, mirroring the
+      // getClientTicketDetails comment filter. The filters are null-tolerant
+      // so tickets without any comments are kept.
       const ticketsQuery = scopedDb.table('tickets')
         .select([
           'tickets.title',
@@ -312,9 +322,18 @@ export const getRecentActivity = withAuth(async (
           'comments.note as description'
         ]);
       scopedDb.tenantJoin(ticketsQuery, 'comments', 'tickets.ticket_id', 'comments.ticket_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
       const tickets = await ticketsQuery
         .where({
           'tickets.client_id': clientId
+        })
+        .where(function (this: Knex.QueryBuilder) {
+          this.whereNull('comments.is_internal')
+            .orWhere('comments.is_internal', false);
+        })
+        .where(function (this: Knex.QueryBuilder) {
+          this.whereNull('ct.is_internal')
+            .orWhere('ct.is_internal', false);
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
           applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 'tickets.board_id');
@@ -330,6 +349,7 @@ export const getRecentActivity = withAuth(async (
         .select([
           'inv.invoice_number',
           'inv.total_amount as total',
+          'inv.currency_code',
           'inv.updated_at as timestamp',
           trx.raw('MIN(iid.service_period_start) as service_period_start'),
           trx.raw('MAX(iid.service_period_end) as service_period_end'),
@@ -341,7 +361,7 @@ export const getRecentActivity = withAuth(async (
         .where({
           'inv.client_id': clientId
         })
-        .groupBy('inv.invoice_id', 'inv.invoice_number', 'inv.total_amount', 'inv.updated_at')
+        .groupBy('inv.invoice_id', 'inv.invoice_number', 'inv.total_amount', 'inv.currency_code', 'inv.updated_at')
         .orderBy('inv.updated_at', 'desc')
         .limit(3);
 
@@ -414,6 +434,10 @@ export const getRecentActivity = withAuth(async (
       };
     });
 
+    // Amounts format with the tenant's default portal locale; each invoice
+    // carries its own currency.
+    const portalLocale = await getTenantDefaultLocale(tenant, 'client');
+
     // Combine and sort activities. Each branch returns the untranslated `name`
     // and (where applicable) a `status` sub-type so the client can pick the
     // right translation key (`dashboard.activity.titles.<type>` or
@@ -433,7 +457,7 @@ export const getRecentActivity = withAuth(async (
         name: i.invoice_number,
         title: `Invoice ${i.invoice_number} generated`,
         timestamp: i.timestamp,
-        description: formatRecentInvoiceDescription(i)
+        description: formatRecentInvoiceDescription(i, portalLocale)
       })),
       ...result.assetActivities.map((a): RecentActivity => ({
         type: 'asset',

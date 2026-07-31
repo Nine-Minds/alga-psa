@@ -16,9 +16,13 @@ interface CurrencyFormatContextValue {
 }
 
 export interface CurrencyFormat {
+  /** Currency supplied by the nearest provider, after fallback resolution. */
+  currencyCode: string;
   money: (minorUnits: number, currencyOverride?: string) => string;
   moneySigned: (minorUnits: number, currencyOverride?: string) => string;
   fractionDigits: (currencyOverride?: string) => number;
+  /** Bare currency symbol ("$", "€") for input adornments. */
+  symbol: (currencyOverride?: string) => string;
 }
 
 const CurrencyFormatContext = React.createContext<CurrencyFormatContextValue>({
@@ -58,6 +62,7 @@ export function useCurrencyFormat(): CurrencyFormat {
       formatCurrencyFromMinorUnits(Number(minorUnits || 0), locale, resolveCurrency(currencyOverride));
 
     return {
+      currencyCode,
       money,
       moneySigned: (minorUnits: number, currencyOverride?: string) => {
         const amount = Number(minorUnits || 0);
@@ -68,6 +73,15 @@ export function useCurrencyFormat(): CurrencyFormat {
       },
       fractionDigits: (currencyOverride?: string) =>
         currencyFractionDigits(resolveCurrency(currencyOverride), locale),
+      symbol: (currencyOverride?: string) => {
+        const currency = resolveCurrency(currencyOverride);
+        try {
+          const parts = new Intl.NumberFormat(locale, { style: 'currency', currency }).formatToParts(0);
+          return parts.find((part) => part.type === 'currency')?.value ?? currency;
+        } catch {
+          return currency;
+        }
+      },
     };
   }, [currencyCode, locale]);
 }

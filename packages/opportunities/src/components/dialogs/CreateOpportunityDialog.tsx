@@ -9,6 +9,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IClient, OpportunityType } from '@alga-psa/types';
+import { ActionSuggestions } from '../ActionSuggestions';
 
 const TYPES: OpportunityType[] = ['new_logo', 'expansion', 'renewal', 'project'];
 
@@ -40,7 +41,7 @@ export function CreateOpportunityDialog({
   defaultClientId,
   lockedClient,
   defaults,
-  renderProspectCreator,
+  renderClientCreator,
   onSubmit,
 }: {
   isOpen: boolean;
@@ -52,10 +53,14 @@ export function CreateOpportunityDialog({
   /** Prefill for launches from a context that already knows the deal shape (e.g. a whitespace cell). */
   defaults?: { title?: string; type?: OpportunityType };
   /** Host-provided client creation keeps this package independent of the clients UI package. */
-  renderProspectCreator?: (onCreated: (client: IClient) => void) => React.ReactNode;
+  renderClientCreator?: (props: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onCreated: (client: IClient) => void;
+  }) => React.ReactNode;
   onSubmit: (input: CreateOpportunityInput) => Promise<void> | void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [clientId, setClientId] = useState<string | null>(lockedClient?.client_id ?? defaultClientId ?? null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [typeFilter, setTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -65,6 +70,7 @@ export function CreateOpportunityDialog({
   const [due, setDue] = useState<Date | undefined>(undefined);
   const [expectedClose, setExpectedClose] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
+  const [clientCreatorOpen, setClientCreatorOpen] = useState(false);
 
   const valid = !!clientId && title.trim().length > 0 && nextAction.trim().length > 0 && !!due;
 
@@ -90,12 +96,24 @@ export function CreateOpportunityDialog({
     }
   };
 
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <Button id="opportunity-create-cancel" variant="ghost" size="sm" onClick={onClose} disabled={saving}>
+        {t('common.cancel', 'Cancel')}
+      </Button>
+      <Button id="opportunity-create-submit" size="sm" onClick={submit} disabled={!valid || saving}>
+        {t('opportunities.createDialog.submit', 'Create opportunity')}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       id="opportunity-create-dialog"
       isOpen={isOpen}
       onClose={onClose}
       title={t('opportunities.createDialog.title', 'New opportunity')}
+      footer={footer}
     >
       <div className="space-y-4 pt-1">
         {lockedClient ? (
@@ -116,8 +134,16 @@ export function CreateOpportunityDialog({
               onFilterStateChange={setFilterState}
               clientTypeFilter={typeFilter}
               onClientTypeFilterChange={setTypeFilter}
+              onAddNew={renderClientCreator ? () => setClientCreatorOpen(true) : undefined}
             />
-            {renderProspectCreator?.((client) => setClientId(client.client_id))}
+            {renderClientCreator?.({
+              open: clientCreatorOpen,
+              onOpenChange: setClientCreatorOpen,
+              onCreated: (client) => {
+                setClientId(client.client_id);
+                setClientCreatorOpen(false);
+              },
+            })}
           </div>
         )}
         <Input
@@ -127,6 +153,11 @@ export function CreateOpportunityDialog({
           value={title}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
           required
+        />
+        <ActionSuggestions
+          id="opportunity-create-suggestion"
+          stage="identified"
+          onSelect={setNextAction}
         />
         <CustomSelect
           id="opportunity-create-type"
@@ -157,14 +188,6 @@ export function CreateOpportunityDialog({
             onChange={(d?: Date) => setExpectedClose(d)}
             clearable
           />
-        </div>
-        <div className="flex justify-end gap-2 pt-1">
-          <Button id="opportunity-create-cancel" variant="ghost" size="sm" onClick={onClose} disabled={saving}>
-            {t('common.cancel', 'Cancel')}
-          </Button>
-          <Button id="opportunity-create-submit" size="sm" onClick={submit} disabled={!valid || saving}>
-            {t('opportunities.createDialog.submit', 'Create opportunity')}
-          </Button>
         </div>
       </div>
     </Dialog>

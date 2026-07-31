@@ -144,6 +144,7 @@
     },
     "badges": {
       "disabled": "Wyłączony",
+      "paused": "Wstrzymano",
       "connected": "Połączony",
       "disconnected": "Rozłączony",
       "error": "Błąd",
@@ -167,15 +168,29 @@
       "reconnectOauth": "Połącz ponownie OAuth",
       "resyncing": "Ponowna synchronizacja…",
       "resyncMailbox": "Zsynchronizuj ponownie skrzynkę pocztową",
+      "pause": "Wstrzymaj pocztę przychodzącą",
+      "resume": "Wznów pocztę przychodzącą",
       "delete": "Usuń dostawcę"
     },
+    "feedback": {
+      "paused": "Poczta przychodząca wstrzymana.",
+      "resumed": "Poczta przychodząca wznowiona.",
+      "pauseError": "Nie udało się zmienić stanu wstrzymania poczty przychodzącej."
+    },
+    "pausedHelp": "Wiadomości odebrane w czasie, gdy ta skrzynka jest wstrzymana, nie są importowane wstecznie.",
     "fields": {
       "status": "Status",
       "lastSync": "Ostatnia synchronizacja",
+      "lastIngested": "Ostatnio pobrano",
+      "delivery": "Dostarczanie",
       "created": "Utworzono",
       "subscription": "Subskrypcja",
       "defaults": "Domyślne ustawienia zgłoszeń",
       "error": "Błąd:"
+    },
+    "delivery": {
+      "polling": "Odpytywanie co 3 minuty",
+      "webhook": "Dostarczanie w czasie rzeczywistym: aktywne"
     },
     "values": {
       "active": "Aktywny",

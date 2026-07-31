@@ -21,6 +21,16 @@ export interface TenantSubqueryJoinOptions {
   on?: (join: Knex.JoinClause) => void;
 }
 
+export interface TenantFirstMatchingJoinOptions {
+  type?: 'inner' | 'left';
+  rootTenantColumn: string;
+  where: (query: Knex.QueryBuilder, sourceAlias: string) => void;
+  orderBy: ReadonlyArray<{
+    column: string;
+    order: 'asc' | 'desc';
+  }>;
+}
+
 // Default row type for facade queries. `any` (not `Record<string, any>`) is
 // deliberate: knex narrows `.select('alias.col')` over a Record to
 // `Pick<Record, "alias.col">`, keying the row by the literal alias-qualified
@@ -54,6 +64,14 @@ export interface TenantDb {
     left: string,
     right: string,
     options: TenantSubqueryJoinOptions
+  ): Knex.QueryBuilder;
+  tenantJoinFirstMatching(
+    builder: Knex.QueryBuilder,
+    tableName: string,
+    alias: string,
+    rootParentColumn: string,
+    childParentColumn: string,
+    options: TenantFirstMatchingJoinOptions
   ): Knex.QueryBuilder;
   tenantWhereColumn(
     builder: Knex.QueryBuilder,
@@ -293,6 +311,47 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
     return builder.join(subquery, joinDerivedTenantQuery);
   }
 
+  function tenantJoinFirstMatching(
+    builder: Knex.QueryBuilder,
+    tableName: string,
+    alias: string,
+    rootParentColumn: string,
+    childParentColumn: string,
+    options: TenantFirstMatchingJoinOptions
+  ): Knex.QueryBuilder {
+    const parsed = parseTableExpression(tableName);
+    if (parsed.rootAlias !== parsed.tableName) {
+      throw new Error('tenantDb.tenantJoinFirstMatching requires a table name without an alias');
+    }
+    if (!alias.trim() || !childParentColumn.trim() || options.orderBy.length === 0) {
+      throw new Error('tenantDb.tenantJoinFirstMatching requires an alias, parent column, and ordering');
+    }
+
+    const sourceAlias = `__${alias}_source`;
+    const subquery = table(`${tableName} as ${sourceAlias}`)
+      .distinctOn([`${sourceAlias}.tenant`, `${sourceAlias}.${childParentColumn}`])
+      .select(`${sourceAlias}.*`)
+      .orderBy(`${sourceAlias}.tenant`, 'asc')
+      .orderBy(`${sourceAlias}.${childParentColumn}`, 'asc');
+
+    options.where(subquery, sourceAlias);
+    for (const ordering of options.orderBy) {
+      subquery.orderBy(`${sourceAlias}.${ordering.column}`, ordering.order);
+    }
+
+    return tenantJoinSubquery(
+      builder,
+      subquery.as(alias),
+      rootParentColumn,
+      `${alias}.${childParentColumn}`,
+      {
+        type: options.type,
+        rootTenantColumn: options.rootTenantColumn,
+        joinedTenantColumn: `${alias}.tenant`,
+      }
+    );
+  }
+
   function tenantWhereColumn(
     builder: Knex.QueryBuilder,
     leftTenantColumn: string,
@@ -325,6 +384,7 @@ export function tenantDb(conn: Knex | Knex.Transaction, tenantInput: string | nu
     subquery: table,
     tenantJoin,
     tenantJoinSubquery,
+    tenantJoinFirstMatching,
     tenantWhereColumn,
     unscoped,
   };

@@ -9,6 +9,11 @@ const { getEntraSyncRunHistoryMock, fetchMock } = vi.hoisted(() => ({
   fetchMock: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('../utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/integrations');
+});
+
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraSyncRunHistory: getEntraSyncRunHistoryMock,
 }));
@@ -17,6 +22,26 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string, vars?: Record<string, unknown>) => {
+      if (key === 'integrations.entra.syncHistory.run.header') {
+        return `${vars?.runType} · ${vars?.status}`;
+      }
+      if (key === 'integrations.entra.syncHistory.details.tenantHeader') {
+        return `Tenant ${vars?.tenant} · ${vars?.status}`;
+      }
+      if (key === 'integrations.entra.syncHistory.details.stats') {
+        return `created ${vars?.created}, linked ${vars?.linked}, updated ${vars?.updated}, ambiguous ${vars?.ambiguous}, inactivated ${vars?.inactivated}`;
+      }
+      if (key === 'integrations.entra.syncHistory.details.summarySkipped') {
+        return `Skipped provisioning outcomes: ${vars?.count}`;
+      }
+      return key;
+    },
+  }),
 }));
 
 describe('EntraSyncHistoryPanel', () => {
@@ -117,6 +142,9 @@ describe('EntraSyncHistoryPanel', () => {
             processedTenants: 1,
             succeededTenants: 1,
             failedTenants: 0,
+            summary: {
+              skipped: 2,
+            },
           },
           tenantResults: [
             {
@@ -128,6 +156,7 @@ describe('EntraSyncHistoryPanel', () => {
               updated: 1,
               ambiguous: 0,
               inactivated: 4,
+              skipped: 2,
               errorMessage: null,
             },
           ],
@@ -143,8 +172,9 @@ describe('EntraSyncHistoryPanel', () => {
     fireEvent.click(button as HTMLElement);
 
     await screen.findByText('Tenant managed-123 · completed');
+    expect(screen.getByText('Skipped provisioning outcomes: 2')).toBeInTheDocument();
     expect(
-      screen.getByText('created 2, linked 3, updated 1, ambiguous 0, inactivated 4')
+      screen.getByText('created 2, linked 3, updated 1, ambiguous 0, inactivated 4, skipped 2')
     ).toBeInTheDocument();
   });
 });

@@ -15,14 +15,21 @@ import type {
 } from './types';
 import { whitespaceGenerator } from './whitespaceGenerator';
 
-export const GENERATORS: Record<OpportunityGeneratorKey, SuggestionGenerator> = {
+/**
+ * Generators that run on the scheduled sweep. 'inbound-lead' is deliberately
+ * absent: marketing creates those suggestions synchronously at capture time
+ * (via persistGeneratedSuggestions), not from a periodic scan.
+ */
+export type SweepGeneratorKey = Exclude<OpportunityGeneratorKey, 'inbound-lead'>;
+
+export const GENERATORS: Record<SweepGeneratorKey, SuggestionGenerator> = {
   renewal: renewalGenerator,
   tm_conversion: tmConversionGenerator,
   whitespace: whitespaceGenerator,
   asset_aging: assetAgingGenerator,
 };
 
-export const OPPORTUNITY_GENERATOR_KEYS = Object.keys(GENERATORS) as OpportunityGeneratorKey[];
+export const OPPORTUNITY_GENERATOR_KEYS = Object.keys(GENERATORS) as SweepGeneratorKey[];
 
 interface ExistingSuggestionRow {
   suggestion_id: string;
@@ -139,7 +146,7 @@ export async function persistGeneratedSuggestions(
 export async function runGenerators(
   knex: Knex,
   tenant: string,
-  keys: OpportunityGeneratorKey[] = OPPORTUNITY_GENERATOR_KEYS,
+  keys: SweepGeneratorKey[] = OPPORTUNITY_GENERATOR_KEYS,
 ): Promise<GeneratorRunSummary[]> {
   const settings = await getOpportunitySettings(knex, tenant);
   const summaries: GeneratorRunSummary[] = [];

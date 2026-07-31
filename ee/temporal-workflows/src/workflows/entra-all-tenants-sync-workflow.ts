@@ -15,7 +15,32 @@ const activities = proxyActivities<{
   }): Promise<{ runId: string }>;
   loadMappedTenantsActivity(input: {
     tenantId: string;
-  }): Promise<{ mappings: Array<{ managedTenantId: string; entraTenantId: string; clientId?: string | null }> }>;
+    includeCreateNew?: boolean;
+  }): Promise<{ mappings: Array<{
+    managedTenantId: string;
+    entraTenantId: string;
+    clientId?: string | null;
+    mappingState?: 'mapped' | 'create_new';
+    displayName?: string | null;
+    primaryDomain?: string | null;
+  }> }>;
+  provisionEntraClientActivity(input: {
+    tenantId: string;
+    mapping: {
+      managedTenantId: string;
+      entraTenantId: string;
+      clientId?: string | null;
+      mappingState?: 'mapped' | 'create_new';
+      displayName?: string | null;
+      primaryDomain?: string | null;
+    };
+    actorUserId?: string;
+  }): Promise<{
+    managedTenantId: string;
+    entraTenantId: string;
+    clientId?: string | null;
+    mappingState?: 'mapped' | 'create_new';
+  }>;
   syncTenantUsersActivity(input: {
     tenantId: string;
     runId: string;
@@ -53,6 +78,7 @@ function createEmptySummary(totalTenants: number): EntraSyncRunSummary {
     updated: 0,
     ambiguous: 0,
     inactivated: 0,
+    skipped: 0,
   };
 }
 
@@ -77,17 +103,26 @@ export async function entraAllTenantsSyncWorkflow(
 
   const mappedTenants = await activities.loadMappedTenantsActivity({
     tenantId: input.tenantId,
+    includeCreateNew: input.trigger === 'manual',
   });
 
   const tenantResults: EntraTenantSyncResult[] = [];
   const summary = createEmptySummary(mappedTenants.mappings.length);
 
   for (const mapping of mappedTenants.mappings) {
+    let resolvedMapping = mapping;
     try {
+      if (mapping.mappingState === 'create_new') {
+        resolvedMapping = await activities.provisionEntraClientActivity({
+          tenantId: input.tenantId,
+          mapping,
+          actorUserId: input.actor?.userId,
+        });
+      }
       const tenantResult = await activities.syncTenantUsersActivity({
         tenantId: input.tenantId,
         runId: run.runId,
-        mapping,
+        mapping: resolvedMapping,
       });
       tenantResults.push(tenantResult);
       await activities.recordSyncTenantResultActivity({
@@ -98,13 +133,14 @@ export async function entraAllTenantsSyncWorkflow(
     } catch (error: unknown) {
       const failedResult: EntraTenantSyncResult = {
         managedTenantId: mapping.managedTenantId,
-        clientId: mapping.clientId || null,
+        clientId: resolvedMapping.clientId || null,
         status: 'failed',
         created: 0,
         linked: 0,
         updated: 0,
         ambiguous: 0,
         inactivated: 0,
+        skipped: 0,
         errorMessage: error instanceof Error ? error.message : 'Tenant sync failed.',
       };
       tenantResults.push(failedResult);
@@ -128,6 +164,7 @@ export async function entraAllTenantsSyncWorkflow(
     summary.updated += result.updated;
     summary.ambiguous += result.ambiguous;
     summary.inactivated += result.inactivated;
+    summary.skipped += result.skipped;
   }
 
   const status =

@@ -48,7 +48,7 @@ export function CardHeader({
   return (
     <div
       ref={ref}
-      className={`flex flex-col space-y-1.5 p-6 ${className}`}
+      className={`flex flex-col space-y-1.5 p-6 ${className ?? ''}`}
       {...props}
     />
   );
@@ -59,7 +59,7 @@ export function CardContent({
   ref,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> }) {
-  return <div ref={ref} className={`p-6 pt-0 ${className}`} {...props} />;
+  return <div ref={ref} className={`p-6 pt-0 ${className ?? ''}`} {...props} />;
 }
 
 export function CardTitle({
@@ -70,7 +70,7 @@ export function CardTitle({
   return (
     <h3
       ref={ref}
-      className={`text-lg font-semibold leading-none tracking-tight ${className}`}
+      className={`text-lg font-semibold leading-none tracking-tight ${className ?? ''}`}
       {...props}
     />
   );
@@ -84,7 +84,7 @@ export function CardDescription({
   return (
     <p
       ref={ref}
-      className={`text-sm text-muted-foreground ${className}`}
+      className={`text-sm text-muted-foreground ${className ?? ''}`}
       {...props}
     />
   );
@@ -98,7 +98,7 @@ export function CardFooter({
   return (
     <div
       ref={ref}
-      className={`flex items-center p-6 pt-0 ${className}`}
+      className={`flex items-center p-6 pt-0 ${className ?? ''}`}
       {...props}
     />
   );

@@ -3,6 +3,48 @@
  */
 const TEMPLATES = [
   {
+    templateName: 'project-milestone-ready',
+    subtypeName: 'project-milestone-ready',
+    translations: {
+      en: { title: 'Project Milestone Ready', message: '"{{entryDescription}}" in project "{{projectName}}" is ready to bill ({{amount}})' },
+      fr: { title: 'Jalon du projet prêt', message: '« {{entryDescription}} » dans le projet « {{projectName}} » est prêt à facturer ({{amount}})' },
+      es: { title: 'Hito del proyecto listo', message: '"{{entryDescription}}" en el proyecto "{{projectName}}" está listo para facturarse ({{amount}})' },
+      de: { title: 'Projektmeilenstein bereit', message: '„{{entryDescription}}“ im Projekt „{{projectName}}“ ist zur Abrechnung bereit ({{amount}})' },
+      nl: { title: 'Projectmijlpaal klaar', message: '"{{entryDescription}}" in project "{{projectName}}" is klaar om te factureren ({{amount}})' },
+      it: { title: 'Milestone del progetto pronta', message: '"{{entryDescription}}" nel progetto "{{projectName}}" è pronta per la fatturazione ({{amount}})' },
+      pl: { title: 'Kamień milowy projektu gotowy', message: '„{{entryDescription}}” w projekcie „{{projectName}}” jest gotowy do rozliczenia ({{amount}})' },
+      pt: { title: 'Marco do projeto pronto', message: '"{{entryDescription}}" no projeto "{{projectName}}" está pronto para faturar ({{amount}})' },
+    },
+  },
+  {
+    templateName: 'project-budget-threshold-reached',
+    subtypeName: 'project-budget-threshold-reached',
+    translations: {
+      en: { title: 'Project Budget Threshold Reached', message: 'Project "{{projectName}}" reached {{threshold}} of its budget ({{billed}} billed of {{cap}})' },
+      fr: { title: 'Seuil budgétaire du projet atteint', message: 'Le projet « {{projectName}} » a atteint {{threshold}} de son budget ({{billed}} facturés sur {{cap}})' },
+      es: { title: 'Umbral de presupuesto alcanzado', message: 'El proyecto "{{projectName}}" alcanzó el {{threshold}} de su presupuesto ({{billed}} facturados de {{cap}})' },
+      de: { title: 'Projektbudget-Schwellenwert erreicht', message: 'Projekt „{{projectName}}“ hat {{threshold}} seines Budgets erreicht ({{billed}} von {{cap}} abgerechnet)' },
+      nl: { title: 'Projectbudgetdrempel bereikt', message: 'Project "{{projectName}}" heeft {{threshold}} van het budget bereikt ({{billed}} van {{cap}} gefactureerd)' },
+      it: { title: 'Soglia budget del progetto raggiunta', message: 'Il progetto "{{projectName}}" ha raggiunto il {{threshold}} del budget ({{billed}} fatturati su {{cap}})' },
+      pl: { title: 'Osiągnięto próg budżetu projektu', message: 'Projekt „{{projectName}}” osiągnął {{threshold}} budżetu (zafakturowano {{billed}} z {{cap}})' },
+      pt: { title: 'Limite de orçamento do projeto atingido', message: 'O projeto "{{projectName}}" atingiu {{threshold}} do orçamento ({{billed}} faturados de {{cap}})' },
+    },
+  },
+  {
+    templateName: 'project-budget-exceeded',
+    subtypeName: 'project-budget-exceeded',
+    translations: {
+      en: { title: 'Project Budget Exceeded', message: 'Project "{{projectName}}" exceeded its {{cap}} budget; {{writtenDown}} was written down ({{billed}} billed)' },
+      fr: { title: 'Budget du projet dépassé', message: 'Le projet « {{projectName}} » a dépassé son budget de {{cap}} ; {{writtenDown}} ont été dépréciés ({{billed}} facturés)' },
+      es: { title: 'Presupuesto del proyecto superado', message: 'El proyecto "{{projectName}}" superó su presupuesto de {{cap}}; se dieron de baja {{writtenDown}} ({{billed}} facturados)' },
+      de: { title: 'Projektbudget überschritten', message: 'Projekt „{{projectName}}“ hat sein Budget von {{cap}} überschritten; {{writtenDown}} wurden abgeschrieben ({{billed}} abgerechnet)' },
+      nl: { title: 'Projectbudget overschreden', message: 'Project "{{projectName}}" heeft het budget van {{cap}} overschreden; {{writtenDown}} is afgeschreven ({{billed}} gefactureerd)' },
+      it: { title: 'Budget del progetto superato', message: 'Il progetto "{{projectName}}" ha superato il budget di {{cap}}; {{writtenDown}} sono stati svalutati ({{billed}} fatturati)' },
+      pl: { title: 'Przekroczono budżet projektu', message: 'Projekt „{{projectName}}” przekroczył budżet {{cap}}; odpisano {{writtenDown}} (zafakturowano {{billed}})' },
+      pt: { title: 'Orçamento do projeto excedido', message: 'O projeto "{{projectName}}" excedeu o orçamento de {{cap}}; {{writtenDown}} foram baixados ({{billed}} faturados)' },
+    },
+  },
+  {
     templateName: 'project-assigned',
     subtypeName: 'project-assigned',
     translations: {

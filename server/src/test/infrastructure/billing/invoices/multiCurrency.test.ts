@@ -10,6 +10,7 @@ import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   createTestService,
   createFixedPlanAssignment,
+  materializeRecurringServicePeriods,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureClientPlanBundlesTable
@@ -217,16 +218,19 @@ describe('Multi-Currency Billing', () => {
       updated_at: new Date().toISOString()
     });
 
-    // 5. Assign the contract line to the client
-    const clientContractLineId = uuidv4();
-    await tenantTable(context, 'client_contract_lines').insert({
-      client_contract_line_id: clientContractLineId,
+    // 5. Assign the contract to the client. The line already carries
+    // contract_id, so client_contracts is the whole assignment post-drop.
+    await tenantTable(context, 'client_contracts').insert({
+      tenant: context.tenantId,
+      client_contract_id: uuidv4(),
       client_id: context.clientId,
-      contract_line_id: contractLineId,
+      contract_id: contractId,
       start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       is_active: true,
-      tenant: context.tenantId
+      status: 'pending'
     });
+
+    await materializeRecurringServicePeriods(context, contractLineId);
 
     // 6. Add service configuration to the contract line (Fixed)
     const configId = uuidv4();
@@ -316,25 +320,31 @@ describe('Multi-Currency Billing', () => {
       tenant: context.tenantId
     });
 
-    // 4. Assign both to client
-    await tenantTable(context, 'client_contract_lines').insert([
+    // 4. Assign both contracts to the client. The lines already carry
+    // contract_id, so client_contracts is the whole assignment post-drop.
+    await tenantTable(context, 'client_contracts').insert([
       {
-        client_contract_line_id: uuidv4(),
+        tenant: context.tenantId,
+        client_contract_id: uuidv4(),
         client_id: context.clientId,
-        contract_line_id: lineAId,
+        contract_id: contractAId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
-        tenant: context.tenantId
+        status: 'pending'
       },
       {
-        client_contract_line_id: uuidv4(),
+        tenant: context.tenantId,
+        client_contract_id: uuidv4(),
         client_id: context.clientId,
-        contract_line_id: lineBId,
+        contract_id: contractBId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
-        tenant: context.tenantId
+        status: 'pending'
       }
     ]);
+
+    await materializeRecurringServicePeriods(context, lineAId);
+    await materializeRecurringServicePeriods(context, lineBId);
 
     // 5. Add dummy service configs so they are billed
     const serviceId = await createTestService(context, { service_name: 'Generic Service' });
@@ -372,19 +382,22 @@ describe('Multi-Currency Billing', () => {
       .toThrow(/Mixed currency billing is not supported/);
   });
 
-  it('should default to client currency if contract currency is missing (simulating legacy)', async () => {
+  // contracts.currency_code is NOT NULL DEFAULT 'USD', so the legacy
+  // "contract with no currency falls back to the client default" path this test
+  // used to cover is unreachable — an unspecified contract currency is USD, and
+  // the invoice follows the contract, not the client's GBP default.
+  it('defaults an unspecified contract currency to USD rather than the client default', async () => {
     // 1. Update client default currency to GBP
     await tenantTable(context, 'clients')
       .where({ client_id: context.clientId })
       .update({ default_currency_code: 'GBP' });
 
-    // 2. Create a contract with NO currency (simulating legacy or null)
+    // 2. Create a contract without specifying a currency
     const contractId = uuidv4();
     await tenantTable(context, 'contracts').insert({
       contract_id: contractId,
       contract_name: 'Legacy Contract',
       billing_frequency: 'monthly',
-      currency_code: null, // Explicitly null
       status: 'active',
       tenant: context.tenantId,
       is_active: true,
@@ -404,14 +417,17 @@ describe('Multi-Currency Billing', () => {
       tenant: context.tenantId
     });
 
-    await tenantTable(context, 'client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
+    await tenantTable(context, 'client_contracts').insert({
+      tenant: context.tenantId,
+      client_contract_id: uuidv4(),
       client_id: context.clientId,
-      contract_line_id: lineId,
+      contract_id: contractId,
       start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       is_active: true,
-      tenant: context.tenantId
+      status: 'pending'
     });
+
+    await materializeRecurringServicePeriods(context, lineId);
 
     const serviceId = await createTestService(context, { service_name: 'GBP Service' });
     await tenantTable(context, 'contract_line_service_configuration').insert({
@@ -437,11 +453,16 @@ describe('Multi-Currency Billing', () => {
 
     // Assert
     expect(result).not.toBeNull();
-    expect(result?.currencyCode).toBe('GBP'); // Should fallback to client default
-    
+    expect(result?.currencyCode).toBe('USD');
+
     const savedInvoice = await tenantTable(context, 'invoices')
       .where({ invoice_id: result?.invoice_id })
       .first();
-    expect(savedInvoice.currency_code).toBe('GBP');
+    expect(savedInvoice.currency_code).toBe('USD');
+
+    const savedContract = await tenantTable(context, 'contracts')
+      .where({ contract_id: contractId })
+      .first();
+    expect(savedContract.currency_code).toBe('USD');
   });
 });

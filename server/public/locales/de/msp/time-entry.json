@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Suche...",
       "noWorkItems": "Keine Arbeitselemente gefunden"
-    }
+    },
+    "paymentWarningTitle": "Warnung zur Zahlungsvoraussetzung",
+    "paymentWarning": "Für einen gekennzeichneten Projektabrechnungsmeilenstein ist eine Zahlung erforderlich, die noch nicht bestätigt wurde. Bestätigen Sie die Zahlung, bevor Sie weiterarbeiten."
   },
   "workItemList": {
     "meta": {

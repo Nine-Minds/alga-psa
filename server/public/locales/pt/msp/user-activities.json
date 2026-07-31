@@ -143,7 +143,21 @@
       "title": "Item ad hoc",
       "toggleDoneError": "Falha ao atualizar o item."
     },
-    "enterpriseOnly": "As tarefas de fluxo de trabalho são um recurso empresarial."
+    "enterpriseOnly": "As tarefas de fluxo de trabalho são um recurso empresarial.",
+    "nextAction": "Próxima ação",
+    "overdueSince": "Em atraso desde {{date}}",
+    "dueOn": "Vence em {{date}}",
+    "stage": "Fase",
+    "confidence": "Confiança",
+    "owner": "Proprietário",
+    "expectedClose": "Fecho previsto",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "contact": "Contacto",
+    "linkedQuotes": "Orçamentos associados",
+    "openOpportunity": "Abrir oportunidade",
+    "opportunityNotFound": "Oportunidade não encontrada."
   },
   "groupedView": {
     "addGroup": "Adicionar grupo",

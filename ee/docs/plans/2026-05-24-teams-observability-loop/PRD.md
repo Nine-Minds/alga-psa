@@ -252,7 +252,7 @@ These server actions are callable from the existing settings/admin context. No `
 
 ## Acceptance Criteria
 
-- [ ] Three migrations land in `ee/server/migrations/` (CE-compatible) and `ee/server/migrations/citus/` (where Citus-specific logic differs).
+- [ ] Three migrations land in `ee/server/migrations/` (CE-compatible), with Citus-specific distribution guarded inline in the same file — no separate `ee/server/migrations/citus/` folder (removed 2026-07-24; it was never executed).
 - [ ] `deliverTeamsNotificationImpl()` writes exactly one row per terminal outcome with correct `status` and `error_code`.
 - [ ] Each of the 7 mutation actions in `teamsActionRegistry.ts` writes exactly one audit row on success and one on failure.
 - [ ] First inbound bot activity from a (tenant, user, conversation) tuple writes a `teams_conversation_references` row; subsequent activities upsert.

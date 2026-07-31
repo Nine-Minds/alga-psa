@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { generateManualInvoice } from '@alga-psa/billing/actions';
+import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/billing/actions';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
   createTestService,
@@ -11,9 +11,15 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  unwrapManualInvoice
 } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
+
+// generateManualInvoice returns {success, invoice}; unwrap so call sites keep
+// receiving the invoice itself.
+const generateManualInvoice = async (request: any): Promise<any> =>
+  unwrapManualInvoice(await generateManualInvoiceRaw(request));
 
 
 vi.mock('@alga-psa/auth', async () => {

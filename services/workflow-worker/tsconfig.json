@@ -21,6 +21,8 @@
       "@enterprise/*": ["packages/ee/src/*"],
       "@ee": ["packages/ee/src"],
       "@ee/*": ["packages/ee/src/*"],
+      "@alga-psa/ee-stubs": ["packages/ee/src"],
+      "@alga-psa/ee-stubs/*": ["packages/ee/src/*"],
       "@alga-psa/extension-runtime": ["sdk/extension-runtime/src"],
       "@alga-psa/extension-runtime/*": ["sdk/extension-runtime/src/*"],
       "@alga-psa/core": ["packages/core/src"],

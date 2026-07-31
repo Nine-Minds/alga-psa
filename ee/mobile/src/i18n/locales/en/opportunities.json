@@ -1,0 +1,146 @@
+{
+  "title": "Opportunities",
+  "segments": {
+    "queue": "Queue",
+    "pipeline": "Pipeline"
+  },
+  "queue": {
+    "dueToday": "Do these today",
+    "goingQuiet": "Going quiet",
+    "empty": "That's everything. Nothing needs you today.",
+    "overdue": "Overdue",
+    "due": "Due",
+    "loading": "Loading your work"
+  },
+  "pipeline": {
+    "searchPlaceholder": "Search deals",
+    "empty": "No open deals.",
+    "filters": {
+      "open": "Open",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "quietDays": "{{count}} days quiet",
+    "loading": "Loading deals"
+  },
+  "stage": {
+    "identified": "Identified",
+    "qualified": "Qualified",
+    "assessment": "Assessment",
+    "proposed": "Proposed",
+    "verbal": "Verbal",
+    "won": "Won",
+    "lost": "Lost"
+  },
+  "detail": {
+    "nextAction": "Next action",
+    "due": "Due {{date}}",
+    "complete": "Complete",
+    "timeline": "Timeline",
+    "timelineEmpty": "No interactions yet.",
+    "logInteraction": "Log interaction",
+    "scheduleFollowUp": "Schedule follow-up",
+    "markWon": "Mark won",
+    "markLost": "Mark lost",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "call": "Call",
+    "email": "Email",
+    "contact": "Contact",
+    "clientContacts": "Client contacts",
+    "noContacts": "No contacts for this client yet.",
+    "viewAllContacts": "View all ({{count}})",
+    "viewClient": "View client",
+    "viewContact": "View contact",
+    "expectedClose": "Expected close",
+    "confidence": "Confidence",
+    "owner": "Owner",
+    "quotes": "Quotes",
+    "loading": "Loading deal",
+    "noNextAction": "No next action set.",
+    "durationMinutes": "{{count}} min"
+  },
+  "confidence": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "committed": "Committed"
+  },
+  "completeAction": {
+    "title": "Complete action",
+    "completing": "Completing",
+    "whatDidYouDo": "What happened?",
+    "nextAction": "Next action",
+    "nextActionRequired": "Every open deal needs a next action.",
+    "dueDate": "Due date",
+    "dueTime": "Time",
+    "submit": "Complete and set next",
+    "success": "Action completed"
+  },
+  "logInteraction": {
+    "title": "Log interaction",
+    "type": "Type",
+    "selectType": "Select a type",
+    "titleField": "Title",
+    "notes": "Notes",
+    "duration": "Duration (minutes)",
+    "submit": "Log it",
+    "success": "Interaction logged"
+  },
+  "callPrompt": {
+    "title": "Log this call?",
+    "body": "You called {{name}}. Add it to the deal's record.",
+    "log": "Log the call",
+    "dismiss": "Not now"
+  },
+  "followUp": {
+    "title": "Schedule follow-up",
+    "defaultTitle": "Follow up: {{deal}}",
+    "titleField": "Title",
+    "date": "Date",
+    "start": "Start",
+    "end": "End",
+    "invalidTimes": "End time must be after start time.",
+    "submit": "Add to calendar",
+    "success": "Follow-up scheduled"
+  },
+  "won": {
+    "title": "Mark won?",
+    "body": "Close gates run on the server. Finish the conversion (agreement, project) on the web.",
+    "confirm": "Mark won",
+    "success": "Deal won"
+  },
+  "lost": {
+    "title": "Mark lost",
+    "reason": "Reason",
+    "selectReason": "Select a reason",
+    "reasonRequired": "A loss reason is required",
+    "lostTo": "Lost to",
+    "notes": "Notes",
+    "confirm": "Mark lost",
+    "success": "Deal marked lost",
+    "reasons": {
+      "no_response": "No response",
+      "chose_competitor": "Chose a competitor",
+      "price": "Price",
+      "timing": "Timing",
+      "no_budget": "No budget",
+      "not_a_fit": "Not a fit",
+      "other": "Other"
+    }
+  },
+  "format": {
+    "perMonth": "{{value}}/mo"
+  },
+  "errors": {
+    "unableToLoad": "Unable to load.",
+    "generic": "Something went wrong. Please try again.",
+    "callUnavailable": "This device can't place phone calls.",
+    "emailUnavailable": "No email app is available on this device."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "noAccess": "You don't have access to opportunities."
+  }
+}

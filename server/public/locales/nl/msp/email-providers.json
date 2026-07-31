@@ -144,6 +144,7 @@
     },
     "badges": {
       "disabled": "Gehandicapt",
+      "paused": "Gepauzeerd",
       "connected": "Aangesloten",
       "disconnected": "Verbinding verbroken",
       "error": "Fout",
@@ -167,15 +168,29 @@
       "reconnectOauth": "Maak opnieuw verbinding met OAuth",
       "resyncing": "Opnieuw synchroniseren…",
       "resyncMailbox": "Postbus opnieuw synchroniseren",
+      "pause": "Inkomende e-mail pauzeren",
+      "resume": "Inkomende e-mail hervatten",
       "delete": "Aanbieder verwijderen"
     },
+    "feedback": {
+      "paused": "Inkomende e-mail gepauzeerd.",
+      "resumed": "Inkomende e-mail hervat.",
+      "pauseError": "Kan de pauzestatus van inkomende e-mail niet wijzigen."
+    },
+    "pausedHelp": "Berichten die binnenkomen terwijl deze mailbox is gepauzeerd, worden niet met terugwerkende kracht geïmporteerd.",
     "fields": {
       "status": "Status",
       "lastSync": "Laatste synchronisatie",
+      "lastIngested": "Laatst ingelezen",
+      "delivery": "Levering",
       "created": "Gemaakt",
       "subscription": "Abonnement",
       "defaults": "Ticketstandaarden",
       "error": "Fout:"
+    },
+    "delivery": {
+      "polling": "Polling elke 3 minuten",
+      "webhook": "Realtime levering: actief"
     },
     "values": {
       "active": "Actief",

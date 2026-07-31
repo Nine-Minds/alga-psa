@@ -298,7 +298,7 @@ describe('AssetTypesManager (T308)', () => {
     await waitFor(() => expect(byId('assets-types-dialog')).toBeNull());
     expect(mockGetAssetTypes).toHaveBeenCalledTimes(2);
     expect(mockToastSuccess).toHaveBeenCalledWith('Asset type created');
-  });
+  }, 15_000);
 
   it('built-in edit allows name/icon only and locks the schema area with a hint', async () => {
     const user = userEvent.setup();

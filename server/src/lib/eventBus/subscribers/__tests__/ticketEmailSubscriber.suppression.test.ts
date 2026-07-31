@@ -7,6 +7,7 @@ const {
   resolveAccumulatedTicketNotificationSuppression,
   shouldSendContactFacingTicketEmail,
   shouldSendInternalTicketEmail,
+  shouldSendTicketCommentNotification,
   shouldSendTicketWatcherEmail,
   shouldSendTicketClosedWatcherEmail,
 } = ticketEmailSubscriberTestHarness;
@@ -143,5 +144,20 @@ describe('ticketEmailSubscriber suppression policy', () => {
     expect(shouldSendInternalTicketEmail(contactOnly)).toBe(true);
     expect(shouldSendContactFacingTicketEmail(full)).toBe(false);
     expect(shouldSendInternalTicketEmail(full)).toBe(false);
+  });
+
+  it('suppresses closing-resolution comment emails for the selected recipient classes', () => {
+    const contactOnly = resolveTicketNotificationSuppression({
+      suppressContactNotifications: true,
+    });
+    const full = resolveTicketNotificationSuppression({
+      suppressContactNotifications: true,
+      suppressInternalNotifications: true,
+    });
+
+    expect(shouldSendTicketCommentNotification(contactOnly, 'contact')).toBe(false);
+    expect(shouldSendTicketCommentNotification(contactOnly, 'internal')).toBe(true);
+    expect(shouldSendTicketCommentNotification(full, 'contact')).toBe(false);
+    expect(shouldSendTicketCommentNotification(full, 'internal')).toBe(false);
   });
 });

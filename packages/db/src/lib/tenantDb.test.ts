@@ -222,6 +222,34 @@ describe('tenantDb facade', () => {
     );
   });
 
+  it('joins at most one matching child row per tenant and parent', () => {
+    const db = tenantDb(knex, 'tenant-1');
+    const query = db.table('clients as c').select('c.client_id');
+
+    db.tenantJoinFirstMatching(query, 'client_locations', 'cl', 'c.client_id', 'client_id', {
+      type: 'left',
+      rootTenantColumn: 'c.tenant',
+      where: (childQuery, sourceAlias) => childQuery.where({
+        [`${sourceAlias}.is_default`]: true,
+        [`${sourceAlias}.is_active`]: true,
+      }),
+      orderBy: [
+        { column: 'updated_at', order: 'desc' },
+        { column: 'location_id', order: 'desc' },
+      ],
+    });
+
+    expect(query.toString()).toContain(
+      'left join (select distinct on ("__cl_source"."tenant", "__cl_source"."client_id") "__cl_source".* from "client_locations" as "__cl_source"'
+    );
+    expect(query.toString()).toContain(
+      'order by "__cl_source"."tenant" asc, "__cl_source"."client_id" asc, "__cl_source"."updated_at" desc, "__cl_source"."location_id" desc'
+    );
+    expect(query.toString()).toContain(
+      'on "c"."client_id" = "cl"."client_id" and "cl"."tenant" = "c"."tenant"'
+    );
+  });
+
   it('supports correlated tenant predicates outside joins', () => {
     const db = tenantDb(knex, 'tenant-1');
     const waitSearch = db

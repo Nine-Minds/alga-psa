@@ -32,6 +32,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 import { ITaxComponent } from '@alga-psa/types';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -66,6 +67,7 @@ interface TaxComponentEditorProps {
 
 export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxComponentEditorProps) {
   const { t } = useTranslation('msp/billing-settings');
+  const { money } = useCurrencyFormat();
   const [components, setComponents] = useState<ITaxComponent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -404,7 +406,7 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
           <div className="bg-muted/50 rounded-lg p-4 mt-4">
             <h5 className="text-sm font-medium mb-2">
               {t('tax.components.preview.title', {
-                amount: `$${calculatePreview.baseAmount.toFixed(2)}`,
+                amount: money(Math.round(calculatePreview.baseAmount * 100)),
                 defaultValue: 'Calculation Preview ({{amount}} base)'
               })}
             </h5>
@@ -416,13 +418,13 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
                       ? t('tax.components.preview.compoundSuffix', { defaultValue: ', compound' })
                       : ''}):
                   </span>
-                  <span>${item.tax.toFixed(2)}</span>
+                  <span>{money(Math.round(item.tax * 100))}</span>
                 </div>
               ))}
               <div className="border-t pt-1 mt-1 flex justify-between font-medium">
                 <span>{t('tax.components.preview.totalTax', { defaultValue: 'Total Tax:' })}</span>
                 <span>
-                  ${calculatePreview.totalTax.toFixed(2)} (
+                  {money(Math.round(calculatePreview.totalTax * 100))} (
                   {t('tax.components.preview.effective', {
                     rate: calculatePreview.effectiveRate.toFixed(2),
                     defaultValue: 'Effective: {{rate}}%'

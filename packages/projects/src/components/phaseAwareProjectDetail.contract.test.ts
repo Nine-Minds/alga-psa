@@ -11,6 +11,8 @@ describe('phase-aware MSP project UI contracts', () => {
   const taskStatusSelectSource = readComponent('TaskStatusSelect.tsx');
   const taskEditSource = readComponent('TaskEdit.tsx');
   const taskQuickAddSource = readComponent('TaskQuickAdd.tsx');
+  const projectPhasesSource = readComponent('ProjectPhases.tsx');
+  const phaseListItemSource = readComponent('PhaseListItem.tsx');
 
   it('T034/T035/T036: ProjectDetail refetches phase-effective statuses and derives counts from them', () => {
     expect(projectDetailSource).toContain('const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);');
@@ -54,5 +56,16 @@ describe('phase-aware MSP project UI contracts', () => {
     );
     expect(taskEditSource).toContain('projectStatuses={selectedPhaseStatuses}');
     expect(taskQuickAddSource).toContain('projectStatuses={projectStatuses}');
+  });
+
+  it('keeps billing-view phases selectable but read-only and reserves billing badges for that view', () => {
+    expect(projectDetailSource).toContain('viewMode={viewMode}');
+    expect(projectPhasesSource).toContain("viewMode !== 'billing'");
+    expect(projectPhasesSource).toContain('viewMode={viewMode}');
+    expect(phaseListItemSource).toContain("const isBillingView = viewMode === 'billing';");
+    expect(phaseListItemSource).toContain('draggable={!isBillingView && !effectiveIsEditing}');
+    expect(phaseListItemSource).toContain('{isBillingView && billingBadge && (');
+    expect(phaseListItemSource).toContain('{!isBillingView && (');
+    expect(phaseListItemSource).toContain('onSelect(phase);');
   });
 });

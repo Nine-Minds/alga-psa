@@ -366,6 +366,9 @@
       "title": "Aucun accès au portail",
       "description": "Ce contact n’a pas encore accès au portail client"
     },
+    "noClient": {
+      "description": "Associez ce contact à un client pour gérer l’accès au portail."
+    },
     "portalAdmin": {
       "label": "Administrateur du portail",
       "helper": "Lorsqu’il est activé, l’utilisateur sera créé avec le rôle Administrateur client. Lorsqu’il est désactivé, il obtiendra le rôle Utilisateur client."

@@ -8,6 +8,7 @@ import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
+import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 
@@ -144,7 +145,11 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
     }
 
     try {
-      const evaluation = evaluateTemplateAst(validation.ast, input.invoiceData as unknown as Record<string, unknown>);
+      const evaluation = evaluateTemplateAst(
+        validation.ast,
+        input.invoiceData as unknown as Record<string, unknown>,
+        { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
+      );
       const rendered = await renderEvaluatedTemplateAst(validation.ast, evaluation);
       return {
         success: true,
