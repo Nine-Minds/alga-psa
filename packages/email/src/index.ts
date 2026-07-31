@@ -49,6 +49,7 @@ export {
 // Individual email sending functions
 export { sendPasswordResetEmail } from './sendPasswordResetEmail';
 export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';
+export { sendTeamInvitationEmail } from './sendTeamInvitationEmail';
 export { sendTenantRecoveryEmail } from './clientPortalTenantRecoveryEmail';
 export { sendVerificationEmail } from './sendVerificationEmail';
 export { sendCancellationFeedbackEmail } from './sendCancellationFeedbackEmail';
@@ -59,3 +60,9 @@ export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory'
 
 // Tenant email provider manager
 export { EmailProviderManager } from './providers/EmailProviderManager';
+
+// Shared settings defaults
+export {
+  createDefaultProviderConfig,
+  type EditableEmailProviderType,
+} from './providerConfig';

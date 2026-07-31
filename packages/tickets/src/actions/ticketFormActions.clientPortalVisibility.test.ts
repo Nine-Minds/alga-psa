@@ -27,6 +27,12 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getPrioritiesByBoardType: (...args: any[]) => getPrioritiesByBoardTypeMock(...args),
 }));
 
+vi.mock('@alga-psa/reference-data/actions/priorityActions', () => ({
+  getTicketStatuses: vi.fn(),
+  getAllPriorities: vi.fn(),
+  getPrioritiesByBoardType: (...args: any[]) => getPrioritiesByBoardTypeMock(...args),
+}));
+
 vi.mock('./clientLookupActions', () => ({
   getAllClients: vi.fn(),
   getClientById: vi.fn(),
@@ -38,6 +44,10 @@ vi.mock('./board-actions', () => ({
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
+  getAllUsers: vi.fn(),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getAllUsers: vi.fn(),
 }));
 

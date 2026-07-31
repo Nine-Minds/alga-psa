@@ -131,7 +131,7 @@ vi.mock('@alga-psa/integrations/components', () => ({
 
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   __esModule: true,
-  EntraIntegrationSettings: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
+  EntraIntegrationSummaryCard: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
 }));
 
 vi.mock('@alga-psa/ee-microsoft-teams/components', () => ({

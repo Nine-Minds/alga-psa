@@ -8,6 +8,6 @@ describe('DocumentStorageCard preview contract', () => {
     const source = fs.readFileSync(filePath, 'utf-8');
 
     expect(source).toContain('const identifierForPreview = document.document_id || document.file_id;');
-    expect(source).toContain('const preview = await getDocumentPreview(identifierForPreview);');
+    expect(source).toContain('getDocumentPreview(identifierForPreview)');
   });
 });

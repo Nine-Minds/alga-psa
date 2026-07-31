@@ -870,6 +870,10 @@
     "contactLoadFailed": "Échec du chargement du contact.",
     "tenantNotDefined": "Erreur : le locataire n'est pas défini",
     "noContact": "Aucun contact",
+    "closeTicketTitle": "Fermer le ticket",
+    "resolveAndClose": "Résoudre et fermer",
+    "closeTicketResolutionPrompt": "Choisissez un statut de clôture et ajoutez une résolution pour ce ticket.",
+    "selectCloseStatus": "Sélectionner un statut de clôture",
     "cannotCloseYet": "Ce ticket ne peut pas encore être fermé",
     "closeRulesIntro": "Les règles de fermeture du tableau exigent les éléments suivants avant que ce ticket puisse être fermé :",
     "viewChecklist": "Voir la liste de contrôle",
@@ -1135,7 +1139,9 @@
     "clientRequired": "Un client doit être attribué à ce ticket avant de pouvoir ajouter des matériaux.",
     "serialUnit": "Numéro de série / MAC (produit sérialisé)",
     "selectUnit": "Sélectionnez une unité à livrer...",
-    "onHandByLocation": "En stock par emplacement"
+    "onHandByLocation": "En stock par emplacement",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Liste de surveillance",
@@ -1198,6 +1204,7 @@
   "categoryPicker": {
     "title": "Sélecteur de catégorie",
     "placeholder": "Sélectionnez les catégories...",
+    "searchPlaceholder": "Rechercher des catégories...",
     "noCategory": "Aucune catégorie",
     "addNew": "Ajouter une nouvelle catégorie",
     "itilBadge": "ITIL",
@@ -1484,7 +1491,6 @@
       "pausedHint": "L'horloge est en pause tant que le ticket est dans un statut en pause."
     },
     "tiles": {
-      "request": "Demande",
       "openedBy": "Ouvert par {{name}}",
       "showMore": "Afficher plus",
       "showLess": "Afficher moins",

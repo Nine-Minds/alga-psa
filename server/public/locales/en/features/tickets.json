@@ -878,6 +878,10 @@
     "contactLoadFailed": "Failed to load contact.",
     "tenantNotDefined": "Error: tenant is not defined",
     "noContact": "No contact",
+    "closeTicketTitle": "Close ticket",
+    "resolveAndClose": "Resolve and close",
+    "closeTicketResolutionPrompt": "Choose a close status and add a resolution for this ticket.",
+    "selectCloseStatus": "Select a close status",
     "cannotCloseYet": "This ticket can't be closed yet",
     "closeRulesIntro": "The board's close rules require the following before this ticket can be closed:",
     "viewChecklist": "View checklist",
@@ -1143,7 +1147,9 @@
     "clientRequired": "A client must be assigned to this ticket before materials can be added.",
     "serialUnit": "Serial / MAC (serialized product)",
     "selectUnit": "Select a unit to deliver...",
-    "onHandByLocation": "On hand by location"
+    "onHandByLocation": "On hand by location",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Watch List",
@@ -1206,6 +1212,7 @@
   "categoryPicker": {
     "title": "Category Picker",
     "placeholder": "Select categories...",
+    "searchPlaceholder": "Search categories...",
     "noCategory": "No Category",
     "addNew": "Add new category",
     "itilBadge": "ITIL",
@@ -1492,7 +1499,6 @@
       "pausedHint": "The clock is paused while the ticket waits in a paused status."
     },
     "tiles": {
-      "request": "Request",
       "openedBy": "Opened by {{name}}",
       "showMore": "Show more",
       "showLess": "Show less",

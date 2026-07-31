@@ -192,6 +192,11 @@ spec:
                 log "SETUP_RUN_MIGRATIONS is disabled; skipping migrations"
               fi
 
+              # LEVERAGE: friction builtin-content-distribution — hosted gates seeds off after
+              # first run, so new built-in content only reaches existing tenants via
+              # hand-written readd_* migrations; the appliance variant
+              # (appliance-bootstrap-configmap.yaml) instead replays seeds ungated on every
+              # upgrade. Same divergence, see the marker there.
               if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
                 if check_seeds_status; then
                   log "Seeds already exist; skipping"

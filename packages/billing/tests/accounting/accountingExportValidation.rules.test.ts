@@ -53,12 +53,13 @@ type FakeState = {
 function createFakeKnex(state: FakeState) {
   const updates: Array<{ table: string; patch: any }> = [];
   const tableData: Record<string, () => any[]> = {
-    invoice_charges: () => state.charges,
+    invoice_charges: () => state.charges.map((charge) => ({ net_amount: 100, ...charge })),
     invoice_charge_details: () => state.chargeDetails,
     invoices: () => state.invoices,
     clients: () => state.clients,
     service_catalog: () => state.services,
     accounting_export_errors: () => [],
+    tenant_settings: () => [{ settings: { accountingSync: { autoProvisionCustomers: true } } }],
   };
 
   const knex: any = (table: string) => {
@@ -75,6 +76,7 @@ function createFakeKnex(state: FakeState) {
       updates.push({ table, patch });
       return Promise.resolve(1);
     };
+    builder.first = () => Promise.resolve(tableData[table]?.()[0]);
     builder.then = (onFulfilled: any, onRejected: any) =>
       Promise.resolve(tableData[table]?.() ?? []).then(onFulfilled, onRejected);
     return builder;

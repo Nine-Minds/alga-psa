@@ -104,6 +104,71 @@ secrets:
     file: ./secrets/ninjaone_client_secret
 
 services:
+  ai-gateway:
+    build:
+      context: .
+      dockerfile: services/ai-gateway/Dockerfile
+    environment:
+      NODE_ENV: ${APP_ENV:-development}
+      PORT: 8080
+      AI_GATEWAY_DATABASE_URL: ${AI_GATEWAY_DATABASE_URL:-}
+      AI_GATEWAY_DB_HOST: ${AI_GATEWAY_DB_HOST:-ai-gateway-postgres}
+      AI_GATEWAY_DB_PORT: ${AI_GATEWAY_DB_PORT:-5432}
+      AI_GATEWAY_DB_NAME: ${AI_GATEWAY_DB_NAME:-ai_gateway}
+      AI_GATEWAY_DB_USER: ${AI_GATEWAY_DB_USER:-postgres}
+      AI_GATEWAY_DB_PASSWORD_FILE: /run/secrets/postgres_password
+      AI_GATEWAY_DEFAULT_INPUT_CREDITS_PER_1K_TOKENS: ${AI_GATEWAY_DEFAULT_INPUT_CREDITS_PER_1K_TOKENS:-}
+      AI_GATEWAY_DEFAULT_OUTPUT_CREDITS_PER_1K_TOKENS: ${AI_GATEWAY_DEFAULT_OUTPUT_CREDITS_PER_1K_TOKENS:-}
+      AI_GATEWAY_SERVICE_SECRET: ${AI_GATEWAY_SERVICE_SECRET:-}
+      AI_GATEWAY_ADMIN_TOKEN: ${AI_GATEWAY_ADMIN_TOKEN:-}
+      AI_GATEWAY_STRIPE_SECRET_KEY: ${AI_GATEWAY_STRIPE_SECRET_KEY:-}
+      AI_GATEWAY_STRIPE_WEBHOOK_SECRET: ${AI_GATEWAY_STRIPE_WEBHOOK_SECRET:-}
+      AI_GATEWAY_TIER_CONFIG: ${AI_GATEWAY_TIER_CONFIG:-}
+      AI_GATEWAY_AUTO_TOPUP_POLL_INTERVAL_MS: ${AI_GATEWAY_AUTO_TOPUP_POLL_INTERVAL_MS:-5000}
+      AI_GATEWAY_AUTO_TOPUP_MAX_ATTEMPTS: ${AI_GATEWAY_AUTO_TOPUP_MAX_ATTEMPTS:-3}
+      AI_GATEWAY_AUTO_TOPUP_RETRY_BASE_MS: ${AI_GATEWAY_AUTO_TOPUP_RETRY_BASE_MS:-60000}
+      AI_GATEWAY_EVENTS_WEBHOOK_URL: ${AI_GATEWAY_EVENTS_WEBHOOK_URL:-}
+      AI_GATEWAY_EVENTS_WEBHOOK_SECRET: ${AI_GATEWAY_EVENTS_WEBHOOK_SECRET:-}
+      AI_GATEWAY_MODEL_ROUTES: ${AI_GATEWAY_MODEL_ROUTES:-{}}
+      AI_GATEWAY_DEFAULT_PROVIDER: ${AI_GATEWAY_DEFAULT_PROVIDER:-openrouter}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
+      OPENROUTER_API: ${OPENROUTER_API:-}
+      VERTEX_OPENAPI_BASE_URL: ${VERTEX_OPENAPI_BASE_URL:-}
+      VERTEX_PROJECT_ID: ${VERTEX_PROJECT_ID:-}
+      VERTEX_LOCATION: ${VERTEX_LOCATION:-}
+      GOOGLE_CLOUD_ACCESS_TOKEN: ${GOOGLE_CLOUD_ACCESS_TOKEN:-}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+      ALGA_LICENSE_URL: ${ALGA_LICENSE_URL:-}
+      ALGA_LICENSE_SERVICE_TOKEN: ${ALGA_LICENSE_SERVICE_TOKEN:-}
+      ALGA_LICENSE_STUB: ${ALGA_LICENSE_STUB:-false}
+      ALGA_LICENSE_STUB_TENANT_ID: ${ALGA_LICENSE_STUB_TENANT_ID:-}
+      ALGA_LICENSE_STUB_EDITION: ${ALGA_LICENSE_STUB_EDITION:-enterprise}
+    secrets:
+      - postgres_password
+    ports:
+      - "${EXPOSE_AI_GATEWAY_PORT:-8081}:8080"
+    networks:
+      - app-network
+    depends_on:
+      ai-gateway-postgres:
+        condition: service_started
+
+  ai-gateway-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ai_gateway
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "${EXPOSE_AI_GATEWAY_DB_PORT:-5433}:5432"
+    volumes:
+      - ai-gateway-postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
   postgres: # Renamed from postgres-base
     image: ankane/pgvector:latest
     #container_name: ${APP_NAME:-sebastian}_postgres
@@ -150,3 +215,6 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  ai-gateway-postgres-data:

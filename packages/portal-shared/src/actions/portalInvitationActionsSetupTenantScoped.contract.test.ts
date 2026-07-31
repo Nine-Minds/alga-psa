@@ -19,11 +19,11 @@ describe('portal invitation setup tenant-scoped query contract', () => {
   it('uses structural tenant scoping for setup user, contact, and role roots', () => {
     const section = sectionBetween('export async function completePortalSetup', 'export const getPortalInvitations');
 
-    expect(section).toContain('const tenantScopedTable = (table: string) => tenantDb(knex, ');
-    expect(section).toContain("tenantScopedTable('users')");
-    expect(section).toContain("tenantScopedTable('contacts')");
-    expect(section).toContain("tenantScopedTable('roles')");
-    expect(section).toContain("await knex('user_roles').insert({");
+    expect(section).toContain('const scopedDb = tenantDb(knex, tenant);');
+    expect(section).toContain("scopedDb.table('users')");
+    expect(section).toContain("scopedDb.table('contacts')");
+    expect(section).toContain("scopedDb.table('roles')");
+    expect(section).toContain("await scopedDb.table('user_roles').insert({");
 
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*user_id: existingUser\.user_id,\s*tenant\s*\}\)/);

@@ -218,12 +218,23 @@ export class AssetService extends BaseService<any> {
     const asset = await this.getById(id, context);
     if (!asset) return null;
 
+    // The auxiliary sub-objects are best-effort: a failing join (some carry
+    // legacy schema drift) must degrade to empty, never 500 the whole asset.
+    const settle = async <T>(work: Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await work;
+      } catch (error) {
+        console.error(`[AssetService.getWithDetails] sub-query failed for asset ${id}:`, error);
+        return fallback;
+      }
+    };
+
     const [client, extensionData, relationships, documents, maintenanceSchedules] = await Promise.all([
-      this.getAssetClient(asset.client_id, context),
-      this.getAssetExtensionData(id, asset.asset_type, context),
-      this.getAssetRelationships(id, context),
-      this.getAssetDocuments(id, context),
-      this.getMaintenanceSchedules(id, context)
+      settle(this.getAssetClient(asset.client_id, context), null),
+      settle(this.getAssetExtensionData(id, asset.asset_type, context), null),
+      settle(this.getAssetRelationships(id, context), [] as any[]),
+      settle(this.getAssetDocuments(id, context), [] as any[]),
+      settle(this.getMaintenanceSchedules(id, context), [] as any[]),
     ]);
 
     return {
@@ -504,23 +515,37 @@ export class AssetService extends BaseService<any> {
       .del();
   }
 
-  // Asset relationships
+  // Asset relationships. The table is directional (parent_asset_id/
+  // child_asset_id); "relationships of X" are rows where X is on either side,
+  // and the related asset is the other end. Resolved without a self-alias join.
   async getAssetRelationships(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
-    const db = tenantDb(knex, context.tenant);
-    const query = db.table('asset_relationships');
-    db.tenantJoin(query, 'assets as related_assets', 'asset_relationships.related_asset_id', 'related_assets.asset_id');
-    return query
-      .where({
-        'asset_relationships.asset_id': assetId
-      })
-      .select(
-        'asset_relationships.*',
-        'related_assets.asset_tag',
-        'related_assets.name as related_asset_name',
-        'related_assets.asset_type',
-        'related_assets.status'
-      );
+    const rows = await scopedTable(knex, context.tenant, 'asset_relationships')
+      .where((builder) => builder
+        .where('parent_asset_id', assetId)
+        .orWhere('child_asset_id', assetId))
+      .select('*');
+    if (rows.length === 0) return [];
+
+    const relatedId = (row: any): string => (row.parent_asset_id === assetId ? row.child_asset_id : row.parent_asset_id);
+    const relatedIds: string[] = [...new Set((rows as any[]).map(relatedId))];
+    const related = await scopedTable(knex, context.tenant, 'assets')
+      .whereIn('asset_id', relatedIds)
+      .select('asset_id', 'asset_tag', 'name', 'asset_type', 'status');
+    const byId = new Map((related as any[]).map((asset) => [asset.asset_id, asset]));
+
+    return rows.map((row: any) => {
+      const other: any = byId.get(relatedId(row));
+      return {
+        ...row,
+        related_asset_id: relatedId(row),
+        direction: row.parent_asset_id === assetId ? 'child' : 'parent',
+        asset_tag: other?.asset_tag ?? null,
+        related_asset_name: other?.name ?? null,
+        asset_type: other?.asset_type ?? null,
+        status: other?.status ?? null,
+      };
+    });
   }
 
   /**
@@ -735,15 +760,17 @@ export class AssetService extends BaseService<any> {
   // Maintenance management
   async getMaintenanceSchedules(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
+    // The schedule table has no assigned_to; it records created_by. Join on
+    // that to surface who set the schedule up (nullable-safe left join).
     const query = scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
       .where({
         'asset_maintenance_schedules.asset_id': assetId
       })
       .select(
         'asset_maintenance_schedules.*',
-        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as created_by_name`)
       );
-    tenantDb(knex, context.tenant).tenantJoin(query, 'users', 'asset_maintenance_schedules.assigned_to', 'users.user_id', {
+    tenantDb(knex, context.tenant).tenantJoin(query, 'users', 'asset_maintenance_schedules.created_by', 'users.user_id', {
       type: 'left',
     });
     return query;
@@ -838,26 +865,36 @@ export class AssetService extends BaseService<any> {
   async recordMaintenance(assetId: string, data: RecordMaintenanceData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
     await this.assertAssetExists(knex, context.tenant, assetId);
-    await this.assertUserExists(knex, context.tenant, data.performed_by, 'Maintenance performer not found');
-    if (data.schedule_id) {
-      await this.assertMaintenanceScheduleForAsset(knex, context.tenant, data.schedule_id, assetId);
-    }
+    const performedBy = data.performed_by ?? context.userId;
+    await this.assertUserExists(knex, context.tenant, performedBy, 'Maintenance performer not found');
+    await this.assertMaintenanceScheduleForAsset(knex, context.tenant, data.schedule_id, assetId);
 
-    const maintenanceData = {
-      ...data,
-      asset_id: assetId,
+    const performedAt = data.performed_at ?? new Date().toISOString();
+    // Only these columns exist on asset_maintenance_history; the loose fields
+    // (duration/cost/notes/parts) live inside the maintenance_data jsonb.
+    const extras: Record<string, unknown> = { ...(data.maintenance_data ?? {}) };
+    if (data.duration_hours !== undefined) extras.duration_hours = data.duration_hours;
+    if (data.cost !== undefined) extras.cost = data.cost;
+    if (data.notes !== undefined) extras.notes = data.notes;
+    if (data.parts_used !== undefined) extras.parts_used = data.parts_used;
+
+    const row = {
       tenant: context.tenant,
+      asset_id: assetId,
+      schedule_id: data.schedule_id,
+      maintenance_type: data.maintenance_type,
+      description: data.description ?? data.notes ?? `${data.maintenance_type} maintenance performed`,
+      maintenance_data: JSON.stringify(extras),
+      performed_at: performedAt,
+      performed_by: performedBy,
       created_at: new Date()
     };
 
     const [maintenance] = await tenantDb(knex, context.tenant).table('asset_maintenance_history')
-      .insert(maintenanceData)
+      .insert(row)
       .returning('*');
 
-    // Update schedule if linked
-    if (data.schedule_id) {
-      await this.updateScheduleAfterMaintenance(data.schedule_id, data.performed_at, context);
-    }
+    await this.updateScheduleAfterMaintenance(data.schedule_id, performedAt, context);
 
     return maintenance;
   }
@@ -1023,7 +1060,9 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     return scopedTable(knex, context.tenant, 'clients')
       .where({ client_id: clientId })
-      .select('client_id', 'client_name', 'email', 'phone_no')
+      // clients holds only client_name/url/billing_email; contact email/phone
+      // live on the client's locations/contacts, not here.
+      .select('client_id', 'client_name', 'billing_email')
       .first();
   }
 

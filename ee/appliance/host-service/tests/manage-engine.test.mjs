@@ -126,18 +126,25 @@ test('applyLicense surfaces structured workflow errors despite a nonzero exit', 
   assert.match(res.error, /different account/);
 });
 
-test('applyAppUrl rewrites values, persists runtime, reconciles helm', async () => {
+test('applyAppUrl rewrites app and temporal-worker values, persists runtime, and reconciles both releases', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-'));
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');
   fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable', runtime: { appHostname: 'https://alga.local' } }));
 
   const coreYaml = 'appUrl: https://alga.local\nhost: alga.local\ndomainSuffix: alga.local\nserver:\n  image:\n    tag: latest\n';
-  let appliedManifest = null;
+  const temporalWorkerYaml = 'applicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: latest\n';
+  const appliedManifests = [];
   const kube = fakeKube({
-    json: (args) => args.includes('configmap appliance-values-alga-core')
-      ? { ok: true, value: { data: { 'alga-core.single-node.yaml': coreYaml } } }
-      : { ok: true, value: {} },
-    apply: (manifest) => { appliedManifest = manifest; return { ok: true }; }
+    json: (args) => {
+      if (args.includes('configmap appliance-values-alga-core')) {
+        return { ok: true, value: { data: { 'alga-core.single-node.yaml': coreYaml } } };
+      }
+      if (args.includes('configmap appliance-values-temporal-worker')) {
+        return { ok: true, value: { data: { 'temporal-worker.single-node.yaml': temporalWorkerYaml } } };
+      }
+      return { ok: true, value: {} };
+    },
+    apply: (manifest) => { appliedManifests.push(manifest); return { ok: true }; }
   });
 
   const res = await applyAppUrl({
@@ -148,18 +155,27 @@ test('applyAppUrl rewrites values, persists runtime, reconciles helm', async () 
   });
   assert.equal(res.ok, true);
 
-  // Configmap was rewritten with the new URL.
-  const newYaml = appliedManifest.data['alga-core.single-node.yaml'];
-  assert.match(newYaml, /appUrl: "http:\/\/192\.168\.1\.50:3000"/);
-  assert.match(newYaml, /host: "192\.168\.1\.50"/);
-  assert.match(newYaml, /domainSuffix: ""/);
+  // Both ConfigMaps were rewritten with the new public URL.
+  const newCoreYaml = appliedManifests
+    .find((manifest) => manifest.metadata.name === 'appliance-values-alga-core')
+    .data['alga-core.single-node.yaml'];
+  assert.match(newCoreYaml, /appUrl: "http:\/\/192\.168\.1\.50:3000"/);
+  assert.match(newCoreYaml, /host: "192\.168\.1\.50"/);
+  assert.match(newCoreYaml, /domainSuffix: ""/);
+
+  const newTemporalWorkerYaml = appliedManifests
+    .find((manifest) => manifest.metadata.name === 'appliance-values-temporal-worker')
+    .data['temporal-worker.single-node.yaml'];
+  assert.match(newTemporalWorkerYaml, /applicationUrl: http:\/\/alga-core\.msp\.svc\.cluster\.local:3000/);
+  assert.match(newTemporalWorkerYaml, /publicBaseUrl: "http:\/\/192\.168\.1\.50:3000"/);
 
   // Operator intent persisted.
   const persisted = JSON.parse(fs.readFileSync(releaseSelectionFile, 'utf8'));
   assert.equal(persisted.runtime.appHostname, 'http://192.168.1.50:3000');
 
-  // HelmRelease reconcile requested.
+  // Both HelmRelease reconciles were requested.
   assert.ok(kube.calls.some((c) => c[0] === 'run' && c[1].includes('annotate helmrelease alga-core')), 'expected a helmrelease reconcile');
+  assert.ok(kube.calls.some((c) => c[0] === 'run' && c[1].includes('annotate helmrelease temporal-worker')), 'expected a temporal-worker reconcile');
 });
 
 test('applyAppUrl requires a hostname', async () => {

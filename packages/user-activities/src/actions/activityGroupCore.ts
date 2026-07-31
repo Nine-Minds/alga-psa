@@ -11,7 +11,7 @@
  * is exposed only through `@alga-psa/user-activities/server/activity-actions`).
  */
 
-import { createTenantKnex, withTransaction } from "@alga-psa/db";
+import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import { hasPermission } from "@alga-psa/auth";
 import type { IUserWithRoles } from "@alga-psa/types";
 import type { Knex } from "knex";
@@ -46,6 +46,7 @@ export async function getUserActivityGroupsForApi(
   const { knex: db } = await createTenantKnex(tenant);
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     let ownerUserId = user.user_id;
     if (targetUserId && targetUserId !== user.user_id) {
       const [canUpdate, canReadAll] = await Promise.all([
@@ -55,8 +56,8 @@ export async function getUserActivityGroupsForApi(
       if (!canUpdate && !canReadAll) {
         throw new Error("Permission denied: cannot view another user's groups");
       }
-      const target = await trx("users")
-        .where({ tenant, user_id: targetUserId, user_type: "internal" })
+      const target = await scopedDb.table("users")
+        .where({ user_id: targetUserId, user_type: "internal" })
         .first();
       if (!target) {
         throw new Error("User not found");
@@ -64,8 +65,8 @@ export async function getUserActivityGroupsForApi(
       ownerUserId = targetUserId;
     }
 
-    const groups = await trx("user_activity_groups")
-      .where({ tenant, user_id: ownerUserId })
+    const groups = await scopedDb.table("user_activity_groups")
+      .where({ user_id: ownerUserId })
       .orderBy("sort_order")
       .select("group_id", "group_name", "sort_order", "is_collapsed");
 
@@ -73,8 +74,7 @@ export async function getUserActivityGroupsForApi(
 
     const groupIds = groups.map((g) => g.group_id);
 
-    const items = await trx("user_activity_group_items")
-      .where({ tenant })
+    const items = await scopedDb.table("user_activity_group_items")
       .whereIn("group_id", groupIds)
       .orderBy("sort_order")
       .select("item_id", "group_id", "activity_id", "activity_type", "sort_order");
@@ -137,8 +137,8 @@ async function resolveGroupOwnerForWrite(
   if (!(await hasPermission(user, "user_schedule", "update", trx))) {
     throw new Error("Permission denied: cannot organize another user's activity groups");
   }
-  const target = await trx("users")
-    .where({ tenant, user_id: targetUserId, user_type: "internal" })
+  const target = await tenantDb(trx, tenant).table("users")
+    .where({ user_id: targetUserId, user_type: "internal" })
     .first();
   if (!target) {
     throw new Error("User not found");
@@ -173,35 +173,36 @@ export async function moveActivityToGroupForApi(
 
   const { knex: db } = await createTenantKnex(tenant);
   await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     const ownerUserId = await resolveGroupOwnerForWrite(trx, user, tenant, targetUserId);
 
-    const target = await trx("user_activity_groups")
-      .where({ tenant, group_id: targetGroupId, user_id: ownerUserId })
+    const target = await scopedDb.table("user_activity_groups")
+      .where({ group_id: targetGroupId, user_id: ownerUserId })
       .first();
     if (!target) {
       throw new Error("Target group not found");
     }
 
     // Remove any existing membership of this activity in any of the owner's groups.
-    const userGroupIds = await trx("user_activity_groups")
-      .where({ tenant, user_id: ownerUserId })
+    const userGroupIds = await scopedDb.table("user_activity_groups")
+      .where({ user_id: ownerUserId })
       .pluck("group_id");
 
     if (userGroupIds.length > 0) {
-      await trx("user_activity_group_items")
-        .where({ tenant, activity_id: activityId, activity_type: activityType })
+      await scopedDb.table("user_activity_group_items")
+        .where({ activity_id: activityId, activity_type: activityType })
         .whereIn("group_id", userGroupIds)
         .del();
     }
 
     // Make room at the insertion index so rows never share a sort_order (which would make
     // the order non-deterministic on reload).
-    await trx("user_activity_group_items")
-      .where({ tenant, group_id: targetGroupId })
+    await scopedDb.table("user_activity_group_items")
+      .where({ group_id: targetGroupId })
       .andWhere("sort_order", ">=", sortOrder)
       .increment("sort_order", 1);
 
-    await trx("user_activity_group_items").insert({
+    await scopedDb.table("user_activity_group_items").insert({
       tenant,
       group_id: targetGroupId,
       activity_id: activityId,
@@ -229,15 +230,16 @@ export async function removeActivityFromGroupsForApi(
 
   const { knex: db } = await createTenantKnex(tenant);
   await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     const ownerUserId = await resolveGroupOwnerForWrite(trx, user, tenant, targetUserId);
 
-    const userGroupIds = await trx("user_activity_groups")
-      .where({ tenant, user_id: ownerUserId })
+    const userGroupIds = await scopedDb.table("user_activity_groups")
+      .where({ user_id: ownerUserId })
       .pluck("group_id");
     if (userGroupIds.length === 0) return;
 
-    await trx("user_activity_group_items")
-      .where({ tenant, activity_id: activityId, activity_type: activityType })
+    await scopedDb.table("user_activity_group_items")
+      .where({ activity_id: activityId, activity_type: activityType })
       .whereIn("group_id", userGroupIds)
       .del();
   });
@@ -260,19 +262,19 @@ export async function reorderActivitiesInGroupForApi(
 
   const { knex: db } = await createTenantKnex(tenant);
   await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     await assertCanOrganizeGroups(trx, user);
 
-    const group = await trx("user_activity_groups")
-      .where({ tenant, group_id: groupId, user_id: user.user_id })
+    const group = await scopedDb.table("user_activity_groups")
+      .where({ group_id: groupId, user_id: user.user_id })
       .first();
     if (!group) {
       throw new Error("Group not found");
     }
 
     for (const item of orderedItems) {
-      await trx("user_activity_group_items")
+      await scopedDb.table("user_activity_group_items")
         .where({
-          tenant,
           group_id: groupId,
           activity_id: item.activityId,
           activity_type: item.activityType,

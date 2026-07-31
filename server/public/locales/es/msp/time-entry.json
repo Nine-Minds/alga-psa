@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Búsqueda...",
       "noWorkItems": "No se encontraron elementos de trabajo"
-    }
+    },
+    "paymentWarningTitle": "Advertencia de requisito de pago",
+    "paymentWarning": "Se requiere el pago de un hito de facturación del proyecto marcado y aún no se ha confirmado. Confirme el pago antes de continuar el trabajo."
   },
   "workItemList": {
     "meta": {

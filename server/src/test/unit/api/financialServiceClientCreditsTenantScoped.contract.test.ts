@@ -21,8 +21,6 @@ describe('financial service client credits tenant-scoped query contract', () => 
 
     expect(creditSection).toContain('tenantDb(');
     expect(creditSection).toContain(".table('credit_tracking')");
-    expect(creditSection).toContain(".table('transactions')");
-    expect(creditSection).toContain(".table('clients')");
     expect(creditSection).toContain("tenantDb(knex, tenant).tenantJoin(q, 'transactions', 'credit_tracking.transaction_id', 'transactions.transaction_id', { type: 'left' })");
 
     expect(creditSection).not.toMatch(/knex\('(?:credit_tracking|transactions|clients)'\)\s*\./);

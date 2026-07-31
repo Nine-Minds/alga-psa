@@ -1,6 +1,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { ADD_ONS, tenantHasAddOn, type AddOnKey } from '@alga-psa/types';
 
+import { toAiCreditsError } from '../../lib/aiGateway/errors';
 import { resolveChatProvider } from '../chatProviderResolver';
 
 type InboundEmailAiDecision = 'skip' | 'assign_client' | 'no_decision';
@@ -141,7 +142,7 @@ const eeClassifier: InboundEmailAiClassifier = {
     }
 
     try {
-      const provider = await resolveChatProvider();
+      const provider = await resolveChatProvider(input.tenantId, 'email-rule-classifier');
       const completion = await provider.client.chat.completions.create({
         model: provider.model,
         messages: [
@@ -204,6 +205,11 @@ const eeClassifier: InboundEmailAiClassifier = {
         error: null,
       };
     } catch (error) {
+      const creditsError = toAiCreditsError(error);
+      if (creditsError) {
+        const { notifyAiCreditsUnavailable } = await import('../../lib/aiGateway/notifications');
+        await notifyAiCreditsUnavailable(input.tenantId, 'email-rule-classifier', creditsError);
+      }
       return {
         decision: 'no_decision',
         source: 'ee_ai',

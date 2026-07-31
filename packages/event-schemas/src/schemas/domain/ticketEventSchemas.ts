@@ -91,8 +91,8 @@ export type TicketUpdatedEventPayload = z.infer<typeof ticketUpdatedEventPayload
 
 export const ticketResponseStateChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousResponseState: z.string().optional().describe('Previous response state'),
-  newResponseState: z.string().optional().describe('New response state'),
+  previousResponseState: z.string().nullable().optional().describe('Previous response state (null on first transition)'),
+  newResponseState: z.string().nullable().optional().describe('New response state (null when cleared)'),
 }).describe('Payload for TICKET_RESPONSE_STATE_CHANGED');
 
 export type TicketResponseStateChangedEventPayload = z.infer<

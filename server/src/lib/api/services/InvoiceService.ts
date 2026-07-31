@@ -34,10 +34,11 @@ import {
   previewInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
+import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
-import { StorageService } from '../../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import InvoiceModel from '@alga-psa/billing/models/invoice';
 
 // Import schemas and interfaces
@@ -978,13 +979,18 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Publish event
       deferredEvents.push(() => publishEvent({
         eventType: 'INVOICE_FINALIZED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: data.invoice_id,
-          totalAmount,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
+        payload: (() => {
+          const occurredAt = new Date().toISOString();
+          return {
+            tenantId: context.tenant,
+            occurredAt,
+            invoiceId: data.invoice_id,
+            // payload.InvoiceFinalized.v1 types totalAmount as a string
+            totalAmount: String(totalAmount),
+            userId: context.userId,
+            timestamp: occurredAt
+          };
+        })()
       }));
 
       deferredEvents.push(() => publishWorkflowEvent({
@@ -1285,7 +1291,15 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   /**
-   * Apply credit to an invoice
+   * Apply credit to an invoice.
+   *
+   * Delegates to the canonical apply-credit engine
+   * (creditActions.applyCreditToInvoiceInternal), which draws down
+   * credit_tracking, writes the credit_application transaction and
+   * credit_allocations row, and moves the derived credit balance — identical
+   * ledger state to the financial REST path and the UI server action.
+   * Invoice status derivation (paid / partially_applied) stays here, as it
+   * is this endpoint's contract rather than part of the credit ledger.
    */
   async applyCredit(data: ApplyCredit, context: ServiceContext): Promise<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'credit');
@@ -1293,129 +1307,125 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
 
-    await withTransaction(knex, async (trx) => {
-      const invoice = await tenantDb(trx, context.tenant).table('invoices')
-        .where({ invoice_id: data.invoice_id })
-        .first();
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where({ invoice_id: data.invoice_id })
+      .first();
 
-      if (!invoice) {
-        throw new NotFoundError('Invoice not found');
-      }
+    if (!invoice) {
+      throw new NotFoundError('Invoice not found');
+    }
 
-      // Validate credit amount
-      if (data.credit_amount <= 0) {
-        throw new BadRequestError('Credit amount must be positive');
-      }
+    // Validate credit amount
+    if (data.credit_amount <= 0) {
+      throw new BadRequestError('Credit amount must be positive');
+    }
 
-      if (data.credit_amount > invoice.total_amount - (invoice.credit_applied ?? 0)) {
-        throw new BadRequestError('Credit amount cannot exceed invoice balance due');
-      }
+    if (data.credit_amount > invoice.total_amount - (invoice.credit_applied ?? 0)) {
+      throw new BadRequestError('Credit amount cannot exceed invoice balance due');
+    }
 
-      // Insert credit record
-      const creditData = {
-        credit_id: uuidv4(),
-        invoice_id: data.invoice_id,
-        credit_amount: data.credit_amount,
-        transaction_id: data.transaction_id,
-        applied_date: new Date(),
-        created_by: context.userId,
-        tenant: context.tenant,
-        created_at: new Date()
-      };
+    const { appliedAmount } = await applyCreditToInvoiceInternal(
+      context.tenant,
+      context.userId,
+      invoice.client_id,
+      data.invoice_id,
+      data.credit_amount
+    );
 
-      await tenantDb(trx, context.tenant).table('invoice_credits').insert(creditData);
+    if (appliedAmount > 0) {
+      await withTransaction(knex, async (trx) => {
+        const updatedInvoice = await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: data.invoice_id })
+          .select('credit_applied', 'total_amount', 'status')
+          .first();
 
-      // Update invoice credit applied
-      const newCreditApplied = (invoice.credit_applied || 0) + data.credit_amount;
+        const newCreditApplied = Number(updatedInvoice?.credit_applied || 0);
 
-      // Calculate total payments to determine correct status
-      const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
-        .where({ invoice_id: data.invoice_id })
-        .sum('amount as total_paid');
-      const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
+        // Calculate total payments to determine correct status
+        const payments = await tenantDb(trx, context.tenant).table('invoice_payments')
+          .where({ invoice_id: data.invoice_id })
+          .sum('amount as total_paid');
+        const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
-      // Total paid includes both credits and payments
-      const totalPaid = newCreditApplied + totalPayments;
+        // Total paid includes both credits and payments
+        const totalPaid = newCreditApplied + totalPayments;
 
-      // Update invoice status based on total paid
-      let newStatus = invoice.status;
-      if (totalPaid >= invoice.total_amount) {
-        newStatus = 'paid';
-      } else if (totalPaid > 0 && invoice.status !== 'cancelled') {
-        newStatus = 'partially_applied';
-      }
+        // Update invoice status based on total paid
+        let newStatus = invoice.status;
+        if (totalPaid >= invoice.total_amount) {
+          newStatus = 'paid';
+        } else if (totalPaid > 0 && invoice.status !== 'cancelled') {
+          newStatus = 'partially_applied';
+        }
 
-      await tenantDb(trx, context.tenant).table('invoices')
-        .where({ invoice_id: data.invoice_id })
-        .update({
-          credit_applied: newCreditApplied,
-          status: newStatus,
-          updated_by: context.userId,
-          updated_at: new Date()
-        });
+        await tenantDb(trx, context.tenant).table('invoices')
+          .where({ invoice_id: data.invoice_id })
+          .update({
+            status: newStatus,
+            updated_by: context.userId,
+            updated_at: new Date()
+          });
 
-      // Calculate remaining balance after credit application
-      const remainingBalance = invoice.total_amount - totalPaid;
+        // Calculate remaining balance after credit application
+        const remainingBalance = invoice.total_amount - totalPaid;
 
-      const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
+        const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
 
-	      // Audit log
-	      await auditLog(trx, {
-	        userId: context.userId,
-	        operation: 'UPDATE',
-	        tableName: 'invoices',
-	        recordId: data.invoice_id,
-	        changedData: { 
-	          credit_applied: newCreditApplied,
-	          status: newStatus
-	        },
-	        details: {
+        // Audit log
+        await auditLog(trx, {
+          userId: context.userId,
+          operation: 'UPDATE',
+          tableName: 'invoices',
+          recordId: data.invoice_id,
+          changedData: {
+            credit_applied: newCreditApplied,
+            status: newStatus
+          },
+          details: {
             action: 'invoice.credit_applied',
-            credit_amount: data.credit_amount,
+            credit_amount: appliedAmount,
             ...(recurringProvenance ? { recurring_provenance: recurringProvenance } : {}),
           }
-	      });
+        });
 
-	      if (String(newStatus) !== String(invoice.status)) {
-	        const occurredAt = new Date().toISOString();
-	        deferredEvents.push(() => publishWorkflowEvent({
-	          eventType: 'INVOICE_STATUS_CHANGED',
-	          payload: buildInvoiceStatusChangedPayload({
-	            invoiceId: data.invoice_id,
-	            previousStatus: String(invoice.status),
-	            newStatus: String(newStatus),
-	            changedAt: occurredAt,
+        if (String(newStatus) !== String(invoice.status)) {
+          const occurredAt = new Date().toISOString();
+          deferredEvents.push(() => publishWorkflowEvent({
+            eventType: 'INVOICE_STATUS_CHANGED',
+            payload: buildInvoiceStatusChangedPayload({
+              invoiceId: data.invoice_id,
+              previousStatus: String(invoice.status),
+              newStatus: String(newStatus),
+              changedAt: occurredAt,
               recurringProvenance,
-	          }),
-	          ctx: {
-	            tenantId: context.tenant,
-	            occurredAt,
-	            actor: { actorType: 'USER', actorUserId: context.userId },
-	          },
-	        }));
-	      }
+            }),
+            ctx: {
+              tenantId: context.tenant,
+              occurredAt,
+              actor: { actorType: 'USER', actorUserId: context.userId },
+            },
+          }));
+        }
 
-	      // Publish event
-	      deferredEvents.push(() => publishEvent({
-	        eventType: 'INVOICE_CREDIT_APPLIED',
-	        payload: {
-	          tenantId: context.tenant,
-	          invoiceId: data.invoice_id,
-	          creditAmount: data.credit_amount,
-	          newCreditApplied,
-	          remainingBalance,
-	          newStatus,
-	          userId: context.userId,
-	          timestamp: new Date().toISOString()
-	        }
-	      }));
-
-    });
+        // Publish event
+        deferredEvents.push(() => publishEvent({
+          eventType: 'INVOICE_CREDIT_APPLIED',
+          payload: {
+            tenantId: context.tenant,
+            invoiceId: data.invoice_id,
+            creditAmount: appliedAmount,
+            newCreditApplied,
+            remainingBalance,
+            newStatus,
+            userId: context.userId,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      });
+    }
 
     await publishDeferredEvents(deferredEvents);
 
-    // Re-fetch after commit: getById runs on a pooled (non-transaction)
-    // connection, so it must read the row only after the tx commits.
     return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
@@ -2355,14 +2365,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   private async getInvoiceCredits(invoiceId: string, trx: Knex.Transaction, context: ServiceContext): Promise<any[]> {
-    const hasTable = await trx.schema.hasTable('invoice_credits');
-    if (!hasTable) {
-      return [];
-    }
-
-    return tenantDb(trx, context.tenant).table('invoice_credits')
+    // Credit applications live in credit_allocations (written by the canonical
+    // apply-credit engine), not the phantom invoice_credits table.
+    return tenantDb(trx, context.tenant).table('credit_allocations')
       .where({ invoice_id: invoiceId })
-      .orderBy('applied_date', 'desc');
+      .orderBy('created_at', 'desc');
   }
 
   private async createInvoiceLineItems(invoiceId: string, lineItems: any[], trx: Knex.Transaction, context: ServiceContext): Promise<void> {

@@ -63,6 +63,7 @@ vi.mock(
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   handleError: vi.fn(),
+  isActionMessageError: () => false,
   isActionPermissionError: () => false,
 }));
 
@@ -190,6 +191,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   findUserById: vi.fn().mockResolvedValue(null),
   getCurrentUser: vi.fn().mockResolvedValue(null),
   getCurrentUserPermissions: vi.fn().mockResolvedValue([]),
+  searchUsersForMentions: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({

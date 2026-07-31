@@ -721,7 +721,6 @@ export class XeroCsvClientSyncService {
       is_inactive: false,
       is_tax_exempt: false,
       url: '',
-      credit_balance: 0,
       billing_cycle: 'monthly',
       created_at: now,
       updated_at: now

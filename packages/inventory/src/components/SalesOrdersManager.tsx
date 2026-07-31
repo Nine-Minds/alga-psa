@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -31,7 +33,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import { formatCurrencyFromMinorUnits, toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
+import { toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import type {
   ColumnDefinition,
   IClient,
@@ -47,6 +50,7 @@ import {
   confirmSalesOrder,
   cancelSalesOrder,
 } from '../actions';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import {
   SalesOrderDetail,
   type ConfirmDropShipFn,
@@ -119,8 +123,11 @@ const NUM_CELL = 'text-right tabular-nums';
 
 const asNumber = (value: unknown): number => Number(value ?? 0);
 
-const money = (cents: unknown, currency?: string | null): string =>
-  formatCurrencyFromMinorUnits(asNumber(cents), 'en-US', currency || 'USD');
+// Tenant locale + currency come from CurrencyFormatProvider via the hook;
+// components shadow this with a bound `money` (see below).
+const formatMoney = (fmt: (minorUnits: number, currencyOverride?: string) => string) =>
+  (cents: unknown, currency?: string | null): string =>
+    fmt(asNumber(cents), currency || undefined);
 
 interface LineForm {
   service_id: string;
@@ -217,6 +224,8 @@ export function SalesOrdersManager({
   confirmDropShip,
   defaultCurrencyCode = 'USD',
 }: SalesOrdersManagerProps) {
+  const { money: fmtMinorUnits } = useCurrencyFormat();
+  const money = formatMoney(fmtMinorUnits);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation('features/inventory');
@@ -789,13 +798,20 @@ export function SalesOrdersManager({
               value={form.client_po_number}
               onChange={(e) => setForm({ ...form, client_po_number: e.target.value })}
             />
-            <Input
-              id="sales-order-expected-ship-date"
-              label={t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
-              type="date"
-              value={form.expected_ship_date}
-              onChange={(e) => setForm({ ...form, expected_ship_date: e.target.value })}
-            />
+            <div>
+              <Label className="block mb-1" htmlFor="sales-order-expected-ship-date">
+                {t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
+              </Label>
+              <DatePicker
+                id="sales-order-expected-ship-date"
+                label={t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
+                placeholder={t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
+                clearable
+                className="w-full"
+                value={dateFromString(form.expected_ship_date)}
+                onChange={(date) => setForm({ ...form, expected_ship_date: dateToString(date) })}
+              />
+            </div>
           </div>
 
           {/* Items */}
@@ -990,7 +1006,7 @@ export function SalesOrdersManager({
           <div className="flex items-center justify-between border-t border-[rgb(var(--color-border-200))] pt-3">
             <span className="text-sm text-gray-600">{t('salesOrders.total', 'Total')}</span>
             <span id="sales-order-total" className="text-base font-semibold tabular-nums">
-              {formatCurrencyFromMinorUnits(totalMinor, undefined, currency)}
+              {money(totalMinor, currency)}
             </span>
           </div>
 

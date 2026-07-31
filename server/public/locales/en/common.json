@@ -14,11 +14,16 @@
     "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
     "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
   },
+  "staleAction": {
+    "message": "This page is out of date. Refresh to restore live updates and actions."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "Enterprise trial expires in {{count}} day. Enter a license key to keep Enterprise features.",
-    "trialExpiresIn_other": "Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.",
-    "trialDaysRemaining_one": "Enterprise trial active — {{count}} day remaining.",
-    "trialDaysRemaining_other": "Enterprise trial active — {{count}} days remaining.",
+    "trialExpiresIn_one": "Pro trial expires in {{count}} day. Enter a license key to keep Pro features.",
+    "trialExpiresIn_other": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features.",
+    "trialDaysRemaining_one": "Pro trial active — {{count}} day remaining.",
+    "trialDaysRemaining_other": "Pro trial active — {{count}} days remaining.",
+    "trialAvailable": "Running Essentials features. Start a free 15-day Pro trial to unlock all features.",
+    "trialExpired": "Pro trial has expired. The install is now running Essentials features.",
     "licenseExpiresIn_one": "License expires in {{count}} day. Renew to avoid service interruption.",
     "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption."
   },

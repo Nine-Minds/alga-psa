@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Impostazioni generali",
-    "description": "Gestisca il nome dell'organizzazione e il cliente predefinito. Il cliente predefinito viene utilizzato per scopi di configurazione e rappresenta il Suo MSP.",
+    "description": "Gestisca il nome dell'organizzazione e scelga quale scheda cliente rappresenta la Sua azienda. I dati di quel cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
     "fields": {
       "organizationName": {
         "label": "Nome dell'organizzazione"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Salva fuso orario predefinito"
     },
     "clients": {
-      "title": "Clienti",
+      "title": "La Sua azienda",
+      "help": "Il cliente contrassegnato come la Sua azienda rappresenta la Sua organizzazione. Nome, indirizzo e logo di questo cliente compaiono su fatture, preventivi e comunicazioni ai clienti.",
+      "currentDefault": "Attualmente la Sua azienda è {{name}}.",
+      "yourCompanyBadge": "La Sua azienda",
       "table": {
         "name": "Nome",
-        "default": "Predefinito",
+        "default": "La Sua azienda (predefinito)",
         "actions": "Azioni"
       },
       "placeholder": "Selezioni un cliente da aggiungere",
-      "addClient": "Aggiungi cliente"
+      "addClient": "Aggiungi cliente",
+      "confirmDialog": {
+        "title": "Modificare la Sua azienda?",
+        "message": "Questa operazione cambierà la Sua azienda da {{current}} a {{next}}. {{next}} rappresenterà la Sua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
+        "messageInitial": "Questa operazione imposterà {{next}} come la Sua azienda. {{next}} rappresenterà la Sua organizzazione su fatture, preventivi ed e-mail e inviti destinati ai clienti.",
+        "confirm": "Modifica azienda",
+        "cancel": "Annulla"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Impossibile aggiornare il fuso orario",
         "selectClient": "Selezioni un cliente",
         "clientNotFound": "Cliente non trovato",
+        "clientAlreadyAdded": "Questo cliente è già presente nell’elenco",
         "addClient": "Impossibile aggiungere il cliente",
         "removeClient": "Impossibile rimuovere il cliente",
         "setDefaultClient": "Impossibile impostare il cliente predefinito",
@@ -150,6 +161,7 @@
       "copying": "Copia in corso...",
       "createUser": "Crea utente",
       "sendInvitation": "Invia invito al portale",
+      "sendTeamInvitation": "Invia invito",
       "cancel": "Annulla"
     },
     "form": {
@@ -183,7 +195,8 @@
       },
       "passwordAlert": {
         "withPassword": "L'impostazione di una password creera immediatamente l'utente. Potra accedere subito.",
-        "withoutPassword": "Nessuna password richiesta: invieremo un invito al portale per consentire all'utente di impostarla."
+        "withoutPassword": "Nessuna password richiesta: invieremo un invito al portale per consentire all'utente di impostarla.",
+        "withoutPasswordMsp": "Nessuna password richiesta: invieremo un invito via e-mail affinché la persona la imposti da sé."
       },
       "requirePasswordChange": "Richiedi cambio password al primo accesso"
     },
@@ -208,9 +221,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Invito al portale inviato con successo!",
+        "teamInvitationSent": "Invito inviato con successo!",
         "clientPortalUserCreated": "Utente del portale clienti creato con successo!",
         "copiedVanityLink": "Link personalizzato di accesso al portale copiato negli appunti",
-        "copiedCanonicalLink": "Link canonico di accesso al portale copiato negli appunti"
+        "copiedCanonicalLink": "Link canonico di accesso al portale copiato negli appunti",
+        "invitationRevoked": "Invito revocato"
       },
       "error": {
         "fetchUsers": "Impossibile recuperare gli utenti",
@@ -237,6 +252,7 @@
         "contactNotFound": "Contatto non trovato.",
         "contactMissingEmailGeneric": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
         "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
+        "invalidEmail": "Inserisci un indirizzo e-mail valido",
         "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
         "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
         "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",
@@ -245,8 +261,17 @@
         "roleRequired": "Il ruolo è obbligatorio",
         "invalidRole": "Il ruolo selezionato non è valido",
         "licenseLimitReached": "Hai raggiunto il limite di licenze utente MSP.",
-        "soloPlanLimit": "Il piano Solo è limitato a 1 utente. Passa a Pro per aggiungere altri utenti."
+        "soloPlanLimit": "Il piano Solo è limitato a 1 utente. Passa a Pro per aggiungere altri utenti.",
+        "revokeInvitation": "Impossibile revocare l'invito",
+        "invitationNotFound": "Invito non trovato o già utilizzato"
       }
+    },
+    "invitations": {
+      "title": "Inviti in sospeso",
+      "description": "Membri del team invitati che non hanno ancora configurato il proprio account.",
+      "expiresPrefix": "Scade:",
+      "revoke": "Revoca",
+      "revoking": "Revoca in corso..."
     }
   },
   "userDetails": {
@@ -267,6 +292,27 @@
       "reportsTo": {
         "label": "Riporta a",
         "placeholder": "Seleziona responsabile"
+      },
+      "workSchedule": {
+        "label": "Orario di lavoro",
+        "help": "Quando questa persona è in servizio. Usato nei report di utilizzo. Non è la disponibilità di prenotazione per i clienti.",
+        "setHours": "Imposta orario di lavoro",
+        "clear": "Cancella",
+        "weeklyTotal": "{{hours}} h a settimana",
+        "days": {
+          "0": "Domenica",
+          "1": "Lunedì",
+          "2": "Martedì",
+          "3": "Mercoledì",
+          "4": "Giovedì",
+          "5": "Venerdì",
+          "6": "Sabato"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Capacità settimanale (ore)",
+        "placeholder": "es. 40",
+        "help": "Usato solo se sopra non è impostato alcun orario di lavoro."
       },
       "lastLogin": "Ultimo accesso",
       "roles": "Ruoli",
@@ -312,7 +358,9 @@
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
         "reportsToSelf": "Un utente non può riferire a se stesso",
         "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
-        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente."
+        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente.",
+        "invalidCapacity": "La capacità settimanale deve essere un numero positivo.",
+        "invalidWorkSchedule": "L'orario di lavoro deve essere un intervallo valido che termina dopo l'inizio."
       }
     },
     "loading": "Caricamento dettagli utente..."
@@ -1042,6 +1090,15 @@
     "openMenu": "Apri menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funzionalità del portale",
+      "description": "Scelga a quali funzionalità self-service possono accedere i clienti.",
+      "appointmentsLabel": "Appuntamenti",
+      "appointmentsHelp": "Consenta ai clienti di visualizzare e richiedere appuntamenti dal portale clienti.",
+      "appointmentsEnabled": "Gli appuntamenti sono ora disponibili nel portale clienti",
+      "appointmentsDisabled": "Gli appuntamenti sono ora nascosti nel portale clienti",
+      "updateFailed": "Impossibile aggiornare le funzionalità del portale clienti"
+    },
     "branding": {
       "title": "Branding e aspetto",
       "description": "Personalizzi l'aspetto del Suo portale clienti con il marchio della Sua azienda.",

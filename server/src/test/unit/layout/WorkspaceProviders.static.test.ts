@@ -43,4 +43,12 @@ describe('WorkspaceProviders static structure', () => {
       expect(defaultLayoutSource).not.toContain(`import { ${provider} }`);
     }
   });
+
+  it('mounts MspClientTagsProvider at the shell, not in WorkspaceProviders', () => {
+    // Hoisted to DefaultLayout so the ClientPicker tag filter is ambient on every MSP
+    // route (AlgaDeskMspShell mounts it for AlgaDesk). WorkspaceProviders is always a
+    // descendant of the shell, so it must not re-mount the provider.
+    expect(defaultLayoutSource).toContain('<MspClientTagsProvider>');
+    expect(workspaceSource).not.toContain('<MspClientTagsProvider>');
+  });
 });

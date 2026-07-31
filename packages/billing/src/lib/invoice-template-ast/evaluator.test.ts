@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TemplateAst, TemplateTransformOperation } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import * as strategiesModule from './strategies';
+import { INVOICE_TEMPLATE_BINDING_ALIASES } from './bindingAliases';
 import { evaluateTemplateAst, TemplateEvaluationError } from './evaluator';
 
 const invoiceFixture = {
@@ -42,6 +43,56 @@ const buildAst = (operations: TemplateTransformOperation[]): TemplateAst => ({
 });
 
 describe('evaluateTemplateAst', () => {
+  it('resolves quote party bindings verbatim when aliases are not provided', () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          clientName: { id: 'clientName', kind: 'value', path: 'client.name', fallback: 'Client' },
+          tenantName: { id: 'tenantName', kind: 'value', path: 'tenant.name', fallback: 'Your Company' },
+          tenantAddress: { id: 'tenantAddress', kind: 'value', path: 'tenant.address', fallback: '' },
+        },
+      },
+      layout: { id: 'root', type: 'document', children: [] },
+    };
+
+    const result = evaluateTemplateAst(ast, {
+      client: { name: 'Acme Corp' },
+      tenant: { name: 'Northwind MSP', address: '400 SW Main' },
+    });
+
+    expect(result.bindings.clientName).toBe('Acme Corp');
+    expect(result.bindings.tenantName).toBe('Northwind MSP');
+    expect(result.bindings.tenantAddress).toBe('400 SW Main');
+  });
+
+  it('resolves invoice party bindings through explicitly provided aliases', () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          clientName: { id: 'clientName', kind: 'value', path: 'client.name', fallback: 'Client' },
+          tenantName: { id: 'tenantName', kind: 'value', path: 'tenant.name', fallback: 'Your Company' },
+        },
+      },
+      layout: { id: 'root', type: 'document', children: [] },
+    };
+
+    const result = evaluateTemplateAst(
+      ast,
+      {
+        customer: { name: 'Acme Corp' },
+        tenantClient: { name: 'Northwind MSP' },
+      },
+      { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
+    );
+
+    expect(result.bindings.clientName).toBe('Acme Corp');
+    expect(result.bindings.tenantName).toBe('Northwind MSP');
+  });
+
   it('applies filter transforms to invoice items', () => {
     const ast = buildAst([
       {

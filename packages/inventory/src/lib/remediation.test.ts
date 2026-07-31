@@ -17,16 +17,9 @@ import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { reconcileStockLevels, computeAllocationsFromTruth } from './reconcile';
 import { recordStockMovement } from './movements';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
@@ -37,10 +30,10 @@ let CLIENT: string;
 let VENDOR: string;
 
 beforeAll(async () => {
-  const e = readEnv();
+  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
-    connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
+    connection: databaseConnection,
     pool: { min: 1, max: 6 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
@@ -99,7 +92,7 @@ async function makeSo(trx: Knex.Transaction, opts?: { allocation_mode?: string; 
   return so;
 }
 
-describe('T014 — CHECK constraints reject drifted quantities', () => {
+describe.skipIf(!databaseConnection)('T014 — CHECK constraints reject drifted quantities', () => {
   it('rejects negative reserved/held on stock_levels', async () => {
     await inTx(async (trx) => {
       await expect(
@@ -158,7 +151,7 @@ describe('T014 — CHECK constraints reject drifted quantities', () => {
   });
 });
 
-describe('T024 — stock_movements is append-only (trigger)', () => {
+describe.skipIf(!databaseConnection)('T024 — stock_movements is append-only (trigger)', () => {
   it('rejects UPDATE and DELETE, allows INSERT', async () => {
     await inTx(async (trx) => {
       const movement = await recordStockMovement(trx, TENANT, {
@@ -178,7 +171,7 @@ describe('T024 — stock_movements is append-only (trigger)', () => {
   });
 });
 
-describe('T023 — hardened FKs and indexes', () => {
+describe.skipIf(!databaseConnection)('T023 — hardened FKs and indexes', () => {
   it('rejects an orphan tax_rate_id on SO lines', async () => {
     await inTx(async (trx) => {
       const so = await makeSo(trx, { status: 'draft' });
@@ -214,7 +207,7 @@ describe('T023 — hardened FKs and indexes', () => {
   });
 });
 
-describe('T002/T003 mechanics — locking prevents double-claim and overshoot', () => {
+describe.skipIf(!databaseConnection)('T002/T003 mechanics — locking prevents double-claim and overshoot', () => {
   it('FOR UPDATE SKIP LOCKED: two transactions cannot pick the same unit', async () => {
     const serial = `SN-LOCK-${Math.floor(Math.random() * 1e9)}`;
     const [unit] = await knex('stock_units')
@@ -270,7 +263,7 @@ describe('T002/T003 mechanics — locking prevents double-claim and overshoot', 
   });
 });
 
-describe('T008 — reconcile recomputes reserved/held from open SO lines', () => {
+describe.skipIf(!databaseConnection)('T008 — reconcile recomputes reserved/held from open SO lines', () => {
   it('repairs manufactured drift and honors allocation_mode', async () => {
     await inTx(async (trx) => {
       // Manufacture drift: a counter with no backing reservation.
@@ -304,7 +297,7 @@ describe('T008 — reconcile recomputes reserved/held from open SO lines', () =>
   });
 });
 
-describe('T027 — vendor price list constraints', () => {
+describe.skipIf(!databaseConnection)('T027 — vendor price list constraints', () => {
   it('enforces a single preferred offer per product', async () => {
     await inTx(async (trx) => {
       if (!VENDOR) return; // no vendor fixture in this DB
@@ -323,7 +316,7 @@ describe('T027 — vendor price list constraints', () => {
   });
 });
 
-describe('T032 math — landed-cost allocation adds up and rounds to the last line', () => {
+describe.skipIf(!databaseConnection)('T032 math — landed-cost allocation adds up and rounds to the last line', () => {
   it('allocates by value with cents preserved', () => {
     // Mirrors applyPoLandedCosts's weighting: 10000 cents across value weights 3:1.
     const lines = [
@@ -345,7 +338,7 @@ describe('T032 math — landed-cost allocation adds up and rounds to the last li
   });
 });
 
-describe('T034 constraints — vendor bill lifecycle schema', () => {
+describe.skipIf(!databaseConnection)('T034 constraints — vendor bill lifecycle schema', () => {
   it('rejects invalid statuses and duplicate bill numbers per vendor', async () => {
     await inTx(async (trx) => {
       if (!VENDOR) return;
@@ -364,7 +357,7 @@ describe('T034 constraints — vendor bill lifecycle schema', () => {
   });
 });
 
-describe('T019 schema — rma_cases no longer admits dead_unit_returned', () => {
+describe.skipIf(!databaseConnection)('T019 schema — rma_cases no longer admits dead_unit_returned', () => {
   it('rejects the removed status and accepts live ones', async () => {
     await inTx(async (trx) => {
       const base = { tenant: TENANT, rma_type: 'standard', service_id: SERVICE, client_id: CLIENT, opened_at: trx.fn.now() };
@@ -376,7 +369,7 @@ describe('T019 schema — rma_cases no longer admits dead_unit_returned', () => 
   });
 });
 
-describe('cycle count schema (T029/T031 paths)', () => {
+describe.skipIf(!databaseConnection)('cycle count schema (T029/T031 paths)', () => {
   it('unique per (session, service); status CHECK; cascade delete of lines', async () => {
     await inTx(async (trx) => {
       const [session] = await trx('count_sessions')

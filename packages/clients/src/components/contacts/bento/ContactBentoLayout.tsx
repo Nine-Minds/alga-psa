@@ -535,6 +535,7 @@ export function ContactBentoLayout({
   );
 
   const portalStatus = (() => {
+    if (!contact.client_id) return { label: 'No client assigned', positive: false };
     if (!portalSummary) return { label: '—', positive: false };
     if (portalSummary.hasAccount) {
       return portalSummary.accountInactive

@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -45,6 +47,7 @@ import {
   listInventoryProducts,
   type PurchaseOrderListRow,
 } from '../actions';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 
 type ProductOption = {
   service_id: string;
@@ -728,13 +731,20 @@ export function PurchaseOrdersManager({
               onValueChange={(value) => setForm({ ...form, currency_code: value })}
               options={CURRENCY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
             />
-            <Input
-              id="purchase-order-expected-date"
-              label={t('purchaseOrders.fields.expectedDate', 'Expected date')}
-              type="date"
-              value={form.expected_date}
-              onChange={(e) => setForm({ ...form, expected_date: e.target.value })}
-            />
+            <div>
+              <Label className="block mb-1" htmlFor="purchase-order-expected-date">
+                {t('purchaseOrders.fields.expectedDate', 'Expected date')}
+              </Label>
+              <DatePicker
+                id="purchase-order-expected-date"
+                label={t('purchaseOrders.fields.expectedDate', 'Expected date')}
+                placeholder={t('purchaseOrders.fields.expectedDate', 'Expected date')}
+                clearable
+                className="w-full"
+                value={dateFromString(form.expected_date)}
+                onChange={(date) => setForm({ ...form, expected_date: dateToString(date) })}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -87,13 +87,13 @@ describe('setVendorBillStatus auto-export hook', () => {
     expect(enqueueVendorBillAutoExportMock).not.toHaveBeenCalled();
   });
 
-  it('invalid transition (paid → open) throws before any enqueue', async () => {
+  it('invalid transition (paid → open) returns an action error before any enqueue', async () => {
     const db = makeDb('paid');
     createTenantKnexMock.mockResolvedValue({ knex: db, tenant: TENANT });
 
     await expect(
       (setVendorBillStatus as any)(USER, { tenant: TENANT }, 'bill-1', 'open')
-    ).rejects.toThrow(/Cannot move a paid bill to open/);
+    ).resolves.toEqual({ actionError: 'Cannot move a paid bill to open' });
 
     expect(enqueueVendorBillAutoExportMock).not.toHaveBeenCalled();
   });

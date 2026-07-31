@@ -39,6 +39,7 @@ vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   detectClientLocale: () => 'en',
+  useOptionalI18n: () => null,
   useTranslation: () => ({
     t: (key: string) => ({
       'onboardingRedirect.title': 'Taking you to setup',

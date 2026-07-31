@@ -15,6 +15,15 @@
  * name in a runtime query, you are on the wrong path — use the join above.
  * (The static guard clientContractLineRuntimeSourceGuards.static.test.ts will
  * fail the build if a dropped-table reference slips into packages/ or shared/.)
+ *
+ * ALWAYS qualify `contract_line_service_configuration` by
+ * `configuration_type = 'Bucket'` here. A single (contract_line_id, service_id)
+ * pair legitimately carries ONE ROW PER configuration_type — an Hourly line with
+ * a bucket overlay ("7 hours included, overage above that") has both an 'Hourly'
+ * and a 'Bucket' row, each with its own detail table. Selecting on
+ * (contract_line_id, service_id) alone picks an arbitrary row from that set;
+ * when it lands on the non-bucket one the detail lookup finds nothing and bucket
+ * time entry fails for the whole tenant. That shipped as alga0002175.
  */
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
@@ -24,6 +33,14 @@ import { toPlainDate, toISODate } from '@alga-psa/core';
 import {
     buildClientCadencePostDropObligationRef,
 } from './postDropRecurringObligationIdentity';
+import { BucketUsageError } from './bucketUsageErrors';
+
+/**
+ * A (contract_line_id, service_id) pair carries one configuration row per
+ * configuration_type. Every bucket-usage lookup must pin this value; see the
+ * file header.
+ */
+const BUCKET_CONFIGURATION_TYPE = 'Bucket';
 // Import necessary interfaces - adjust paths if needed
 
 // Define IBucketUsage locally for now, aligning with Phase 1 needs.
@@ -181,10 +198,21 @@ async function calculatePeriod(
         .first<{ client_contract_id: string } | undefined>();
 
     if (conflictingClientPlan?.client_contract_id) {
-        throw new Error(
+        throw new BucketUsageError(
+            'AMBIGUOUS_ASSIGNMENT',
             `Ambiguous bucket usage assignment resolution for client ${clientId}, service ${serviceCatalogId}, date ${targetDateISO}. `
             + `Matched assignments: ${clientPlan.client_contract_id}, ${conflictingClientPlan.client_contract_id}. `
             + 'Provide explicit assignment identity before bucket billing.',
+            {
+                tenant,
+                clientId,
+                serviceCatalogId,
+                date: targetDateISO,
+                matchedAssignments: [
+                    clientPlan.client_contract_id,
+                    conflictingClientPlan.client_contract_id,
+                ],
+            },
         );
     }
 
@@ -273,11 +301,25 @@ async function calculatePeriod(
             // TODO: Add other frequencies if supported (e.g., weekly, bi-annually)
             default:
                 // Throw an error for unsupported frequencies
-                throw new Error(`Unsupported billing frequency: ${frequency}`);
+                throw new BucketUsageError(
+                    'UNSUPPORTED_BILLING_FREQUENCY',
+                    `Unsupported billing frequency for bucket period calculation: ${frequency}`,
+                    {
+                        tenant,
+                        clientId,
+                        serviceCatalogId,
+                        contractLineId: clientPlan.contract_line_id,
+                        billingFrequency: frequency,
+                        date: targetDateISO,
+                    },
+                );
         }
     } catch (error) {
         console.error(`[calculatePeriod] Error calculating period dates: ${error}`);
-        throw new Error(`Failed to calculate period dates for frequency ${frequency}.`);
+        // Rethrow untouched. The deliberate throws above are already typed;
+        // stamping an unexpected failure (e.g. bad date data) with a frequency
+        // code would tell the user to change a setting that isn't the problem.
+        throw error;
     }
 
     console.debug(`[calculatePeriod] Calculated period: start=${periodStart.toString()}, end=${periodEnd.toString()}`);
@@ -326,7 +368,11 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     if (!periodInfo) {
         // If no period info, it means no suitable active plan was found.
-        throw new Error(`Could not determine active contract line/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
+        throw new BucketUsageError(
+            'NO_ACTIVE_CONTRACT_LINE',
+            `Could not determine active contract line/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`,
+            { tenant, clientId, serviceCatalogId, date },
+        );
     }
 
     const { periodStart, periodEnd, planId, billingFrequency, source, recurringScheduleKey } = periodInfo;
@@ -353,15 +399,24 @@ export async function findOrCreateCurrentBucketUsageRecord(
     // 3. Create New Record - Fetch Bucket Configuration
 
     // First, get the contract_line_service_configuration to find the config_id
+    // configuration_type is REQUIRED here — this pair can hold an 'Hourly' (or
+    // 'Usage', or 'Fixed') row alongside the 'Bucket' one. Ordering keeps the
+    // choice stable in the event a tenant ends up with two Bucket rows.
     const planServiceConfig = await db.table('contract_line_service_configuration')
         .where({
             contract_line_id: planId,
             service_id: serviceCatalogId,
+            configuration_type: BUCKET_CONFIGURATION_TYPE,
         })
+        .orderBy('created_at', 'asc')
         .first<{ config_id: string }>();
 
     if (!planServiceConfig) {
-        throw new Error(`Plan service configuration not found for plan ${planId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`);
+        throw new BucketUsageError(
+            'MISSING_PLAN_SERVICE_CONFIG',
+            `Bucket service configuration not found for contract line ${planId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`,
+            { tenant, clientId, contractLineId: planId, serviceCatalogId, date },
+        );
     }
 
     const bucketConfig = await db.table('contract_line_service_bucket_config')
@@ -372,7 +427,18 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     if (!bucketConfig) {
         // A bucket usage record cannot exist without its configuration.
-        throw new Error(`Bucket configuration not found for config_id ${planServiceConfig.config_id} (plan ${planId}, service ${serviceCatalogId}) in tenant ${tenant}. Cannot create usage record.`);
+        throw new BucketUsageError(
+            'MISSING_BUCKET_CONFIG',
+            `Bucket configuration not found for config_id ${planServiceConfig.config_id} (contract line ${planId}, service ${serviceCatalogId}) in tenant ${tenant}. Cannot create usage record.`,
+            {
+                tenant,
+                clientId,
+                contractLineId: planId,
+                serviceCatalogId,
+                configId: planServiceConfig.config_id,
+                date,
+            },
+        );
     }
 
     let rolledOverMinutes = 0;
@@ -419,7 +485,11 @@ export async function findOrCreateCurrentBucketUsageRecord(
                             prevPeriodStart = periodStart.subtract({ years: 1 });
                             break;
                         default:
-                            throw new Error(`Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`);
+                            throw new BucketUsageError(
+                                'UNSUPPORTED_BILLING_FREQUENCY',
+                                `Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`,
+                                { tenant, clientId, contractLineId: planId, serviceCatalogId, billingFrequency, date },
+                            );
                     }
                 }
             } else {
@@ -438,12 +508,20 @@ export async function findOrCreateCurrentBucketUsageRecord(
                         break;
                     default:
                         // Should not happen due to check in calculatePeriod, but handle defensively
-                        throw new Error(`Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`);
+                        throw new BucketUsageError(
+                            'UNSUPPORTED_BILLING_FREQUENCY',
+                            `Unsupported billing frequency encountered during rollover calculation: ${billingFrequency}`,
+                            { tenant, clientId, contractLineId: planId, serviceCatalogId, billingFrequency, date },
+                        );
                 }
             }
         } catch (error) {
              console.error(`Error calculating previous period dates: ${error}`);
-             throw new Error(`Failed to calculate previous period dates for frequency ${billingFrequency}.`);
+             // Rethrow untouched. This try block includes a live DB query, so
+             // an unexpected failure here can be a transient database error —
+             // stamping it with a frequency code would tell the user to change
+             // a setting that isn't the problem.
+             throw error;
         }
 
 
@@ -531,9 +609,13 @@ export async function updateBucketUsageMinutes(
 
     const db = tenantDb(trx, tenant);
     const currentUsageQuery = db.table('bucket_usage as bu');
+    // The inner join to psbc below already excludes non-bucket rows, but pin
+    // configuration_type explicitly so this reads the same as every other
+    // bucket lookup and stays correct if that join is ever loosened.
     db.tenantJoin(currentUsageQuery, 'contract_line_service_configuration as psc', 'psc.contract_line_id', 'bu.contract_line_id', {
         on(join) {
             join.andOn('psc.service_id', '=', 'bu.service_catalog_id');
+            join.andOnVal('psc.configuration_type', '=', BUCKET_CONFIGURATION_TYPE);
         },
     });
     db.tenantJoin(currentUsageQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');
@@ -600,9 +682,11 @@ export async function reconcileBucketUsageRecord(
    // 2. Fetch Bucket Usage Record and Config
    const db = tenantDb(trx, tenant);
    const usageRecordQuery = db.table('bucket_usage as bu');
+   // See updateBucketUsageMinutes — pin configuration_type for consistency.
    db.tenantJoin(usageRecordQuery, 'contract_line_service_configuration as psc', 'psc.contract_line_id', 'bu.contract_line_id', {
        on(join) {
            join.andOn('psc.service_id', '=', 'bu.service_catalog_id');
+           join.andOnVal('psc.configuration_type', '=', BUCKET_CONFIGURATION_TYPE);
        },
    });
    db.tenantJoin(usageRecordQuery, 'contract_line_service_bucket_config as psbc', 'psc.config_id', 'psbc.config_id');

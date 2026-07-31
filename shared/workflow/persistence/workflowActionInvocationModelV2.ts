@@ -17,6 +17,7 @@ export type WorkflowActionInvocationRecord = {
   input_json?: Record<string, unknown> | null;
   output_json?: Record<string, unknown> | null;
   error_message?: string | null;
+  error_json?: Record<string, unknown> | null;
   created_at: string;
   started_at?: string | null;
   completed_at?: string | null;

@@ -1,4 +1,5 @@
 export * from './Alert';
+export * from './StaleActionBanner';
 export * from './LanguageHierarchyTable';
 export type { SelectOption as AsyncSearchableSelectOption } from './AsyncSearchableSelect';
 export { default as AsyncSearchableSelect } from './AsyncSearchableSelect';
@@ -91,6 +92,7 @@ export * from './PrintButton';
 export * from './PrintOptionsDialog';
 export * from './PrintableDetailHeader';
 export * from './PrintableRegion';
+export * from './PrintableSummary';
 export * from './PrintableTable';
 export * from './ShareActionsMenu';
 export * from './Progress';

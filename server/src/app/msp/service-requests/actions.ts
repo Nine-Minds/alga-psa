@@ -39,10 +39,28 @@ import {
   type ServiceRequestPublishValidationResult,
   type ServiceRequestTemplateOption,
   type ServiceRequestDefinitionEditorData,
+  ServiceRequestDefinitionBusinessError,
+  type ServiceRequestDefinitionErrorCode,
 } from '../../../lib/service-requests';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
 
 type AuthUser = Parameters<Parameters<typeof withAuth>[0]>[0];
+
+export type ServiceRequestDefinitionActionResult<T = void> =
+  | { success: true; data: T }
+  | { success: false; code: ServiceRequestDefinitionErrorCode; message: string };
+
+function serviceRequestSuccess<T>(data: T): ServiceRequestDefinitionActionResult<T> {
+  return { success: true, data };
+}
+
+function mapServiceRequestDefinitionError<T>(error: unknown): ServiceRequestDefinitionActionResult<T> {
+  if (error instanceof ServiceRequestDefinitionBusinessError) {
+    return { success: false, code: error.code, message: error.message };
+  }
+
+  throw error;
+}
 
 function getActorId(user: unknown): string | null {
   const candidate = user as { user_id?: string; id?: string } | undefined;
@@ -194,31 +212,41 @@ export const createServiceRequestDefinitionFromTemplateAction = withAuth(async (
   { tenant },
   templateProviderKey: string,
   templateId: string
-): Promise<ServiceRequestDefinitionManagementRow> => {
+): Promise<ServiceRequestDefinitionActionResult<ServiceRequestDefinitionManagementRow>> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'create', knex);
-  return createServiceRequestDefinitionFromTemplate({
-    knex,
-    tenant,
-    templateProviderKey,
-    templateId,
-    createdBy: getActorId(user),
-  });
+  try {
+    const created = await createServiceRequestDefinitionFromTemplate({
+      knex,
+      tenant,
+      templateProviderKey,
+      templateId,
+      createdBy: getActorId(user),
+    });
+    return serviceRequestSuccess(created);
+  } catch (error) {
+    return mapServiceRequestDefinitionError(error);
+  }
 });
 
 export const duplicateServiceRequestDefinitionAction = withAuth(async (
   user,
   { tenant },
   definitionId: string
-): Promise<ServiceRequestDefinitionManagementRow> => {
+): Promise<ServiceRequestDefinitionActionResult<ServiceRequestDefinitionManagementRow>> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'create', knex);
-  return duplicateServiceRequestDefinition({
-    knex,
-    tenant,
-    sourceDefinitionId: definitionId,
-    createdBy: getActorId(user),
-  });
+  try {
+    const created = await duplicateServiceRequestDefinition({
+      knex,
+      tenant,
+      sourceDefinitionId: definitionId,
+      createdBy: getActorId(user),
+    });
+    return serviceRequestSuccess(created);
+  } catch (error) {
+    return mapServiceRequestDefinitionError(error);
+  }
 });
 
 export const saveServiceRequestDefinitionDraftAction = withAuth(async (
@@ -538,18 +566,28 @@ export const archiveServiceRequestDefinitionAction = withAuth(async (
   user,
   { tenant },
   definitionId: string
-): Promise<void> => {
+): Promise<ServiceRequestDefinitionActionResult> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'delete', knex);
-  await archiveServiceRequestDefinitionFromManagement(knex, tenant, definitionId, getActorId(user));
+  try {
+    await archiveServiceRequestDefinitionFromManagement(knex, tenant, definitionId, getActorId(user));
+    return serviceRequestSuccess(undefined);
+  } catch (error) {
+    return mapServiceRequestDefinitionError(error);
+  }
 });
 
 export const unarchiveServiceRequestDefinitionAction = withAuth(async (
   user,
   { tenant },
   definitionId: string
-): Promise<void> => {
+): Promise<ServiceRequestDefinitionActionResult> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'update', knex);
-  await unarchiveServiceRequestDefinitionFromManagement(knex, tenant, definitionId, getActorId(user));
+  try {
+    await unarchiveServiceRequestDefinitionFromManagement(knex, tenant, definitionId, getActorId(user));
+    return serviceRequestSuccess(undefined);
+  } catch (error) {
+    return mapServiceRequestDefinitionError(error);
+  }
 });

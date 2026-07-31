@@ -44,9 +44,8 @@ describe('FinalizedTab i18n wiring contract', () => {
       'finalizedTab.loading',
       'finalizedTab.errors.loadFailed',
       'finalizedTab.errors.pdfFailed',
-      'finalizedTab.errors.unfinalizeFailed',
       'finalizedTab.errors.bulkPdfFailed',
-      'finalizedTab.errors.bulkUnfinalizeFailed',
+      'finalizedTab.errors.bulkUnfinalizeInvoiceFailed',
       'common.actions.openMenu',
     ];
 

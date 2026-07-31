@@ -29,6 +29,8 @@ vi.mock('@alga-psa/auth', () => ({
   preCheckDeletion: preCheckDeletionMock,
   withAuth: (fn: ServerAction) => (...args: unknown[]) =>
     fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
+  withOptionalAuth: (fn: ServerAction) => (...args: unknown[]) =>
+    fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -37,6 +39,10 @@ vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
     return isEnterpriseRef.value;
   },
+}));
+
+vi.mock('@alga-psa/core/server', () => ({
+  deleteEntityWithValidation: deleteEntityWithValidationMock,
 }));
 
 vi.mock('@alga-psa/db', () => ({

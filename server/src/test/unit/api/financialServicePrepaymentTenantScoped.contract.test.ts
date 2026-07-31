@@ -22,9 +22,8 @@ describe('financial service prepayment tenant-scoped query contract', () => {
     expect(prepaymentSection).toContain('tenantDb(');
     expect(prepaymentSection).toContain('tenantDb(');
     expect(prepaymentSection).toContain(".table('clients')");
-    expect(prepaymentSection).toContain(".table('client_billing_settings')");
-    expect(prepaymentSection).toContain(".table('default_billing_settings')");
-    expect(prepaymentSection).toContain(".table('transactions')");
+    // Creation only writes the invoice; credit issuance happens at finalization.
+    expect(prepaymentSection).toContain(".table('invoices')");
 
     expect(prepaymentSection).not.toMatch(/knex\('clients'\)\s*\.(?:where|first)/);
     expect(prepaymentSection).not.toMatch(/trx\('(?:client_billing_settings|default_billing_settings)'\)\s*\.(?:where|first)/);

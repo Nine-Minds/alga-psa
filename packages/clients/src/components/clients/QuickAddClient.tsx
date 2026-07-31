@@ -98,8 +98,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       annual_revenue: '',
       website: '',
     },
-    account_manager_id: null,
-    credit_balance: 0
+    account_manager_id: null
   };
 
   const initialLocationData: CreateLocationData = {

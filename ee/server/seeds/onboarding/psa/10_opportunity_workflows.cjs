@@ -109,8 +109,10 @@ async function seedWorkflow(knex, tenantId, workflow) {
   };
   const existing = await db.table('workflow_definitions').where({ key: workflow.key }).first();
   if (existing) {
+    // Citus forbids SET on the tenant distribution column, even to the same value.
+    const { tenant: _tenant, ...updateRecord } = record;
     await db.table('workflow_definitions').where({ workflow_id: existing.workflow_id }).update({
-      ...record,
+      ...updateRecord,
       draft_definition: { ...definition, id: existing.workflow_id },
     });
     definition.id = existing.workflow_id;
@@ -158,7 +160,8 @@ async function seedWorkflow(knex, tenantId, workflow) {
       updated_at: now,
     };
     if (existingSchedule) {
-      await db.table('tenant_workflow_schedule').where({ id: existingSchedule.id }).update(scheduleRecord);
+      const { tenant: _scheduleTenant, ...scheduleUpdate } = scheduleRecord;
+      await db.table('tenant_workflow_schedule').where({ id: existingSchedule.id }).update(scheduleUpdate);
     } else {
       await db.table('tenant_workflow_schedule').insert({
         id: scheduleId,
@@ -170,7 +173,22 @@ async function seedWorkflow(knex, tenantId, workflow) {
 }
 
 exports.seed = async function seed(knex, tenantId) {
-  if (!tenantId) throw new Error('tenantId is required for opportunity workflow seeding');
+  // Use provided tenantId or fall back to first tenant. The onboarding Temporal
+  // workflow (runOnboardingSeeds) calls seed(trx, tenantId), but the standard
+  // knex seed runner invokes seed(knex) with no tenantId — mirror the sibling
+  // onboarding seeds (e.g. 09_asset_type_registry.cjs) rather than throwing.
+  // LEVERAGE: friction builtin-content-distribution — this fallback is an unwritten
+  // contract every onboarding seed must hand-copy (the appliance replays seeds via
+  // knex seed:run with no tenantId on every upgrade); omitting it broke appliance
+  // upgrades (#2989). The runner should inject tenant resolution once, centrally.
+  if (!tenantId) {
+    const tenant = await knex('tenants').select('tenant').first();
+    if (!tenant) {
+      console.log('No tenant found, skipping opportunity workflow seed');
+      return;
+    }
+    tenantId = tenant.tenant;
+  }
   for (const workflow of WORKFLOWS) await seedWorkflow(knex, tenantId, workflow);
 };
 

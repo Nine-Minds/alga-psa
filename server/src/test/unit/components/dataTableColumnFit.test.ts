@@ -136,6 +136,13 @@ describe('getColumnSizeConfig', () => {
     expect(sizeOf(createdBy, columns, 1600)).toBeGreaterThanOrEqual(160);
   });
 
+  it('reads a rem width as rem, not as that many pixels', () => {
+    // '18rem' used to fall through to the bare-number branch and resolve to 18
+    // pixels, so the column collapsed to its minimum with nothing to say why.
+    const columns = [col('wide', '18rem'), col('rest', '50%')];
+    expect(sizeOf(columns[0], columns, 1000)).toBe(288);
+  });
+
   it('honors explicit pixel widths without applying the natural floor', () => {
     const columns = [col('narrow', '120px', 'Some Long Column Title')];
     expect(sizeOf(columns[0], columns, 1600)).toBe(120);

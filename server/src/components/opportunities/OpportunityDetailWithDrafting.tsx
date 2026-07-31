@@ -19,21 +19,24 @@ export function OpportunityDetailWithDrafting({
   draftingAvailable,
   managementAvailable = false,
   autoOpenDraft = false,
+  returnTab,
 }: {
   detail: IOpportunityDetail;
   draftingAvailable: boolean;
   managementAvailable?: boolean;
   autoOpenDraft?: boolean;
+  returnTab?: string;
 }) {
   return (
     <OpportunityDetailHost
       detail={detail}
       autoOpenDraft={autoOpenDraft}
+      returnTab={returnTab}
       commitments={managementAvailable ? <OpportunityCommitmentsSection detail={detail} /> : undefined}
       drafting={
         draftingAvailable
           ? {
-              generate: (opportunityId, tone) => generateFollowUpDraft(opportunityId, tone),
+              generate: (opportunityId, request) => generateFollowUpDraft(opportunityId, request),
               getRecipient: (opportunityId) => getOpportunityFollowUpRecipient(opportunityId),
               send: (opportunityId, input) => sendOpportunityFollowUp(opportunityId, input),
             }

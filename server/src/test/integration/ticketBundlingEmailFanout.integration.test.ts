@@ -143,7 +143,6 @@ describe('Ticket bundling email fanout integration', () => {
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
       is_inactive: false,
-      credit_balance: 0,
       properties: {},
     });
     await db('client_locations').insert({
@@ -306,7 +305,6 @@ describe('Ticket bundling email fanout integration', () => {
       created_at: db.fn.now(),
       updated_at: db.fn.now(),
       is_inactive: false,
-      credit_balance: 0,
       properties: {},
     });
     await db('client_locations').insert({

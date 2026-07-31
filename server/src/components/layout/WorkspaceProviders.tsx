@@ -8,11 +8,13 @@ import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/
 // Keep granular msp-composition imports: package index barrels pull broad feature trees
 // into every wrapped route's RSC manifest.
 import { MspTicketIntegrationProvider } from '@alga-psa/msp-composition/projects/MspTicketIntegrationProvider';
+import { MspProjectBillingIntegrationProvider } from '@alga-psa/msp-composition/projects/MspProjectBillingIntegrationProvider';
 import { MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects/MspClientIntegrationProvider';
 import { MspClientDrawerProvider } from '@alga-psa/msp-composition/clients/MspClientDrawerProvider';
 import { MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients/MspClientCrossFeatureProvider';
 import { QuickAddClientProviderWithCallbacks } from '@alga-psa/clients/providers/QuickAddClientProviderWithCallbacks';
-import { MspClientTagsProvider } from '@alga-psa/msp-composition/clients/MspClientTagsProvider';
+// MspClientTagsProvider is now mounted at the shell (DefaultLayout / AlgaDeskMspShell),
+// which is always an ancestor of this component — so it no longer needs to be re-mounted here.
 import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets/MspAssetCrossFeatureProvider';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
@@ -37,6 +39,7 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
   return (
     <SchedulingProviderWithCallbacks>
       <MspTicketIntegrationProvider>
+       <MspProjectBillingIntegrationProvider>
         <MspClientIntegrationProvider>
           <ActivityDrawerProvider>
             <MspClientDrawerProvider>
@@ -46,10 +49,8 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
                     <MspSchedulingCrossFeatureProvider>
                       <MspActivityCrossFeatureProvider>
                         <QuickAddClientProviderWithCallbacks>
-                          <MspClientTagsProvider>
-                            {children}
-                            <DrawerOutlet />
-                          </MspClientTagsProvider>
+                          {children}
+                          <DrawerOutlet />
                         </QuickAddClientProviderWithCallbacks>
                       </MspActivityCrossFeatureProvider>
                     </MspSchedulingCrossFeatureProvider>
@@ -59,6 +60,7 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
             </MspClientDrawerProvider>
           </ActivityDrawerProvider>
         </MspClientIntegrationProvider>
+       </MspProjectBillingIntegrationProvider>
       </MspTicketIntegrationProvider>
     </SchedulingProviderWithCallbacks>
   );

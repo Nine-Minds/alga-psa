@@ -33,16 +33,9 @@ import {
   updateKitProduct,
 } from './kitActions';
 import { listSalesOrders } from './salesOrderActions';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const envPath = path.resolve(__dirname, '../../../../server/.env.local');
-  const env: Record<string, string> = {};
-  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
-    const match = line.match(/^([A-Z_]+)=(.*)$/);
-    if (match) env[match[1]] = match[2];
-  }
-  return env;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let serviceTypeId: string;
@@ -50,16 +43,10 @@ let stockLocationId: string;
 let clientId: string;
 
 beforeAll(async () => {
-  const env = readEnv();
+  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
-    connection: {
-      host: 'localhost',
-      port: 5432,
-      user: env.DB_USER_ADMIN,
-      password: env.DB_PASSWORD_ADMIN,
-      database: 'server',
-    },
+    connection: databaseConnection,
     pool: { min: 1, max: 2 },
   });
   testState.tenant = (await knex('tenants').select('tenant').first()).tenant;
@@ -69,6 +56,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  if (!databaseConnection) return;
   testState.trx = await knex.transaction();
 });
 
@@ -151,7 +139,7 @@ async function createComponent(input: {
   return serviceId;
 }
 
-describe('kit actions (real DB, rolled back)', () => {
+describe.skipIf(!databaseConnection)('kit actions (real DB, rolled back)', () => {
   it('T001: derives no-BOM, ready, low-stock, fixed/sum pricing, and non-stocked component detail', async () => {
     const noBom = await createKit(`No BOM ${randomUUID()}`);
     const ready = await createKit(`Ready sum ${randomUUID()}`);

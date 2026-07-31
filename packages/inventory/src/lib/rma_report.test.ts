@@ -8,16 +8,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
@@ -26,10 +19,10 @@ let SER_SERVICE: string;
 let LOCATION: string;
 
 beforeAll(async () => {
-  const e = readEnv();
+  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
-    connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
+    connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
@@ -52,7 +45,7 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
   }
 }
 
-describe('inventory — RMA / reports / search (real DB, rolled back)', () => {
+describe.skipIf(!databaseConnection)('inventory — RMA / reports / search (real DB, rolled back)', () => {
   it('T029/T030: advance-replacement RMA walks its full status path; bad status rejected', async () => {
     await inTx(async (trx) => {
       const [c] = await trx('rma_cases').insert({ tenant: TENANT, rma_type: 'advance_replacement', service_id: SERVICE, status: 'open', reason: 'DOA' }).returning('rma_id');

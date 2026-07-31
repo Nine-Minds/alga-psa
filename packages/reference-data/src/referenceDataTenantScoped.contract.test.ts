@@ -32,7 +32,7 @@ describe('reference-data tenant-scoped query contract', () => {
   it('uses structural tenant scoping for status action roots while leaving inserts direct', () => {
     const source = readFileSync(resolve(__dirname, 'actions/status-actions/statusActions.ts'), 'utf8');
 
-    expect(source).toContain("tenantDb(trx, tenant).table('statuses')");
+    expect(source).toContain("tenantDb(trx, tenant).table<IStatus>('statuses')");
     expect(source).toContain('statusesQuery(trx, tenant)');
     expect(source).toContain('statusesQuery(knex, tenant)');
     expect(source).toContain('statusesQuery(trx, tenantId)');

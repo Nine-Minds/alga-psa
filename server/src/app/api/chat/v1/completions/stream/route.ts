@@ -225,6 +225,20 @@ type StreamControllerState = {
   doneSent: boolean;
 };
 
+type AiCreditsReason = 'no_subscription' | 'out_of_credits' | 'consent_required';
+
+function readAiCreditsReason(error: unknown): AiCreditsReason | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+  const reason = (error as { reason?: unknown }).reason;
+  return reason === 'no_subscription' ||
+    reason === 'out_of_credits' ||
+    reason === 'consent_required'
+    ? reason
+    : null;
+}
+
 function isInvalidStateError(error: unknown): boolean {
   return (
     typeof error === 'object' &&
@@ -331,6 +345,46 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let completionIterator: AsyncIterator<RawCompletionChunk>;
+  let firstCompletionResult: IteratorResult<RawCompletionChunk>;
+  try {
+    const mod = (await import('@product/chat/entry')) as unknown as {
+      ChatCompletionsService: ChatCompletionsServiceLike;
+    };
+    const completionStream = await mod.ChatCompletionsService.createStructuredCompletionStream(
+      messages,
+      {
+        signal: req.signal,
+        uiContext,
+        mentions: mentions.length > 0 ? mentions : undefined,
+        baseUrl: req.nextUrl.origin,
+        tenantId: user.tenant,
+        userId: user.user_id,
+        currentUser: user as unknown as Record<string, unknown>,
+        cookieHeader: req.headers.get('cookie') ?? undefined,
+      },
+    );
+    completionIterator = completionStream[Symbol.asyncIterator]();
+    firstCompletionResult = await completionIterator.next();
+  } catch (error) {
+    const creditsReason = readAiCreditsReason(error);
+    if (creditsReason) {
+      return new Response(JSON.stringify({
+        type: 'ai_credits',
+        reason: creditsReason,
+      }), {
+        status: 402,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.error('[chat completions stream] Failed to start stream', { error });
+    return new Response(JSON.stringify({ error: 'Failed to start chat stream' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const encoder = new TextEncoder();
   const controllerState: StreamControllerState = {
     closed: false,
@@ -339,24 +393,20 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       (async () => {
-        const mod = (await import('@product/chat/entry')) as unknown as {
-          ChatCompletionsService: ChatCompletionsServiceLike;
-        };
-        const completionStream = await mod.ChatCompletionsService.createStructuredCompletionStream(
-          messages,
-          {
-            signal: req.signal,
-            uiContext,
-            mentions: mentions.length > 0 ? mentions : undefined,
-            baseUrl: req.nextUrl.origin,
-            tenantId: user.tenant,
-            userId: user.user_id,
-            currentUser: user as unknown as Record<string, unknown>,
-            cookieHeader: req.headers.get('cookie') ?? undefined,
-          },
-        );
+        async function* prefetchedEvents(): AsyncGenerator<RawCompletionChunk> {
+          if (!firstCompletionResult.done) {
+            yield firstCompletionResult.value;
+          }
+          while (true) {
+            const next = await completionIterator.next();
+            if (next.done) {
+              return;
+            }
+            yield next.value;
+          }
+        }
 
-        for await (const event of completionStream) {
+        for await (const event of prefetchedEvents()) {
           if (req.signal.aborted) {
             break;
           }

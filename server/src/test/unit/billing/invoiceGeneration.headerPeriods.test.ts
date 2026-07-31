@@ -7,7 +7,29 @@ const mocks = vi.hoisted(() => {
     materialUpdates: [] as Array<Record<string, any>>,
   };
 
-  const createTenantKnex = vi.fn(async () => ({ knex: {} }));
+  // After the content transaction commits, invoiceGeneration queries
+  // `project_billing_schedule_entries` directly on the raw knex connection
+  // (outside withTransaction), so the mocked connection must be callable.
+  // A recurring (non-project) invoice finds no schedule rows, so `select`
+  // resolves to an empty array.
+  const createQueryBuilder = () => {
+    const builder: any = {
+      join: vi.fn(() => builder),
+      leftJoin: vi.fn(() => builder),
+      where: vi.fn(() => builder),
+      andWhere: vi.fn(() => builder),
+      orderBy: vi.fn(() => builder),
+      select: vi.fn(async () => []),
+      first: vi.fn(async () => undefined),
+      update: vi.fn(async () => 1),
+      insert: vi.fn(async () => []),
+      delete: vi.fn(async () => 0),
+      del: vi.fn(async () => 0),
+    };
+    return builder;
+  };
+  const knexStub = vi.fn((_tableName: string) => createQueryBuilder());
+  const createTenantKnex = vi.fn(async () => ({ knex: knexStub }));
   const withTransaction = vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) => {
     const trx = ((tableName: string) => {
       const queryState = {
@@ -88,6 +110,7 @@ const mocks = vi.hoisted(() => {
     state,
     createTenantKnex,
     withTransaction,
+    knexStub,
     getNextNumber,
     persistInvoiceCharges,
     calculateAndDistributeTax,
@@ -250,7 +273,7 @@ describe('invoice generation header billing periods', () => {
     mocks.state.materialUpdates.length = 0;
     vi.clearAllMocks();
 
-    mocks.createTenantKnex.mockResolvedValue({ knex: {} });
+    mocks.createTenantKnex.mockResolvedValue({ knex: mocks.knexStub });
     mocks.getNextNumber.mockResolvedValue('INV-1000');
     mocks.persistInvoiceCharges.mockResolvedValue(4200);
     mocks.calculateAndDistributeTax.mockResolvedValue(550);

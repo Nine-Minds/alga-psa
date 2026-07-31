@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Option 1 — Guided setup → console</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body data-initial="fresh">
+
+<div class="mockbar">
+  <b>Option 1</b> <span class="sep">·</span> Guided setup → console
+  <span class="sep">·</span> <a href="index.html">All options</a>
+  <div class="states">
+    <button data-setstate="fresh">1 Not connected</button>
+    <button data-setstate="connected">2 Connected</button>
+    <button data-setstate="mapping">3 Mapping</button>
+    <button data-setstate="preflight">4 Preflight</button>
+    <button data-setstate="operating">5 Operating</button>
+    <button data-setstate="failing">6 Failing</button>
+  </div>
+  <button class="themetog">Dark</button>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="mark">A</span> AlgaPSA</div>
+    <div class="navsec">Organization &amp; access</div>
+    <div class="nav-item">General</div>
+    <div class="nav-item">Users</div>
+    <div class="nav-item">Teams</div>
+    <div class="navsec">Data &amp; integration</div>
+    <div class="nav-item">Secrets</div>
+    <div class="nav-item active">Integrations</div>
+    <div class="nav-item">Extensions</div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+
+      <!-- ============ SETUP MODE : wizard owns the route ============ -->
+      <div data-state="fresh connected mapping preflight">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <a class="link" href="#">← Identity integrations</a>
+          <span class="meta-q">/</span>
+          <span class="meta">Microsoft Entra</span>
+        </div>
+
+        <div class="hero">
+          <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:260px">
+              <h1 class="t-title">Set up Microsoft Entra sync <span class="pill tier">Pro</span></h1>
+              <p class="t-lead">Bring the people from the Microsoft tenants you manage into Alga as client contacts.
+                Nothing is written to your contacts until you have seen a preview and approved it.</p>
+            </div>
+            <div class="btn-row" data-state="fresh">
+              <button class="btn btn-ghost btn-xs">Cancel setup</button>
+            </div>
+            <div class="btn-row" data-state="connected mapping preflight">
+              <span class="chip ok"><span class="dot"></span>Connected via CIPP</span>
+              <button class="btn btn-outline btn-xs" data-open="dlg-disconnect">Disconnect</button>
+            </div>
+          </div>
+
+          <div style="margin-top:16px">
+            <div class="ladder">
+              <div class="st cur" data-state="fresh"><span class="n">1</span><span class="lb">Connect</span></div>
+              <div class="st done" data-state="connected mapping preflight"><span class="n">✓</span><span class="lb">Connect</span></div>
+
+              <div class="st" data-state="fresh"><span class="n">2</span><span class="lb">Find tenants</span></div>
+              <div class="st cur" data-state="connected"><span class="n">2</span><span class="lb">Find tenants</span></div>
+              <div class="st done" data-state="mapping preflight"><span class="n">✓</span><span class="lb">Find tenants</span></div>
+
+              <div class="st" data-state="fresh connected"><span class="n">3</span><span class="lb">Match to clients</span></div>
+              <div class="st cur" data-state="mapping"><span class="n">3</span><span class="lb">Match to clients</span></div>
+              <div class="st done" data-state="preflight"><span class="n">✓</span><span class="lb">Match to clients</span></div>
+
+              <div class="st" data-state="fresh connected mapping"><span class="n">4</span><span class="lb">Preview &amp; pilot</span></div>
+              <div class="st cur" data-state="preflight"><span class="n">4</span><span class="lb">Preview &amp; pilot</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- STEP 1 : connect ---------- -->
+        <div data-state="fresh">
+          <div class="card">
+            <div class="card-h">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <h3>Before you connect</h3>
+            </div>
+            <div class="grid2">
+              <div>
+                <p class="eyebrow">What Alga will be allowed to do</p>
+                <ul class="reqs">
+                  <li><span class="m y">✓</span><span>Read the list of Microsoft tenants you manage</span></li>
+                  <li><span class="m y">✓</span><span>Read users in those tenants — name, email, phone, job title</span></li>
+                  <li><span class="m n">✕</span><span>Never writes anything back to Microsoft</span></li>
+                  <li><span class="m n">✕</span><span>Never reads mail, files, calendars or Teams messages</span></li>
+                </ul>
+                <p class="hint">Scopes requested: <span class="mono">ManagedTenants.Read.All</span>,
+                  <span class="mono">Directory.Read.All</span>, <span class="mono">User.Read</span>,
+                  <span class="mono">offline_access</span>. All read-only.</p>
+              </div>
+              <div>
+                <p class="eyebrow">What happens to your contacts</p>
+                <ul class="reqs">
+                  <li><span class="m y">✓</span><span>A Microsoft user is matched to an existing contact by email, within the client you mapped</span></li>
+                  <li><span class="m y">✓</span><span>Unmatched users become new contacts</span></li>
+                  <li><span class="m q">–</span><span>Two contacts share an email? It is set aside for you to decide — never guessed</span></li>
+                  <li><span class="m n">✕</span><span>Existing names, emails, phones and job titles are <b>not</b> overwritten unless you turn that on</span></li>
+                  <li><span class="m n">✕</span><span>Nothing is ever deleted</span></li>
+                </ul>
+                <p class="hint">A disabled Microsoft account marks the contact inactive. You can turn that off in step 4.</p>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <div class="btn-row">
+              <a class="link" href="#">Read the Entra integration guide</a>
+              <span class="meta-q">·</span>
+              <a class="link" href="#">Copy this summary for a change record</a>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              <h3>How should Alga reach Microsoft?</h3>
+            </div>
+            <p class="note info" style="margin-bottom:12px">
+              <b>Most MSPs should choose Direct.</b> Choose CIPP only if you already run your own CIPP instance —
+              it becomes a dependency Alga relies on.
+            </p>
+
+            <div class="choices" role="radiogroup" aria-label="Connection method">
+              <button class="choice sel" role="radio" aria-checked="true" data-reveals="direct">
+                <span class="ch-top">
+                  <span class="radio"></span>
+                  <span style="min-width:0">
+                    <h4>Direct Microsoft partner <span class="pill">Recommended</span></h4>
+                    <p>Alga talks to Microsoft Graph itself using your partner relationships.</p>
+                  </span>
+                </span>
+                <span class="ch-foot">
+                  <p class="eyebrow" style="margin-bottom:5px">You need</p>
+                  <ul class="reqs">
+                    <li><span class="m y">✓</span><span>Microsoft Partner (CSP) relationship</span></li>
+                    <li><span class="m y">✓</span><span>GDAP relationship per client tenant</span></li>
+                    <li><span class="m y">✓</span><span>Global Admin to approve the consent prompt</span></li>
+                  </ul>
+                </span>
+              </button>
+
+              <button class="choice" role="radio" aria-checked="false" data-reveals="cipp">
+                <span class="ch-top">
+                  <span class="radio"></span>
+                  <span style="min-width:0">
+                    <h4>CIPP</h4>
+                    <p>Alga reads tenants and users from a CIPP instance you already run.</p>
+                  </span>
+                </span>
+                <span class="ch-foot">
+                  <p class="eyebrow" style="margin-bottom:5px">You need</p>
+                  <ul class="reqs">
+                    <li><span class="m y">✓</span><span>A running CIPP instance Alga can reach</span></li>
+                    <li><span class="m y">✓</span><span>An API credential from CIPP</span></li>
+                    <li><span class="m q">–</span><span>CIPP keeps its own Microsoft permissions — Alga inherits what it can see</span></li>
+                  </ul>
+                </span>
+              </button>
+            </div>
+
+            <div class="hr"></div>
+            <div data-revealed="direct">
+              <div class="btn-row">
+                <button class="btn btn-primary btn-lg" data-open="dlg-direct">Continue with Direct
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </button>
+                <span class="meta">You will review the permission prompt before anything is granted.</span>
+              </div>
+            </div>
+            <div data-revealed="cipp" class="hide">
+              <div class="btn-row">
+                <button class="btn btn-primary btn-lg" data-open="dlg-cipp">Set up CIPP connection
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </button>
+                <span class="meta">Alga will test the connection before saving it.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- STEP 2 : discover ---------- -->
+        <div data-state="connected">
+          <div class="card">
+            <div class="card-h">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <h3>Find the tenants you manage</h3>
+            </div>
+            <p class="t-body" style="margin-bottom:12px">Alga will ask CIPP which Microsoft tenants you manage and remember the list.
+              This only reads — nothing is matched or synced yet.</p>
+            <div class="btn-row">
+              <button class="btn btn-primary">Find tenants</button>
+              <span class="meta">Usually under a minute for 50 tenants.</span>
+            </div>
+          </div>
+          <div class="card">
+            <p class="eyebrow">Connection</p>
+            <div class="rows">
+              <div class="kv"><span class="k">Method</span><span class="v">CIPP</span></div>
+              <div class="kv"><span class="k">CIPP URL</span><span class="v mono">https://cipp.delgado-it.com</span></div>
+              <div class="kv"><span class="k">Tested</span><span class="v">Just now — 47 tenants visible</span></div>
+              <div class="kv"><span class="k">Connected by</span><span class="v">Sam Delgado · today 14:02</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- STEP 3 : mapping ---------- -->
+        <div data-state="mapping">
+          <div class="card">
+            <div class="card-h">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h7l2 3h9M3 7v10h18V10"/></svg>
+              <h3>Match Microsoft tenants to your clients</h3>
+              <div class="slot"><span class="meta">47 found · 39 matched · 5 need you · 3 skipped</span></div>
+            </div>
+            <p class="note" style="margin-bottom:12px">Alga only auto-matches when exactly one client is an obvious fit.
+              A guess by name is never auto-matched — those are the five below.</p>
+
+            <div class="toolbar">
+              <span class="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <input placeholder="Search tenant or domain">
+              </span>
+              <span class="seg" data-filters="map">
+                <button data-filter="review" class="on">Needs you <span class="cnt">5</span></button>
+                <button data-filter="matched">Matched <span class="cnt">39</span></button>
+                <button data-filter="skipped">Skipped <span class="cnt">3</span></button>
+                <button data-filter="all">All <span class="cnt">47</span></button>
+              </span>
+              <span style="margin-left:auto" class="btn-row">
+                <button class="btn btn-outline btn-xs">Skip all unmatched</button>
+                <button class="btn btn-primary btn-xs">Save matches</button>
+              </span>
+            </div>
+
+            <div class="tbl-wrap tbl-scroll">
+              <table>
+                <thead><tr>
+                  <th>Microsoft tenant</th><th>Primary domain</th><th class="r">Users</th>
+                  <th>Why</th><th>Alga client</th><th></th>
+                </tr></thead>
+                <tbody>
+                  <tr data-rowscope="map" data-rowtags="review">
+                    <td class="cellname">Northwind Traders</td>
+                    <td class="celldim mono">northwindtraders.com</td>
+                    <td class="r num">412</td>
+                    <td><span class="conf"><span class="confbar"><i class="mid" style="width:62%"></i></span><span class="celldim">Name is similar</span></span></td>
+                    <td><select class="inp"><option>Choose a client…</option><option>Northwind Traders Ltd</option><option>Northwind Group</option></select></td>
+                    <td class="r"><button class="btn btn-ghost btn-xs">Skip</button></td>
+                  </tr>
+                  <tr data-rowscope="map" data-rowtags="review">
+                    <td class="cellname">Tailspin Toys</td>
+                    <td class="celldim mono">tailspintoys.co</td>
+                    <td class="r num">28</td>
+                    <td><span class="conf"><span class="confbar"><i class="low" style="width:31%"></i></span><span class="celldim">No match found</span></span></td>
+                    <td><div class="btn-row"><select class="inp"><option>Choose a client…</option></select><button class="btn btn-outline btn-xs" data-open="dlg-import">Create client…</button></div></td>
+                    <td class="r"><button class="btn btn-ghost btn-xs">Skip</button></td>
+                  </tr>
+                  <tr data-rowscope="map" data-rowtags="review">
+                    <td class="cellname">Fabrikam Residential</td>
+                    <td class="celldim mono">fabrikam-res.com</td>
+                    <td class="r num">76</td>
+                    <td><span class="conf"><span class="confbar"><i class="mid" style="width:58%"></i></span><span class="celldim">Name is similar</span></span></td>
+                    <td><select class="inp"><option>Choose a client…</option><option>Fabrikam Inc</option></select></td>
+                    <td class="r"><button class="btn btn-ghost btn-xs">Skip</button></td>
+                  </tr>
+                  <tr data-rowscope="map" data-rowtags="matched hide" class="hide">
+                    <td class="cellname">Contoso Ltd</td>
+                    <td class="celldim mono">contoso.com</td>
+                    <td class="r num">153</td>
+                    <td><span class="conf"><span class="confbar"><i style="width:100%"></i></span><span class="celldim">Domain matches exactly</span></span></td>
+                    <td><span class="cellname">Contoso Ltd</span></td>
+                    <td class="r"><button class="btn btn-ghost btn-xs">Change</button></td>
+                  </tr>
+                  <tr data-rowscope="map" data-rowtags="skipped" class="hide">
+                    <td class="cellname">Delgado IT (your own tenant)</td>
+                    <td class="celldim mono">delgado-it.com</td>
+                    <td class="r num">6</td>
+                    <td><span class="celldim">You skipped this</span></td>
+                    <td><span class="celldim">— not a client</span></td>
+                    <td class="r"><button class="btn btn-ghost btn-xs">Undo skip</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="btn-row" style="margin-top:13px">
+              <button class="btn btn-primary">Save matches and preview changes</button>
+              <span class="meta">Next step shows exactly what a sync would do. Still nothing written.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- STEP 4 : preflight + pilot ---------- -->
+        <div data-state="preflight">
+          <div class="card">
+            <div class="card-h">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              <h3>Preview — pick one client to start with</h3>
+              <div class="slot"><span class="chip idle"><span class="dot"></span>Nothing written yet</span></div>
+            </div>
+
+            <div class="toolbar">
+              <label class="sr">Client</label>
+              <select class="inp" style="min-width:230px">
+                <option>Contoso Ltd — 153 users</option>
+                <option>Northwind Traders Ltd — 412 users</option>
+                <option>Fabrikam Inc — 76 users</option>
+              </select>
+              <button class="btn btn-outline btn-xs">Refresh preview</button>
+              <span class="meta" style="margin-left:auto">Preview run at 14:22 · read-only</span>
+            </div>
+
+            <div class="pf">
+              <div class="pfrow">
+                <span class="lb"><span class="sq c-link"></span>Link to existing contact</span>
+                <span class="pfbar"><i class="c-link" style="width:71%"></i></span><span class="vv">109</span>
+              </div>
+              <div class="pfrow">
+                <span class="lb"><span class="sq c-new"></span>Create new contact</span>
+                <span class="pfbar"><i class="c-new" style="width:19%"></i></span><span class="vv">29</span>
+              </div>
+              <div class="pfrow">
+                <span class="lb"><span class="sq c-rev"></span>Needs your decision</span>
+                <span class="pfbar"><i class="c-rev" style="width:3%"></i></span><span class="vv">4</span>
+              </div>
+              <div class="pfrow">
+                <span class="lb"><span class="sq c-off"></span>Mark contact inactive</span>
+                <span class="pfbar"><i class="c-off" style="width:7%"></i></span><span class="vv">11</span>
+              </div>
+              <div class="pfrow">
+                <span class="lb"><span class="sq c-skip"></span>No change</span>
+                <span class="pfbar"><i class="c-skip" style="width:0%"></i></span><span class="vv">0</span>
+              </div>
+            </div>
+
+            <details class="disc">
+              <summary>29 contacts would be created</summary>
+              <div class="dbody"><div class="namelist">
+                <span>ana.silva@contoso.com</span><span>b.okafor@contoso.com</span><span>chen.wei@contoso.com</span>
+                <span>d.novak@contoso.com</span><span>e.haddad@contoso.com</span><span>f.moreau@contoso.com</span>
+                <span>+ 23 more</span>
+              </div></div>
+            </details>
+            <details class="disc">
+              <summary>11 contacts would be marked inactive — their Microsoft account is disabled</summary>
+              <div class="dbody">
+                <p class="hint" style="margin:9px 0 0">These stay in Alga and keep their history. They drop out of the default
+                  "Active contacts" view and will be labelled "Inactive — Microsoft account disabled".</p>
+                <div class="namelist">
+                  <span>j.pham@contoso.com</span><span>k.ortiz@contoso.com</span><span>l.abebe@contoso.com</span><span>+ 8 more</span>
+                </div>
+              </div>
+            </details>
+            <details class="disc">
+              <summary>4 need your decision — two Alga contacts share one Microsoft email</summary>
+              <div class="dbody"><p class="hint" style="margin:9px 0 0">Alga will not guess. These go to the review queue and
+                nothing happens to them until you pick.</p></div>
+            </details>
+
+            <div class="hr"></div>
+            <p class="eyebrow">Which fields may Microsoft overwrite?</p>
+            <div class="rows">
+              <div class="swrow"><div class="txt"><h5>Full name</h5><p>Replace the contact's name with the Entra display name</p></div><span class="sw" role="switch" aria-checked="false"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Phone</h5><p>Replace the contact's phone with the Entra phone number</p></div><span class="sw" role="switch" aria-checked="false"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Job title</h5><p>Replace the contact's role with the Entra job title</p></div><span class="sw" role="switch" aria-checked="false"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Mark contacts inactive when the Microsoft account is disabled</h5><p>Affects 11 contacts in this preview</p></div><span class="sw on" role="switch" aria-checked="true"><span class="track"></span></span></div>
+            </div>
+            <p class="note ok" style="margin-top:11px">All overwrites are off, so your own contact edits win.
+              Turn one on and the preview above updates before anything runs.</p>
+
+            <div class="hr"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary btn-lg">Sync Contoso Ltd only</button>
+              <button class="btn btn-outline" disabled>Sync the other 38 clients</button>
+              <span class="meta">Unlocks once your first client has synced and you have looked at the result.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ OPERATING MODE : console ============ -->
+      <div data-state="operating failing">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <a class="link" href="#">← Identity integrations</a>
+          <span class="meta-q">/</span><span class="meta">Microsoft Entra</span>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+          <div style="flex:1;min-width:240px">
+            <h1 class="t-title">Microsoft Entra <span class="pill tier">Pro</span></h1>
+            <p class="t-lead">39 clients · 1,842 contacts linked · connected via CIPP</p>
+          </div>
+          <div class="btn-row">
+            <span class="chip ok" data-state="operating"><span class="dot"></span>Healthy</span>
+            <span class="chip err" data-state="failing"><span class="dot"></span>4 clients failing</span>
+            <button class="btn btn-outline btn-xs">Sync now</button>
+            <button class="btn btn-outline btn-xs">Pause sync</button>
+          </div>
+        </div>
+
+        <div class="tabbar" data-tabgroup="c1">
+          <span class="tab on" data-tab="ov">Overview</span>
+          <span class="tab" data-tab="sched">Sync &amp; schedule</span>
+          <span class="tab" data-tab="clients">Clients <span class="cnt">39</span></span>
+          <span class="tab" data-tab="rules">Field rules</span>
+          <span class="tab" data-tab="queue">Review queue <span class="cnt warn">7</span></span>
+          <span class="tab" data-tab="hist">History</span>
+          <span class="tab" data-tab="conn">Connection</span>
+        </div>
+
+        <!-- overview -->
+        <div data-tabpanel="ov" data-tabgroupref="c1">
+          <div class="card" data-state="failing">
+            <div class="card-h">
+              <svg class="ic" style="color:var(--error)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+              <h3>Needs your attention</h3>
+            </div>
+            <div class="rows">
+              <div class="attn">
+                <svg class="ic" style="color:var(--error)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg>
+                <div class="tx"><b>Northwind Traders Ltd</b> — failed the last 3 syncs
+                  <p>CIPP returned 401 Unauthorized. The API credential may have been rotated.</p></div>
+                <button class="btn btn-outline btn-xs">Fix connection</button>
+              </div>
+              <div class="attn">
+                <svg class="ic" style="color:var(--warning)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01"/><circle cx="12" cy="12" r="10"/></svg>
+                <div class="tx"><b>3 more clients failing</b> — Fabrikam Inc, Wide World Importers, Adventure Works
+                  <p>Same error. Likely the one credential, not three problems.</p></div>
+                <button class="btn btn-ghost btn-xs">View all</button>
+              </div>
+              <div class="attn">
+                <svg class="ic" style="color:var(--warning)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg>
+                <div class="tx"><b>7 people are waiting on a decision</b>
+                  <p>Two Alga contacts share one Microsoft email. Oldest has been waiting 12 days.</p></div>
+                <button class="btn btn-primary btn-xs">Review</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-side">
+            <div>
+              <div class="card">
+                <div class="card-h"><h3>Last sync</h3>
+                  <div class="slot"><a class="link" href="#">Full history</a></div>
+                </div>
+                <div class="statrow" style="margin-bottom:14px">
+                  <div class="stat"><span class="lbl">Linked</span><span class="val">1,842</span><span class="sub">existing contacts</span></div>
+                  <div class="stat"><span class="lbl">Created</span><span class="val">18</span><span class="sub">new contacts</span></div>
+                  <div class="stat"><span class="lbl">Fields changed</span><span class="val">6</span><span class="sub">where you allowed it</span></div>
+                  <div class="stat"><span class="lbl">Made inactive</span><span class="val">4</span><span class="sub">accounts disabled</span></div>
+                  <div class="stat" data-state="failing"><span class="lbl" style="color:var(--error)">Failed</span><span class="val" style="color:var(--error)">4</span><span class="sub">clients</span></div>
+                </div>
+                <div class="tbl-wrap tbl-scroll">
+                  <table>
+                    <thead><tr><th>Client</th><th>Result</th><th class="r">Linked</th><th class="r">New</th><th class="r">Inactive</th><th>When</th></tr></thead>
+                    <tbody>
+                      <tr data-state="failing"><td class="cellname">Northwind Traders Ltd</td><td><span class="chip err"><span class="dot"></span>Failed</span></td><td class="r celldim">—</td><td class="r celldim">—</td><td class="r celldim">—</td><td class="celldim">03:04</td></tr>
+                      <tr><td class="cellname">Contoso Ltd</td><td><span class="chip ok"><span class="dot"></span>Done</span></td><td class="r num">153</td><td class="r num">2</td><td class="r num">1</td><td class="celldim">03:04</td></tr>
+                      <tr><td class="cellname">Fabrikam Inc</td><td><span class="chip ok"><span class="dot"></span>Done</span></td><td class="r num">76</td><td class="r num">0</td><td class="r num">0</td><td class="celldim">03:05</td></tr>
+                      <tr><td class="cellname">Tailspin Toys</td><td><span class="chip warn"><span class="dot"></span>2 to review</span></td><td class="r num">26</td><td class="r num">1</td><td class="r num">0</td><td class="celldim">03:05</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="card">
+                <p class="eyebrow">Automatic sync</p>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+                  <span class="sw on" role="switch" aria-checked="true"><span class="track"></span></span>
+                  <span class="t-body"><strong class="k">On</strong> · every 24 hours</span>
+                </div>
+                <div class="rows">
+                  <div class="kv"><span class="k">Last run</span><span class="v">Today 03:04</span></div>
+                  <div class="kv"><span class="k">Next run</span><span class="v">Tomorrow 03:04</span></div>
+                  <div class="kv"><span class="k">Covers</span><span class="v">39 clients</span></div>
+                </div>
+                <div class="btn-row" style="margin-top:11px">
+                  <button class="btn btn-outline btn-xs" style="flex:1">Pause</button>
+                  <button class="btn btn-ghost btn-xs">Change…</button>
+                </div>
+              </div>
+              <div class="card">
+                <p class="eyebrow">Connection</p>
+                <div class="rows">
+                  <div class="kv"><span class="k">Method</span><span class="v">CIPP</span></div>
+                  <div class="kv"><span class="k">URL</span><span class="v mono" style="font-size:11.5px">cipp.delgado-it.com</span></div>
+                  <div class="kv"><span class="k">Checked</span><span class="v" data-state="operating">12 min ago ✓</span><span class="v" data-state="failing" style="color:var(--error)">Failing</span></div>
+                  <div class="kv"><span class="k">Token age</span><span class="v">86 days</span></div>
+                </div>
+                <div class="btn-row" style="margin-top:11px">
+                  <button class="btn btn-outline btn-xs" style="flex:1" data-open="dlg-rotate">Rotate token</button>
+                </div>
+              </div>
+              <div class="card">
+                <p class="eyebrow">Overwrites allowed</p>
+                <div class="rows" style="font-size:12.5px">
+                  <div class="kv"><span class="k">Full name</span><span class="v celldim">Off</span></div>
+                  <div class="kv"><span class="k">Phone</span><span class="v">On</span></div>
+                  <div class="kv"><span class="k">Job title</span><span class="v celldim">Off</span></div>
+                </div>
+                <div class="btn-row" style="margin-top:9px"><a class="link" href="#">Change field rules</a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- schedule tab -->
+        <div data-tabpanel="sched" data-tabgroupref="c1" class="hide">
+          <div class="card">
+            <div class="card-h"><h3>Automatic sync</h3></div>
+            <div class="swrow" style="border-bottom:1px solid var(--border-light)">
+              <div class="txt"><h5>Run automatically</h5><p>When off, sync only happens when you click "Sync now".</p></div>
+              <span class="sw on" role="switch" aria-checked="true" data-enables="sched"><span class="track"></span></span>
+            </div>
+            <div data-enabledby="sched">
+              <div class="field" style="margin-top:14px">
+                <label class="fld">How often</label>
+                <select class="inp" style="min-width:200px"><option>Every 24 hours</option><option>Every 12 hours</option><option>Every 6 hours</option><option>Every hour</option></select>
+                <p class="hint">Runs at 03:04 in your workspace time zone.</p>
+              </div>
+              <div class="hr"></div>
+              <div class="statrow">
+                <div class="stat"><span class="lbl">Last run</span><span class="val" style="font-size:15px">Today 03:04</span><span class="sub">39 clients · 4 failed</span></div>
+                <div class="stat"><span class="lbl">Next run</span><span class="val" style="font-size:15px">Tomorrow 03:04</span><span class="sub">in 12h 40m</span></div>
+              </div>
+              <div class="btn-row" style="margin-top:14px">
+                <button class="btn btn-outline">Pause sync</button>
+                <button class="btn btn-ghost">Sync now</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>When a sync fails</h3></div>
+            <div class="rows">
+              <div class="swrow"><div class="txt"><h5>Email me a summary after every run</h5><p>Created, linked, inactivated and failures</p></div><span class="sw" role="switch" aria-checked="false"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Email me when a client fails twice in a row</h5><p>Sent to sam@delgado-it.com</p></div><span class="sw on" role="switch" aria-checked="true"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Open a ticket on repeated failure</h5><p>Board: Internal · Priority: Medium</p></div><span class="sw" role="switch" aria-checked="false"><span class="track"></span></span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- clients tab -->
+        <div data-tabpanel="clients" data-tabgroupref="c1" class="hide">
+          <div class="card">
+            <div class="toolbar">
+              <span class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Search client or domain"></span>
+              <span class="seg"><button class="on">All <span class="cnt">39</span></button><button>Failing <span class="cnt">4</span></button><button>To review <span class="cnt">7</span></button><button>Unmapped <span class="cnt">5</span></button></span>
+              <button class="btn btn-outline btn-xs" style="margin-left:auto">Find new tenants</button>
+            </div>
+            <div class="tbl-wrap tbl-scroll">
+              <table>
+                <thead><tr><th>Client</th><th>Microsoft tenant</th><th class="r">Contacts</th><th>Last sync</th><th>Result</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td class="cellname">Contoso Ltd</td><td class="celldim mono">contoso.com</td><td class="r num">153</td><td class="celldim">Today 03:04</td><td><span class="chip ok"><span class="dot"></span>Done</span></td><td class="r"><button class="btn btn-ghost btn-xs">Sync</button></td></tr>
+                  <tr><td class="cellname">Northwind Traders Ltd</td><td class="celldim mono">northwindtraders.com</td><td class="r num">412</td><td class="celldim">Today 03:04</td><td><span class="chip err"><span class="dot"></span>Failed ×3</span></td><td class="r"><button class="btn btn-ghost btn-xs">Sync</button></td></tr>
+                  <tr><td class="cellname">Fabrikam Inc</td><td class="celldim mono">fabrikam-res.com</td><td class="r num">76</td><td class="celldim">Today 03:05</td><td><span class="chip ok"><span class="dot"></span>Done</span></td><td class="r"><button class="btn btn-ghost btn-xs">Sync</button></td></tr>
+                  <tr><td class="cellname">Tailspin Toys</td><td class="celldim mono">tailspintoys.co</td><td class="r num">27</td><td class="celldim">Today 03:05</td><td><span class="chip warn"><span class="dot"></span>2 to review</span></td><td class="r"><button class="btn btn-ghost btn-xs">Sync</button></td></tr>
+                  <tr><td class="celldim">— not mapped</td><td class="celldim mono">adventure-works.net</td><td class="r celldim">—</td><td class="celldim">Never</td><td><span class="chip idle"><span class="dot"></span>Unmapped</span></td><td class="r"><button class="btn btn-outline btn-xs">Match…</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- field rules tab -->
+        <div data-tabpanel="rules" data-tabgroupref="c1" class="hide">
+          <div class="card">
+            <div class="card-h"><h3>What Microsoft may change</h3></div>
+            <p class="note" style="margin-bottom:12px">Everything is off by default, so contact details your team curated are never
+              silently replaced. Turn a field on and Entra becomes the source of truth for it.</p>
+            <div class="rows">
+              <div class="swrow"><div class="txt"><h5>Full name</h5><p>Replace contact name with the Entra display name</p></div><span class="sw" role="switch" aria-checked="false"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Email</h5><p>Replace contact email with the Entra address</p></div><span class="sw" role="switch" aria-checked="false"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Phone</h5><p>Replace contact phone with the Entra number · <b>on</b> since 14 Jul</p></div><span class="sw on" role="switch" aria-checked="true"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Job title</h5><p>Replace contact role with the Entra job title</p></div><span class="sw" role="switch" aria-checked="false"><span class="track"></span></span></div>
+              <div class="swrow"><div class="txt"><h5>Mark contacts inactive when their Microsoft account is disabled</h5><p>Contacts keep their history and are labelled with the reason</p></div><span class="sw on" role="switch" aria-checked="true"><span class="track"></span></span></div>
+            </div>
+            <div class="hr"></div>
+            <div class="btn-row"><button class="btn btn-outline">Preview effect of these rules</button>
+              <span class="meta">Shows what would change on the next run, without running it.</span></div>
+          </div>
+        </div>
+
+        <!-- review queue tab -->
+        <div data-tabpanel="queue" data-tabgroupref="c1" class="hide">
+          <div class="card">
+            <div class="card-h"><h3>People Alga could not place</h3>
+              <div class="slot"><span class="chip warn"><span class="dot"></span>7 waiting</span></div></div>
+            <p class="note" style="margin-bottom:12px">Two or more of your contacts share this Microsoft user's email inside the same
+              client, so Alga stopped rather than guess. Nothing happens to these people until you choose.</p>
+            <div class="tbl-wrap tbl-scroll">
+              <table>
+                <thead><tr><th>Microsoft user</th><th>Client</th><th>Possible matches</th><th>Waiting</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><span class="cellname">Jordan Lee</span><br><span class="celldim mono" style="font-size:11.5px">j.lee@contoso.com</span></td>
+                    <td class="celldim">Contoso Ltd</td>
+                    <td><span class="celldim">Jordan Lee (Ops) · Jordan Lee (Billing)</span></td>
+                    <td class="celldim">12 days</td>
+                    <td class="r"><div class="btn-row"><button class="btn btn-outline btn-xs">Choose…</button><button class="btn btn-ghost btn-xs">Ignore</button></div></td>
+                  </tr>
+                  <tr>
+                    <td><span class="cellname">Sam Patel</span><br><span class="celldim mono" style="font-size:11.5px">s.patel@tailspintoys.co</span></td>
+                    <td class="celldim">Tailspin Toys</td>
+                    <td><span class="celldim">S. Patel · Sameer Patel</span></td>
+                    <td class="celldim">3 days</td>
+                    <td class="r"><div class="btn-row"><button class="btn btn-outline btn-xs">Choose…</button><button class="btn btn-ghost btn-xs">Ignore</button></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- history tab -->
+        <div data-tabpanel="hist" data-tabgroupref="c1" class="hide">
+          <div class="card">
+            <div class="toolbar">
+              <span class="seg"><button class="on">All runs</button><button>Failures only</button></span>
+              <select class="inp"><option>Last 30 days</option><option>Last 90 days</option><option>All time</option></select>
+              <select class="inp"><option>All clients</option><option>Northwind Traders Ltd</option></select>
+              <button class="btn btn-ghost btn-xs" style="margin-left:auto">Export CSV</button>
+            </div>
+            <div class="tbl-wrap tbl-scroll">
+              <table>
+                <thead><tr><th>When</th><th>Trigger</th><th>Clients</th><th class="r">Linked</th><th class="r">New</th><th class="r">Changed</th><th class="r">Inactive</th><th>Result</th></tr></thead>
+                <tbody>
+                  <tr><td>Today 03:04</td><td class="celldim">Schedule</td><td class="num">39</td><td class="r num">1,842</td><td class="r num">18</td><td class="r num">6</td><td class="r num">4</td><td><span class="chip err"><span class="dot"></span>4 failed</span></td></tr>
+                  <tr><td>Yesterday 03:04</td><td class="celldim">Schedule</td><td class="num">39</td><td class="r num">1,838</td><td class="r num">3</td><td class="r num">1</td><td class="r num">0</td><td><span class="chip ok"><span class="dot"></span>Done</span></td></tr>
+                  <tr><td>23 Jul 16:41</td><td class="celldim">Sam Delgado · manual</td><td class="num">1</td><td class="r num">153</td><td class="r num">0</td><td class="r num">0</td><td class="r num">0</td><td><span class="chip ok"><span class="dot"></span>Done</span></td></tr>
+                  <tr><td>23 Jul 03:04</td><td class="celldim">Schedule</td><td class="num">38</td><td class="r num">1,835</td><td class="r num">12</td><td class="r num">2</td><td class="r num">1</td><td><span class="chip ok"><span class="dot"></span>Done</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- connection tab -->
+        <div data-tabpanel="conn" data-tabgroupref="c1" class="hide">
+          <div class="grid2">
+            <div class="card">
+              <div class="card-h"><h3>How Alga reaches Microsoft</h3></div>
+              <div class="rows">
+                <div class="kv"><span class="k">Method</span><span class="v">CIPP</span></div>
+                <div class="kv"><span class="k">CIPP URL</span><span class="v mono">https://cipp.delgado-it.com</span></div>
+                <div class="kv"><span class="k">Last checked</span><span class="v">12 minutes ago</span></div>
+                <div class="kv"><span class="k">Token age</span><span class="v">86 days</span></div>
+                <div class="kv"><span class="k">Connected by</span><span class="v">Sam Delgado · 14 Jul 09:12</span></div>
+              </div>
+              <div class="btn-row" style="margin-top:12px">
+                <button class="btn btn-outline" data-open="dlg-rotate">Rotate token</button>
+                <button class="btn btn-ghost">Test now</button>
+                <button class="btn btn-danger" style="margin-left:auto" data-open="dlg-disconnect">Disconnect</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-h"><h3>Permissions in effect</h3></div>
+              <ul class="reqs">
+                <li><span class="m y">✓</span><span>Read managed tenants</span></li>
+                <li><span class="m y">✓</span><span>Read directory users</span></li>
+                <li><span class="m n">✕</span><span>No write access to Microsoft</span></li>
+              </ul>
+              <p class="hint">Granted 14 Jul 09:12 by Sam Delgado.</p>
+              <div class="btn-row" style="margin-top:10px"><a class="link" href="#">Download connection record (PDF)</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ============ dialogs ============ -->
+<div class="scrim" id="dlg-cipp" hidden>
+  <div class="dlg">
+    <div class="dlg-h">
+      <h3>Connect to CIPP</h3>
+      <p>Alga will read your managed tenants and their users from CIPP. It never writes to CIPP or to Microsoft.</p>
+    </div>
+    <div class="dlg-b">
+      <div class="field">
+        <label class="fld">CIPP API URL</label>
+        <input class="inp" style="width:100%" placeholder="https://cipp-api-xxxx.azurewebsites.net">
+        <p class="hint">This is the <b>CIPP-API function app</b>, not the page you log in to. In CIPP go to
+          <b>Settings → Application Settings</b> and copy the API URL.</p>
+      </div>
+      <div class="field">
+        <label class="fld">API credential</label>
+        <input class="inp" style="width:100%" type="password" placeholder="Paste the client secret">
+        <p class="hint">In CIPP: <b>Settings → API Access → Add</b>. Choose the <b>read-only</b> role.
+          Copy the client secret shown once. <a class="link" href="#">Show me where</a></p>
+      </div>
+      <div class="note" style="margin-top:13px">
+        <div class="nh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Stored encrypted
+        </div>
+        The credential is encrypted at rest and never shown again. Rotate it any time from the Connection tab.
+      </div>
+      <div class="note ok" style="margin-top:10px">
+        <div class="nh">✓ Test passed</div>
+        Reached CIPP 6.4.0 · 47 managed tenants visible · read-only credential confirmed.
+      </div>
+    </div>
+    <div class="dlg-f">
+      <button class="btn btn-ghost left" data-close>Cancel</button>
+      <button class="btn btn-outline">Test connection</button>
+      <button class="btn btn-primary">Save connection</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="dlg-direct" hidden>
+  <div class="dlg">
+    <div class="dlg-h">
+      <h3>You're about to authorize Alga at Microsoft</h3>
+      <p>Read this first — you can copy it into a change record.</p>
+    </div>
+    <div class="dlg-b">
+      <p class="eyebrow">Alga will ask Microsoft for</p>
+      <ul class="reqs">
+        <li><span class="m y">✓</span><span><span class="mono">ManagedTenants.Read.All</span> — the list of tenants you manage</span></li>
+        <li><span class="m y">✓</span><span><span class="mono">Directory.Read.All</span> — users in those tenants</span></li>
+        <li><span class="m y">✓</span><span><span class="mono">User.Read</span> — your own profile</span></li>
+        <li><span class="m y">✓</span><span><span class="mono">offline_access</span> — to keep syncing without you signing in again</span></li>
+      </ul>
+      <p class="note warn" style="margin-top:12px">
+        <b>A Global Admin must approve this.</b> If that isn't you, send them this page — nothing is granted until they consent.
+      </p>
+      <p class="note" style="margin-top:10px">
+        The connection runs as a service principal, not as your personal login, so it keeps working if you leave.
+      </p>
+    </div>
+    <div class="dlg-f">
+      <button class="btn btn-ghost left" data-close>Back</button>
+      <button class="btn btn-outline">Copy for change record</button>
+      <button class="btn btn-primary">Continue to Microsoft</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="dlg-import" hidden>
+  <div class="dlg">
+    <div class="dlg-h">
+      <h3>Create a client from this tenant?</h3>
+      <p>This adds a new client record to Alga.</p>
+    </div>
+    <div class="dlg-b">
+      <div class="field"><label class="fld">Client name</label><input class="inp" style="width:100%" value="Tailspin Toys"></div>
+      <div class="field"><label class="fld">Domain</label><input class="inp" style="width:100%" value="tailspintoys.co"></div>
+      <p class="note warn" style="margin-top:13px">
+        <div class="nh">2 existing clients look similar</div>
+        <b>Tailspin Toys Ltd</b> · tailspin.co — 14 contacts, 3 open tickets<br>
+        <b>Tailspin Retail</b> · tailspinretail.com — 8 contacts<br>
+        <a class="link" href="#">Match to one of these instead</a>
+      </p>
+    </div>
+    <div class="dlg-f">
+      <button class="btn btn-ghost left" data-close>Cancel</button>
+      <button class="btn btn-primary">Create client</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="dlg-rotate" hidden>
+  <div class="dlg">
+    <div class="dlg-h"><h3>Rotate the CIPP credential</h3><p>Replace the stored secret without tearing down the integration.</p></div>
+    <div class="dlg-b">
+      <div class="field"><label class="fld">New API credential</label><input class="inp" style="width:100%" type="password" placeholder="Paste the new client secret"></div>
+      <p class="note ok" style="margin-top:12px">Your 39 client matches, field rules and history are kept. Only the secret changes.</p>
+    </div>
+    <div class="dlg-f">
+      <button class="btn btn-ghost left" data-close>Cancel</button>
+      <button class="btn btn-outline">Test new credential</button>
+      <button class="btn btn-primary" disabled>Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="dlg-disconnect" hidden>
+  <div class="dlg">
+    <div class="dlg-h"><h3>Disconnect Microsoft Entra?</h3><p>Here is exactly what happens.</p></div>
+    <div class="dlg-b">
+      <ul class="reqs">
+        <li><span class="m y">✓</span><span><b>Kept:</b> all 1,842 contacts, including the 214 Alga created</span></li>
+        <li><span class="m y">✓</span><span><b>Kept:</b> your 39 client-to-tenant matches, so reconnecting is quick</span></li>
+        <li><span class="m y">✓</span><span><b>Kept:</b> sync history for your records</span></li>
+        <li><span class="m n">✕</span><span><b>Stops:</b> the daily automatic sync</span></li>
+        <li><span class="m n">✕</span><span><b>Deleted:</b> the stored CIPP credential</span></li>
+      </ul>
+      <p class="note" style="margin-top:12px">Contacts keep their Microsoft link, so nothing becomes orphaned. Revoke Alga's
+        access in CIPP separately if you want the credential dead at the source too.</p>
+    </div>
+    <div class="dlg-f">
+      <button class="btn btn-ghost left" data-close>Cancel</button>
+      <button class="btn btn-danger">Disconnect</button>
+    </div>
+  </div>
+</div>
+
+<script src="mock.js"></script>
+</body>
+</html>

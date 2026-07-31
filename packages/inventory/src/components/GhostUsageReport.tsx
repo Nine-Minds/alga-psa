@@ -3,9 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
+import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
+import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
@@ -27,6 +32,7 @@ import {
   type GhostRunResult,
   type GhostDisposition,
 } from '../actions';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 
 /**
  * Ghost-usage report (PRD §16/§17): the tickets a hardware shop closed with no part
@@ -347,6 +353,35 @@ export function GhostUsageReport({
     { title: t('common.actions', 'Actions'), dataIndex: 'ticket_id', render: (_v: any, rec) => worklistActions(rec) },
   ];
 
+  // Print drops the links/badges/action buttons and keeps the evidence columns.
+  const verdictLabel = (rec: GhostUsageCandidateRow): string => {
+    if (!rec.ai_classification) return t('common.emptyValue', '—');
+    const pct = rec.ai_confidence != null ? ` ${Math.round(rec.ai_confidence * 100)}%` : '';
+    const verdict =
+      rec.ai_classification === 'hardware_missing'
+        ? t('ghostUsage.verdict.hardwareMissing', 'Hardware missing')
+        : rec.ai_classification === 'no_hardware'
+          ? t('ghostUsage.verdict.noHardware', 'No hardware')
+          : t('ghostUsage.verdict.unclear', 'Unclear');
+    return `${verdict}${pct}`;
+  };
+
+  const printBaseColumns: PrintableTableColumn<GhostUsageCandidateRow>[] = [
+    { key: 'ticketNumber', header: t('ghostUsage.columns.ticketNumber', 'Ticket #'), render: (row) => row.ticket_number },
+    { key: 'title', header: t('ghostUsage.columns.title', 'Title'), render: (row) => row.title || t('common.emptyValue', '—') },
+    { key: 'board', header: t('ghostUsage.columns.board', 'Board'), render: (row) => row.board_name || t('common.emptyValue', '—') },
+    { key: 'category', header: t('ghostUsage.columns.category', 'Category'), render: (row) => row.category_name || t('common.emptyValue', '—') },
+    { key: 'client', header: t('ghostUsage.columns.client', 'Client'), render: (row) => row.client_name || t('common.emptyValue', '—') },
+    { key: 'closed', header: t('ghostUsage.columns.closed', 'Closed'), render: (row) => shortDate(row.closed_at) },
+    { key: 'closedBy', header: t('ghostUsage.columns.closedBy', 'Closed by'), render: (row) => row.closed_by_name || t('common.emptyValue', '—') },
+    { key: 'assignedTo', header: t('ghostUsage.columns.assignedTo', 'Assigned to'), render: (row) => row.assigned_to_name || t('common.emptyValue', '—') },
+  ];
+
+  const printCandidateColumns: PrintableTableColumn<GhostUsageCandidateRow>[] = [
+    ...printBaseColumns,
+    { key: 'aiVerdict', header: t('ghostUsage.columns.aiVerdict', 'AI verdict'), render: (row) => verdictLabel(row) },
+  ];
+
   const funnel = report?.funnel;
   const funnelDenom = Math.max(funnel?.closed_in_scope ?? 0, 1);
   const funnelStages = funnel
@@ -367,9 +402,12 @@ export function GhostUsageReport({
             {t('ghostUsage.subtitle', 'Closed hardware tickets with no recorded parts — work the shop may have eaten.')}
           </p>
         </div>
-        <Button id="ghost-usage-refresh" variant="outline" onClick={refresh} disabled={loading}>
-          {loading ? t('common.refreshing', 'Refreshing…') : t('common.refresh', 'Refresh')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <PrintButton id="ghost-usage-print" variant="outline" disabled={!report || loading} />
+          <Button id="ghost-usage-refresh" variant="outline" onClick={refresh} disabled={loading}>
+            {loading ? t('common.refreshing', 'Refreshing…') : t('common.refresh', 'Refresh')}
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-end gap-3 flex-wrap">
@@ -391,8 +429,14 @@ export function GhostUsageReport({
             onValueChange={(v) => setCategoryId(v)}
           />
         </div>
-        <Input id="ghost-usage-from" label={t('common.from', 'From')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <Input id="ghost-usage-to" label={t('common.to', 'To')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <div>
+          <Label className="block mb-1" htmlFor="ghost-usage-from">{t('common.from', 'From')}</Label>
+          <DatePicker id="ghost-usage-from" label={t('common.from', 'From')} placeholder={t('common.from', 'From')} clearable className="w-40" value={dateFromString(from)} onChange={(date) => setFrom(dateToString(date))} />
+        </div>
+        <div>
+          <Label className="block mb-1" htmlFor="ghost-usage-to">{t('common.to', 'To')}</Label>
+          <DatePicker id="ghost-usage-to" label={t('common.to', 'To')} placeholder={t('common.to', 'To')} clearable className="w-40" value={dateFromString(to)} onChange={(date) => setTo(dateToString(date))} />
+        </div>
         <Button id="ghost-usage-run" onClick={run} disabled={loading}>
           {loading ? t('common.running', 'Running…') : t('common.runReport', 'Run report')}
         </Button>
@@ -478,6 +522,39 @@ export function GhostUsageReport({
               <DataTable id="ghost-usage-worklist-table" data={report.worklist} columns={worklistColumns} />
             </div>
           )}
+
+          <div className="app-print-root app-print-only" id="ghost-usage-print-region">
+            <PrintableDetailHeader
+              title={t('ghostUsage.title', 'Ghost Usage')}
+              subtitle={t('ghostUsage.subtitle', 'Closed hardware tickets with no recorded parts — work the shop may have eaten.')}
+              fields={[
+                { label: t('common.from', 'From'), value: from || t('common.allTime', 'All time') },
+                { label: t('common.to', 'To'), value: to || t('common.today', 'Today') },
+                { label: t('ghostUsage.filters.board', 'Board'), value: boardOptions.find((o) => o.value === boardId)?.label },
+                { label: t('ghostUsage.filters.category', 'Category'), value: categoryOptions.find((o) => o.value === categoryId)?.label },
+              ]}
+            />
+            <PrintableSummary metrics={funnelStages.map((s) => ({ label: s.label, value: s.value }))} />
+            <PrintableTable
+              title={t('ghostUsage.candidatesTitle', 'Ghost candidates')}
+              subtitle={report.candidates.length >= report.candidate_cap
+                ? t('ghostUsage.candidateCapNote', ' (showing first {{cap}})', { cap: report.candidate_cap })
+                : undefined}
+              rows={report.candidates}
+              columns={printCandidateColumns}
+              getRowKey={(row) => row.ticket_id}
+              emptyMessage={t('ghostUsage.noCandidates', 'No ghost candidates — nothing looks eaten.')}
+            />
+            {report.worklist.length > 0 && (
+              <PrintableTable
+                title={t('ghostUsage.worklistTitle', 'Confirmed — record the material')}
+                rows={report.worklist}
+                columns={printBaseColumns}
+                getRowKey={(row) => row.ticket_id}
+                emptyMessage={t('common.emptyValue', '—')}
+              />
+            )}
+          </div>
         </>
       )}
     </div>

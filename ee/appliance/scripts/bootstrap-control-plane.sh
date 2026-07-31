@@ -174,7 +174,7 @@ Wants=network-online.target
 
 [Service]
 Type=notify
-ExecStart=$k3s_bin server --disable traefik --disable servicelb --write-kubeconfig-mode 0644
+ExecStart=$k3s_bin server --disable traefik --disable servicelb --disable local-storage --write-kubeconfig-mode 0644
 KillMode=process
 Delegate=yes
 Restart=always
@@ -193,12 +193,36 @@ EOF
     fi
 
     mkdir -p /var/log
-    nohup "$k3s_bin" server --disable traefik --disable servicelb --write-kubeconfig-mode 0644 >/var/log/alga-appliance-k3s.log 2>&1 &
+    nohup "$k3s_bin" server --disable traefik --disable servicelb --disable local-storage --write-kubeconfig-mode 0644 >/var/log/alga-appliance-k3s.log 2>&1 &
     return 0
   fi
 
   echo "k3s is not installed and no bundled k3s binary is available at $BUNDLED_K3S_BINARY. The ISO must stage k3s before this script runs." >&2
   exit 1
+}
+
+configure_k3s_storage_owner() {
+  log "Substrate: reserving local-path storage for the appliance provisioner"
+  if [ "$DRY_RUN" = "true" ]; then
+    plan "persist --disable local-storage in the k3s service and configuration"
+    return 0
+  fi
+
+  mkdir -p /etc/rancher/k3s/config.yaml.d
+  cat > /etc/rancher/k3s/config.yaml.d/20-alga-local-storage.yaml <<'EOF'
+disable+:
+  - local-storage
+EOF
+
+  # Existing appliance units already carry repeatable --disable CLI flags,
+  # which take precedence over the config-file list. Add local-storage beside
+  # the known servicelb flag so upgrades remain fixed after a reboot.
+  if [ -f /etc/systemd/system/k3s.service ] \
+    && grep -q -- '--disable servicelb' /etc/systemd/system/k3s.service \
+    && ! grep -q -- '--disable local-storage' /etc/systemd/system/k3s.service; then
+    sed -i 's/--disable servicelb/--disable servicelb --disable local-storage/' /etc/systemd/system/k3s.service
+    systemctl daemon-reload
+  fi
 }
 
 wait_for_kubernetes_api() {
@@ -439,6 +463,7 @@ if [ "$CONTROL_PLANE_ONLY" = "true" ]; then
   apply_control_plane
   log "control-plane upgrade applied"
 else
+  configure_k3s_storage_owner
   ensure_k3s_started
   wait_for_kubernetes_api
   import_control_plane_images

@@ -42,6 +42,8 @@
       "@alga-psa/core/secrets": ["../../packages/core/src/lib/secrets/index.ts"],
       "@alga-psa/core/secrets.js": ["../../packages/core/src/lib/secrets/index.ts"],
       "server/*": ["../../server/*"],
+      "@alga-psa/ee-stubs": ["../../packages/ee/src/index.ts"],
+      "@alga-psa/ee-stubs/*": ["../../packages/ee/src/*"],
       "@alga-psa/db": ["../../packages/db/src/index.ts"],
       "@alga-psa/db/*": ["../../packages/db/src/lib/*", "../../packages/db/src/*"],
       "@alga-psa/db/tenant": ["../../packages/db/src/lib/tenant.ts"],

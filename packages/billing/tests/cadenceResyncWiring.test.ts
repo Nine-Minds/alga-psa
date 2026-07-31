@@ -9,6 +9,7 @@ const cycleActions = read('../src/actions/billingCycleActions.ts');
 const scheduleActions = read('../src/actions/billingScheduleActions.ts');
 const anchorActions = read('../src/actions/billingCycleAnchorActions.ts');
 const regeneration = read('../../../shared/billingClients/clientCadenceScheduleRegeneration.ts');
+const contractCadenceMaterialization = read('../src/actions/contractCadenceServicePeriodMaterialization.ts');
 const rspActions = read('../src/actions/recurringServicePeriodActions.ts');
 const automaticInvoices = read('../src/components/billing-dashboard/AutomaticInvoices.tsx');
 // The real cadence editor saves through the clients package helper.
@@ -41,6 +42,13 @@ describe('Cadence-change resync wiring', () => {
   it('T004/T005: regeneration preserves billed periods', () => {
     expect(regeneration).toContain('legacyBilledThroughEnd: billedBoundaryEnd');
     expect(regeneration).toContain("regenerationReasonCode: 'billing_schedule_changed'");
+  });
+
+  it('bounds candidate periods in both client- and contract-cadence persistence paths', () => {
+    expect(regeneration).toContain('clipRecurringCandidatesToObligationBounds(');
+    expect(contractCadenceMaterialization).toContain(
+      'clipRecurringCandidatesToObligationBounds(',
+    );
   });
 
   it('T003/T010: preview computes impact without persisting', () => {

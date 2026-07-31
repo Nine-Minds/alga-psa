@@ -164,6 +164,17 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const loadData = async () => {
     setIsLoading(true);
     try {
+      if (!contact.client_id) {
+        setExistingUser(null);
+        setUserRoles([]);
+        setClientRoles([]);
+        setVisibilityGroups([]);
+        setVisibilityBoards([]);
+        setSelectedVisibilityGroupId(null);
+        setInvitationHistory([]);
+        return;
+      }
+
       // Check for existing user
       const { user, error } = await getUserByContactId(contact.contact_name_id);
       if (!error && user) {
@@ -661,6 +672,34 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         showTable={false}
         noCard={false}
       />
+    );
+  }
+
+  if (!contact.client_id) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              {t('contactPortalTab.title', { defaultValue: 'Client Portal Access' })}
+            </CardTitle>
+            <CardDescription>
+              {t('contactPortalTab.description', { defaultValue: 'Manage client portal access and permissions for this contact' })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                {t('contactPortalTab.noClient.description', {
+                  defaultValue: 'Assign this contact to a client to manage portal access.'
+                })}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

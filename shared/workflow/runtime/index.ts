@@ -37,6 +37,12 @@ export {
 export { buildSampleFromJsonSchema } from './simulation/samplePayload';
 export { buildWorkflowAuthoringGuide, type WorkflowAuthoringGuide } from './designer/authoringGuide';
 export { listWorkflowExpressionFunctions } from './expressionFunctions';
+export {
+  DEFAULT_WORKFLOW_EVENT_CORRELATION_PATHS,
+  WORKFLOW_EVENT_CORRELATION_PATHS_ENV,
+  getWorkflowEventCorrelationPaths,
+  type CorrelationPathsResolution
+} from './correlationDefaults';
 export { didYouMean, findNearestName, levenshteinDistance } from './validation/didYouMean';
 export * from './actions/composeText';
 export {

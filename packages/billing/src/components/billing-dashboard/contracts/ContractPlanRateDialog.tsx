@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface ContractLineRateDialogProps {
   contractLine: {
@@ -22,6 +23,7 @@ interface ContractLineRateDialogProps {
 
 export function ContractLineRateDialog({ contractLine, onClose, onSave }: ContractLineRateDialogProps) {
   const { t } = useTranslation('msp/contracts');
+  const { symbol } = useCurrencyFormat();
   const [rate, setRate] = useState<number>(
     contractLine.rate !== undefined && contractLine.rate !== null ? contractLine.rate : 0
   );
@@ -82,7 +84,7 @@ export function ContractLineRateDialog({ contractLine, onClose, onSave }: Contra
             <div>
               <Label htmlFor="custom-rate">{t('contractLineRate.fields.rate', { defaultValue: 'Rate' })}</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                 <Input
                   id="custom-rate"
                   type="number"

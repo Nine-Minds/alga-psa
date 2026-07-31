@@ -603,13 +603,21 @@ export const sendPortalInvitation = withAuth(async (
         );
       }
 
-      if (!mspLocation.email) {
+      // Support contact shown in the invitation is the tenant's own support
+      // desk (Settings -> Client Portal -> Branding), falling back to the
+      // default client's location contact.
+      const tenantSettingsRow = await scopedDb.table('tenant_settings').first() as any;
+      const tenantSettings = tenantSettingsRow?.settings || {};
+      const supportEmail: string = tenantSettings.supportEmail || mspLocation.email;
+      const supportPhone: string = tenantSettings.supportPhone || mspLocation.phone || '';
+
+      if (!supportEmail) {
         throw new PortalInvitationError(
-          'Default client\'s location must have a contact email configured',
+          'A support email must be configured in Client Portal settings, or on the default client\'s location',
           'NO_LOCATION_EMAIL'
         );
       }
-      
+
       // Get the client's client info for the email template
       const clientClient = contact.client_id ? await scopedDb.table('clients')
         .where({ client_id: contact.client_id })
@@ -658,12 +666,13 @@ export const sendPortalInvitation = withAuth(async (
       await sendPortalInvitationEmail({
         email: contact.email,
         contactName: contact.full_name,
-        clientName: clientClient?.client_name || tenantDefaultClient.client_name,  // Client's client name or MSP name
+        clientName: clientClient?.client_name || tenantDefaultClient.client_name,  // Recipient's own client name
+        tenantName: tenantDefaultClient.client_name,  // MSP name (sender of the invitation)
         portalLink: portalSetupUrl,
         expirationTime: expirationTime,
         tenant: tenant,
-        clientLocationEmail: mspLocation.email,  // MSP's email for reply-to
-        clientLocationPhone: mspLocation.phone || 'Not provided',  // MSP's phone
+        supportEmail,  // MSP's support email for reply-to
+        supportPhone,  // MSP's support phone
         fromName: `${tenantDefaultClient.client_name} Portal`,  // MSP's name for the portal
         clientId: contact.client_id  // Pass client ID (stored in company_id field) for locale resolution
       });

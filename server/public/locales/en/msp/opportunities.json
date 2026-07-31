@@ -1,0 +1,414 @@
+{
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "saveChanges": "Save changes"
+  },
+  "opportunities": {
+    "board": {
+      "daysQuiet": "{{count}}d quiet",
+      "nextDue": "next: {{date}}",
+      "recentlyClosed": "Recently closed"
+    },
+    "clientTab": {
+      "emptyBody": "Create one, or let a quote start the trail.",
+      "emptyTitle": "No opportunities for this client yet"
+    },
+    "commitments": {
+      "add": "Record it",
+      "coveredByQuote": "Covered by {{quote}}",
+      "declined": "Declined — not happening",
+      "help": "Write down every promise as it leaves your mouth. Each one resolves to a quote line or gets declined before the deal closes.",
+      "openCount": "{{count}} unresolved — blocks close-won",
+      "placeholder": "e.g. Email migration included in onboarding",
+      "resolve": "Resolve…",
+      "status": {
+        "agreement_line": "agreement line",
+        "declined": "declined",
+        "open": "open",
+        "project_task": "project task",
+        "quote_line": "quote line"
+      },
+      "title": "Commitments"
+    },
+    "completeDialog": {
+      "due": "Due",
+      "nextAction": "Next action",
+      "placeholder": "e.g. Follow up on the proposal",
+      "submit": "Complete & schedule next",
+      "title": "Done. What happens next?"
+    },
+    "confidence": {
+      "committed": "Committed",
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium"
+    },
+    "createDialog": {
+      "client": "Client",
+      "dealTitle": "Title",
+      "due": "Due",
+      "expectedClose": "Expected close",
+      "nextAction": "First action",
+      "nextActionPlaceholder": "e.g. Send the assessment proposal",
+      "submit": "Create opportunity",
+      "title": "New opportunity",
+      "titlePlaceholder": "e.g. Managed services agreement"
+    },
+    "deleteDialog": {
+      "body": "Delete {{number}} permanently? This cannot be undone. Opportunities with linked quotes cannot be deleted.",
+      "title": "Delete opportunity"
+    },
+  "detail": {
+    "backToList": "Back to opportunities",
+    "confidence": "Your confidence",
+      "confidenceNote": "Confidence is yours; the stage comes from evidence. The two are compared, never merged.",
+      "createQuote": "Create quote",
+      "draftFollowUp": "Draft the follow-up",
+      "due": "due {{date}}",
+      "evidence": "Evidence",
+      "expectedClose": "Expected close",
+      "hardware": "Hardware",
+      "linkQuote": "Link existing",
+      "markLost": "Mark lost",
+      "markWon": "Mark won",
+      "metadataTitle": "Opportunity",
+      "nextAction": "Next action",
+      "nextActionOverdue": "Next action · overdue",
+      "noQuotes": "No quote yet. A sent quote moves this deal to Proposed on its own.",
+      "oneTime": "One-time",
+      "owner": "Owner",
+      "quotes": "Quotes",
+      "quoteTitle": "Quote for {{title}}",
+      "recurring": "Recurring",
+      "setStageHint": "Select a checkpoint to set the stage",
+      "timeline": "Timeline",
+      "unlinkQuote": "Unlink",
+      "value": "Value",
+      "valuesFromQuote": "from accepted quote",
+      "whyNumber": "{{number}} is at ",
+      "whyPeriod": "."
+    },
+    "draft": {
+      "body": "Body",
+      "copied": "Copied. Paste it into your email.",
+      "copy": "Copy",
+      "instructions": "Tell the agent what to change",
+      "instructionsPlaceholder": "e.g. shorter, warmer, more formal",
+      "loadingRecipient": "Checking the linked contact...",
+      "noRecipient": "Link a contact with a primary email address before sending.",
+      "recipient": "Sends to {{recipient}} through your tenant email provider.",
+      "regenerate": "Rewrite",
+      "send": "Send follow-up",
+      "sent": "Follow-up sent and logged on the deal.",
+      "subject": "Subject",
+      "title": "Follow-up draft"
+    },
+    "editDialog": {
+      "title": "Edit opportunity"
+    },
+    "forecast": {
+      "basis": "Counted because",
+      "calibrated": "calibrated",
+      "ceiling": "Ceiling — evidence-weighted",
+      "deal": "Deal",
+      "floor": "Floor — signed and verbal",
+      "floorCol": "Floor",
+      "note": "This quarter. Weights come from evidence stages, replaced by each seller’s own close rates once they have twenty closed deals of history.",
+      "plusOneTime": "+ {{amount}} one-time",
+      "weighted": "{{stage}} · weighted {{pct}}%",
+      "won": "Won this period"
+    },
+    "ladder": "Evidence ladder",
+    "setStage": "Set stage to {{stage}}",
+    "linkQuoteDialog": {
+      "confirm": "Link quote",
+      "empty": "No unlinked quotes are available for this client.",
+      "title": "Link an existing quote"
+    },
+    "list": {
+      "confidence": "Confidence",
+      "deal": "Deal",
+      "mrr": "Recurring",
+      "nextAction": "Next action",
+      "oneTime": "One-time",
+      "owner": "Owner",
+      "stage": "Stage"
+    },
+    "loseDialog": {
+      "lostTo": "Lost to",
+      "notes": "Notes",
+      "notesPlaceholder": "Anything future-you should know",
+      "reasonPlaceholder": "Why did it die?",
+      "submit": "Mark lost",
+      "title": "Mark lost"
+    },
+    "lossReason": {
+      "chose_competitor": "Chose a competitor",
+      "no_budget": "No budget",
+      "no_response": "They went quiet",
+      "not_a_fit": "Not a fit",
+      "other": "Other",
+      "price": "Price",
+      "timing": "Timing"
+    },
+    "meeting": {
+      "daysAgo": "{{count}} days ago",
+      "done": "Pipeline reviewed. {{count}} deals on the record.",
+      "evidenceSays": "Evidence says",
+      "gap": "Confidence is {{confidence}} but the evidence stops at {{stage}}. What has the client actually done?",
+      "keys": "← back · → reviewed",
+      "markReviewed": "Reviewed → next",
+      "next": "Next action:",
+      "noAction": "none set",
+      "progress": "Deal {{n}} of {{total}}",
+      "repSays": "Owner says",
+      "reviewed": "Reviewed",
+      "silence": "Last touch"
+    },
+    "new": "New opportunity",
+    "onePager": {
+      "average": "Monthly average",
+      "billed": "Billed",
+      "month": "Month",
+      "printTitle": "{{client}} — support spend, trailing 12 months",
+      "summary": "{{client}} paid {{total}} for hourly support in the last 12 months. That is {{avg}} per month on average.",
+      "title": "Time & materials, last 12 months"
+    },
+    "oneTime": "one-time",
+    "oneTimeAmount": "{{amount}} one-time",
+    "pageTitle": "Opportunities",
+    "perMonthSuffix": "/mo",
+    "prospect": "Prospect",
+    "queue": {
+      "actions": "Actions",
+      "allClear": "All clear. Every open deal has a next step scheduled.",
+      "bottom": "That's everything. Nothing else needs you today.",
+      "cardsView": "Cards",
+      "completeAction": "Done → set next",
+      "completeActionFor": "Complete action for {{title}}",
+      "daysOverdue": "{{count}} days overdue",
+      "daysQuiet": "{{count}} days quiet",
+      "doToday": "Do today",
+      "goingQuiet": "Going quiet",
+      "greetingAfternoon": "Good afternoon, {{name}}.",
+      "greetingEvening": "Good evening, {{name}}.",
+      "greetingMorning": "Good morning, {{name}}.",
+      "lesson": {
+        "reviewPipeline": "Review the pipeline",
+        "viewAssessmentDeals": "View assessment deals"
+      },
+      "markLost": "Mark lost",
+      "moneyFound": "Money found",
+      "moneyFoundSource": "from billing, contracts, and assets",
+      "needsYou_one": "{{count}} thing needs you today.",
+      "needsYou_other": "{{count}} things need you today.",
+      "nothingDue": "Nothing is due today.",
+      "openDeal": "Open deal",
+      "openDealNamed": "Open {{title}}",
+      "reviewDraft": "Review the draft",
+      "snooze": "Snooze",
+      "snoozeNamed": "Snooze {{title}}",
+      "stakesMrr": "{{amount}}/mo is sitting in your own data, nothing typed in.",
+      "stakesNrr": "{{amount}} of project work is sitting in your own data.",
+      "table": {
+        "actions": "Actions",
+        "client": "Client",
+        "due": "Due",
+        "nextAction": "Next action",
+        "value": "Value"
+      },
+      "tableView": "Table",
+      "viewLabel": "Queue view"
+    },
+    "snapshot": {
+      "actionsDue": "Actions due",
+      "empty": "No open opportunities yet.",
+      "loading": "Loading opportunity snapshot",
+      "mrr": "{{amount}} MRR",
+      "nrr": "{{amount}} NRR",
+      "open": "Open opportunities",
+      "openCount": "Open opportunities",
+      "opportunityCount_one": "{{count}} opportunity",
+      "opportunityCount_other": "{{count}} opportunities",
+      "pipelineByStage": "Pipeline by stage",
+      "stalled": "Stalled",
+      "subtitle": "Open pipeline and follow-up work that needs attention.",
+      "title": "Opportunity snapshot",
+      "unavailable": "Opportunity totals are temporarily unavailable. Open Opportunities to continue working."
+    },
+    "stage": {
+      "assessment": "Assessment",
+      "identified": "Identified",
+      "lost": "Lost",
+      "proposed": "Proposed",
+      "qualified": "Qualified",
+      "verbal": "Verbal",
+      "won": "Won"
+    },
+    "status": {
+      "lost": "Lost",
+      "won": "Won"
+    },
+    "suggestedActions": {
+      "bookAssessment": "Book assessment",
+      "confirmDecisionMaker": "Confirm the decision-maker",
+      "confirmRequirements": "Confirm requirements and budget",
+      "confirmStartDate": "Confirm start date",
+      "followUpQuote": "Follow up on quote",
+      "label": "Suggested next actions",
+      "prepareQuote": "Prepare quote",
+      "reviewFindings": "Review assessment findings",
+      "scheduleDiscovery": "Schedule discovery call",
+      "scheduleProposalReview": "Schedule proposal review",
+      "sendContract": "Send contract"
+    },
+    "suggestionHow": {
+      "assetAging_one": "Scope a refresh for {{count}} aging asset.",
+      "assetAging_other": "Scope a refresh for {{count}} aging assets.",
+      "inboundLead": "Follow up while the interest is warm.",
+      "renewal": "Start {{clientName}}'s renewal conversation before the deadline.",
+      "tmConversion": "Compare trailing T&M spend with a recurring agreement.",
+      "whitespace": "Show {{clientName}} the missing {{serviceName}} coverage."
+    },
+    "suggestions": {
+      "accept": "Create opportunity",
+      "dismiss": "Dismiss",
+      "emptyBody": "Generators watch your contracts, billing, and assets, and surface deals here as they find them.",
+      "emptyTitle": "No suggestions right now",
+      "intro": "Found in your data. Accept to create the opportunity, or dismiss and it stays gone.",
+      "seeNumbers": "See the numbers",
+      "snooze": "Snooze"
+    },
+    "suggestionTitles": {
+      "assetAging": "{{clientName}} asset refresh",
+      "inboundLead": "{{clientName}} inbound opportunity",
+      "renewal": "{{contractName}} renewal",
+      "tmConversion": "{{clientName}} T&M agreement conversion",
+      "whitespace": "{{clientName}}: {{serviceName}} opportunity"
+    },
+    "tabs": {
+      "board": "Board",
+      "forecast": "Forecast",
+      "meeting": "Meeting",
+      "pipeline": "Pipeline",
+      "queue": "Queue",
+      "suggestions": "Suggestions"
+    },
+  "timeline": {
+    "created": "Opportunity created",
+    "empty": "Nothing logged yet. Completed actions land here on their own."
+    },
+    "toast": {
+      "actionCompleted": "Done. Next action scheduled.",
+      "created": "Opportunity created",
+      "deleted": "Opportunity deleted",
+      "lost": "Marked lost",
+      "qualified": "Qualified checkpoint recorded",
+      "quoteLinked": "Quote linked",
+      "quoteUnlinked": "Quote unlinked",
+      "saved": "Saved",
+      "snoozed": "Snoozed for a few days",
+      "stageSet": "Stage set to {{stage}}",
+      "suggestionAccepted": "Opportunity created from the suggestion",
+      "suggestionDismissed": "Dismissed. It will not come back.",
+      "suggestionSnoozed": "Snoozed for one week",
+      "whitespaceSuggestionCreated": "Suggestion ready for review",
+      "whitespaceSuggestionDismissed": "This suggestion was previously dismissed",
+      "whitespaceSuggestionKnown": "This suggestion is already known",
+      "won": "Won"
+    },
+    "type": {
+      "expansion": "Expansion",
+      "new_logo": "New client",
+      "project": "Project",
+      "renewal": "Renewal"
+    },
+    "valuesDialog": {
+      "hardware": "Hardware",
+      "mrr": "Recurring (monthly)",
+      "note": "These are your estimates. An accepted quote replaces them with the real numbers.",
+      "nrr": "One-time services",
+      "title": "Estimated value"
+    },
+    "whitespace": {
+      "adoption": "{{pct}}% of your agreement clients buy this",
+      "client": "Client",
+      "empty": "The grid fills in once clients are on active agreements.",
+      "sell": "Start {{category}} for {{client}}",
+      "subtitle": "What each agreement client buys. An empty cell is a conversation you have not had yet.",
+      "title": "The whole book"
+    },
+    "why": {
+      "actionDue": {
+        "deadlinePast_one": " and {{count}} day past your own deadline.",
+        "deadlinePast_other": " and {{count}} days past your own deadline.",
+        "dueToday": "Due today",
+        "inboundChase_one": " They have written once since your last reply.",
+        "inboundChase_other": " They have written {{count}} times since your last reply.",
+        "pastDue_one": "{{count}} day past due",
+        "pastDue_other": "{{count}} days past due",
+        "proposalAge_one": "Day {{count}} since the proposal",
+        "proposalAge_other": "Day {{count}} since the proposal",
+        "proposalAgeShort_one": "{{count}} day.",
+        "proposalAgeShort_other": "{{count}} days.",
+        "quoteIntro": "{{clientName}} has had quote {{quoteNumber}} for "
+      },
+      "assetAging": {
+        "age_one": "{{count}} asset past {{oldestYears}} years old",
+        "age_other": "{{count}} assets past {{oldestYears}} years old",
+        "quoteRefresh": " at {{clientName}}. Quote the refresh before it becomes an outage ticket."
+      },
+      "forClient": " for {{clientName}}.",
+      "goingQuiet": {
+        "nudge": " at {{clientName}}. Deals this quiet usually die without a nudge.",
+        "paperworkMissing": ". The paperwork never went out.",
+        "quietAge_one": "Quiet for {{count}} day",
+        "quietAge_other": "Quiet for {{count}} days",
+        "verbalAge_one": "{{count}} day since their verbal yes",
+        "verbalAge_other": "{{count}} days since their verbal yes"
+      },
+      "inboundLead": {
+        "raisedHand": "{{clientName}} raised their hand",
+        "source": " via {{formName}}. Inbound interest cools fast."
+      },
+      "lesson": {
+        "assessmentGap_one": " You have not proposed one in {{count}} month. Paid assessments are your strongest opening move.",
+        "assessmentGap_other": " You have not proposed one in {{count}} months. Paid assessments are your strongest opening move.",
+        "assessmentRate": "You close {{wonPerFive}} of every 5 assessments you propose.",
+        "quoteVelocity": "Quotes you send within a week close {{ratio}}x as often",
+        "quoteVelocityCompared": " as the ones that wait."
+      },
+      "renewal": {
+        "age_one": "Renews in {{count}} day",
+        "age_other": "Renews in {{count}} days",
+        "startNow": ". Starting now means the renewal conversation is not rushed."
+      },
+      "tmConversion": {
+        "counted_one": "{{count}} client paid more on T&M than an agreement costs",
+        "counted_other": "{{count}} clients paid more on T&M than an agreement costs",
+        "named": "{{clientNames}} paid more on T&M than an agreement costs",
+        "trailing": " over the trailing 12 months. The one-pager makes it their idea."
+      },
+      "whitespace": {
+        "comparable": " from you yet. Every comparable client does.",
+        "missing": "{{clientName}} does not buy {{serviceName}}"
+      }
+    },
+    "winDialog": {
+      "body": "The deal closes as won. Convert the accepted quote to an agreement from the quote screen afterward.",
+      "bodyProspect": "{{client}} becomes an active client. Convert the accepted quote to an agreement from the quote screen afterward.",
+      "confirm": "Mark won",
+      "convertQuote": "Convert an accepted quote to a draft agreement (optional)",
+      "noConvertQuote": "Do not convert a quote",
+      "noProject": "Do not create a project",
+      "projectName": "Project name",
+      "projectStart": "Start date",
+      "projectStatus": "Initial status",
+      "projectTemplate": "Create an onboarding project (optional)",
+      "title": "Mark won"
+    }
+  }
+}

@@ -14,11 +14,16 @@
     "expiringForClient_one": "{{count}} crédit pour {{clientName}} expirera bientôt",
     "expiringForClient_other": "{{count}} crédits pour {{clientName}} expireront bientôt"
   },
+  "staleAction": {
+    "message": "Cette page n’est plus à jour. Actualisez-la pour rétablir les mises à jour et les actions."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "L'essai Enterprise expire dans {{count}} jour. Saisissez une clé de licence pour conserver les fonctionnalités Enterprise.",
-    "trialExpiresIn_other": "L'essai Enterprise expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Enterprise.",
-    "trialDaysRemaining_one": "Essai Enterprise actif — {{count}} jour restant.",
-    "trialDaysRemaining_other": "Essai Enterprise actif — {{count}} jours restants.",
+    "trialExpiresIn_one": "L'essai Pro expire dans {{count}} jour. Saisissez une clé de licence pour conserver les fonctionnalités Pro.",
+    "trialExpiresIn_other": "L'essai Pro expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Pro.",
+    "trialDaysRemaining_one": "Essai Pro actif — {{count}} jour restant.",
+    "trialDaysRemaining_other": "Essai Pro actif — {{count}} jours restants.",
+    "trialAvailable": "Les fonctionnalités Essentials sont actives. Démarrez un essai Pro gratuit de 15 jours pour débloquer toutes les fonctionnalités.",
+    "trialExpired": "L'essai Pro a expiré. L'installation utilise désormais les fonctionnalités Essentials.",
     "licenseExpiresIn_one": "La licence expire dans {{count}} jour. Renouvelez pour éviter toute interruption de service.",
     "licenseExpiresIn_other": "La licence expire dans {{count}} jours. Renouvelez pour éviter toute interruption de service."
   },

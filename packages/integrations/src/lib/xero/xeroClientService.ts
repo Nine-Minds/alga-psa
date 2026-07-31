@@ -19,7 +19,9 @@ const ACCESS_TOKEN_BUFFER_SECONDS = 300;
 const DEFAULT_XERO_SCOPES = [
   'offline_access',
   'accounting.settings',
-  'accounting.transactions',
+  'accounting.invoices',
+  'accounting.banktransactions',
+  'accounting.payments',
   'accounting.contacts'
 ];
 

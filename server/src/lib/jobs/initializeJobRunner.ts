@@ -2,7 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { registerJobRunnerAccessor } from '@alga-psa/jobs/runner';
 import { JobRunnerFactory, getJobRunner } from './JobRunnerFactory';
 import { IJobRunner } from './interfaces';
-import { StorageService } from '../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobService } from '../../services/job.service';
 import { registerAllJobHandlers } from './registerAllHandlers';
 import { isEnterprise } from '../features';

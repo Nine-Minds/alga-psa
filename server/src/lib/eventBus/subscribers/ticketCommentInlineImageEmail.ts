@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { EmailAttachment } from '../../../types/email.types';
-import { StorageService } from '../../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 
 const IMG_SRC_REGEX = /<img\b[^>]*\bsrc=(["'])(.*?)\1/gi;
 const DOCUMENT_VIEW_PATH_REGEX = /^\/api\/documents\/view\/([^/?#]+)$/i;

@@ -13,6 +13,18 @@ import {
 
 export type BillingCurrencyActionError = ActionMessageError | ActionPermissionError;
 
+// Display metadata for CurrencyFormatProvider — deliberately no billing
+// permission gate: every portal user sees formatted amounts.
+// LEVERAGE: pattern tenant-default-currency-read — same read as inventory's resolveTenantCurrency
+export const getTenantDefaultCurrencyCode = withAuth(async (user, { tenant }): Promise<string> => {
+  const { knex } = await createTenantKnex();
+  const row = await tenantDb(knex, tenant)
+    .table('default_billing_settings')
+    .select<{ default_currency_code: string | null }>('default_currency_code')
+    .first();
+  return row?.default_currency_code?.trim() || 'USD';
+});
+
 export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, clientId: string, asOfDate?: string): Promise<string | BillingCurrencyActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
     return permissionError('Permission denied: Cannot resolve client billing currency');

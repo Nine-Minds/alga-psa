@@ -21,6 +21,20 @@ vi.mock('@alga-psa/email', () => ({
   },
 }));
 
+vi.mock('@alga-psa/email/providerConfig', () => ({
+  createDefaultProviderConfig: (
+    providerType: 'smtp' | 'resend',
+    { isEnabled }: { isEnabled: boolean }
+  ) => ({
+    providerId: `${providerType}-provider`,
+    providerType,
+    isEnabled,
+    config: providerType === 'smtp'
+      ? { host: '', port: 587, username: '', password: '', from: '' }
+      : { apiKey: '', from: '' },
+  }),
+}));
+
 describe('updateEmailSettings clear behavior', () => {
   beforeEach(() => {
     createTenantKnexMock.mockReset();

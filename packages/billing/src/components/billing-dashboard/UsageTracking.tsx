@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, AlertTriangle, Info, MoreVertical, Package } from 'lucide-react';
@@ -652,13 +653,19 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
             </div>
             <div>
               <Label htmlFor="usage-date-input">{t('usage.dialog.fields.usageDate', { defaultValue: 'Usage Date' })}</Label>
-              <Input
+              <DatePicker
                 id="usage-date-input"
-                type="date"
-                value={newUsage.usage_date
+                label={t('usage.dialog.fields.usageDate', { defaultValue: 'Usage Date' })}
+                placeholder={t('usage.dialog.fields.usageDate', { defaultValue: 'Usage Date' })}
+                clearable
+                className="w-full"
+                value={dateFromString(newUsage.usage_date
                   ? new Date(newUsage.usage_date).toISOString().split('T')[0]
-                  : ''}
-                onChange={(e) => setNewUsage({ ...newUsage, usage_date: new Date(e.target.value).toISOString() })}
+                  : '')}
+                onChange={(date) => setNewUsage({
+                  ...newUsage,
+                  usage_date: date ? new Date(dateToString(date)).toISOString() : '',
+                })}
               />
             </div>
             <div>

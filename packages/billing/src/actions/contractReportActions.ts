@@ -74,6 +74,7 @@ type ContractRevenueAssignmentRow = {
   end_date: string | Date | null;
   contract_id: string;
   contract_name: string;
+  contract_status: string | null;
   client_name: string | null;
 };
 
@@ -86,6 +87,7 @@ type ContractExpirationRow = {
   client_contract_id: string;
   contract_id: string;
   contract_name: string;
+  contract_status: string | null;
   client_id: string;
   client_name: string | null;
   is_active: boolean | null;
@@ -247,6 +249,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         'cc.end_date',
         'c.contract_id',
         'c.contract_name',
+        'c.status as contract_status',
         'cl.client_name'
       );
     db.tenantJoin(dataQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
@@ -260,6 +263,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         isActive: Boolean(row.is_active),
         startDate: normalizeDateOnly(row.start_date),
         endDate: normalizeDateOnly(row.end_date),
+        contractStatus: row.contract_status ?? undefined,
         now: today,
       });
       const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);
@@ -339,6 +343,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         'cc.client_contract_id',
         'c.contract_id',
         'c.contract_name',
+        'c.status as contract_status',
         'cc.client_id',
         'cl.client_name',
         'cc.is_active',
@@ -371,6 +376,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         isActive: Boolean(row.is_active),
         startDate: normalizeDateOnly(row.start_date),
         endDate: normalizeDateOnly(row.end_date),
+        contractStatus: row.contract_status ?? undefined,
         now: today,
       });
       if (assignmentStatus !== 'active') {

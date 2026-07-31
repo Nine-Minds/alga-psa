@@ -200,6 +200,11 @@ export const generateManualInvoice = withAuth(async (
       credit_applied: 0,
       is_manual: true,
       is_prepayment: isPrepayment || false,
+      // Finalization issues the prepayment credit and reads its expiration
+      // from here; when null, the client/default settings decide.
+      credit_expiration_date: isPrepayment && expirationDate
+        ? new Date(expirationDate).toISOString()
+        : null,
       tax_source: taxSource,
     };
 
@@ -228,7 +233,7 @@ export const generateManualInvoice = withAuth(async (
         client,
         tenant,
         invoiceNumber,
-        isPrepayment ? expirationDate : undefined,
+        isPrepayment && expirationDate ? expirationDate : undefined,
       );
 
       const createdInvoice = await Invoice.getFullInvoiceById(trx, tenant, invoiceId);

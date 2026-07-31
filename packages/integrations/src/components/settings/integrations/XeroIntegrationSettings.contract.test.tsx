@@ -40,7 +40,9 @@ describe('XeroIntegrationSettings contracts', () => {
       scopes: [
         'offline_access',
         'accounting.settings',
-        'accounting.transactions',
+        'accounting.invoices',
+        'accounting.banktransactions',
+        'accounting.payments',
         'accounting.contacts'
       ],
       credentials: {
@@ -66,7 +68,9 @@ describe('XeroIntegrationSettings contracts', () => {
     expect(await screen.findByText('https://example.com/api/integrations/xero/callback')).toBeInTheDocument();
     expect(screen.getByText('offline_access')).toBeInTheDocument();
     expect(screen.getByText('accounting.settings')).toBeInTheDocument();
-    expect(screen.getByText('accounting.transactions')).toBeInTheDocument();
+    expect(screen.getByText('accounting.invoices')).toBeInTheDocument();
+    expect(screen.getByText('accounting.banktransactions')).toBeInTheDocument();
+    expect(screen.getByText('accounting.payments')).toBeInTheDocument();
     expect(screen.getByText('accounting.contacts')).toBeInTheDocument();
   });
 
@@ -120,7 +124,9 @@ describe('XeroIntegrationSettings contracts', () => {
       scopes: [
         'offline_access',
         'accounting.settings',
-        'accounting.transactions',
+        'accounting.invoices',
+        'accounting.banktransactions',
+        'accounting.payments',
         'accounting.contacts'
       ],
       credentials: {
@@ -148,7 +154,9 @@ describe('XeroIntegrationSettings contracts', () => {
       scopes: [
         'offline_access',
         'accounting.settings',
-        'accounting.transactions',
+        'accounting.invoices',
+        'accounting.banktransactions',
+        'accounting.payments',
         'accounting.contacts'
       ],
       credentials: {
@@ -194,7 +202,9 @@ describe('XeroIntegrationSettings contracts', () => {
       scopes: [
         'offline_access',
         'accounting.settings',
-        'accounting.transactions',
+        'accounting.invoices',
+        'accounting.banktransactions',
+        'accounting.payments',
         'accounting.contacts'
       ],
       credentials: {
@@ -235,7 +245,9 @@ describe('XeroIntegrationSettings contracts', () => {
       scopes: [
         'offline_access',
         'accounting.settings',
-        'accounting.transactions',
+        'accounting.invoices',
+        'accounting.banktransactions',
+        'accounting.payments',
         'accounting.contacts'
       ],
       credentials: {

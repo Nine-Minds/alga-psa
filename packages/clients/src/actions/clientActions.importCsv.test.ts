@@ -24,6 +24,8 @@ vi.mock('@alga-psa/auth', () => ({
   preCheckDeletion: vi.fn(),
   withAuth: (fn: ServerAction) => (...args: unknown[]) =>
     fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
+  withOptionalAuth: (fn: ServerAction) => (...args: unknown[]) =>
+    fn(authUserRef.value, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -75,7 +77,12 @@ vi.mock('@alga-psa/storage', () => ({
   deleteEntityImage: vi.fn(),
 }));
 
-vi.mock('@alga-psa/tags/actions', () => ({
+vi.mock('@alga-psa/tags/actions/tagActions', () => ({
+  createTag: createTagMock,
+  findTagsByEntityId: findTagsByEntityIdMock,
+}));
+
+vi.mock('@alga-psa/tags/actions/tagActions', () => ({
   createTag: createTagMock,
   findTagsByEntityId: findTagsByEntityIdMock,
 }));
@@ -369,6 +376,38 @@ describe('importClientsFromCSV', () => {
     });
   });
 
+  it('normalizes case-variant client types on create and update', async () => {
+    const createResults = await importClients([
+      csvRow({ client_name: 'Case Folded Co', client_type: ' Company ' }),
+    ]);
+
+    expect(createResults[0]).toMatchObject({ success: true, message: 'Client created' });
+    expect(state.clients[0].client_type).toBe('company');
+
+    const updateResults = await importClients([
+      csvRow({ client_name: 'Case Folded Co', client_type: 'INDIVIDUAL' }),
+    ], true);
+
+    expect(updateResults[0]).toMatchObject({ success: true, message: 'Client updated' });
+    expect(state.clients[0].client_type).toBe('individual');
+  });
+
+  it('rejects an unsupported client type without aborting sibling rows', async () => {
+    const results = await importClients([
+      csvRow({ client_name: 'Valid Before Co', client_type: 'Company' }),
+      csvRow({ client_name: 'Invalid Vendor Co', client_type: 'Vendor' }),
+      csvRow({ client_name: 'Valid After Person', client_type: 'Individual' }),
+    ]);
+
+    expect(results.map((result) => result.success)).toEqual([true, false, true]);
+    expect(results[1].message).toContain("client_type must be 'company' or 'individual'");
+    expect(state.clients.map((client) => client.client_name)).toEqual([
+      'Valid Before Co',
+      'Valid After Person',
+    ]);
+    expect(state.clients.map((client) => client.client_type)).toEqual(['company', 'individual']);
+  });
+
   it('updates the existing default location instead of inserting a second one', async () => {
     state.clients.push({
       tenant: 'tenant-1',
@@ -466,16 +505,26 @@ describe('importClientsFromCSV', () => {
     expect(state.clients[0].default_currency_code).toBe('EUR');
   });
 
-  it('rejects without create permission', async () => {
+  it('returns row failures without create permission', async () => {
     hasPermissionAsyncMock.mockResolvedValue(false);
 
-    await expect(importClients([csvRow()])).rejects.toThrow('Permission denied: Cannot create clients');
+    await expect(importClients([csvRow()])).resolves.toEqual([
+      expect.objectContaining({
+        success: false,
+        message: 'Permission denied: Cannot create clients',
+      }),
+    ]);
     expect(state.clients).toHaveLength(0);
   });
 
-  it('rejects updateExisting without update permission', async () => {
+  it('returns row failures when updateExisting lacks update permission', async () => {
     hasPermissionAsyncMock.mockImplementation(async (_user: any, _resource: string, action: string) => action !== 'update');
 
-    await expect(importClients([csvRow()], true)).rejects.toThrow('Permission denied: Cannot update clients');
+    await expect(importClients([csvRow()], true)).resolves.toEqual([
+      expect.objectContaining({
+        success: false,
+        message: 'Permission denied: Cannot update clients',
+      }),
+    ]);
   });
 });

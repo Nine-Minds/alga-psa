@@ -20,6 +20,10 @@ import {
   throwActionError,
   rethrowAsStandardError,
   parseJsonMaybe,
+  normalizePhoneDigits,
+  buildNormalizedPhoneMatchCondition,
+  phoneMatchModes,
+  type PhoneMatchMode,
   type TenantTxContext,
 } from './shared';
 
@@ -103,6 +107,12 @@ const contactSummarySchema = z.object({
   email: z.string().nullable(),
   phone: z.string().nullable(),
   client_id: uuidSchema.nullable(),
+});
+
+const matchedLocationSchema = z.object({
+  location_id: uuidSchema,
+  location_name: z.string().nullable(),
+  phone: z.string().nullable(),
 });
 
 const tagResultSchema = z.object({
@@ -954,25 +964,36 @@ export function registerClientActions(): void {
         client_id: withWorkflowPicker(uuidSchema.optional(), 'Client id', 'client'),
         name: z.string().optional().describe('Exact client name (case-insensitive)'),
         external_ref: z.string().optional().describe('External reference (stored in clients.properties.external_ref)'),
+        phone: z.string().optional().describe('Phone number (normalized digits match against client locations)'),
+        phone_match: z
+          .enum(phoneMatchModes)
+          .default('exact')
+          .describe('Phone matching mode. last7/last10 can match multiple client locations; branch on matched_count.'),
         include_primary_contact: z.boolean().default(false),
         on_not_found: z.enum(['return_null', 'error']).default('return_null'),
       })
-      .refine((val) => Boolean(val.client_id || val.name || val.external_ref), { message: 'client_id, name, or external_ref required' })
+      .refine((val) => Boolean(val.client_id || val.name || val.external_ref || val.phone), {
+        message: 'client_id, name, external_ref, or phone required',
+      })
       .refine((val) => !val.external_ref || /^[A-Za-z0-9._:-]+$/.test(String(val.external_ref)), { message: 'external_ref has invalid format' }),
     outputSchema: z.object({
       client: clientSummarySchema.nullable(),
       primary_contact: contactSummarySchema.nullable(),
+      matched_location: matchedLocationSchema.nullable().optional(),
+      matched_count: z.number().int().nonnegative().optional(),
     }),
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },
-    ui: { label: 'Find Client', category: 'Business Operations', description: 'Find a client by id, name, or external ref' },
+    ui: { label: 'Find Client', category: 'Business Operations', description: 'Find a client by id, name, external ref, or location phone' },
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'client', action: 'read' });
 
         const startedAt = Date.now();
         let client: any = null;
-        let matchedBy: 'client_id' | 'name' | 'external_ref' | null = null;
+        let matchedBy: 'client_id' | 'name' | 'external_ref' | 'phone' | null = null;
+        let matchedLocation: z.infer<typeof matchedLocationSchema> | null = null;
+        let matchedCount = 0;
         if (input.client_id) {
           client = await ClientModel.getClientById(input.client_id, tx.tenantId, tx.trx);
           matchedBy = 'client_id';
@@ -987,6 +1008,50 @@ export function registerClientActions(): void {
             .andWhereRaw(`(properties->>'external_ref') = ?`, [input.external_ref])
             .first();
           matchedBy = 'external_ref';
+        } else if (input.phone) {
+          const digits = normalizePhoneDigits(input.phone);
+          const phoneMatch = (input.phone_match ?? 'exact') as PhoneMatchMode;
+          const requiredDigits = phoneMatch === 'last7' ? 7 : phoneMatch === 'last10' ? 10 : 1;
+          if (digits.length < requiredDigits) {
+            throwActionError(ctx, {
+              category: 'ValidationError',
+              code: 'VALIDATION_ERROR',
+              message: 'phone is invalid',
+            });
+          }
+
+          matchedBy = 'phone';
+          const phoneCondition = buildNormalizedPhoneMatchCondition('cl.phone', digits, phoneMatch);
+          const db = tenantDb(tx.trx, tx.tenantId);
+          const phoneMatches = tenantScopedTable(tx, 'client_locations as cl');
+          db.tenantJoin(phoneMatches, 'clients as c', 'c.client_id', 'cl.client_id', {
+            rootTenantColumn: 'cl.tenant',
+          });
+
+          const rows = await phoneMatches
+            .select(
+              'c.*',
+              'cl.location_id as matched_location_id',
+              'cl.location_name as matched_location_name',
+              'cl.phone as matched_location_phone'
+            )
+            .where('cl.is_active', true)
+            .andWhereRaw(phoneCondition.sql, phoneCondition.bindings)
+            .orderBy('cl.is_default', 'desc')
+            .orderBy('cl.location_id', 'asc');
+
+          // Ambiguity means multiple CLIENTS matched — one client listing the
+          // same number on several locations is still a unique resolution.
+          matchedCount = new Set(rows.map((r: any) => String(r.client_id))).size;
+          const row = rows[0] ?? null;
+          if (row) {
+            client = row;
+            matchedLocation = matchedLocationSchema.parse({
+              location_id: row.matched_location_id,
+              location_name: row.matched_location_name ?? null,
+              phone: row.matched_location_phone ?? null,
+            });
+          }
         }
 
         if (!client) {
@@ -998,7 +1063,9 @@ export function registerClientActions(): void {
               details: { matched_by: matchedBy },
             });
           }
-          return { client: null, primary_contact: null };
+          return matchedBy === 'phone'
+            ? { client: null, primary_contact: null, matched_location: null, matched_count: matchedCount }
+            : { client: null, primary_contact: null };
         }
 
         const parsedClient = clientToSummary(client);
@@ -1026,9 +1093,17 @@ export function registerClientActions(): void {
           duration_ms: Date.now() - startedAt,
           matched_by: matchedBy,
           include_primary_contact: input.include_primary_contact,
+          matched_count: matchedBy === 'phone' ? matchedCount : undefined,
         });
 
-        return { client: parsedClient, primary_contact: parsedPrimaryContact };
+        return matchedBy === 'phone'
+          ? {
+              client: parsedClient,
+              primary_contact: parsedPrimaryContact,
+              matched_location: matchedLocation,
+              matched_count: matchedCount,
+            }
+          : { client: parsedClient, primary_contact: parsedPrimaryContact };
       }),
   });
 

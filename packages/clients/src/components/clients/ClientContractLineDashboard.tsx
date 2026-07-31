@@ -9,7 +9,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable'; // Import DataTab
 import { ColumnDefinition } from '@alga-psa/types'; // Import ColumnDefinition
 import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting/actions'; // Import action and type
 import { Skeleton } from '@alga-psa/ui/components/Skeleton'; // Import Skeleton for loading state
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core'; // invoices.total_amount is in cents
+import { useCurrencyFormat } from '@alga-psa/ui/lib'; // invoices.total_amount is in cents
 import { formatDateOnly } from '@alga-psa/core'; // Import date formatter
 import { parseISO, subDays, format } from 'date-fns'; // Import date functions
 import {
@@ -87,6 +87,7 @@ const CustomBucketTooltip = ({ active, payload, label }: CustomBucketTooltipProp
 
 
 const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = ({ clientId }) => {
+ const { money } = useCurrencyFormat();
  const { t } = useTranslation('msp/clients');
  const notAvailable = t('common.states.na', { defaultValue: 'N/A' });
 
@@ -121,7 +122,7 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
    dataIndex: 'total_amount',
    width: '130px',
    render: (value: number, record: RecentInvoice) => (
-     <div className="text-right">{formatCurrencyFromMinorUnits(value, 'en-US', record.currency_code || 'USD')}</div>
+     <div className="text-right">{money(value, record.currency_code || undefined)}</div>
    ),
  },
  {
@@ -133,7 +134,7 @@ const ClientContractLineDashboard: React.FC<ClientContractLineDashboardProps> = 
    width: '130px',
    render: (value: number | null, record: RecentInvoice) => (
      <div className={`text-right ${value ? 'font-semibold text-gray-900' : 'text-gray-400'}`}>
-       {value == null ? '—' : formatCurrencyFromMinorUnits(value, 'en-US', record.currency_code || 'USD')}
+       {value == null ? '—' : money(value, record.currency_code || undefined)}
      </div>
    ),
  },

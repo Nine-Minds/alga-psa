@@ -27,17 +27,20 @@ describe('contractReportActions expiration report wiring', () => {
   it('includes queue status in expiration rows when work-item status exists', () => {
     expect(source).toContain("import type { RenewalWorkItemStatus } from '@alga-psa/types';");
     expect(source).toContain('queue_status?: RenewalWorkItemStatus | null;');
-    expect(source).toContain("'cc.status as queue_status',");
+    expect(source).toContain("'cc.status as queue_status'");
     expect(source).toContain('queue_status: row.queue_status ?? null,');
   });
 
   it('derives expiration rows from assignment lifecycle and groups them by client assignment id', () => {
     expect(source).toContain("'cc.is_active',");
     expect(source).toContain('const assignmentStatus = deriveClientContractStatus({');
+    expect(source).toContain("'c.status as contract_status',");
+    expect(source).toContain('contractStatus: row.contract_status ?? undefined,');
     expect(source).toContain("if (assignmentStatus !== 'active') {");
     expect(source).toContain('const key = row.client_contract_id;');
     expect(source).toContain('const expirationMap = new Map<string, ContractExpiration>();');
-    expect(source).toContain('existing.monthly_value += Number(row.monthly_value ?? 0) || 0;');
+    expect(source).toContain('const monthlyValue = monthlyValues.get(key)?.monthlyValueCents ?? 0;');
+    expect(source).toContain('existing.monthly_value = monthlyValue;');
   });
 
   it('keeps fixed-term expiration rows even when renewal fields are unset', () => {

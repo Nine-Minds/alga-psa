@@ -19,6 +19,7 @@ import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AIChatContextBoundary } from '@product/chat/context';
+import { ContactMarketingGate } from '@/components/marketing/ContactMarketingGate';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
@@ -142,6 +143,8 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
             userId={currentUser.user_id}
             userPermissions={permissions}
           />
+          {/* Marketing-module surface; self-gates on the marketing-module flag. */}
+          <ContactMarketingGate contactId={id} />
         </div>
       </AIChatContextBoundary>
     );

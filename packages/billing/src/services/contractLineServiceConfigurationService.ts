@@ -174,7 +174,8 @@ export class ContractLineServiceConfigurationService {
             config_id: configId,
             unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? 'Unit',
             enable_tiered_pricing: (typeConfig as IContractLineServiceUsageConfig)?.enable_tiered_pricing ?? false,
-            minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0
+            minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0,
+            base_rate: (typeConfig as IContractLineServiceUsageConfig)?.base_rate ?? null,
           });
           
           // Add rate tiers if provided

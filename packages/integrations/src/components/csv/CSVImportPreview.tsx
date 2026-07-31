@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { CheckCircle2, XCircle, AlertTriangle, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -49,11 +50,9 @@ interface CSVImportPreviewProps {
 
 export function CSVImportPreview({ validation, importResult }: CSVImportPreviewProps) {
   const { t } = useTranslation('msp/integrations');
+  const { money } = useCurrencyFormat();
   const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(cents / 100);
+    return money(cents);
   };
 
   return (

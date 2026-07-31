@@ -26,7 +26,7 @@ export function TmOnePagerDialog({
   onClose: () => void;
   onCreateOpportunity: (suggestionId: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [data, setData] = useState<ITmConversionOnePager | null>(null);
 
   useEffect(() => {

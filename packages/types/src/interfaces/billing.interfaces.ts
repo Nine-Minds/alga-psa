@@ -45,6 +45,8 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   total: number;
   type: 'time';
   entryId: string; // Added field for source time entry ID
+  write_down_amount?: number;
+  write_down_reason?: 'project_cap';
 }
 
 export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
@@ -57,7 +59,7 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   usageId: string; // Added field for source usage record ID
 }
 
-type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
+type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit';
 export interface IRecurringChargeDetailPeriod {
   servicePeriodStart?: ISO8601String | null;
   servicePeriodEnd?: ISO8601String | null;
@@ -138,6 +140,7 @@ export interface IClientContractLine extends TenantEntity {
   billing_frequency?: string;
   contract_name?: string; // Contract name (added dynamically for contract-associated contract lines)
   location_id?: string | null;
+  is_system_managed_default?: boolean;
 }
 
 export interface IClientContractLineCycle extends TenantEntity {
@@ -173,6 +176,8 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   rate: number;
   total: number;
   type: 'product';
+  material_source_type?: 'ticket' | 'project';
+  material_source_id?: string;
 }
 
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {
@@ -184,6 +189,18 @@ export interface ILicenseCharge extends IBillingCharge, TenantEntity {
   type: 'license';
   period_start?: ISO8601String;
   period_end?: ISO8601String;
+}
+
+export interface IProjectMilestoneCharge extends IBillingCharge, TenantEntity {
+  type: 'project_milestone';
+  project_id: string;
+  schedule_entry_id: string;
+}
+
+export interface IProjectDepositCharge extends IBillingCharge, TenantEntity {
+  type: 'project_deposit';
+  project_id: string;
+  schedule_entry_id: string;
 }
 
 /**
@@ -210,6 +227,7 @@ export interface IService extends TenantEntity {
   item_kind?: 'service' | 'product'; // Catalog kind (Products are a filtered subset)
   is_active?: boolean;
   sku?: string | null;
+  barcode?: string | null;
   cost?: number | null; // cents
   cost_currency?: string | null; // ISO 4217 currency code
   vendor?: string | null;
@@ -406,6 +424,8 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   quantity: number;
   rate: number;
   total: number;
+  material_source_type?: 'ticket' | 'project';
+  material_source_id?: string;
 }
 
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {
@@ -558,23 +578,4 @@ export interface IClientContractLineSettings extends TenantEntity {
   recurring_cadence_rollout_message?: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;
-}
-
-export type ReconciliationStatus = 'open' | 'in_review' | 'resolved';
-
-export interface ICreditReconciliationReport extends TenantEntity {
-  report_id: string;
-  client_id: string;
-  expected_balance: number;
-  actual_balance: number;
-  difference: number;
-  detection_date: ISO8601String;
-  status: ReconciliationStatus;
-  resolution_date?: ISO8601String;
-  resolution_user?: string;
-  resolution_notes?: string;
-  resolution_transaction_id?: string;
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
-  metadata?: Record<string, any>; // For storing additional information about the reconciliation issue
 }

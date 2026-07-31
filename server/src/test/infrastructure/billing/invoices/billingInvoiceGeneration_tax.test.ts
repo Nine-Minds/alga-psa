@@ -8,10 +8,11 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
-  ensureClientPlanBundlesTable as ensureClientContractsTable
+  ensureClientPlanBundlesTable as ensureClientContractsTable,
+  unwrapManualInvoice
 } from '../../../../../test-utils/billingTestHelpers';
 import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
-import { generateManualInvoice } from '@alga-psa/billing/actions';
+import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/billing/actions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -19,6 +20,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import type { IClient } from 'server/src/interfaces/client.interfaces';
 import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
+
+// generateManualInvoice returns {success, invoice}; unwrap so call sites keep
+// receiving the invoice itself.
+const generateManualInvoice = async (request: any): Promise<any> =>
+  unwrapManualInvoice(await generateManualInvoiceRaw(request));
 
 
 vi.mock('@alga-psa/auth', async () => {
@@ -81,11 +87,12 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
-    publishEvent: vi.fn()
+    publishEvent: vi.fn(),
   }),
-  toStreamEvent: (event: unknown) => event
+  toStreamEvent: (event: unknown) => event,
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({

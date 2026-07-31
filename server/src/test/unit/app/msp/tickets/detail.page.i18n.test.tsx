@@ -67,6 +67,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 
   return {
     detectClientLocale: () => 'de',
+    useOptionalI18n: () => null,
     I18nProvider: ({
       children,
       initialLocale = 'de',

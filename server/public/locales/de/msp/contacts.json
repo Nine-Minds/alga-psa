@@ -366,6 +366,9 @@
       "title": "Kein Portalzugriff",
       "description": "Dieser Kontakt hat noch keinen Zugriff auf das Kundenportal"
     },
+    "noClient": {
+      "description": "Weisen Sie diesem Kontakt einen Kunden zu, um den Portalzugriff zu verwalten."
+    },
     "portalAdmin": {
       "label": "Portaladministrator",
       "helper": "Wenn aktiviert, wird der Benutzer mit der Rolle Kundenadministrator erstellt. Wenn deaktiviert, erhält er die Rolle Kundenbenutzer."

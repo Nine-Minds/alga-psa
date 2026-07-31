@@ -78,7 +78,8 @@ describe('Entra Temporal workflow/activity contracts', () => {
     const activity = readRepoFile('ee/temporal-workflows/src/activities/entra-sync-activities.ts');
 
     expect(activity).toContain('export async function finalizeSyncRunActivity');
-    expect(activity).toContain("tenantDb(knex, input.tenantId).table('entra_sync_runs')");
+    expect(activity).toContain('const db = tenantDb(knex, input.tenantId);');
+    expect(activity).toContain("db.table('entra_sync_runs')");
     expect(activity).toContain('status: input.status');
     expect(activity).toContain('completed_at: now');
     expect(activity).toContain('total_tenants: input.summary.totalTenants');
@@ -108,7 +109,7 @@ describe('Entra Temporal workflow/activity contracts', () => {
     expect(scheduleSource).toContain('const ENTRA_SCHEDULE_ID_PREFIX = \'entra-all-tenants-sync-schedule\'');
     expect(scheduleSource).toContain('const entraConfigs = await loadEntraScheduleConfigs();');
     expect(scheduleSource).toContain('for (const config of entraConfigs)');
-    expect(scheduleSource).toContain('if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEnterpriseAddOn)');
+    expect(scheduleSource).toContain('if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEntraTier)');
     expect(scheduleSource).toContain('await upsertSchedule(client, tenantScheduleId, {');
     expect(scheduleSource).toContain('workflowType: entraAllTenantsSyncWorkflow');
     expect(scheduleSource).toContain("trigger: 'scheduled'");
@@ -165,7 +166,16 @@ describe('Entra Temporal workflow/activity contracts', () => {
 
     expect(activity).toContain('export async function loadMappedTenantsActivity');
     expect(activity).toContain("'m.is_active': true");
-    expect(activity).toContain("'m.mapping_state': 'mapped'");
+    expect(activity).toContain("query.andWhere('m.mapping_state', 'mapped')");
     expect(activity).not.toContain("'m.mapping_state': 'skip_for_now'");
+  });
+
+  it('T147: only explicit initial/manual workflows opt into create-new provisioning', () => {
+    const initialWorkflow = readRepoFile('ee/temporal-workflows/src/workflows/entra-initial-sync-workflow.ts');
+    const allTenantsWorkflow = readRepoFile('ee/temporal-workflows/src/workflows/entra-all-tenants-sync-workflow.ts');
+
+    expect(initialWorkflow).toContain('includeCreateNew: true');
+    expect(allTenantsWorkflow).toContain("includeCreateNew: input.trigger === 'manual'");
+    expect(allTenantsWorkflow).toContain("if (mapping.mappingState === 'create_new')");
   });
 });

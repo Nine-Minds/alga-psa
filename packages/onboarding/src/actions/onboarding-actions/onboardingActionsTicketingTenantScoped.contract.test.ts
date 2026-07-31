@@ -24,14 +24,15 @@ describe('onboarding ticketing tenant-scoped query contract', () => {
     expect(section).toContain("tenantScopedTable('categories')");
     expect(section).toContain("tenantScopedTable('statuses')");
     expect(section).toContain("tenantScopedTable('priorities')");
-    expect(section).toContain("await trx('next_number').insert({");
-    expect(section).toContain("await trx('boards').insert({");
-    expect(section).toContain("await trx('categories').insert({");
-    expect(section).toContain("await trx('statuses').insert({");
-    expect(section).toContain("await trx('priorities').insert({");
-    expect(section).toContain("await trx('boards').columnInfo()");
+    expect(section).toContain("await tenantScopedTable('next_number').insert({");
+    expect(section).toContain("await tenantScopedTable('boards').insert({");
+    expect(section).toContain("await tenantScopedTable('categories').insert({");
+    expect(section).toContain("await tenantScopedTable('statuses').insert({");
+    expect(section).toContain("await tenantScopedTable('priorities').insert({");
+    expect(section).toContain(".unscoped('boards', 'columnInfo reads schema metadata, not tenant rows')");
 
     expect(section).not.toMatch(/trx\('(next_number|boards|categories|statuses|priorities)'\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);
     expect(section).not.toMatch(/trx\('(next_number|boards|categories|statuses|priorities)'\)\.where\(\{\s*tenant/);
+    expect(section).not.toMatch(/trx\('(next_number|boards|categories|statuses|priorities)'\)/);
   });
 });

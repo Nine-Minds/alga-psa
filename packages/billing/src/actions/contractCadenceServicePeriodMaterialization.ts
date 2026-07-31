@@ -10,6 +10,7 @@ import type {
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { backfillRecurringServicePeriods } from '@shared/billingClients/backfillRecurringServicePeriods';
+import { clipRecurringCandidatesToObligationBounds } from '@shared/billingClients/clipRecurringCandidatesToObligationBounds';
 
 type ContractCadenceBillingCycle = 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
 
@@ -25,6 +26,7 @@ type ContractCadenceObligationRow = {
   assignment_end_date: unknown;
 };
 
+// LEVERAGE: pattern recurring-period-row-mapping
 type RecurringServicePeriodDbRow = {
   record_id: string;
   tenant: string;
@@ -448,7 +450,7 @@ async function syncContractCadenceObligation(
     ? maxIsoDateOnly(assignmentStart, billedBoundaryEnd)
     : assignmentStart;
 
-  const candidateRecords = materializeContractCadenceServicePeriods({
+  const materialized = materializeContractCadenceServicePeriods({
     asOf: regenerationStart,
     materializedAt,
     billingCycle: frequency,
@@ -463,12 +465,12 @@ async function syncContractCadenceObligation(
     sourceRuleVersion,
     sourceRunKey,
     recordIdFactory: recurringServicePeriodRecordIdFactory,
-  }).records.filter((record) => {
-    if (!assignmentEnd) {
-      return true;
-    }
-    return compareIsoDateOnly(record.servicePeriod.start, assignmentEnd) < 0;
   });
+  const candidateRecords = clipRecurringCandidatesToObligationBounds(
+    materialized.records,
+    assignmentStart,
+    assignmentEnd,
+  );
 
   const regenerationPlan = backfillRecurringServicePeriods({
     candidateRecords,

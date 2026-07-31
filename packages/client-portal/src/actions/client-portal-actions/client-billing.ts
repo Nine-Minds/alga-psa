@@ -31,6 +31,10 @@ import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import {
+  getClientIdFromPortalUser as getClientIdFromUser,
+  hasClientBillingReadPermission as hasBillingPermission,
+} from './clientBillingPermissions';
 
 export type ClientBillingActionError =
   | { readonly actionError: string }
@@ -107,49 +111,6 @@ class JobNotFoundError extends Error {
     super('Job not found');
     this.name = 'JobNotFoundError';
   }
-}
-
-/**
- * Get clientId from user's contact - avoids nested withAuth calls
- */
-async function getClientIdFromUser(
-  trx: Knex.Transaction,
-  user: IUserWithRoles,
-  tenant: string
-): Promise<string | null> {
-  if (!user.contact_id) return null;
-
-  const contact = await tenantDb(trx, tenant).table('contacts')
-    .where({
-      contact_name_id: user.contact_id,
-    })
-    .select('client_id')
-    .first();
-
-  return contact?.client_id || null;
-}
-
-/**
- * Check if user has billing read permission - avoids nested withAuth calls
- */
-async function hasBillingPermission(
-  trx: Knex.Transaction,
-  user: IUserWithRoles,
-  tenant: string
-): Promise<boolean> {
-  const scopedDb = tenantDb(trx, tenant);
-  const permissionsQuery = scopedDb.table('role_permissions as rp')
-    .where({
-      'ur.user_id': user.user_id,
-      'p.resource': 'billing',
-      'p.action': 'read'
-    })
-    .first();
-  scopedDb.tenantJoin(permissionsQuery, 'permissions as p', 'rp.permission_id', 'p.permission_id');
-  scopedDb.tenantJoin(permissionsQuery, 'user_roles as ur', 'rp.role_id', 'ur.role_id');
-  const permissions = await permissionsQuery;
-
-  return !!permissions;
 }
 
 async function getAuthorizedClientQuote(
@@ -654,7 +615,28 @@ export const getClientInvoiceLineItems = withAuth(async (user, { tenant }, invoi
  * Get invoice templates
  */
 export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<IInvoiceTemplate[]>> => {
+  const knex = await getConnection(tenant);
+
   try {
+    // Same client-context + billing read gate as the other client billing actions
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access invoice data');
+      }
+
+      return null;
+    });
+
+    if (accessError) {
+      return accessError;
+    }
+
     // Get all templates (both standard and tenant-specific)
     const templates = await getInvoiceTemplates();
     if (isClientBillingActionError(templates)) {
@@ -873,8 +855,32 @@ async function pollJobUntilComplete(
  * Get job status for polling - used to check if PDF generation is complete
  */
 export const getClientJobStatus = withAuth(async (user, { tenant }, jobId: string): Promise<ClientBillingActionResult<ClientJobStatus>> => {
+  const knex = await getConnection(tenant);
+
   try {
-    return await getJobStatus(jobId, tenant);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access invoice data');
+      }
+
+      // Jobs carry no client context — restrict access to jobs the caller
+      // created so a portal user cannot read other users' generated artifact
+      // fileIds. Report foreign/missing jobs identically to avoid an oracle.
+      const job = await tenantDb(trx, tenant).table('jobs')
+        .where({ job_id: jobId })
+        .first('user_id');
+      if (!job || job.user_id !== user.user_id) {
+        return actionError('Job not found');
+      }
+
+      return await getJobStatus(jobId, tenant);
+    });
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {

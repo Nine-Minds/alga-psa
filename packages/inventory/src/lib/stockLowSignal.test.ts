@@ -15,26 +15,19 @@ import {
   collectDefaultLocationStockLowSignalAfterConsume,
   collectStockLowSignalAfterConsume,
 } from './stockLowSignal';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
 let LOCATION: string;
 
 beforeAll(async () => {
-  const e = readEnv();
+  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
-    connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
+    connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
@@ -100,7 +93,7 @@ async function makeProduct(
   return svc.service_id;
 }
 
-describe('stock-low signal collection (real DB, rolled back)', () => {
+describe.skipIf(!databaseConnection)('stock-low signal collection (real DB, rolled back)', () => {
   it('returns a signal only when non-serialized on-hand crosses down to the reorder point', async () => {
     await inTx(async (trx) => {
       const serviceId = await makeProduct(trx, `edge-${randomUUID().slice(0, 8)}`, {

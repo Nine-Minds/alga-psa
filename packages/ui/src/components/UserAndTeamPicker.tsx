@@ -503,7 +503,7 @@ const UserAndTeamPicker = ({
 
   return (
     <div
-      className={`relative inline-block ${buttonWidth === 'full' ? 'w-full' : ''} ${className || ''}`}
+      className={`relative inline-block max-w-full ${buttonWidth === 'full' ? 'w-full' : ''} ${className || ''}`}
       ref={containerRef}
     >
       {label && labelStyle !== 'none' && (
@@ -528,10 +528,10 @@ const UserAndTeamPicker = ({
             ? 'p-1 h-7 text-xs min-w-0 gap-1'
             : 'p-2 h-10 text-sm'
         } ${
-          buttonWidth === 'full' ? 'w-full' : size === 'xs' ? 'w-fit' : 'w-fit min-w-[150px]'
+          buttonWidth === 'full' ? 'w-full' : size === 'xs' ? 'w-fit' : 'w-fit min-w-[min(150px,100%)] max-w-full'
         }`}
       >
-        <div className={`flex items-center flex-1 ${size === 'xs' ? 'gap-1' : 'gap-2'}`}>
+        <div className={`flex items-center flex-1 min-w-0 ${size === 'xs' ? 'gap-1' : 'gap-2'}`}>
           {currentUser && (
             <UserAvatar
               userId={currentUser.user_id}
@@ -549,7 +549,7 @@ const UserAndTeamPicker = ({
             />
           )}
           {size !== 'xs' && (
-            <span className={!hasSelection ? 'text-gray-400' : ''}>{selectedLabel}</span>
+            <span className={`truncate ${!hasSelection ? 'text-gray-400' : ''}`}>{selectedLabel}</span>
           )}
         </div>
         <ChevronDown className={size === 'xs' ? 'w-3 h-3 text-gray-500' : 'w-4 h-4 text-gray-500'} />

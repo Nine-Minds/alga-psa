@@ -229,7 +229,9 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     if (activeTabContent.requiredFeature && !hasFeature(activeTabContent.requiredFeature)) {
       return (
         <FeatureUpgradeNotice
-          featureName={activeTabContent.label}
+          // TabContent.label is ReactNode (it can carry inline chrome like a
+          // count pill); the notice needs plain text, so fall back to the id.
+          featureName={typeof activeTabContent.label === 'string' ? activeTabContent.label : activeTabContent.id}
           requiredTier={FEATURE_MINIMUM_TIER[activeTabContent.requiredFeature]}
         />
       );

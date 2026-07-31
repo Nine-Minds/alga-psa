@@ -13,6 +13,7 @@ import logger from '@alga-psa/core/logger';
 import { isValidEmail } from '@alga-psa/validation';
 
 import { getAuthEmailRegistry } from '../lib/emailRegistry';
+import { buildPasswordResetLink } from '../lib/portalDomain';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
 const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';
@@ -130,7 +131,11 @@ export async function setNewPassword(password: string, token: string): Promise<b
   return false;
 }
 
-export async function recoverPassword(email: string, portal: 'msp' | 'client' = 'msp'): Promise<boolean> {
+export async function recoverPassword(
+  email: string,
+  portal: 'msp' | 'client' = 'msp',
+  portalDomain?: string
+): Promise<boolean> {
   if (!isValidEmail(email)) {
     logger.debug(`Invalid email format: [ ${email} ]`);
     return true; // Return true for security - don't reveal invalid format
@@ -161,7 +166,12 @@ export async function recoverPassword(email: string, portal: 'msp' | 'client' = 
       user_type: userType  // Include the correct user type in token
     });
 
-    const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/password-reset/set-new-password?token=${recoverToken}&portal=${portal}`;
+    const resetLink = buildPasswordResetLink(
+      process.env.NEXT_PUBLIC_BASE_URL,
+      recoverToken,
+      portal,
+      portalDomain
+    );
 
     // Use the proper sendPasswordResetEmail function which respects language hierarchy
     try {

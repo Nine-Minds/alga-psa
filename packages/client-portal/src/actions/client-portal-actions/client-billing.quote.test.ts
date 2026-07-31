@@ -405,7 +405,9 @@ describe('client quote billing actions', () => {
   it('T100: rejectClientQuote requires a comment and stores rejection metadata', async () => {
     const { rejectClientQuote } = await import('./client-billing');
 
-    await expect(rejectClientQuote('quote-1', '   ')).rejects.toThrow('A rejection comment is required');
+    await expect(rejectClientQuote('quote-1', '   ')).resolves.toEqual({
+      actionError: 'A rejection comment is required',
+    });
 
     const rejectedQuote = await rejectClientQuote('quote-1', '  Budget is not approved yet.  ');
 
@@ -461,8 +463,12 @@ describe('client quote billing actions', () => {
     quoteStore['quote-1'].status = 'expired';
     const { acceptClientQuote, rejectClientQuote } = await import('./client-billing');
 
-    await expect(acceptClientQuote('quote-1', ['item-optional'])).rejects.toThrow('Failed to accept quote');
-    await expect(rejectClientQuote('quote-1', 'Too late')).rejects.toThrow('Failed to reject quote');
+    await expect(acceptClientQuote('quote-1', ['item-optional'])).resolves.toEqual({
+      actionError: 'Quote is not in a valid state for this action',
+    });
+    await expect(rejectClientQuote('quote-1', 'Too late')).resolves.toEqual({
+      actionError: 'Quote is not in a valid state for this action',
+    });
     expect(updateQuoteMock).not.toHaveBeenCalled();
   });
 
@@ -536,7 +542,7 @@ describe('client quote billing actions', () => {
 
     const result = await downloadClientQuotePdf('quote-other-client');
 
-    expect(result).toEqual({ success: false, error: 'Failed to download quote PDF' });
+    expect(result).toEqual({ actionError: 'Quote not found or access denied' });
   });
 
   it('T139: downloadClientQuotePdf rejects access to draft quotes', async () => {
@@ -544,7 +550,7 @@ describe('client quote billing actions', () => {
 
     const result = await downloadClientQuotePdf('quote-draft');
 
-    expect(result).toEqual({ success: false, error: 'Failed to download quote PDF' });
+    expect(result).toEqual({ actionError: 'Quote not found or access denied' });
   });
 
   it('T140: downloadClientQuotePdf rejects unauthenticated users', async () => {
@@ -554,6 +560,6 @@ describe('client quote billing actions', () => {
 
     const result = await downloadClientQuotePdf('quote-1');
 
-    expect(result).toEqual({ success: false, error: 'Failed to download quote PDF' });
+    expect(result).toEqual({ permissionError: 'Unauthorized' });
   });
 });

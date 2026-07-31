@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
-import { ADD_ONS, TIER_FEATURES } from '@alga-psa/types';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
-import { AddOnAccessError, assertAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 import { TierAccessError, assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 type EntraGuardPermission = 'read' | 'update';
 
-export async function requireEntraUiFlagEnabled(
+export async function requireEntraAccess(
   requiredPermission: EntraGuardPermission = 'read'
-): Promise<Response | { tenantId: string; userId: string }> {
+): Promise<Response | { tenantId: string; userId: string; user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>> }> {
   const user = await getCurrentUser();
 
   if (!user || !user.user_id || !user.tenant) {
@@ -46,9 +44,9 @@ export async function requireEntraUiFlagEnabled(
 
   try {
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
-    await assertAddOnAccess(ADD_ONS.ENTERPRISE);
+    await assertTierAccess(TIER_FEATURES.ENTRA_SYNC);
   } catch (error) {
-    if (error instanceof TierAccessError || error instanceof AddOnAccessError) {
+    if (error instanceof TierAccessError) {
       return NextResponse.json(
         {
           success: false,
@@ -60,20 +58,5 @@ export async function requireEntraUiFlagEnabled(
     throw error;
   }
 
-  const enabled = await featureFlags.isEnabled('entra-integration-ui', {
-    userId: user.user_id,
-    tenantId: user.tenant,
-  });
-
-  if (!enabled) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Microsoft Entra integration is disabled for this tenant.',
-      },
-      { status: 404 }
-    );
-  }
-
-  return { tenantId: user.tenant, userId: user.user_id };
+  return { tenantId: user.tenant, userId: user.user_id, user };
 }

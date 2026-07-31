@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { EntityType } from '@alga-psa/shared/services/numberingService';
+import { NUMBERING_DEFAULTS, type EntityType } from '@alga-psa/shared/services/numberingDefaults';
 import { getNumberSettings, updateNumberSettings, canEditNumberingSettings, type NumberSettings } from '../../actions/number-actions/numberingActions';
 
 interface NumberingSettingsProps {
@@ -173,15 +173,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
               onChange={(e) => handleInputChange('prefix', e.target.value)}
               disabled={!isEditing}
               className="!w-48"
-              placeholder={
-                entityType === 'TICKET'
-                  ? 'TK-'
-                  : entityType === 'INVOICE'
-                  ? 'INV-'
-                  : entityType === 'QUOTE'
-                  ? 'QT-'
-                  : 'PRJ-'
-              }
+              placeholder={NUMBERING_DEFAULTS[entityType].prefix}
             />
             {!isEditing && canEdit && (
               <Button
@@ -208,7 +200,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
             <Input
               id={`${entityId}-padding-length-input`}
               type="number"
-              value={isEditing ? formState.padding_length : settings?.padding_length ?? 6}
+              value={(isEditing ? formState.padding_length : settings?.padding_length) ?? 6}
               onChange={(e) => handleInputChange('padding_length', e.target.value)}
               disabled={!isEditing}
               className="!w-48"

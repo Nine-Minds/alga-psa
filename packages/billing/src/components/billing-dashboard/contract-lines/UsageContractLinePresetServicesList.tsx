@@ -33,6 +33,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -58,6 +59,7 @@ interface PresetServiceWithBucket extends IContractLinePresetService {
 
 const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServicesListProps> = ({ presetId, onServiceAdded }) => {
   const { t } = useTranslation('msp/contract-lines');
+  const { money, symbol } = useCurrencyFormat();
   const [presetServices, setPresetServices] = useState<PresetServiceWithBucket[]>([]);
   const [originalServices, setOriginalServices] = useState<PresetServiceWithBucket[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -444,7 +446,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                         <label className="text-sm font-medium">
                           {t('services.usagePreset.ratePerUnitLabel', { defaultValue: 'Rate per Unit:' })}
                         </label>
-                        <span className="text-muted-foreground">$</span>
+                        <span className="text-muted-foreground">{symbol()}</span>
                       <Input
                         type="text"
                         inputMode="decimal"
@@ -549,7 +551,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                                 defaultValue: 'Service Type: {{type}} | Method: {{method}} | Default Rate: {{rate}} | Unit: {{unit}}',
                                 type: serviceTypeName,
                                 method: billingMethod,
-                                rate: `$${(Number(service.default_rate) / 100).toFixed(2)}`,
+                                rate: money(Number(service.default_rate)),
                                 unit: service.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' }),
                               })}
                             </span>

@@ -1,17 +1,12 @@
 {
   "page": {
-    "title": "Credit Management",
-    "creditsOverview": "Credits Overview",
-    "overviewDescription": "Manage your client credits and transfers",
-    "overviewDescriptionWithExpiration": "Manage your client credits, including expiration dates, and transfers",
-    "expirationSummary": "Credit Expiration Summary",
-    "expirationSummaryDescription": "Overview of credits expiring soon",
-    "usageTrends": "Credit Usage Trends",
-    "usageTrendsDescription": "Historical credit usage patterns"
+    "title": "Credit Management"
   },
   "columns": {
     "creditId": "Credit ID",
     "client": "Client",
+    "balance": "Balance",
+    "balanceOf": "of {{amount}}",
     "created": "Created",
     "description": "Description",
     "context": "Context",
@@ -20,34 +15,31 @@
     "expires": "Expires",
     "status": "Status",
     "actions": "Actions",
-    "discrepancy": "Discrepancy",
-    "detected": "Detected",
-    "expectedBalance": "Expected Balance",
-    "actualBalance": "Actual Balance",
     "amountAvailable": "Amount Available",
     "expiration": "Expiration",
     "select": "Select"
   },
+  "filters": {
+    "allClients": "All Clients",
+    "allStatuses": "All Statuses"
+  },
   "status": {
     "active": "Active",
     "expired": "Expired",
-    "expiringSoon": "Expiring Soon ({{days}} days)",
-    "open": "Open",
-    "inReview": "In Review",
-    "resolved": "Resolved",
     "never": "Never",
-    "na": "N/A"
+    "na": "N/A",
+    "depleted": "Depleted",
+    "expiringSoonShort": "Expiring Soon",
+    "expiringSoon_one": "Expires in {{count}} day",
+    "expiringSoon_other": "Expires in {{count}} days"
   },
   "actions": {
     "view": "View",
     "edit": "Edit",
     "expire": "Expire",
-    "resolve": "Resolve",
     "addCredit": "Add Credit",
     "cancel": "Cancel",
-    "backToCredits": "Back to Credits",
     "viewAllCredits": "View All Credits",
-    "runReconciliation": "Run Reconciliation",
     "running": "Running...",
     "reset": "Reset",
     "applyCredit": "Apply Credit",
@@ -55,84 +47,51 @@
     "select": "Select",
     "selected": "Selected",
     "saveChanges": "Save Changes",
-    "saving": "Saving..."
-  },
-  "tabs": {
-    "activeCredits": "Active Credits",
-    "allCredits": "All Credits",
-    "expiredCredits": "Expired Credits"
+    "saving": "Saving...",
+    "transfer": "Transfer"
   },
   "settings": {
-    "title": "Credit Expiration Settings",
-    "creditExpiration": "Credit Expiration:",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "expirationPeriod": "Expiration Period:",
-    "daysUnit": "{{count}} days",
-    "notificationDays": "Notification Days:",
-    "none": "None",
-    "loadErrorPrefix": "Error loading credit expiration settings:"
-  },
-  "charts": {
-    "expirationSummary": "Credit Expiration Summary",
-    "expirationSummaryDescription": "Overview of credits expiring soon",
-    "usageTrends": "Credit Usage Trends",
-    "usageTrendsDescription": "Historical credit usage patterns",
-    "lessThan7Days": "< 7 days",
-    "lessThan30Days": "< 30 days",
-    "lessThan90Days": "< 90 days",
-    "greaterThan90Days": "> 90 days",
-    "creditsIssued": "Credits Issued",
-    "creditsApplied": "Credits Applied",
-    "creditsExpired": "Credits Expired",
-    "statusDistribution": "Status Distribution",
-    "statusDistributionDescription": "Overview of reconciliation report statuses",
-    "discrepancyTrends": "Discrepancy Trends",
-    "discrepancyTrendsDescription": "Monthly trends in credit discrepancies",
-    "numberOfDiscrepancies": "Number of Discrepancies",
-    "totalAmount": "Total Amount",
-    "months": {
-      "jan": "Jan",
-      "feb": "Feb",
-      "mar": "Mar",
-      "apr": "Apr",
-      "may": "May",
-      "jun": "Jun"
-    }
+    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "captionEnabled": "Credit expiration: {{days}} days",
+    "captionDisabled": "Credit expiration: off",
+    "captionReminders": "reminders {{reminders}} days before",
+    "editInSettings": "Edit in Billing Settings"
   },
   "stats": {
     "totalActiveCredits": "Total Active Credits",
     "expiringIn30Days": "Expiring in 30 Days",
     "totalCreditsApplied": "Total Credits Applied",
-    "totalCreditsExpired": "Total Credits Expired",
-    "totalDiscrepancies": "Total Discrepancies",
-    "totalDiscrepancyAmount": "Total Discrepancy Amount",
-    "openIssues": "Open Issues"
+    "totalCreditsExpired": "Total Credits Expired"
   },
   "management": {
     "title": "Credit Management",
-    "recentCredits": "Recent Credits",
-    "recentCreditsDescription": "View and manage your client credits. Credits stay financial artifacts, and recurring service periods appear only when the source invoice carried canonical coverage.",
-    "addCreditPlaceholder": "Credit amount and details form would be implemented here.",
-    "loadErrorPrefix": "Error loading credits:",
-    "noDataReturned": "No data returned from server",
-    "noCreditsFound": "No credits found"
+    "noCreditsFound": "No credits found",
+    "noMatchingCredits": "No credits match these filters",
+    "loadFailed": "Failed to load credits. Try again."
   },
-  "reconciliation": {
-    "title": "Credit Reconciliation Dashboard",
-    "selectClient": "Select Client",
-    "status": "Status",
-    "allStatuses": "All Statuses",
-    "fromDate": "From Date",
-    "toDate": "To Date",
-    "reconciliationReports": "Reconciliation Reports",
-    "reconciliationReportsDescription": "View and manage credit balance discrepancies",
-    "validationResult": "Validation completed: Found {{balanceCount}} balance discrepancies and {{trackingCount}} tracking issues.",
-    "tabs": {
-      "all": "All",
-      "open": "Open",
-      "inReview": "In Review",
-      "resolved": "Resolved"
+  "addCredit": {
+    "description": "The credit is available to the client right away.",
+    "fields": {
+      "client": "Client",
+      "amount": "Amount",
+      "description": "Description (optional)",
+      "expirationDate": "Expiration Date (optional)"
+    },
+    "placeholders": {
+      "amount": "Enter amount",
+      "description": "Reason for the credit",
+      "expirationDate": "Select expiration date"
+    },
+    "hints": {
+      "expirationDate": "Leave blank to use the default expiration."
+    },
+    "submitting": "Adding...",
+    "success": "Credit added successfully",
+    "errors": {
+      "allFieldsRequired": "Please select a client and enter an amount",
+      "validAmount": "Please enter a valid amount",
+      "loadClientsFailed": "Failed to load clients. Please try again.",
+      "submitFailed": "Failed to add credit. Please try again."
     }
   },
   "application": {
@@ -161,17 +120,67 @@
     "creditOrderNote": "Credits are applied in order of expiration date (oldest first)"
   },
   "expirationDialog": {
-    "title": "Modify Credit Expiration",
-    "description": "Update the expiration date for this credit.",
-    "creditAmount": "Credit Amount:",
-    "remainingAmount": "Remaining Amount:",
+    "title": "Edit Expiration Date",
+    "creditAmount": "Original",
+    "remainingAmount": "Remaining",
     "created": "Created:",
-    "currentExpiration": "Current Expiration:",
+    "currentExpiration": "Current Expiration",
     "noExpiration": "No expiration",
-    "removeExpiration": "Remove expiration date",
     "newExpirationDate": "New Expiration Date",
     "pastDateError": "Expiration date cannot be in the past",
-    "updateError": "An error occurred while updating the expiration date"
+    "updateError": "An error occurred while updating the expiration date",
+    "updateSuccess": "Credit expiration updated",
+    "clearHint": "Clear the date to remove the expiration."
+  },
+  "viewDialog": {
+    "title": "Credit Details",
+    "loadFailed": "Failed to load credit details.",
+    "invoice": "Invoice",
+    "transactions": "Related Transactions",
+    "transactionType": "Type",
+    "date": "Date",
+    "amount": "Amount",
+    "noTransactions": "No related transactions found."
+  },
+  "expireDialog": {
+    "title": "Expire Credit",
+    "reasonLabel": "Reason (optional)",
+    "reasonPlaceholder": "Explain why this credit is being expired...",
+    "success": "Credit expired",
+    "error": "An error occurred while expiring the credit",
+    "expiring": "Expiring...",
+    "confirm": "Expire Credit",
+    "creditAmount": "Original",
+    "remainingAmount": "Remaining",
+    "warning": "The client loses the remaining {{amount}}. You can't undo this."
+  },
+  "transferDialog": {
+    "title": "Transfer Credit",
+    "description": "Move credit from this client to another.",
+    "fields": {
+      "targetClient": "To Client",
+      "amount": "Amount",
+      "reason": "Reason (optional)"
+    },
+    "placeholders": {
+      "reason": "Why is this credit being transferred?"
+    },
+    "hints": {
+      "amount": "Up to {{amount}} available"
+    },
+    "impact": {
+      "current": "Current Remaining",
+      "after": "Remaining After Transfer"
+    },
+    "errors": {
+      "selectClient": "Select a client to transfer to",
+      "validAmount": "Enter an amount greater than zero",
+      "exceedsRemaining": "The transfer cannot exceed the remaining {{amount}}"
+    },
+    "success": "Credit transferred",
+    "error": "An error occurred while transferring the credit",
+    "transferring": "Transferring...",
+    "confirm": "Transfer Credit"
   },
   "context": {
     "lineageMissing": "Lineage Missing",

@@ -11,7 +11,17 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { recordStockMovement, recomputeSerializedOnHand, assertLocationWritable, ensureStockLevel, resolveTenantCurrency } from '../lib';
+import {
+  adjustStockCore,
+  assertLocationWritable,
+  publishInventoryEvent,
+  recordCountCore,
+  resolveTenantCurrency,
+  startCountSessionCore,
+  submitCountForReviewCore,
+  timestampPayload,
+  type PendingStockLowSignal,
+} from '../lib';
 
 // NOTE: 'use server' file — export ONLY async functions (+ erased types).
 
@@ -112,19 +122,6 @@ async function getSessionOrThrow(
   return row as ICountSession;
 }
 
-/** Current in_stock serials for a serialized product at a location. */
-async function inStockSerials(
-  trx: Knex.Transaction,
-  tenant: string,
-  serviceId: string,
-  locationId: string,
-): Promise<string[]> {
-  const rows = await trx('stock_units')
-    .where({ tenant, service_id: serviceId, location_id: locationId, status: 'in_stock' })
-    .select('serial_number');
-  return rows.map((r: any) => r.serial_number as string).filter(Boolean);
-}
-
 export interface CountLineView extends ICountLine {
   service_name: string | null;
   sku: string | null;
@@ -148,6 +145,31 @@ export interface CountSessionView extends ICountSession {
   can_review: boolean;
 }
 
+interface CountEventFacts {
+  line_count: number;
+  counted_line_count: number;
+  variance_line_count: number;
+  variance_quantity: number;
+}
+
+async function loadCountEventFacts(
+  trx: Knex.Transaction,
+  tenant: string,
+  sessionId: string,
+): Promise<CountEventFacts> {
+  const lines = await trx('count_lines')
+    .where({ tenant, session_id: sessionId })
+    .select('expected_qty', 'counted_qty');
+  const counted = lines.filter((line: any) => line.counted_qty != null);
+  const variances = counted.map((line: any) => Number(line.counted_qty) - Number(line.expected_qty));
+  return {
+    line_count: lines.length,
+    counted_line_count: counted.length,
+    variance_line_count: variances.filter((variance: number) => variance !== 0).length,
+    variance_quantity: variances.reduce((sum: number, variance: number) => sum + variance, 0),
+  };
+}
+
 /**
  * Start a count at a location (F061/F063): snapshot expected on-hand for every
  * stock-tracked product with a stock_levels row there, plus serialized products'
@@ -157,57 +179,11 @@ export interface CountSessionView extends ICountSession {
 export const startCountSession = withAuth(
   async (user, { tenant }, locationId: string, notes?: string | null): Promise<ICountSession | CycleCountActionError> => {
     return withCycleCountActionErrors(async () => {
-    await requireCountPerm(user, 'create');
-    if (!locationId) throw new Error('location_id is required');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      await assertLocationWritable(trx, tenant, (user as any)?.user_id, locationId);
-      const location = await trx('stock_locations').where({ tenant, location_id: locationId }).first();
-      if (!location) throw new Error('Stock location not found');
-
-      const open = await trx('count_sessions')
-        .where({ tenant, location_id: locationId })
-        .whereIn('status', ['draft', 'in_progress', 'review'])
-        .first();
-      if (open) throw new Error('This location already has an open count session');
-
-      const [session] = await trx('count_sessions')
-        .insert({
-          tenant,
-          location_id: locationId,
-          status: 'in_progress',
-          created_by: user.user_id,
-          notes: notes ?? null,
-        })
-        .returning('*');
-
-      // Snapshot every tracked product present at the location (on-hand or units).
-      const levels = (await trx('stock_levels as sl')
-        .join('product_inventory_settings as pis', function () {
-          this.on('sl.service_id', '=', 'pis.service_id').andOn('sl.tenant', '=', 'pis.tenant');
-        })
-        .where({ 'sl.tenant': tenant, 'sl.location_id': locationId, 'pis.track_stock': true })
-        .select('sl.service_id', 'sl.quantity_on_hand', 'pis.is_serialized')) as Array<{
-        service_id: string;
-        quantity_on_hand: number;
-        is_serialized: boolean;
-      }>;
-
-      for (const level of levels) {
-        const serials = level.is_serialized
-          ? await inStockSerials(trx, tenant, level.service_id, locationId)
-          : null;
-        await trx('count_lines').insert({
-          tenant,
-          session_id: (session as ICountSession).session_id,
-          service_id: level.service_id,
-          expected_qty: Number(level.quantity_on_hand),
-          expected_serials: serials ? JSON.stringify(serials) : null,
-        });
-      }
-
-      return session as ICountSession;
-    });
+      await requireCountPerm(user, 'create');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, (trx: Knex.Transaction) =>
+        startCountSessionCore(trx, tenant, user.user_id, { location_id: locationId, notes }),
+      );
     });
   },
 );
@@ -342,40 +318,15 @@ export const recordCount = withAuth(
     input: { counted_qty?: number; serials?: string[] },
   ): Promise<{ recorded: boolean } | CycleCountActionError> => {
     return withCycleCountActionErrors(async () => {
-    await requireCountPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const session = await getSessionOrThrow(trx, tenant, sessionId, { forUpdate: true });
-      if (session.status !== 'in_progress') {
-        throw new Error(`Counts can only be recorded on an in-progress session (current: ${session.status})`);
-      }
-      const line = await trx('count_lines').where({ tenant, session_id: sessionId, service_id: serviceId }).first();
-      if (!line) throw new Error('This product is not part of the count session');
-
-      const isSerialized = line.expected_serials != null;
-      let countedQty: number;
-      let countedSerials: string[] | null = null;
-      if (isSerialized) {
-        countedSerials = [...new Set((input.serials ?? []).map((s) => s.trim()).filter(Boolean))];
-        countedQty = countedSerials.length;
-      } else {
-        countedQty = Number(input.counted_qty);
-        if (!Number.isInteger(countedQty) || countedQty < 0) {
-          throw new Error('counted_qty must be a non-negative integer');
-        }
-      }
-
-      await trx('count_lines')
-        .where({ tenant, count_line_id: line.count_line_id })
-        .update({
-          counted_qty: countedQty,
-          counted_serials: countedSerials ? JSON.stringify(countedSerials) : null,
-          counted_at: trx.fn.now(),
-          counted_by: user.user_id,
-          updated_at: trx.fn.now(),
-        });
-      return { recorded: true };
-    });
+      await requireCountPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, (trx: Knex.Transaction) =>
+        recordCountCore(trx, tenant, user.user_id, {
+          ...input,
+          session_id: sessionId,
+          service_id: serviceId,
+        }),
+      );
     });
   },
 );
@@ -383,19 +334,26 @@ export const recordCount = withAuth(
 export const submitCountForReview = withAuth(
   async (user, { tenant }, sessionId: string): Promise<ICountSession | CycleCountActionError> => {
     return withCycleCountActionErrors(async () => {
-    await requireCountPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const session = await getSessionOrThrow(trx, tenant, sessionId, { forUpdate: true });
-      if (session.status !== 'in_progress') {
-        throw new Error(`Only an in-progress session can be submitted (current: ${session.status})`);
-      }
-      const [row] = await trx('count_sessions')
-        .where({ tenant, session_id: sessionId })
-        .update({ status: 'review', submitted_at: trx.fn.now(), updated_at: trx.fn.now() })
-        .returning('*');
-      return row as ICountSession;
-    });
+      await requireCountPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const session = await submitCountForReviewCore(
+          trx,
+          tenant,
+          user.user_id,
+          { session_id: sessionId },
+        );
+        const facts = await loadCountEventFacts(trx, tenant, sessionId);
+        return { session, facts };
+      });
+      await publishInventoryEvent('INVENTORY_COUNT_SUBMITTED', timestampPayload({
+        tenant,
+        session_id: outcome.session.session_id,
+        location_id: outcome.session.location_id,
+        ...outcome.facts,
+        user_id: user.user_id,
+      }));
+      return outcome.session;
     });
   },
 );
@@ -453,7 +411,7 @@ export const approveCountSession = withAuth(
     return withCycleCountActionErrors(async () => {
     await requireCountPerm(user, 'approve');
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const outcome = await withTransaction(db, async (trx: Knex.Transaction) => {
       const session = await getSessionOrThrow(trx, tenant, sessionId, { forUpdate: true });
       if (session.status !== 'review' && session.status !== 'in_progress') {
         throw new Error(`Only a session in review can be approved (current: ${session.status})`);
@@ -513,6 +471,7 @@ export const approveCountSession = withAuth(
         stale_service_ids: [],
         uncounted_service_ids: [],
       };
+      const pendingStockLowEvents: PendingStockLowSignal[] = [];
 
       for (const line of lines) {
         if (line.counted_qty == null) {
@@ -544,81 +503,81 @@ export const approveCountSession = withAuth(
             );
           }
 
-          // Missing units retire (F068).
+          // Missing units retire through the same adjustment core as manual adjustments (F068).
           const missing = [...expected].filter((s) => !counted.has(s));
+          const missingUnits: IStockUnit[] = [];
           for (const serial of missing) {
             const unit = (await trx('stock_units')
               .where({ tenant, service_id: line.service_id, serial_number: serial, location_id: locationId, status: 'in_stock' })
               .forUpdate()
               .first()) as IStockUnit | undefined;
             if (!unit) continue; // moved since snapshot — covered by staleness next round
-            await recordStockMovement(trx, tenant, {
-              movement_type: 'adjust',
+            missingUnits.push(unit);
+          }
+          if (missingUnits.length > 0) {
+            const adjustment = await adjustStockCore(trx, tenant, user.user_id, {
               service_id: line.service_id,
-              quantity: 1,
-              unit_id: unit.unit_id,
-              from_location_id: locationId,
+              location_id: locationId,
+              delta: -missingUnits.length,
               reason,
+              unit_ids: missingUnits.map((unit) => unit.unit_id),
               source_doc_type: 'manual',
               source_doc_id: sessionId,
-              performed_by: user.user_id,
-              unitPatch: { status: 'retired' },
             });
-            result.retired_serials.push(serial);
+            if (adjustment.pending_stock_low_event) {
+              pendingStockLowEvents.push(adjustment.pending_stock_low_event);
+            }
+            const adjustedIds = new Set(adjustment.unit_ids);
+            result.retired_serials.push(
+              ...missingUnits
+                .filter((unit) => adjustedIds.has(unit.unit_id))
+                .map((unit) => unit.serial_number)
+                .filter(Boolean) as string[],
+            );
           }
 
-          // Found units enter stock with their REAL serials (F051/F066).
-          for (const serial of unexpected) {
-            const d = dispositionBySerial.get(serial)!;
-            if (d.action !== 'add') continue;
-            const clash = await trx('stock_units')
-              .where({ tenant, service_id: line.service_id, serial_number: serial })
-              .first();
-            if (clash) throw new Error(`Serial number already exists: ${serial}`);
-            const [unit] = (await trx('stock_units')
-              .insert({
-                tenant,
-                service_id: line.service_id,
-                serial_number: serial,
-                mac_address: d.mac_address ? String(d.mac_address).trim() : null,
-                status: 'in_stock',
-                location_id: locationId,
-                unit_cost: line.average_cost ?? null,
-                cost_currency: line.cost_currency ?? defaultCurrency,
-                received_at: trx.fn.now(),
-                notes: `Found via ${reason}`,
-              })
-              .returning('*')) as IStockUnit[];
-            await recordStockMovement(trx, tenant, {
-              movement_type: 'adjust',
+          // Found units also enter through the adjustment core with their real serials.
+          const additions = unexpected
+            .map((serial) => dispositionBySerial.get(serial)!)
+            .filter((disposition) => disposition.action === 'add');
+          if (additions.length > 0) {
+            const adjustment = await adjustStockCore(trx, tenant, user.user_id, {
               service_id: line.service_id,
-              quantity: 1,
-              unit_id: unit.unit_id,
-              to_location_id: locationId,
+              location_id: locationId,
+              delta: additions.length,
               reason,
+              serials: additions.map((disposition) => ({
+                serial_number: disposition.serial_number.trim(),
+                mac_address: disposition.mac_address,
+              })),
               source_doc_type: 'manual',
               source_doc_id: sessionId,
-              performed_by: user.user_id,
+              unit_cost: line.average_cost ?? null,
+              cost_currency: line.cost_currency ?? defaultCurrency,
+              unit_notes: `Found via ${reason}`,
+              skip_mac_uniqueness_check: true,
             });
-            result.added_serials.push(serial);
+            if (adjustment.pending_stock_low_event) {
+              pendingStockLowEvents.push(adjustment.pending_stock_low_event);
+            }
+            result.added_serials.push(...additions.map((disposition) => disposition.serial_number.trim()));
           }
-          await recomputeSerializedOnHand(trx, tenant, line.service_id, locationId);
           const applied = result.added_serials.length - result.retired_serials.length;
           if (applied !== 0) result.adjustments.push({ service_id: line.service_id, delta: applied });
         } else {
           const delta = Number(line.counted_qty) - Number(line.expected_qty);
           if (delta !== 0) {
-            await ensureStockLevel(trx, tenant, line.service_id, locationId);
-            await recordStockMovement(trx, tenant, {
-              movement_type: 'adjust',
+            const adjustment = await adjustStockCore(trx, tenant, user.user_id, {
               service_id: line.service_id,
-              quantity: Math.abs(delta),
-              ...(delta > 0 ? { to_location_id: locationId } : { from_location_id: locationId }),
+              location_id: locationId,
+              delta,
               reason,
               source_doc_type: 'manual',
               source_doc_id: sessionId,
-              performed_by: user.user_id,
             });
+            if (adjustment.pending_stock_low_event) {
+              pendingStockLowEvents.push(adjustment.pending_stock_low_event);
+            }
             result.adjustments.push({ service_id: line.service_id, delta });
           }
         }
@@ -634,8 +593,23 @@ export const approveCountSession = withAuth(
         })
         .returning('*');
       result.session = updated as ICountSession;
-      return result;
+      const facts = await loadCountEventFacts(trx, tenant, sessionId);
+      return { result, pendingStockLowEvents, facts };
     });
+    for (const signal of outcome.pendingStockLowEvents) {
+      await publishInventoryEvent('INVENTORY_STOCK_LOW', signal);
+    }
+    await publishInventoryEvent('INVENTORY_COUNT_APPROVED', timestampPayload({
+      tenant,
+      session_id: outcome.result.session.session_id,
+      location_id: outcome.result.session.location_id,
+      ...outcome.facts,
+      adjustment_line_count: outcome.result.adjustments.length,
+      stale_line_count: outcome.result.stale_service_ids.length,
+      uncounted_line_count: outcome.result.uncounted_service_ids.length,
+      user_id: user.user_id,
+    }));
+    return outcome.result;
     });
   },
 );

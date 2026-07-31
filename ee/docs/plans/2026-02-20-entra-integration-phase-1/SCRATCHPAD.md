@@ -749,3 +749,33 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T140` completed in `packages/clients/src/components/clients/clientDetailsEntraSyncAction.test.ts`.
 - Added client-flag-off contract assertion for hidden sync entrypoint and preserved run-id status representation helper behavior (non-destructive UI toggle path).
 - Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).
+
+## 2026-07-30 — Clients-table user count freshness gap
+
+- Reported behavior: after syncing one client, the sync detail reflects the newly observed directory users but the Clients table `Users` cell does not increase, which makes the two surfaces appear contradictory.
+- Code inspection confirmed the table reads discovery-cached `entra_managed_tenants.source_user_count`; only discovery currently updates that field.
+- `EntraClientsTab.handleSync` reloads mappings immediately after Temporal accepts the workflow, before the tenant sync reaches a terminal state, so that refresh cannot represent the completed run.
+- Plan decision: keep discovery count as the fallback for tenants that have never completed a sync; persist a separate successful-sync eligible-user count and timestamp (including a legitimate zero), prefer it in confirmed mapping rows, and refresh the row after terminal workflow completion.
+- Added unimplemented features `F121` and `F122` with regression tests `T141`–`T143`.
+
+## 2026-07-30 — Defer create-new client provisioning until explicit sync
+
+- Product decision: the mapping screen is a review surface. Existing-client, create-new, and skip controls are provisional row choices; individual clicks must not immediately create a client or persist a skip decision.
+- Current behavior is inconsistent: existing-client selections wait for `Confirm selected`, but `importEntraTenantAsClient` creates a real client immediately and `skipEntraTenantMapping` persists immediately.
+- Confirming the reviewed set will persist three explicit states: `mapped` with an existing client ID, `create_new` with no client ID, and `skip_for_now` with no client ID.
+- An explicitly initiated initial/manual sync may idempotently provision approved `create_new` clients, promote each decision to `mapped`, and then sync contacts. A scheduled recurring sync must ignore `create_new` decisions and cannot provision clients.
+- Retry boundary requirement: client provisioning must be safe if Temporal retries after client creation but before or during contact sync; a confirmed tenant intent must resolve to at most one Alga client.
+- Added unimplemented features `F123`–`F126` and tests `T144`–`T147`.
+- (2026-07-30) `F123`–`F126` completed: mapping row controls are provisional; confirmation stores `mapped`, `create_new`, and `skip_for_now`; explicit initial/manual Temporal runs transactionally provision approved clients; scheduled runs remain mapped-only.
+- Mapping preview now carries persisted decisions so refresh/page reload preserves create-new and skipped choices without creating clients.
+- Setup status reports pending create-new decisions separately from resolved mappings. If no existing mapped client can be piloted, step 4 offers an explicit `Create approved clients and sync` action.
+- Client provisioning, default tax setup, and mapping promotion share one transaction with a row lock. Retried provisioning observes the promoted mapping and reuses the same client.
+- `T144` validation: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx src/__tests__/unit/entraMappingPreviewService.test.ts src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts src/__tests__/unit/entraPilotSyncControl.test.tsx src/__tests__/unit/entraSetupWizard.test.tsx` (33 tests passed).
+- `T145`/`T146` DB validation against the wired environment: `cd ee/server && DB_HOST=localhost DB_PORT=6472 DB_NAME=server DB_NAME_SERVER=server npx vitest run src/__tests__/integration/entraDeferredMapping.integration.test.ts` (1 test passed; transaction rolled back).
+- `T147` validation: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (15 tests passed).
+- Type validation: `cd ee/temporal-workflows && npm run type-check` and `cd ee/server && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit --pretty false` (passed).
+- (2026-07-30) `F121`/`F122` completed: a successful real tenant sync records its eligible-user count and observation time separately from discovery, confirmed mappings expose the effective count and provenance, and a single-client action follows the workflow to terminal status before reloading the Clients table.
+- Failed runs, previews, and incomplete observations preserve the previous successful count; zero is stored as a valid completed-sync count.
+- `T141`/`T142` DB validation: `cd ee/server && DB_HOST=localhost DB_PORT=6472 DB_NAME=server DB_NAME_SERVER=server npx vitest run src/__tests__/integration/entraCompletedSyncUserCount.integration.test.ts` (1 test passed; transaction rolled back).
+- `T143` validation: `cd ee/server && npx vitest run src/__tests__/unit/entraClientsTab.test.tsx` (11 tests passed).
+- Production build validation: `NODE_OPTIONS=--max-old-space-size=12288 npm run build:ee` passed. The default 8 GB heap was insufficient during Webpack cache serialization.

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';

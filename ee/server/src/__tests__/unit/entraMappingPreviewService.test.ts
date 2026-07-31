@@ -12,6 +12,7 @@ type DiscoveryFixture = {
   managedTenants: Array<Record<string, unknown>>;
   clients: Array<Record<string, unknown>>;
   inboundDomains?: Array<Record<string, unknown>>;
+  activeMappings?: Array<Record<string, unknown>>;
 };
 
 function createManagedTenantRow(overrides: Partial<Record<string, unknown>>): Record<string, unknown> {
@@ -52,6 +53,12 @@ function mockDiscoveryQueries(fixture: DiscoveryFixture) {
   };
   inboundDomainTable.where.mockReturnValue(inboundDomainTable);
 
+  const activeMappingsTable = {
+    where: vi.fn(),
+    select: vi.fn(async () => fixture.activeMappings || []),
+  };
+  activeMappingsTable.where.mockReturnValue(activeMappingsTable);
+
   const knexMock = vi.fn((table: string) => {
     if (table === 'entra_managed_tenants') {
       return managedTenantsTable;
@@ -61,6 +68,9 @@ function mockDiscoveryQueries(fixture: DiscoveryFixture) {
     }
     if (table === 'client_inbound_email_domains') {
       return inboundDomainTable;
+    }
+    if (table === 'entra_client_tenant_mappings') {
+      return activeMappingsTable;
     }
     throw new Error(`Unexpected table: ${table}`);
   });
@@ -224,6 +234,36 @@ describe('buildEntraMappingPreview', () => {
       managedTenantId: 'managed-058',
       entraTenantId: 'entra-058',
       displayName: 'Globex Rare Entity',
+    });
+  });
+
+  it('T144: returns persisted create-new decisions without creating a client', async () => {
+    mockDiscoveryQueries({
+      managedTenants: [
+        createManagedTenantRow({
+          managed_tenant_id: 'managed-create-new',
+          entra_tenant_id: 'entra-create-new',
+          display_name: 'Create Later Tenant',
+          primary_domain: 'create-later.example.com',
+        }),
+      ],
+      clients: [],
+      activeMappings: [
+        {
+          managed_tenant_id: 'managed-create-new',
+          client_id: null,
+          mapping_state: 'create_new',
+        },
+      ],
+    });
+
+    const { buildEntraMappingPreview } = await import('@ee/lib/integrations/entra/mapping/mappingPreviewService');
+    const result = await buildEntraMappingPreview('tenant-preview');
+
+    expect(result.unmatched[0]).toMatchObject({
+      managedTenantId: 'managed-create-new',
+      mappingState: 'create_new',
+      mappedClientId: null,
     });
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -43,6 +43,7 @@ import { TrialBanner } from './TrialBanner';
 import { PaymentFailedBanner } from './PaymentFailedBanner';
 import { useQuickAsk } from './QuickAskContext';
 import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
+import { useActionPolling } from '@alga-psa/ui/hooks';
 
 export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
@@ -280,36 +281,17 @@ const JobActivityIndicator: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [metrics, setMetrics] = useState<JobMetrics | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    let interval: ReturnType<typeof setInterval> | undefined;
-
-    const fetchMetrics = async () => {
-      setLoading(true);
-      try {
-        const data = await getQueueMetricsAction();
-        if (isMounted) {
-          setMetrics(data);
-        }
-      } catch (error) {
-        console.error('[Header] Failed to fetch job metrics', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchMetrics();
-    interval = setInterval(fetchMetrics, 15000);
-
-    return () => {
-      isMounted = false;
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
+  const fetchMetrics = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getQueueMetricsAction();
+      setMetrics(data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useActionPolling(fetchMetrics, { intervalMs: 15000 });
 
   const activeJobs = metrics?.active ?? 0;
   const failedJobs = metrics?.failed ?? 0;

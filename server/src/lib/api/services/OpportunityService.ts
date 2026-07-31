@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { SharedNumberingService } from '@shared/services/numberingService';
 import {
   BaseService,
   type ListOptions,
@@ -16,13 +17,16 @@ import type {
   IQuote,
   OpportunityListFilters,
   OpportunitySuggestionStatus,
+  IWorkQueue,
 } from '@alga-psa/types';
 import {
   OpportunityModel,
+  assembleWorkQueue,
   buildOpportunityCreatedPayload,
   buildOpportunityStatusChangedPayload,
   completeOpportunityNextAction,
   correctEvidence,
+  declareStage,
   getOpportunityDetail,
   onQuoteAccepted,
   onQuoteSent,
@@ -36,6 +40,9 @@ import {
   ensureEnterpriseOpportunityCloseGatesRegistered,
   runOpportunityCloseGates,
   prepareOpportunityWinConversions,
+  listOpportunityTimelineCore,
+  promoteProspectClientAfterWin,
+  type IOpportunityTimelineEntry,
 } from '@alga-psa/opportunities';
 import {
   ConflictError,
@@ -100,13 +107,7 @@ function throwOpportunityApiError(error: unknown): never {
 }
 
 async function nextOpportunityNumber(trx: Knex.Transaction, tenant: string): Promise<string> {
-  const result = await trx.raw(
-    'SELECT generate_next_number(:tenant::uuid, :type::text) as number',
-    { tenant, type: 'OPPORTUNITY' },
-  );
-  const number = result?.rows?.[0]?.number;
-  if (!number) throw new Error('Failed to generate opportunity number');
-  return number;
+  return SharedNumberingService.getNextNumber('OPPORTUNITY', { knex: trx, tenant });
 }
 
 export class OpportunityService extends BaseService<IOpportunity | IOpportunityListItem> {
@@ -151,6 +152,30 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       filters,
     );
     return { data: result.data, total: result.total };
+  }
+
+  async getWorkQueue(context: ServiceContext): Promise<IWorkQueue> {
+    const knex = await this.getDbForContext(context);
+    return assembleWorkQueue(
+      knex,
+      context.tenant,
+      context.userId,
+      String(context.user?.first_name ?? ''),
+    );
+  }
+
+  async listTimeline(
+    id: string,
+    context: ServiceContext,
+  ): Promise<IOpportunityTimelineEntry[]> {
+    const knex = await this.getDbForContext(context);
+    const opportunity = await tenantDb(knex, context.tenant).table('opportunities')
+      .where({ opportunity_id: id })
+      .select('opportunity_id')
+      .first();
+    if (!opportunity) throw new NotFoundError('Opportunity not found');
+
+    return listOpportunityTimelineCore(knex, context.tenant, id);
   }
 
   async listSuggestions(
@@ -382,27 +407,12 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       await recordEvidence(trx, context.tenant, {
         opportunityId: id,
         checkpoint: 'won',
-        source: 'declared',
+        source: 'user_declared',
         detail: 'Opportunity marked won',
         recordedBy: context.userId,
       });
 
-      const db = tenantDb(trx, context.tenant);
-      const client = await db.table('clients')
-        .where({ client_id: updated.client_id })
-        .select('lifecycle_status')
-        .first();
-      if (client?.lifecycle_status === 'prospect') {
-        await db.table('clients')
-          .where({ client_id: updated.client_id })
-          .update({ lifecycle_status: 'active', updated_at: now });
-        publishOpportunityEventAfterCommit(trx, context.tenant, 'CLIENT_STATUS_CHANGED', {
-          clientId: updated.client_id,
-          previousStatus: 'prospect',
-          newStatus: 'active',
-          changedAt: now,
-        }, `client_status_changed:${updated.client_id}:${now}`);
-      }
+      await promoteProspectClientAfterWin(trx, context.tenant, updated.client_id, now);
       return updated;
     }).catch(throwOpportunityApiError);
   }
@@ -434,15 +444,16 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
     id: string,
     data: DeclaredOpportunityEvidenceApi,
     context: ServiceContext,
-  ): Promise<IOpportunityEvidence> {
+  ): Promise<IOpportunity> {
     const knex = await this.getDbForContext(context);
-    return withTransaction(knex, (trx) => recordEvidence(trx, context.tenant, {
-      opportunityId: id,
-      checkpoint: data.checkpoint,
-      source: 'declared',
-      detail: data.detail?.trim() || 'Decision-maker and budget conversation confirmed',
-      recordedBy: context.userId,
-    })).catch(throwOpportunityApiError);
+    return withTransaction(knex, (trx) => declareStage(
+      trx,
+      context.tenant,
+      id,
+      data.checkpoint,
+      context.userId,
+      data.detail,
+    )).catch(throwOpportunityApiError);
   }
 
   async correctEvidence(

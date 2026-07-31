@@ -140,6 +140,15 @@ function shouldSendInternalTicketEmail(suppression: TicketNotificationSuppressio
   return !suppression.suppressInternalNotifications;
 }
 
+function shouldSendTicketCommentNotification(
+  suppression: TicketNotificationSuppression,
+  recipientType: 'contact' | 'internal',
+): boolean {
+  return recipientType === 'internal'
+    ? shouldSendInternalTicketEmail(suppression)
+    : shouldSendContactFacingTicketEmail(suppression);
+}
+
 function shouldSendTicketWatcherEmail(
   suppression: TicketNotificationSuppression,
   isInternalWatcher: boolean
@@ -2425,6 +2434,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
+  const suppression = resolveTicketNotificationSuppression(payload);
   // Resolve userId from base field, falling back to legacy
   const commentUserId = payload.actorUserId || (payload as any).userId;
 
@@ -2713,7 +2723,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     );
 
     // Send to primary email if available - external user, no userId
-    if (primaryEmail && isPublicComment && isFromAgent && !isPrimaryContactAuthor) {
+    if (
+      primaryEmail &&
+      isPublicComment &&
+      isFromAgent &&
+      !isPrimaryContactAuthor &&
+      shouldSendTicketCommentNotification(suppression, 'contact')
+    ) {
       // Extract threading info from ticket metadata
       const messageId = emailMetadata.messageId; // Original message ID from inbound email
       
@@ -2754,7 +2770,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
     if (isPublicComment && isFromAgent) {
-      const bundleChildren = await fetchBundleChildTicketsForEmail(db, tenantId, payload.ticketId);
+      const bundleChildren = shouldSendTicketCommentNotification(suppression, 'contact')
+        ? await fetchBundleChildTicketsForEmail(db, tenantId, payload.ticketId)
+        : [];
 
       if (bundleChildren.length > 0) {
         const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
@@ -2817,7 +2835,20 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       await sendOneEmailPerWatcher(
         activeWatcherEmails,
         async (watcherEmail) => {
-          const watcherUrl = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail)) ? internalUrl : portalUrl;
+          const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
+          if (!shouldSendTicketCommentNotification(
+            suppression,
+            isInternalWatcher ? 'internal' : 'contact',
+          )) {
+            logger.debug('[TicketEmailSubscriber] Skipped ticket comment watcher email due to suppression', {
+              eventId: event.id,
+              ticketId: payload.ticketId,
+              tenantId,
+              watcherType: isInternalWatcher ? 'internal' : 'external',
+            });
+            return;
+          }
+          const watcherUrl = isInternalWatcher ? internalUrl : portalUrl;
           await sendIfUnique({
             tenantId,
             ...emailEntityContext,
@@ -2845,7 +2876,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       commentAuthorUserId &&
       ticket.assigned_to === commentAuthorUserId
     );
-    if (assignedEmail && assignedEmail !== primaryEmail && !isAssignedUserTheCommentAuthor) {
+    if (
+      assignedEmail &&
+      assignedEmail !== primaryEmail &&
+      !isAssignedUserTheCommentAuthor &&
+      shouldSendTicketCommentNotification(suppression, 'internal')
+    ) {
       await sendIfUnique({
         tenantId,
         ...emailEntityContext,
@@ -2864,7 +2900,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     }
 
     // Send to all additional resources, excluding the comment author
-    for (const resource of additionalResources) {
+    const resourcesToNotify = shouldSendTicketCommentNotification(suppression, 'internal')
+      ? additionalResources
+      : [];
+    for (const resource of resourcesToNotify) {
       // Skip if this resource is the comment author - they shouldn't be notified about their own comment
       const isResourceTheCommentAuthor = Boolean(
         commentAuthorUserId &&
@@ -3345,6 +3384,7 @@ export const ticketEmailSubscriberTestHarness = {
   resolveAccumulatedTicketNotificationSuppression,
   shouldSendContactFacingTicketEmail,
   shouldSendInternalTicketEmail,
+  shouldSendTicketCommentNotification,
   shouldSendTicketWatcherEmail,
   shouldSendTicketClosedWatcherEmail,
   handleTicketCreated,

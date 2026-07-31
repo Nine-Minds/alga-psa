@@ -173,7 +173,7 @@ describe('opportunity AI drafting data', () => {
       .toEqual(['Hello from user B.']);
   });
 
-  it('assembles deal context once, applies voice and tone, and returns provider text without sending', async () => {
+  it('assembles deal context once, applies voice and instructions, and returns provider text without sending', async () => {
     const knex = {} as any;
     await saveOpportunityVoiceProfileData(knex, 'tenant-1', 'user-a', {
       sample_emails: ['Hi Dana,\n\nTwo quick points.'],
@@ -189,7 +189,7 @@ describe('opportunity AI drafting data', () => {
       'tenant-1',
       '11111111-1111-4111-8111-111111111111',
       'user-a',
-      'Slightly more direct',
+      { instructions: 'Slightly more direct' },
       provider,
       new Date('2026-07-12T12:00:00.000Z'),
     );
@@ -204,10 +204,43 @@ describe('opportunity AI drafting data', () => {
     expect(prompt).toContain('Q-0042: accepted');
     expect(prompt).toContain('Reviewed assessment findings with Dana');
     expect(prompt).toContain('Use short paragraphs and no exclamation points.');
-    expect(prompt).toContain('Per-draft tone: Slightly more direct');
+    expect(prompt).toContain('Instructions: Slightly more direct');
+    expect(prompt).not.toContain('Current draft:');
     expect(table.mock.calls.filter(([name]) => name === 'opportunity_evidence')).toHaveLength(1);
     expect(table.mock.calls.filter(([name]) => name === 'quotes')).toHaveLength(1);
     expect(table.mock.calls.filter(([name]) => name === 'interactions')).toHaveLength(1);
+  });
+
+  it('revises the user-written draft according to the instructions', async () => {
+    const knex = {} as any;
+    const provider = vi.fn().mockResolvedValue(JSON.stringify({
+      subject: 'Assessment follow-up',
+      body: 'Hi Dana — two quick points from the assessment.',
+    }));
+
+    const result = await generateFollowUpDraftData(
+      knex,
+      'tenant-1',
+      '11111111-1111-4111-8111-111111111111',
+      'user-a',
+      {
+        instructions: 'Make it shorter',
+        currentDraft: {
+          subject: 'Checking in',
+          body: 'Hi Dana,\n\nI wrote this myself and want it tightened up.',
+        },
+      },
+      provider,
+      new Date('2026-07-12T12:00:00.000Z'),
+    );
+
+    expect(result.subject).toBe('Assessment follow-up');
+    const system = provider.mock.calls[0][1][0].content;
+    const user = provider.mock.calls[0][1][1].content;
+    expect(system).toContain('Revise the supplied MSP sales follow-up email draft');
+    expect(system).toContain('Preserve everything the instructions do not ask you to change.');
+    expect(user).toContain('Current draft:\nSubject: Checking in\n\nHi Dana,\n\nI wrote this myself and want it tightened up.');
+    expect(user).toContain('Instructions: Make it shorter');
   });
 
   it('logs a human-sent draft as an interaction and advances opportunity activity', async () => {

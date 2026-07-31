@@ -67,6 +67,11 @@ export {
   getHostedMicrosoftConfig
 } from './email-actions/emailProviderActions';
 export {
+  pauseEmailProvider,
+  resumeEmailProvider,
+  type EmailProviderPauseActionResult
+} from './email-actions/inboundPauseActions';
+export {
   getEmailDomains,
   addEmailDomain,
   verifyEmailDomain,
@@ -165,16 +170,24 @@ export {
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
+  testEntraCippCredentials,
+  runEntraPreflight,
+  getEntraConfirmedMappings,
+  getEntraSyncSchedule,
+  canManageEntraIntegration,
+  saveEntraSyncSchedule,
   getEntraIntegrationStatus,
   updateEntraFieldSyncConfig,
   connectEntraIntegration,
   getEntraReconciliationQueue,
   resolveEntraQueueToExisting,
   resolveEntraQueueToNew,
+  dismissEntraQueueItem,
   validateEntraDirectConnection,
   validateEntraCippConnection,
   disconnectEntraIntegration,
   getEntraSyncRunHistory,
+  getEntraSyncRunDetail,
   discoverEntraManagedTenants,
   getEntraMappingPreview,
   confirmEntraMappings,
@@ -189,10 +202,17 @@ export {
   type EntraMappingPreviewResponse,
   type EntraSyncHistoryRun,
   type EntraSyncHistoryResponse,
+  type EntraSyncRunDetail,
+  type EntraSyncRunTenantResult,
   type EntraReconciliationQueueItem,
   type EntraReconciliationQueueResponse,
   type EntraQueueResolutionResponse,
   type EntraFieldSyncConfig,
+  type EntraConfirmedMapping,
+  type EntraPreflightBucketId,
+  type EntraPreflightIdentity,
+  type EntraPreflightResponse,
+  type EntraSyncScheduleSettings,
 } from './integrations/entraActions';
 export {
   getTacticalRmmSettings,

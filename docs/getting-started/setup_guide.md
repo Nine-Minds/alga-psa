@@ -114,6 +114,7 @@ cp .env.example server/.env
    - `EMAIL_PORT=587`
    - `EMAIL_USERNAME=noreply@example.com`
    - `NEXTAUTH_URL=http://localhost:3000`
+   - `NEXT_PUBLIC_BASE_URL=http://localhost:3000` (required; use your public URL in production)
    - `NEXTAUTH_SESSION_EXPIRES=86400`
 
    Optional: enable collaborative editing by setting `REQUIRE_HOCUSPOCUS=true`.
@@ -347,14 +348,19 @@ NEXTAUTH_URL=http://localhost:3000
 For production deployment:
 ```bash
 NEXTAUTH_URL=https://your-domain.com
+NEXT_PUBLIC_BASE_URL=https://your-domain.com
 HOST=https://your-domain.com
 ```
+
+`NEXT_PUBLIC_BASE_URL` is required by the prebuilt Compose stack. Marketing
+emails use it for recipient-facing unsubscribe, click-tracking, and open-tracking
+links. Set it to an origin that email recipients can reach.
 
 ### SSL/TLS Configuration
 For production deployments:
 1. Ensure your domain has valid SSL certificates
 2. Configure your reverse proxy (nginx, Apache, etc.) for HTTPS
-3. Update `NEXTAUTH_URL` to use `https://` protocol
+3. Update `NEXTAUTH_URL` and `NEXT_PUBLIC_BASE_URL` to use the same public `https://` origin
 4. Verify OAuth providers (if used) allow your production domain
 
 ### Reverse Proxy Configuration

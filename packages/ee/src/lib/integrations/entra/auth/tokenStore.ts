@@ -25,6 +25,22 @@ export async function getEntraDirectRefreshToken(tenant: string): Promise<string
   return (await secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.refreshToken)) ?? null;
 }
 
+export async function getEntraDirectTokenSet(tenant: string): Promise<EntraDirectTokenSet | null> {
+  const secretProvider = await getSecretProviderInstance();
+  const [accessToken, refreshToken, expiresAt, scope] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.accessToken),
+    secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.refreshToken),
+    secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.tokenExpiresAt),
+    secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.tokenScope),
+  ]);
+
+  if (!accessToken || !refreshToken || !expiresAt) {
+    return null;
+  }
+
+  return { accessToken, refreshToken, expiresAt, scope: scope || null };
+}
+
 export async function clearEntraDirectTokenSet(tenant: string): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
 

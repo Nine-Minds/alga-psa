@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
+  assembleWorkQueue: vi.fn(),
+  listOpportunityTimelineCore: vi.fn(),
   completeOpportunityNextAction: vi.fn(),
   correctEvidence: vi.fn(),
   getOpportunityDetail: vi.fn(),
@@ -26,6 +28,7 @@ vi.mock('@alga-psa/opportunities', () => ({
     update: vi.fn(),
     delete: vi.fn(),
   },
+  assembleWorkQueue: mocks.assembleWorkQueue,
   buildOpportunityCreatedPayload: vi.fn(),
   buildOpportunityStatusChangedPayload: vi.fn(),
   completeOpportunityNextAction: mocks.completeOpportunityNextAction,
@@ -36,6 +39,7 @@ vi.mock('@alga-psa/opportunities', () => ({
   publishOpportunityEventAfterCommit: vi.fn(),
   recomputeAcceptedQuoteValues: vi.fn(),
   recordEvidence: vi.fn(),
+  listOpportunityTimelineCore: mocks.listOpportunityTimelineCore,
 }));
 
 import { OpportunityService } from '../../../lib/api/services/OpportunityService';

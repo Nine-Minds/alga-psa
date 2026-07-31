@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateTimeFromString, dateTimeToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -969,21 +971,27 @@ function WindowEditorDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="win-starts-at">Starts at</Label>
-              <Input
+              <DateTimePicker
                 id="win-starts-at"
-                type="datetime-local"
-                value={f.startsAt}
-                onChange={(e) => setF((p) => ({ ...p, startsAt: e.target.value }))}
+                label="Starts at"
+                placeholder="Starts at"
+                clearable
+                className="w-full"
+                value={dateTimeFromString(f.startsAt)}
+                onChange={(date) => setF((p) => ({ ...p, startsAt: dateTimeToString(date) }))}
                 disabled={saving}
               />
             </div>
             <div className="space-y-1">
               <Label htmlFor="win-ends-at">Ends at</Label>
-              <Input
+              <DateTimePicker
                 id="win-ends-at"
-                type="datetime-local"
-                value={f.endsAt}
-                onChange={(e) => setF((p) => ({ ...p, endsAt: e.target.value }))}
+                label="Ends at"
+                placeholder="Ends at"
+                clearable
+                className="w-full"
+                value={dateTimeFromString(f.endsAt)}
+                onChange={(date) => setF((p) => ({ ...p, endsAt: dateTimeToString(date) }))}
                 disabled={saving}
               />
             </div>

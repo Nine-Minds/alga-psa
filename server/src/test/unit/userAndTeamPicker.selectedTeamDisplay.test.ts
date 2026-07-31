@@ -14,7 +14,10 @@ describe('UserAndTeamPicker selected team display', () => {
     expect(picker).toContain("const selectedLabel = currentUser");
     expect(picker).toContain("    : currentTeam");
     expect(picker).toContain("      ? currentTeam.team_name || 'Unnamed Team'");
-    expect(picker).toContain("<span className={!hasSelection ? 'text-gray-400' : ''}>{selectedLabel}</span>");
+    // The trigger label truncates so a long name cannot widen a narrow parent.
+    expect(picker).toContain(
+      "<span className={`truncate ${!hasSelection ? 'text-gray-400' : ''}`}>{selectedLabel}</span>",
+    );
   });
 
   it('renders a TeamAvatar in the trigger for selected teams and fetches that avatar even before the menu opens', () => {

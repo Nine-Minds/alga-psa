@@ -6,6 +6,7 @@
 	import { useState, useEffect, useCallback, useRef } from 'react';
 	import * as Y from 'yjs';
 	import { HocuspocusProvider } from '@hocuspocus/provider';
+import { useActionPolling } from '@alga-psa/ui/hooks';
 import type {
   InternalNotification,
   InternalNotificationListResponse,
@@ -73,26 +74,22 @@ export function useInternalNotifications(
 
   const providerRef = useRef<HocuspocusProvider | null>(null);
   const ydocRef = useRef<Y.Doc | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef<number>(INITIAL_RECONNECT_DELAY);
 
-  const fetchNotificationsRef = useRef<(() => Promise<void>) | undefined>(undefined);
-	  const enablePollingRef = useRef<boolean>(enablePolling);
-	
-	  const fetchNotifications = useCallback(async () => {
-	    if (!tenant || !userId) {
-	      setNotifications([]);
-	      setUnreadCount(0);
-	      setError(null);
-	      setIsLoading(false);
-	      return;
-	    }
-	
-	    try {
-	      const response: InternalNotificationListResponse = await getNotificationsAction({
-	        tenant,
-	        user_id: userId,
+  const fetchNotifications = useCallback(async () => {
+    if (!tenant || !userId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response: InternalNotificationListResponse = await getNotificationsAction({
+        tenant,
+        user_id: userId,
         limit,
       });
       setNotifications(response.notifications);
@@ -106,21 +103,10 @@ export function useInternalNotifications(
         notificationsMap.set('data', response.notifications);
         unreadCountMap.set('count', response.unread_count);
       }
-    } catch (err) {
-      console.error('Failed to fetch notifications:', err);
-      setError('Failed to load notifications');
     } finally {
       setIsLoading(false);
     }
-	  }, [tenant, userId, limit]);
-
-  useEffect(() => {
-    fetchNotificationsRef.current = fetchNotifications;
-  }, [fetchNotifications]);
-
-  useEffect(() => {
-    enablePollingRef.current = enablePolling;
-  }, [enablePolling]);
+  }, [tenant, userId, limit]);
 
 	  const fetchUnreadCount = useCallback(async () => {
 	    if (!tenant || !userId) {
@@ -134,30 +120,27 @@ export function useInternalNotifications(
     } catch (err) {
       console.error('Failed to fetch unread count:', err);
     }
-	  }, [tenant, userId]);
-	
-	  const setupWebSocket = useCallback(() => {
+  }, [tenant, userId]);
+
+  const { runNow: pollNotificationsNow } = useActionPolling(fetchNotifications, {
+    intervalMs: POLLING_INTERVAL,
+    enabled: enablePolling && !isConnected && Boolean(tenant && userId),
+    runImmediately: false,
+    onError: () => setError('Failed to load notifications'),
+  });
+
+  const setupWebSocket = useCallback(() => {
 	    if (!tenant || !userId) {
 	      setIsConnected(false);
 	      return () => {};
 	    }
-	
-	    const hocuspocusUrl = getHocuspocusUrl();
-	    if (!hocuspocusUrl) {
-	      setIsConnected(false);
-	      if (enablePollingRef.current && !pollingIntervalRef.current) {
-	        pollingIntervalRef.current = setInterval(() => {
-	          fetchNotificationsRef.current?.();
-	        }, POLLING_INTERVAL);
-	      }
-	      return () => {
-	        if (pollingIntervalRef.current) {
-	          clearInterval(pollingIntervalRef.current);
-	          pollingIntervalRef.current = null;
-	        }
-	      };
-	    }
-	
+
+    const hocuspocusUrl = getHocuspocusUrl();
+    if (!hocuspocusUrl) {
+      setIsConnected(false);
+      return () => {};
+    }
+
 	    const roomName = `notifications:${tenant}:${userId}`;
 	    const ydoc = new Y.Doc();
 	    const provider = new HocuspocusProvider({
@@ -171,23 +154,12 @@ export function useInternalNotifications(
         setError(null);
         reconnectDelayRef.current = INITIAL_RECONNECT_DELAY;
 
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-
-        fetchNotificationsRef.current?.();
+        void pollNotificationsNow();
       },
 
       onDisconnect: ({ event }) => {
         console.log('Disconnected from notification stream', event);
         setIsConnected(false);
-
-        if (enablePollingRef.current && !pollingIntervalRef.current) {
-          pollingIntervalRef.current = setInterval(() => {
-            fetchNotificationsRef.current?.();
-          }, POLLING_INTERVAL);
-        }
 
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
@@ -229,26 +201,22 @@ export function useInternalNotifications(
       provider.destroy();
       ydoc.destroy();
     };
-	  }, [tenant, userId]);
-	
-	  useEffect(() => {
-	    setIsLoading(true);
-	    fetchNotifications();
+  }, [pollNotificationsNow, tenant, userId]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    void pollNotificationsNow();
 
     const cleanup = setupWebSocket();
 
     return () => {
       cleanup();
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
     };
-  }, [fetchNotifications, setupWebSocket]);
+  }, [pollNotificationsNow, setupWebSocket]);
 
   const markAsRead = useCallback(
     async (notificationId: string) => {

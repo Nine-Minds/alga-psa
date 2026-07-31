@@ -336,9 +336,14 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         'd.is_client_visible': true,
       });
 
+      // Only derive involved-user ids from comments the contact can actually
+      // see — internal-only commenters must not be enumerated here. Comment
+      // visibility mirrors the thread root (Comment model enforces replies
+      // match thread visibility), so the comment flag alone is sufficient.
       const commentUserIdsSubquery = scopedDb.table('comments as c')
         .select('c.user_id')
-        .where('c.ticket_id', ticketId);
+        .where('c.ticket_id', ticketId)
+        .where('c.is_internal', false);
       const assignedUserIdSubquery = scopedDb.table('tickets as assigned_ticket')
         .select('assigned_ticket.assigned_to')
         .where('assigned_ticket.ticket_id', ticketId);
@@ -390,15 +395,30 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'aa.relationship_type',
         );
 
+      // Portal contacts must never receive MSP-internal notes. A comment is
+      // hidden when its own is_internal flag is set or when it belongs to an
+      // internal thread (comment_threads.is_internal carries the thread root's
+      // flag — the same "internal thread" definition the MSP thread tabs use
+      // in buildTicketThreadTabState).
+      const conversationsQuery = scopedDb.table('comments');
+      scopedDb.tenantJoin(conversationsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
+      conversationsQuery
+        .select('comments.*')
+        .where({
+          'comments.ticket_id': ticketId,
+          'comments.is_internal': false,
+        })
+        .where(function (this: Knex.QueryBuilder) {
+          this.whereNull('ct.is_internal')
+            .orWhere('ct.is_internal', false);
+        })
+        .orderBy('comments.created_at', 'asc');
+
       const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
         ticketQuery,
 
-        // Get conversations
-        scopedDb.table('comments')
-        .where({
-          ticket_id: ticketId
-        })
-        .orderBy('created_at', 'asc'),
+        // Get conversations (client-visible comments only)
+        conversationsQuery,
 
         // Get client-visible documents only
         documentsQuery,
@@ -519,6 +539,10 @@ export const addClientTicketComment = withAuth(async (
   isInternal: boolean = false,
   isResolution: boolean = false
 ): Promise<ClientTicketActionResult<boolean>> => {
+  // Client portal contacts can never create internal notes/threads. Force the
+  // flag server-side — the portal UI always passes false, but server actions
+  // are directly invocable and the caller-supplied value must not be trusted.
+  isInternal = false;
   try {
     const userId = clientPortalUserIdOrError(user);
     if (typeof userId !== 'string') {
@@ -620,7 +644,9 @@ export const addClientTicketComment = withAuth(async (
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
+          occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
+          commentId: newComment.comment_id,
           userId,
           comment: {
             id: newComment.comment_id,
@@ -702,8 +728,13 @@ export const updateClientTicketComment = withAuth(async (
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
-      let updatesWithMarkdown = { ...updates };
+      // Whitelist the editable fields: portal contacts may only revise the
+      // note body. Everything else on IComment (ticket_id, user_id,
+      // author_type, is_internal, is_resolution, ...) is caller-controlled and
+      // must be dropped to prevent mass assignment.
+      const updatesWithMarkdown: { note?: string; markdown_content?: string } = {};
       if (updates.note) {
+        updatesWithMarkdown.note = updates.note;
         try {
           const markdownContent = await convertBlockNoteToMarkdown(updates.note);
           console.log("Converted markdown content for updated client comment:", markdownContent);
@@ -857,6 +888,7 @@ export const updateTicketStatus = withAuth(async (
       const statusChanges = {
         status_id: {
           old: oldStatusId,
+          previous: oldStatusId,
           new: newStatusId
         }
       };
@@ -904,6 +936,7 @@ export const updateTicketStatus = withAuth(async (
           eventType: 'TICKET_UPDATED',
           payload: {
             tenantId: tenant,
+            occurredAt,
             ticketId: ticketId,
             userId,
             changes: statusChanges

@@ -32,7 +32,10 @@ Map which tiers get the feature:
 ```ts
 // packages/types/src/constants/tierFeatures.ts
 export const TIER_FEATURE_MAP: Record<TenantTier, TIER_FEATURES[]> = {
-  pro: [],
+  pro: [
+    TIER_FEATURES.ENTRA_SYNC,
+    TIER_FEATURES.CIPP,
+  ],
   premium: [
     TIER_FEATURES.ENTRA_SYNC,
     TIER_FEATURES.CIPP,
@@ -46,8 +49,8 @@ export const TIER_FEATURE_MAP: Record<TenantTier, TIER_FEATURES[]> = {
 ```ts
 // packages/types/src/constants/tierFeatures.ts
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
-  [TIER_FEATURES.ENTRA_SYNC]: 'premium',
-  [TIER_FEATURES.CIPP]: 'premium',
+  [TIER_FEATURES.ENTRA_SYNC]: 'pro',
+  [TIER_FEATURES.CIPP]: 'pro',
   [TIER_FEATURES.YOUR_NEW_FEATURE]: 'premium',  // ← add here
 };
 ```
@@ -102,6 +105,23 @@ export async function yourProtectedAction() {
   // ... your action logic
 }
 ```
+
+#### Background runtimes have no session
+
+`assertTierAccess` reads the session, so it is unusable from the Temporal worker,
+job runners, and scripts. Those resolve the tenant's tier directly:
+
+```ts
+import { resolveTenantTier } from '@alga-psa/licensing';
+import { TIER_FEATURES, tierHasFeature } from '@alga-psa/types';
+
+const allowed = tierHasFeature(await resolveTenantTier(tenantId), TIER_FEATURES.YOUR_NEW_FEATURE);
+```
+
+If a feature has a recurring background component, gate it on the same feature
+the request path gates on. `setupSchedules.ts` gated Entra's recurring sync on
+the Enterprise add-on long after the UI and API moved to Pro, so Pro tenants got
+the whole UI while the worker deleted their schedule on every boot.
 
 ### 6. Add display name in AccountManagement
 
@@ -159,13 +179,19 @@ This means CE users get all features regardless of `tenants.plan`.
 | `server/src/components/tier-gating/TierGate.tsx` | Client-side gate component |
 | `server/src/lib/tier-gating/ServerTierGate.tsx` | Server-side gate component |
 | `server/src/lib/tier-gating/assertTierAccess.ts` | Server action enforcement |
+| `packages/licensing/src/lib/tenant-tier.ts` | Session-free tier resolution (shared by actions and background runtimes) |
+| `ee/temporal-workflows/src/schedules/setupSchedules.ts` | Per-tenant recurring schedules; gates on tier, not add-ons |
 | `packages/ui/src/components/tier-gating/FeatureUpgradeNotice.tsx` | Upgrade CTA shown when gated |
 | `ee/server/src/components/settings/account/AccountManagement.tsx` | Account page feature display |
 
 ## Existing Gated Features (for reference)
 
-| Feature | Enum | Gated Where |
-|---------|------|-------------|
-| Visual Invoice Designer | `INVOICE_DESIGNER` | InvoiceTemplateEditor visual tab, BillingPageClient |
-| Entra Sync | `ENTRA_SYNC` | IntegrationsSettingsPage, SettingsPage |
-| CIPP | `CIPP` | EntraIntegrationSettings connection options |
+| Feature | Enum | Minimum tier | Gated Where |
+|---------|------|--------------|-------------|
+| Visual Invoice Designer | `INVOICE_DESIGNER` | Premium | InvoiceTemplateEditor visual tab, BillingPageClient |
+| Entra Sync | `ENTRA_SYNC` | Pro | IntegrationsSettingsPage, SettingsPage, Entra API routes |
+| CIPP | `CIPP` | Pro | EntraIntegrationSettings connection options |
+
+## Dormant Enterprise Add-on Plumbing
+
+`ADD_ONS.ENTERPRISE`, `assertAddOnAccess`, and the Enterprise Stripe price configuration are retained intentionally for a future per-client-tenant metered product. Entra Sync and CIPP no longer depend on this add-on; do not remove the dormant plumbing as dead code. The product strategy is recorded in `nineminds-vault/Inbox/2026-07-22-m365-per-tenant-metering-strategy.md`.

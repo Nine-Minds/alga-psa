@@ -203,6 +203,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: dbMocks.createTenantKnex,
   withTransaction: dbMocks.withTransaction,
+  getTenantContext: () => 'tenant-1',
   runWithTenant: async (_tenant: string, callback: () => Promise<unknown> | unknown) => callback(),
   tenantDb: (conn: any, tenant: string) => ({
     table: (t: string) => conn(t).where({ tenant }),
@@ -661,8 +662,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       });
     });
 
+    expect(await screen.findByText('Zenith Health')).toBeInTheDocument();
     expect(getAvailableBillingPeriodsMock).not.toHaveBeenCalled();
-    expect(screen.getByText('Zenith Health')).toBeInTheDocument();
   });
 
   it('handles an empty recurring due-work and history page', async () => {

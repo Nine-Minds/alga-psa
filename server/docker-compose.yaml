@@ -58,6 +58,8 @@ x-common-config: &common-config
 
     # ---- AUTH ----
     NEXTAUTH_URL: ${NEXTAUTH_URL}
+    APPLICATION_URL: ${APPLICATION_URL:-${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}}
+    NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}
     NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES}
 
     # ---- DEPLOY INFO  ----

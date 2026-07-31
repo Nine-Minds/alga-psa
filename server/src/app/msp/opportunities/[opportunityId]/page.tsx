@@ -6,17 +6,28 @@ import { getOpportunityDraftingAvailability } from '@enterprise/lib/opportunitie
 import { getManagementAvailability } from '@enterprise/lib/opportunities/actions';
 import { OpportunityDetailWithDrafting } from '@/components/opportunities/OpportunityDetailWithDrafting';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export const metadata: Metadata = {
-  title: 'Opportunity',
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ opportunityId: string }>;
+}): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'msp/opportunities');
+  try {
+    const detail = await getOpportunity((await params).opportunityId);
+    return { title: detail.title };
+  } catch {
+    return { title: t('opportunities.detail.metadataTitle', 'Opportunity') };
+  }
+}
 
 export default async function OpportunityDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ opportunityId: string }>;
-  searchParams?: Promise<{ draft?: string }>;
+  searchParams?: Promise<{ draft?: string; fromTab?: string }>;
 }) {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/opportunities', scope: 'msp' });
   if (boundary) {
@@ -35,7 +46,8 @@ export default async function OpportunityDetailPage({
       getOpportunityDraftingAvailability().catch(() => false),
       getManagementAvailability().catch(() => false),
     ]);
-    const wantsDraft = (await searchParams)?.draft === '1';
+    const resolvedSearchParams = await searchParams;
+    const wantsDraft = resolvedSearchParams?.draft === '1';
     return (
       <div className="p-6">
         <OpportunityDetailWithDrafting
@@ -43,6 +55,7 @@ export default async function OpportunityDetailPage({
           draftingAvailable={draftingAvailable}
           managementAvailable={managementAvailable}
           autoOpenDraft={draftingAvailable && wantsDraft}
+          returnTab={resolvedSearchParams?.fromTab}
         />
       </div>
     );

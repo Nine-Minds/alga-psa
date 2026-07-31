@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { withTenantScope } from '../utils/tenantScopedBuilderDouble';
 
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn();
@@ -38,15 +39,15 @@ function createDiscoveryKnexHarness(persistedRows: Array<Record<string, unknown>
   const knexMock = vi.fn((_table: string) => {
     if (callIndex === 0) {
       callIndex += 1;
-      return { insert: insertMock };
+      return withTenantScope({ insert: insertMock });
     }
 
-    return {
+    return withTenantScope({
       where: whereMock,
       whereIn: whereInMock,
       orderBy: orderByMock,
       select: selectMock,
-    };
+    });
   }) as any;
 
   knexMock.fn = { now: vi.fn(() => 'db-now') };

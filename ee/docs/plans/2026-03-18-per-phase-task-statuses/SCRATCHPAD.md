@@ -18,7 +18,7 @@
 - (2026-03-18) Implemented `F001` in `server/migrations/20260318100000_add_phase_id_to_project_status_mappings.cjs`: added nullable `phase_id` plus a composite FK on `(tenant, phase_id)` to `project_phases`. Although the feature text mentions `project_phases(phase_id)`, the schema only exposes `(tenant, phase_id)` as a valid referenced key.
 - (2026-03-18) Implemented `F002` in the same migration file by indexing `(tenant, project_id, phase_id)`. Keeping the column and its lookup index together avoids ordering issues during rollout and rollback.
 - (2026-03-18) Implemented `F003` in `server/migrations/20260318101000_add_template_phase_id_to_project_template_status_mappings.cjs`: added nullable `template_phase_id` with a composite FK on `(tenant, template_phase_id)` because `project_template_phases` is also keyed that way.
-- (2026-03-18) Implemented `F004` with `ee/server/migrations/citus/20260318102000_fix_phase_status_mapping_foreign_keys.cjs` and marked the CE migrations `transaction: false`. The EE migration inspects existing FK definitions and only drops/recreates phase-related constraints when they are not tenant-scoped, which is safer for already-distributed tables than assuming a fixed constraint name.
+- (2026-03-18) Implemented `F004` with `ee/server/migrations/citus/20260318102000_fix_phase_status_mapping_foreign_keys.cjs` and marked the CE migrations `transaction: false`. The EE migration inspects existing FK definitions and only drops/recreates phase-related constraints when they are not tenant-scoped, which is safer for already-distributed tables than assuming a fixed constraint name. Correction (2026-07-24): that `ee/server/migrations/citus/` folder was never executed by anything and has since been removed; this repair never actually ran anywhere.
 - (2026-03-18) `moveTaskToPhase()` in `projectTaskActions.ts` (lines 972-1033) currently only resolves statuses for **cross-project** moves. Same-project moves preserve the original status mapping ID. This must change to also handle same-project cross-phase moves when phases have different statuses.
 - (2026-03-18) `ProjectDetail.tsx` is the orchestrator that passes `statuses={projectStatuses}` to KanbanBoard (line ~2406). It fetches statuses once at project level. This is the critical wiring point.
 - (2026-03-18) Client portal has its own separate components (`ClientKanbanBoard`, `ClientTaskListView`, `ProjectDetailView`) — they do NOT reuse MSP-side KanbanBoard. Separate data action `getClientProjectStatuses()`.
@@ -53,15 +53,14 @@
 - Run migrations: `npm run migrate`
 - Validate migration syntax quickly: `node -e "require('./server/migrations/20260318100000_add_phase_id_to_project_status_mappings.cjs')"`
 - Validate template migration syntax quickly: `node -e "require('./server/migrations/20260318101000_add_template_phase_id_to_project_template_status_mappings.cjs')"`
-- Validate EE Citus migration syntax quickly: `node -e "require('./ee/server/migrations/citus/20260318102000_fix_phase_status_mapping_foreign_keys.cjs')"`
-- Citus migrations: applied via Argo workflows in EE environments
+- (Removed 2026-07-24) `ee/server/migrations/citus/` never ran via any migrate flow or Argo workflow; the folder has been deleted. Citus distribution is validated the same way as any other migration: `node -e "require('./server/migrations/<file>.cjs')"`.
 
 ## Links / References
 
 ### Key Files — Database
 - `server/migrations/20241008191930_create_project_status_mappings_table.cjs` — original table creation
-- `ee/server/migrations/citus/20250805000018_distribute_remaining_tables.cjs` — Citus distribution of project_status_mappings
-- `ee/server/migrations/citus/20250805000011_distribute_project_tables.cjs` — Citus distribution of project_phases
+- (Removed 2026-07-24, never executed) `ee/server/migrations/citus/20250805000018_distribute_remaining_tables.cjs` — was meant to be Citus distribution of project_status_mappings; folder deleted
+- (Removed 2026-07-24, never executed) `ee/server/migrations/citus/20250805000011_distribute_project_tables.cjs` — was meant to be Citus distribution of project_phases; folder deleted
 - `server/migrations/20251119000000_add_project_templates.cjs` — template status mappings table
 
 ### Key Files — Types

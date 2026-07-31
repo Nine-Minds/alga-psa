@@ -2,8 +2,17 @@
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { withAuth } from '@alga-psa/auth';
-import type { PaginatedResult } from '@alga-psa/types';
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import type { IUserWithRoles, PaginatedResult } from '@alga-psa/types';
+
+// MSP-only: email sending logs expose tenant-wide correspondence (subjects,
+// addresses, ticket numbers, entity ids), so client-portal callers
+// (user_type 'client') are always rejected.
+function assertInternalEmailLogAccess(user: IUserWithRoles): void {
+  if (user.user_type !== 'internal') {
+    throw new Error('Permission denied: email log actions are internal-only');
+  }
+}
 
 export interface EmailSendingLogRecord {
   id: number;
@@ -39,11 +48,16 @@ export interface EmailSendingLogRecord {
 
 export const getEmailLogsForTicket = withAuth(
   async (
-    _user,
+    user,
     { tenant },
     ticketId: string,
     options?: { limit?: number }
   ): Promise<EmailSendingLogRecord[]> => {
+    assertInternalEmailLogAccess(user);
+    // Surfaced from the MSP ticket details UI, so mirror the ticket read check.
+    if (!await hasPermission(user, 'ticket', 'read')) {
+      throw new Error('Permission denied: cannot read ticket');
+    }
     const { knex } = await createTenantKnex();
     const limit = Math.min(Math.max(options?.limit ?? 20, 1), 200);
 
@@ -137,14 +151,17 @@ function parseDateOnlyEndExclusive(input: string): Date | null {
 
 export const getEmailLogs = withAuth(
   async (
-    _user,
+    user,
     { tenant },
     filters: EmailLogFilters = {}
   ): Promise<PaginatedResult<EmailSendingLogListRecord>> => {
+    // No dedicated email-log permission resource exists; the MSP system
+    // monitoring page is the only consumer, so internal-only is the guard.
+    assertInternalEmailLogAccess(user);
     const { knex } = await createTenantKnex();
 
     const page = Math.max(1, filters.page ?? 1);
-    const pageSize = Math.min(Math.max(filters.pageSize ?? 25, 1), 200);
+    const pageSize = Math.min(Math.max(filters.pageSize ?? 50, 1), 200);
     const sortDirection = filters.sortDirection === 'asc' ? 'asc' : 'desc';
     const offset = (page - 1) * pageSize;
 
@@ -258,7 +275,8 @@ export interface EmailLogMetrics {
 }
 
 export const getEmailLogMetrics = withAuth(
-  async (_user, { tenant }): Promise<EmailLogMetrics> => {
+  async (user, { tenant }): Promise<EmailLogMetrics> => {
+    assertInternalEmailLogAccess(user);
     const { knex } = await createTenantKnex();
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {

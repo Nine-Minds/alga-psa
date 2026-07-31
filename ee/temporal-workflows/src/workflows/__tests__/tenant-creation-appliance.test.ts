@@ -15,6 +15,7 @@ import type { TenantCreationInput } from '../../types/workflow-types.js';
 interface RecordedCalls {
   createTenant: any[];
   createAdminUser: any[];
+  setupTenantData: any[];
   customerTracking: number;
   welcomeEmail: number;
 }
@@ -25,6 +26,7 @@ async function setupWorkflowTest() {
   const calls: RecordedCalls = {
     createTenant: [],
     createAdminUser: [],
+    setupTenantData: [],
     customerTracking: 0,
     welcomeEmail: 0,
   };
@@ -43,7 +45,10 @@ async function setupWorkflowTest() {
         temporaryPassword: input.password ?? 'generated-password',
       };
     },
-    setupTenantData: async () => ({ setupSteps: ['tenant_settings'] }),
+    setupTenantData: async (input: any) => {
+      calls.setupTenantData.push(input);
+      return { setupSteps: ['tenant_settings'] };
+    },
     sendWelcomeEmail: async () => {
       calls.welcomeEmail += 1;
       return { emailSent: true };
@@ -104,6 +109,7 @@ describe('tenantCreationWorkflow appliance mode', () => {
               tenantId: 'pre-minted-tenant-id',
               adminUser: { ...baseInput.adminUser, password: 'operator-chosen-password' },
               billingSource: 'manual',
+              emailProvider: 'smtp',
               skipCustomerTracking: true,
               skipWelcomeEmail: true,
             },
@@ -117,6 +123,7 @@ describe('tenantCreationWorkflow appliance mode', () => {
       expect(result.tenantId).toBe('pre-minted-tenant-id');
       expect(calls.createTenant[0].tenantId).toBe('pre-minted-tenant-id');
       expect(calls.createAdminUser[0].password).toBe('operator-chosen-password');
+      expect(calls.setupTenantData[0].emailProvider).toBe('smtp');
       expect(calls.customerTracking).toBe(0);
       expect(calls.welcomeEmail).toBe(0);
       expect(result.emailSent).toBe(false);
@@ -140,6 +147,7 @@ describe('tenantCreationWorkflow appliance mode', () => {
       expect(result.tenantId).toBe('generated-tenant-id');
       expect(calls.createTenant[0].tenantId).toBeUndefined();
       expect(calls.createAdminUser[0].password).toBeUndefined();
+      expect(calls.setupTenantData[0].emailProvider).toBeUndefined();
       expect(calls.customerTracking).toBe(3);
       expect(calls.welcomeEmail).toBe(1);
       expect(result.emailSent).toBe(true);

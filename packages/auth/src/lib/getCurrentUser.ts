@@ -1,12 +1,35 @@
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
 import { getApiKeyUserOverride } from './apiKeyUserContext';
-import { getSession } from './getSession';
+import { getSession, getSessionWithRevocationCheck } from './getSession';
 import logger from '@alga-psa/core/logger';
+import type { Session } from 'next-auth';
 // Note: Avatar URLs are NOT fetched here to avoid circular dependency with @alga-psa/documents.
 // If avatar URL is needed, use getUserAvatarUrl from @alga-psa/documents separately.
 
-export async function getCurrentUser(): Promise<IUserWithRoles | null> {
+/**
+ * Deactivation (by an administrator or by SCIM) must deny access on the next
+ * request, not merely at the next sign-in, so an inactive user resolves to no
+ * caller at all.
+ */
+function activeUserOrNull(user: IUserWithRoles | null): IUserWithRoles | null {
+  if (!user) {
+    return null;
+  }
+
+  if (user.is_inactive) {
+    logger.warn(`Rejecting request from inactive user ${user.user_id}`);
+    return null;
+  }
+
+  return user;
+}
+
+type SessionResolver = () => Promise<Session | null>;
+
+async function resolveCurrentUser(
+  resolveSession: SessionResolver
+): Promise<IUserWithRoles | null> {
   try {
     // API-key routes establish the caller's identity explicitly (see
     // apiKeyUserContext); it takes precedence over any ambient session.
@@ -15,7 +38,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       return apiKeyUser;
     }
 
-    const session = await getSession();
+    const session = await resolveSession();
 
     if (!session?.user) {
       return null;
@@ -29,11 +52,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         sessionUser.tenant
       );
 
-      if (!userWithRoles) {
-        return null;
-      }
-
-      return userWithRoles;
+      return activeUserOrNull(userWithRoles);
     }
 
     // Fallback paths should fail in production for security
@@ -68,11 +87,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         sessionUser.user_type
       );
 
-      if (!userWithRoles) {
-        return null;
-      }
-
-      return userWithRoles;
+      return activeUserOrNull(userWithRoles);
     }
 
     // Last resort: email-only lookup (development only)
@@ -89,14 +104,26 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       undefined
     );
 
-    if (!userWithRoles) {
-      return null;
-    }
-
-    return userWithRoles;
+    return activeUserOrNull(userWithRoles);
   } catch (error) {
     logger.error('Failed to get current user:', error);
     // Preserve the original error and stack trace
     throw error;
   }
+}
+
+export async function getCurrentUser(): Promise<IUserWithRoles | null> {
+  return resolveCurrentUser(getSession);
+}
+
+/**
+ * Resolves the current user through the full-auth-first session path.
+ *
+ * Authorization boundaries use this helper so an edge-decoded JWT is never
+ * their first source of authority. The full auth callback and the shared
+ * session gate both reject revoked or untracked sessions; the latter also
+ * protects the development-only edge fallback.
+ */
+export async function getCurrentUserWithRevocationCheck(): Promise<IUserWithRoles | null> {
+  return resolveCurrentUser(getSessionWithRevocationCheck);
 }

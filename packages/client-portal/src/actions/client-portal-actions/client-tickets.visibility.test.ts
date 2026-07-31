@@ -287,11 +287,9 @@ describe('client portal ticket visibility enforcement', () => {
           }
 
           if (table === 'comments') {
-            return {
-              where: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockResolvedValue([]),
-              }),
-            };
+            // The conversations query now selects/joins/filters before ordering;
+            // the chainable builder is thenable and resolves to no comments.
+            return makeChainable();
           }
 
           if (table === 'documents as d') {
@@ -365,11 +363,7 @@ describe('client portal ticket visibility enforcement', () => {
           }
 
           if (table === 'comments') {
-            return {
-              where: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockResolvedValue([]),
-              }),
-            };
+            return makeChainable();
           }
 
           if (table === 'documents as d') {
@@ -420,9 +414,102 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { getClientTicketDetails } = await import('./client-tickets');
 
-    await expect(getClientTicketDetails('ticket-hidden')).rejects.toThrow(
-      'Failed to fetch ticket details'
-    );
+    await expect(getClientTicketDetails('ticket-hidden')).resolves.toEqual({
+      actionError: 'Ticket not found or access denied',
+    });
+  });
+
+  it('T018: client portal ticket detail excludes internal comments and internal-only commenters', async () => {
+    const ticketBuilder = makeDetailBuilder({
+      ticket_id: 'ticket-1',
+      ticket_number: 'T-1',
+      title: 'Visible ticket',
+      board_id: 'board-1',
+      client_id: 'client-1',
+      entered_by_user_type: 'internal',
+      entered_at: '2026-03-15T00:00:00.000Z',
+      updated_at: '2026-03-15T00:00:00.000Z',
+      closed_at: null,
+    });
+    const conversationsBuilder = makeChainable();
+    const commentUserIdsBuilder = makeChainable();
+
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      const trx = Object.assign(
+        (table: string) => {
+          if (table === 'users') {
+            return makeUserQuery();
+          }
+
+          if (table === 'tickets as t') {
+            return ticketBuilder;
+          }
+
+          if (table === 'comments') {
+            return conversationsBuilder;
+          }
+
+          if (table === 'comments as c') {
+            return commentUserIdsBuilder;
+          }
+
+          if (table === 'documents as d') {
+            return {
+              select: vi.fn().mockReturnThis(),
+              join: vi.fn().mockReturnThis(),
+              where: vi.fn().mockResolvedValue([]),
+            };
+          }
+
+          if (
+            table === 'ticket_resources as tr' ||
+            table === 'ticket_resources as tr2' ||
+            table === 'tickets as assigned_ticket' ||
+            table === 'users as u'
+          ) {
+            return makeChainable();
+          }
+
+          if (table === 'asset_associations as aa') {
+            return {
+              innerJoin: vi.fn().mockReturnThis(),
+              where: vi.fn().mockReturnThis(),
+              select: vi.fn().mockResolvedValue([]),
+            };
+          }
+
+          throw new Error(`Unexpected table: ${table}`);
+        },
+        {
+          raw: vi.fn().mockResolvedValue({ rows: [] }),
+        }
+      );
+
+      return callback(trx);
+    });
+
+    getVisibilityContextMock.mockResolvedValue({
+      contactId: 'contact-1',
+      clientId: 'client-1',
+      visibilityGroupId: 'group-1',
+      visibleBoardIds: ['board-1'],
+    });
+
+    const { getClientTicketDetails } = await import('./client-tickets');
+    await getClientTicketDetails('ticket-1');
+
+    // The serialized conversation list filters out internal comments at the
+    // query (not just in the client component) and joins comment_threads so
+    // internal threads are excluded too.
+    expect(conversationsBuilder.where).toHaveBeenCalledWith({
+      'comments.ticket_id': 'ticket-1',
+      'comments.is_internal': false,
+    });
+    expect(conversationsBuilder.leftJoin).toHaveBeenCalled();
+
+    // Comment-derived involved-user ids are likewise restricted to
+    // client-visible comments so internal-only commenters aren't enumerated.
+    expect(commentUserIdsBuilder.where).toHaveBeenCalledWith('c.is_internal', false);
   });
 
   it('T012: client portal ticket documents reject hidden-board access', async () => {
@@ -463,9 +550,9 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { getClientTicketDocuments } = await import('./client-tickets');
 
-    await expect(getClientTicketDocuments('ticket-hidden')).rejects.toThrow(
-      'Failed to fetch ticket documents'
-    );
+    await expect(getClientTicketDocuments('ticket-hidden')).resolves.toEqual({
+      actionError: 'Ticket not found or access denied',
+    });
   });
 
   it('T015: client portal ticket creation rejects manually submitted disallowed boards', async () => {
@@ -523,9 +610,9 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { createClientTicket } = await import('./client-tickets');
 
-    await expect(createClientTicket(formData)).rejects.toThrow(
-      'Visibility group assignment is invalid for this contact.'
-    );
+    await expect(createClientTicket(formData)).resolves.toEqual({
+      actionError: 'Visibility group assignment is invalid for this contact.',
+    });
     expect(createTicketWithRetryMock).not.toHaveBeenCalled();
   });
 
@@ -573,9 +660,9 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { createClientTicket } = await import('./client-tickets');
 
-    await expect(createClientTicket(formData)).rejects.toThrow(
-      'Visibility group assignment is invalid for this contact.'
-    );
+    await expect(createClientTicket(formData)).resolves.toEqual({
+      actionError: 'Visibility group assignment is invalid for this contact.',
+    });
     expect(createTicketWithRetryMock).not.toHaveBeenCalled();
   });
 

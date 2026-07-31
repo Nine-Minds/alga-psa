@@ -16,6 +16,7 @@ import {
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -36,6 +37,7 @@ export function PricingScheduleDialog({
   onSave
 }: PricingScheduleDialogProps) {
   const { t } = useTranslation('msp/contracts');
+  const { symbol } = useCurrencyFormat();
   const [effectiveDate, setEffectiveDate] = useState<Date | undefined>(
     schedule?.effective_date ? new Date(schedule.effective_date) : undefined
   );
@@ -326,7 +328,7 @@ export function PricingScheduleDialog({
                 {t('pricingSchedules.dialog.fields.customRate', { defaultValue: 'Custom Rate' })} *
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                 <Input
                   id="custom-rate"
                   type="number"

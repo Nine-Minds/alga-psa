@@ -24,7 +24,7 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '../../actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History, CheckCircle } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -92,6 +92,8 @@ interface TicketInfoProps {
   itilCategory?: string;
   itilSubcategory?: string;
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
+  onResolveAndClose?: () => void;
+  resolveAndCloseDisabled?: boolean;
   additionalAgents?: { user_id: string; name: string }[];
   responseStateTrackingEnabled?: boolean;
   teams?: ITeam[];
@@ -145,6 +147,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilCategory,
   itilSubcategory,
   renderProjectTaskActions,
+  onResolveAndClose,
+  resolveAndCloseDisabled = false,
   additionalAgents,
   responseStateTrackingEnabled = true,
   teams = [],
@@ -2032,6 +2036,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {/* Save Changes Button - matching contracts behavior */}
           <div className="flex flex-wrap items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
+            {onResolveAndClose ? (
+              <Button
+                id={`${id}-resolve-and-close-button`}
+                type="button"
+                variant="soft"
+                onClick={onResolveAndClose}
+                disabled={workflowLocked || isFieldFrozen('status_id') || resolveAndCloseDisabled}
+                className="flex items-center"
+              >
+                <CheckCircle className="mr-1 h-4 w-4" />
+                {t('info.resolveAndClose', 'Resolve and close')}
+              </Button>
+            ) : null}
             {ticket.ticket_id && onOpenEmailNotificationLogs ? (
               <Tooltip content={t('info.openEmailNotificationLogs', 'View email notification logs')}>
                 <Button

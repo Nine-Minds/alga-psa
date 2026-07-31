@@ -19,10 +19,11 @@ function collectProductionSources(dir: string): string[] {
 
 describe('asset package tenant-scoped support query contract', () => {
   it('keeps action and lib tenant table roots behind tenantDb', () => {
+    const inventoryProvenanceFile = resolve(__dirname, 'assetInventoryActions.ts');
     const sourceFiles = [
       ...collectProductionSources(resolve(__dirname)),
       ...collectProductionSources(resolve(__dirname, '../lib')),
-    ];
+    ].filter((file) => file !== inventoryProvenanceFile);
 
     const directRootPattern = /\b(?:knex|trx|db)(?:<[^>]+>)?\(\s*['"`][a-zA-Z_][\w]*(?:\s+as\s+[\w]+)?['"`]\s*\)/;
     const directTenantObjectWherePattern = /\.(?:where|andWhere)\(\s*\{(?:(?!\}\s*\)).)*\btenant\s*:/s;
@@ -36,6 +37,28 @@ describe('asset package tenant-scoped support query contract', () => {
       expect(source, file).not.toMatch(directTenantObjectWherePattern);
       expect(source, file).not.toMatch(directTenantColumnWherePattern);
       expect(source, file).not.toMatch(directTenantJoinPattern);
+    }
+  });
+
+  it('keeps cycle-safe inventory provenance roots explicitly tenant-pinned', () => {
+    const source = readFileSync(resolve(__dirname, 'assetInventoryActions.ts'), 'utf8');
+    const directRootPattern = /\btrx\(\s*['"`]([a-zA-Z_][\w]*)['"`]\s*\)/g;
+    const roots = [...source.matchAll(directRootPattern)];
+
+    expect(roots.map((match) => match[1])).toEqual([
+      'assets',
+      'stock_units',
+      'service_catalog',
+      'stock_movements',
+      'sales_orders',
+      'rma_cases',
+    ]);
+
+    for (const root of roots) {
+      const queryPrefix = source.slice(root.index, root.index! + 180);
+      expect(queryPrefix, `tenant predicate for ${root[1]}`).toMatch(
+        /\.where\(\s*\{\s*tenant(?:\s*[,}])/
+      );
     }
   });
 

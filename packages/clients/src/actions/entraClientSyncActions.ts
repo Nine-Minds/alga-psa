@@ -1,9 +1,8 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { hasMspPermission } from '../lib/authHelpers';
+import { hasMspPermission, isClientPortalUser } from '../lib/authHelpers';
 
 /**
  * Start an Entra sync for a single client.
@@ -20,14 +19,6 @@ export const startClientEntraSync = withAuth(async (
   const canUpdate = await hasMspPermission(user, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isFeatureFlagEnabled('entra-integration-ui', {
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return { success: false, error: 'Microsoft Entra integration is disabled for this tenant.' } as const;
   }
 
   const clientId = String(input.clientId || '').trim();
@@ -78,4 +69,51 @@ export const startClientEntraSync = withAuth(async (
       error: workflowStart.error || null,
     },
   } as const;
+});
+
+
+/**
+ * Whether this user may manage the Entra integration.
+ *
+ * A local mirror of canManageEntraIntegration rather than an import of it, for
+ * the same reason startClientEntraSync exists here: @alga-psa/clients importing
+ * @alga-psa/integrations closes a package cycle. The predicate is one
+ * permission check, so a copy costs less than the edge.
+ */
+export const canManageEntraSync = withAuth(async (user, _ctx) => {
+  if (isClientPortalUser(user)) {
+    return false;
+  }
+
+  return hasMspPermission(user, 'system_settings', 'update');
+});
+
+/**
+ * The tenant's Entra field-sync rules, for surfaces that only need to know
+ * which contact fields the sync may overwrite. Read directly rather than
+ * through the integration's status action, which pulls in the whole connection
+ * record and the package edge with it.
+ */
+export const getEntraFieldSyncRules = withAuth(async (user, { tenant }) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasMspPermission(user, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const { knex } = await createTenantKnex();
+  const row = await tenantDb(knex, tenant)
+    .table('entra_sync_settings')
+    .first(['field_sync_config']);
+
+  const raw = row?.field_sync_config;
+  const fieldSyncConfig =
+    raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : null;
+
+  return { success: true, data: { fieldSyncConfig } } as const;
 });

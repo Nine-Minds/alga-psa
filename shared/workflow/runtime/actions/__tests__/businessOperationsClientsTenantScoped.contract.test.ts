@@ -75,8 +75,12 @@ describe('client workflow business operations tenant-scoped query contract', () 
   it('uses structural tenant scoping for find/search roots', () => {
     expect(findSearchSection).toContain("tenantScopedTable(tx, 'clients')");
     expect(findSearchSection).toContain("tenantScopedTable(tx, 'contacts')");
+    expect(findSearchSection).toContain("tenantScopedTable(tx, 'client_locations as cl')");
+    expect(findSearchSection).toContain("db.tenantJoin(phoneMatches, 'clients as c', 'c.client_id', 'cl.client_id'");
+    expect(findSearchSection).toContain("rootTenantColumn: 'cl.tenant'");
     expect(findSearchSection).not.toContain("tx.trx('clients').where");
     expect(findSearchSection).not.toContain("tx.trx('contacts').where");
+    expect(findSearchSection).not.toContain("tx.trx('client_locations').where");
     expect(findSearchSection).not.toContain(".where({ tenant: tx.tenantId");
   });
 
@@ -90,7 +94,8 @@ describe('client workflow business operations tenant-scoped query contract', () 
     expect(deleteDuplicateSection).toContain("tenantScopedTable(tx, 'clients')");
     expect(deleteDuplicateSection).toContain("tenantScopedTable(tx, 'tenant_companies')");
     expect(deleteDuplicateSection).toContain("tenantScopedTableForTenant(trx, tenantId, 'clients')");
-    expect(deleteDuplicateSection).toContain("tenantScopedTable(tx, 'tag_mappings as tm')");
+    expect(deleteDuplicateSection).toContain("db.table('tag_mappings as tm')");
+    expect(deleteDuplicateSection).toContain("db.tenantJoin(");
     expect(deleteDuplicateSection).toContain("tenantScopedTable(tx, 'client_locations')");
     expect(deleteDuplicateSection).not.toContain("tx.trx('clients').where");
     expect(deleteDuplicateSection).not.toContain("tx.trx('tag_mappings as tm')");

@@ -79,6 +79,7 @@ const input = {
   companyName: tenantName,
   clientName: tenantName,
   productCode: 'psa',
+  emailProvider: 'smtp',
   billingSource: 'manual',
   tenantId,
   skipCustomerTracking: true,

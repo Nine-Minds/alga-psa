@@ -277,6 +277,7 @@
   },
   "dashboard": {
     "loadingInsights": "Enquête-inzichten laden...",
+    "printTitle": "Enquêtedashboard",
     "responseMetrics": {
       "cards": {
         "sent": "Verzonden uitnodigingen",
@@ -422,6 +423,43 @@
     },
     "fallbacks": {
       "none": "-"
+    }
+  },
+  "print": {
+    "emptyValue": "—",
+    "columns": {
+      "date": "Datum",
+      "averageRating": "Gemiddelde beoordeling",
+      "responses": "Reacties",
+      "rating": "Beoordeling",
+      "share": "Aandeel",
+      "ticket": "Ticket",
+      "client": "Klant",
+      "contact": "Contactpersoon",
+      "agent": "Agent",
+      "technician": "Technicus",
+      "submitted": "Ingediend",
+      "comment": "Opmerking"
+    },
+    "metrics": {
+      "averageRating": "Gemiddelde beoordeling",
+      "invitations": "Uitnodigingen",
+      "outstanding": "Openstaand",
+      "recentNegative": "Recent negatief",
+      "responseRate": "Responspercentage",
+      "responses": "Reacties"
+    },
+    "sections": {
+      "trend": "Reactietrend",
+      "distribution": "Tevredenheidsverdeling",
+      "topIssues": "Belangrijkste problemen",
+      "recentResponses": "Recente reacties"
+    },
+    "empty": {
+      "trend": "Geen reacties in deze periode.",
+      "distribution": "Geen beoordeelde reacties in deze periode.",
+      "topIssues": "Geen negatieve reacties in deze periode.",
+      "recentResponses": "Geen reacties in deze periode."
     }
   }
 }

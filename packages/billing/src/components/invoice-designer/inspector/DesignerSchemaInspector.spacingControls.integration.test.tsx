@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DesignerSchemaInspector } from './DesignerSchemaInspector';
 import { useInvoiceDesignerStore } from '../state/designerStore';
@@ -73,6 +73,16 @@ afterEach(() => {
 
 describe('DesignerSchemaInspector spacing controls', () => {
   beforeEach(() => {
+    // Radix Select scrolls the highlighted item into view on open; jsdom has
+    // no scrollIntoView, and the resulting throw unmounts the whole tree.
+    // writable matters: jsdom is reused across files in the shared fork, and
+    // a non-writable descriptor here makes every later file's plain
+    // `Element.prototype.scrollIntoView = ...` assignment throw.
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
@@ -80,21 +90,28 @@ describe('DesignerSchemaInspector spacing controls', () => {
     renderInspector();
 
     const gapValue = document.querySelector('[data-automation-id="designer-inspector-layout-gap-value"]') as HTMLInputElement | null;
-    const gapUnit = document.querySelector('[data-automation-id="designer-inspector-layout-gap-unit"]') as HTMLSelectElement | null;
+    const gapUnit = document.getElementById('designer-inspector-layout-gap-unit');
     const paddingValue = document.querySelector('[data-automation-id="designer-inspector-layout-padding-value"]') as HTMLInputElement | null;
-    const paddingUnit = document.querySelector('[data-automation-id="designer-inspector-layout-padding-unit"]') as HTMLSelectElement | null;
+    const paddingUnit = document.getElementById('designer-inspector-layout-padding-unit');
 
+    // The unit dropdown is a Radix CustomSelect: a combobox button trigger,
+    // not a native <select>.
     expect(gapValue?.type).toBe('number');
-    expect(gapUnit?.tagName).toBe('SELECT');
+    expect(gapUnit?.tagName).toBe('BUTTON');
+    expect(gapUnit?.getAttribute('role')).toBe('combobox');
     expect(paddingValue?.type).toBe('number');
-    expect(paddingUnit?.tagName).toBe('SELECT');
+    expect(paddingUnit?.tagName).toBe('BUTTON');
+    expect(paddingUnit?.getAttribute('role')).toBe('combobox');
   });
 
-  it('shows px, %, and rem unit options for spacing steppers', () => {
+  it('shows px, %, and rem unit options for spacing steppers', async () => {
     renderInspector();
 
-    const gapUnit = document.querySelector('[data-automation-id="designer-inspector-layout-gap-unit"]') as HTMLSelectElement;
-    const options = Array.from(gapUnit.options).map((option) => option.value);
+    fireEvent.click(document.getElementById('designer-inspector-layout-gap-unit')!);
+    const options = (await screen.findAllByRole('option'))
+      .map((option) => option.textContent)
+      // CustomSelect renders its non-selectable placeholder as the first item.
+      .filter((text) => text !== 'Select...');
 
     expect(options).toEqual(['px', '%', 'rem']);
   });
@@ -108,10 +125,10 @@ describe('DesignerSchemaInspector spacing controls', () => {
     renderInspector({ layout: { gap: raw } });
 
     const gapValue = document.querySelector('[data-automation-id="designer-inspector-layout-gap-value"]') as HTMLInputElement;
-    const gapUnit = document.querySelector('[data-automation-id="designer-inspector-layout-gap-unit"]') as HTMLSelectElement;
+    const gapUnit = document.getElementById('designer-inspector-layout-gap-unit')!;
 
     expect(gapValue.value).toBe(expectedValue);
-    expect(gapUnit.value).toBe(expectedUnit);
+    expect(gapUnit.textContent).toContain(expectedUnit);
   });
 
   it('writes back a combined css string when the gap numeric value changes', () => {
@@ -123,11 +140,11 @@ describe('DesignerSchemaInspector spacing controls', () => {
     expect(((useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.layout ?? {}).gap).toBe('12px');
   });
 
-  it('writes back a combined css string when the gap unit changes', () => {
+  it('writes back a combined css string when the gap unit changes', async () => {
     renderInspector({ layout: { gap: '12px' } });
 
-    const gapUnit = document.querySelector('[data-automation-id="designer-inspector-layout-gap-unit"]') as HTMLSelectElement;
-    fireEvent.change(gapUnit, { target: { value: 'rem' } });
+    fireEvent.click(document.getElementById('designer-inspector-layout-gap-unit')!);
+    fireEvent.click(await screen.findByRole('option', { name: 'rem' }));
 
     expect(((useInvoiceDesignerStore.getState().nodesById['section-1'].props as any)?.layout ?? {}).gap).toBe('12rem');
   });
@@ -139,7 +156,7 @@ describe('DesignerSchemaInspector spacing controls', () => {
     expect(document.querySelector('[data-automation-id="designer-inspector-appearance-margin-right"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id="designer-inspector-appearance-margin-bottom"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id="designer-inspector-appearance-margin-left"]')).toBeTruthy();
-    expect(document.querySelector('[data-automation-id="designer-inspector-appearance-margin-unit"]')).toBeTruthy();
+    expect(document.getElementById('designer-inspector-appearance-margin-unit')).toBeTruthy();
     expect(document.querySelector('[data-automation-id="designer-inspector-appearance-margin-link-all"]')).toBeTruthy();
   });
 
@@ -170,13 +187,14 @@ describe('DesignerSchemaInspector spacing controls', () => {
     renderInspector({ layout: { gap: '8px', padding: '12px' }, style: { margin: '4px' } }, 'dark');
 
     const gapValue = document.querySelector('[data-automation-id="designer-inspector-layout-gap-value"]') as HTMLInputElement;
-    const gapUnit = document.querySelector('[data-automation-id="designer-inspector-layout-gap-unit"]') as HTMLSelectElement;
+    const gapUnit = document.getElementById('designer-inspector-layout-gap-unit')!;
     const marginLink = document.querySelector('[data-automation-id="designer-inspector-appearance-margin-link-all"]') as HTMLButtonElement;
-    const marginUnit = document.querySelector('[data-automation-id="designer-inspector-appearance-margin-unit"]') as HTMLSelectElement;
+    const marginUnit = document.getElementById('designer-inspector-appearance-margin-unit')!;
 
     expect(gapValue.className).toContain('dark:bg-[rgb(var(--color-card))]');
-    expect(gapUnit.className).toContain('dark:border-slate-600');
-    expect(gapUnit.className).toContain('dark:text-slate-300');
+    // Unit dropdowns are CustomSelect triggers; their dark styling is the
+    // shared card background token.
+    expect(gapUnit.className).toContain('dark:bg-[rgb(var(--color-card))]');
     expect(marginLink.className).toContain('dark:border-slate-600');
     expect(marginLink.className).toContain('dark:hover:bg-slate-800');
     expect(marginUnit.className).toContain('dark:bg-[rgb(var(--color-card))]');

@@ -8,6 +8,15 @@ import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
+  // These exercise the preview/render pipeline, not RBAC. Without this the
+  // real hasPermission runs, which needs a database — the action under test
+  // does not. The rbac subpath is a distinct module id, so it needs its own
+  // mock: actions import hasPermission from either specifier.
+  hasPermission: async () => true,
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async () => true,
 }));
 
 const legacyNodes = [
@@ -163,7 +172,9 @@ const legacyNodes = [
       canRotate: false,
       allowResize: true,
       rotation: 0,
-      metadata: {},
+      // Text content lives in metadata.text; node names are designer labels
+      // and stopped rendering as content in d514d724d4.
+      metadata: { text: 'From Address' },
       parentId: '4bd130a3-27d7-44e9-a4c3-53c59009885b',
       childIds: [],
       allowedChildren: [],
@@ -177,7 +188,7 @@ const legacyNodes = [
       canRotate: false,
       allowResize: true,
       rotation: 0,
-      metadata: {},
+      metadata: { text: 'Client Address' },
       parentId: '4bd130a3-27d7-44e9-a4c3-53c59009885b',
       childIds: [],
       allowedChildren: [],
@@ -395,7 +406,7 @@ describe('invoiceTemplatePreview INV-005 runtime sanity', () => {
     expect(mapped).not.toBeNull();
 
     const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
-      { id: 'test-user' },
+      { id: 'test-user', tenant: 'test-tenant' },
       { tenant: 'test-tenant' },
       {
         workspace,
@@ -410,7 +421,10 @@ describe('invoiceTemplatePreview INV-005 runtime sanity', () => {
     expect(actionResult.render.html).toContain('From Address');
     expect(actionResult.render.html).toContain('Client Address');
     expect(actionResult.render.html).toContain('Premium Rabbit Tracking Services');
-    expect(actionResult.render.html).toContain('625000');
+    // Currency-typed table columns format from minor units (625000 -> $6,250.00);
+    // the custom-total has no format metadata, so its raw value passes through.
+    expect(actionResult.render.html).toContain('$6,250.00');
+    expect(actionResult.render.html).toContain('$125.00');
     expect(actionResult.render.html).toContain('750000');
 
     const targetedContainmentMismatches = actionResult.verification.mismatches.filter((mismatch: any) =>

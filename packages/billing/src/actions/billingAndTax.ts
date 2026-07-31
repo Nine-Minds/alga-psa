@@ -46,8 +46,10 @@ import {
 import { BillingEngine } from '../lib/billing/billingEngine';
 import {
     detectRecurringApprovalBlockers,
+    detectRecurringApprovalWarnings,
     formatApprovalBlockedReason,
     type RecurringApprovalBlockerCounts,
+    type RecurringApprovalWarnings,
 } from './recurringApprovalBlockers';
 import {
     permissionError,
@@ -1272,6 +1274,23 @@ function applyRecurringApprovalBlocksToInvoiceCandidates(
     });
 }
 
+function applyRecurringApprovalWarningsToInvoiceCandidates(
+    invoiceCandidates: IRecurringDueWorkInvoiceCandidate[],
+    warningsByExecutionIdentityKey: RecurringApprovalWarnings,
+): IRecurringDueWorkInvoiceCandidate[] {
+    return invoiceCandidates.map((candidate) => {
+        const members = candidate.members.map((member) => ({
+            ...member,
+            warnings: warningsByExecutionIdentityKey.get(member.executionIdentityKey) ?? [],
+        }));
+        const warnings = Array.from(new Map(
+            members.flatMap((member) => member.warnings ?? [])
+                .map((warning) => [warning.code, warning]),
+        ).values());
+        return { ...candidate, members, warnings };
+    });
+}
+
 // Type Guards
 export async function isFixedPriceCharge(charge: IBillingCharge): Promise<boolean> {
     return charge.type === 'fixed';
@@ -1608,16 +1627,32 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 scheduleKey: row.scheduleKey ?? null,
             })),
         });
+        const approvalWarningsByExecutionIdentityKey = await detectRecurringApprovalWarnings({
+            knex,
+            tenant,
+            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
+                executionIdentityKey: row.executionIdentityKey,
+                clientId: row.clientId,
+                servicePeriodStart: row.servicePeriodStart,
+                servicePeriodEnd: row.servicePeriodEnd,
+                contractLineId: row.contractLineId ?? null,
+                scheduleKey: row.scheduleKey ?? null,
+            })),
+        });
         const approvalBlockedInvoiceCandidates = applyRecurringApprovalBlocksToInvoiceCandidates(
             blockedInvoiceCandidates,
             approvalBlockedEntryCountsByExecutionIdentityKey,
         );
-        const total = approvalBlockedInvoiceCandidates.length;
+        const warnedInvoiceCandidates = applyRecurringApprovalWarningsToInvoiceCandidates(
+            approvalBlockedInvoiceCandidates,
+            approvalWarningsByExecutionIdentityKey,
+        );
+        const total = warnedInvoiceCandidates.length;
         const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
         const offset = (page - 1) * pageSize;
 
         return {
-            invoiceCandidates: approvalBlockedInvoiceCandidates.slice(offset, offset + pageSize),
+            invoiceCandidates: warnedInvoiceCandidates.slice(offset, offset + pageSize),
             materializationGaps,
             total,
             page,

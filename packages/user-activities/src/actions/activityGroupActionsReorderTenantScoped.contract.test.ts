@@ -2,20 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const sourcePath = resolve(__dirname, 'activityGroupActions.ts');
-const source = readFileSync(sourcePath, 'utf8');
+// Item reorder lives in the identity-explicit core (shared with the v1 REST
+// API); group reorder remains an inline withAuth action.
+const coreSource = readFileSync(resolve(__dirname, 'activityGroupCore.ts'), 'utf8');
+const actionsSource = readFileSync(resolve(__dirname, 'activityGroupActions.ts'), 'utf8');
 
-function sectionBetween(startMarker: string, endMarker: string): string {
-  const start = source.indexOf(startMarker);
-  const end = source.indexOf(endMarker, start);
-
-  expect(start).toBeGreaterThanOrEqual(0);
-  expect(end).toBeGreaterThan(start);
-
-  return source.slice(start, end);
-}
-
-function sectionFrom(startMarker: string): string {
+function sectionFrom(source: string, startMarker: string): string {
   const start = source.indexOf(startMarker);
 
   expect(start).toBeGreaterThanOrEqual(0);
@@ -25,14 +17,15 @@ function sectionFrom(startMarker: string): string {
 
 describe('activity group reorder tenant-scoped query contract', () => {
   it('uses structural tenant scoping for activity and group reorder roots', () => {
-    const activitySection = sectionBetween('export const reorderActivitiesInGroup', 'export const reorderGroups');
-    const groupSection = sectionFrom('export const reorderGroups');
-    const section = `${activitySection}\n${groupSection}`;
+    const activitySection = sectionFrom(coreSource, 'export async function reorderActivitiesInGroupForApi');
+    const groupSection = sectionFrom(actionsSource, 'export const reorderGroups');
 
-    expect(section).toContain(".table('user_activity_groups");
-    expect(section).toContain(".table('user_activity_group_items");
+    expect(activitySection).toContain('.table("user_activity_groups');
+    expect(activitySection).toContain('.table("user_activity_group_items');
+    expect(groupSection).toContain(".table('user_activity_groups");
 
-    expect(section).not.toMatch(/trx\('user_activity_groups'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
-    expect(section).not.toMatch(/trx\('user_activity_group_items'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
+    expect(activitySection).not.toMatch(/trx\("user_activity_groups"\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
+    expect(activitySection).not.toMatch(/trx\("user_activity_group_items"\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
+    expect(groupSection).not.toMatch(/trx\('user_activity_groups'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
   });
 });

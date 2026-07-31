@@ -131,7 +131,7 @@ const SettingsTabSkeleton = ({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>
-                <div className="h-6 bg-gray-200 rounded w-40"></div>
+                <span className="block h-6 bg-gray-200 rounded w-40"></span>
               </CardTitle>
               <CardDescription>
                 <span className="block h-4 bg-gray-200 rounded w-64 mt-2"></span>

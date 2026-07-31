@@ -169,13 +169,21 @@ import {
   ticketUpdatedEventPayloadSchema,
 } from './domain/ticketEventSchemas';
 import {
+  inventoryCountApprovedEventPayloadSchema,
+  inventoryCountSubmittedEventPayloadSchema,
   inventoryPoReceivedEventPayloadSchema,
-  inventoryPurchaseOrderSearchEventPayloadSchema,
+  inventoryPurchaseOrderCreatedEventPayloadSchema,
+  inventoryPurchaseOrderDeletedEventPayloadSchema,
+  inventoryPurchaseOrderUpdatedEventPayloadSchema,
   inventoryRmaCreatedEventPayloadSchema,
-  inventorySalesOrderSearchEventPayloadSchema,
+  inventorySalesOrderCreatedEventPayloadSchema,
+  inventorySalesOrderDeletedEventPayloadSchema,
+  inventorySalesOrderUpdatedEventPayloadSchema,
   inventorySoFulfilledEventPayloadSchema,
   inventoryStockLowEventPayloadSchema,
   inventoryStockUnitSearchEventPayloadSchema,
+  inventoryTransferDispatchedEventPayloadSchema,
+  inventoryTransferReceivedEventPayloadSchema,
 } from './domain/inventoryEventSchemas';
 
 // Define event types
@@ -272,6 +280,17 @@ export const EVENT_TYPES = [
   'PROJECT_APPROVAL_REQUESTED',
   'PROJECT_APPROVAL_GRANTED',
   'PROJECT_APPROVAL_REJECTED',
+  'PROJECT_MILESTONE_READY',
+  'PROJECT_BUDGET_THRESHOLD_REACHED',
+  'PROJECT_BUDGET_EXCEEDED',
+  'PROJECT_BILLING_CONFIG_CREATED',
+  'PROJECT_BILLING_CONFIG_UPDATED',
+  'PROJECT_BILLING_CONFIG_DELETED',
+  'PROJECT_BILLING_SCHEDULE_ENTRY_CREATED',
+  'PROJECT_BILLING_SCHEDULE_ENTRY_UPDATED',
+  'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+  'PROJECT_BILLING_SCHEDULE_ENTRY_DELETED',
+  'PROJECT_BILLING_PAYMENT_STATUS_CHANGED',
 
   // Time entries (legacy)
   'TIME_ENTRY_CREATED',
@@ -488,6 +507,10 @@ export const EVENT_TYPES = [
   'INVENTORY_STOCK_UNIT_CREATED',
   'INVENTORY_STOCK_UNIT_UPDATED',
   'INVENTORY_STOCK_UNIT_DELETED',
+  'INVENTORY_TRANSFER_DISPATCHED',
+  'INVENTORY_TRANSFER_RECEIVED',
+  'INVENTORY_COUNT_SUBMITTED',
+  'INVENTORY_COUNT_APPROVED',
 
   // Generic events
   'CUSTOM_EVENT',
@@ -562,6 +585,70 @@ export const ProjectPhaseEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid().optional(),
   timestamp: z.string().datetime().optional(),
   changes: z.record(z.unknown()).optional(),
+});
+
+export const ProjectMilestoneReadyPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  entryId: z.string().uuid(),
+  description: z.string().min(1),
+  computedAmount: z.number().int().nonnegative(),
+  trigger: z.enum(['phase', 'date', 'manual']),
+});
+
+export const ProjectBudgetThresholdReachedPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  threshold: z.number().int().nonnegative(),
+  billed: z.number().int().nonnegative(),
+  cap: z.number().int().nonnegative(),
+});
+
+export const ProjectBudgetExceededPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  billed: z.number().int().nonnegative(),
+  attempted: z.number().int().positive(),
+  cap: z.number().int().nonnegative(),
+  writtenDown: z.number().int().positive(),
+});
+
+export const ProjectBillingConfigEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  configId: z.string().uuid(),
+  billingModel: z.enum(['fixed_price', 'time_and_materials']),
+  invoiceMode: z.enum(['recurring', 'standalone']),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+});
+
+export const ProjectBillingScheduleEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  configId: z.string().uuid(),
+  entryId: z.string().uuid(),
+  description: z.string().min(1),
+  status: z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']),
+  previousStatus: z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']).nullable().optional(),
+  requiresPaymentBeforeWork: z.boolean(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+});
+
+const ProjectBillingPaymentStateSchema = z.enum([
+  'outstanding',
+  'satisfied',
+  'replacement_needed',
+]);
+
+export const ProjectBillingPaymentStatusEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  configId: z.string().uuid(),
+  entryId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  previousState: ProjectBillingPaymentStateSchema,
+  newState: ProjectBillingPaymentStateSchema,
+  previousInvoiceStatus: z.string().min(1),
+  newInvoiceStatus: z.string().min(1),
+  requiresPaymentBeforeWork: z.literal(true),
+  userId: z.string().uuid().optional(),
 });
 
 // Project task event payload schema
@@ -1179,6 +1266,17 @@ export const EventPayloadSchemas = {
   PROJECT_APPROVAL_REQUESTED: projectApprovalRequestedEventPayloadSchema,
   PROJECT_APPROVAL_GRANTED: projectApprovalGrantedEventPayloadSchema,
   PROJECT_APPROVAL_REJECTED: projectApprovalRejectedEventPayloadSchema,
+  PROJECT_MILESTONE_READY: ProjectMilestoneReadyPayloadSchema,
+  PROJECT_BUDGET_THRESHOLD_REACHED: ProjectBudgetThresholdReachedPayloadSchema,
+  PROJECT_BUDGET_EXCEEDED: ProjectBudgetExceededPayloadSchema,
+  PROJECT_BILLING_CONFIG_CREATED: ProjectBillingConfigEventPayloadSchema,
+  PROJECT_BILLING_CONFIG_UPDATED: ProjectBillingConfigEventPayloadSchema,
+  PROJECT_BILLING_CONFIG_DELETED: ProjectBillingConfigEventPayloadSchema,
+  PROJECT_BILLING_SCHEDULE_ENTRY_CREATED: ProjectBillingScheduleEventPayloadSchema,
+  PROJECT_BILLING_SCHEDULE_ENTRY_UPDATED: ProjectBillingScheduleEventPayloadSchema,
+  PROJECT_BILLING_SCHEDULE_STATUS_CHANGED: ProjectBillingScheduleEventPayloadSchema,
+  PROJECT_BILLING_SCHEDULE_ENTRY_DELETED: ProjectBillingScheduleEventPayloadSchema,
+  PROJECT_BILLING_PAYMENT_STATUS_CHANGED: ProjectBillingPaymentStatusEventPayloadSchema,
 
   // Time entries (legacy)
   TIME_ENTRY_CREATED: TimeEntryEventPayloadSchema,
@@ -1387,15 +1485,19 @@ export const EventPayloadSchemas = {
   INVENTORY_PO_RECEIVED: inventoryPoReceivedEventPayloadSchema,
   INVENTORY_SO_FULFILLED: inventorySoFulfilledEventPayloadSchema,
   INVENTORY_RMA_CREATED: inventoryRmaCreatedEventPayloadSchema,
-  INVENTORY_SALES_ORDER_CREATED: inventorySalesOrderSearchEventPayloadSchema,
-  INVENTORY_SALES_ORDER_UPDATED: inventorySalesOrderSearchEventPayloadSchema,
-  INVENTORY_SALES_ORDER_DELETED: inventorySalesOrderSearchEventPayloadSchema,
-  INVENTORY_PURCHASE_ORDER_CREATED: inventoryPurchaseOrderSearchEventPayloadSchema,
-  INVENTORY_PURCHASE_ORDER_UPDATED: inventoryPurchaseOrderSearchEventPayloadSchema,
-  INVENTORY_PURCHASE_ORDER_DELETED: inventoryPurchaseOrderSearchEventPayloadSchema,
+  INVENTORY_SALES_ORDER_CREATED: inventorySalesOrderCreatedEventPayloadSchema,
+  INVENTORY_SALES_ORDER_UPDATED: inventorySalesOrderUpdatedEventPayloadSchema,
+  INVENTORY_SALES_ORDER_DELETED: inventorySalesOrderDeletedEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_CREATED: inventoryPurchaseOrderCreatedEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_UPDATED: inventoryPurchaseOrderUpdatedEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_DELETED: inventoryPurchaseOrderDeletedEventPayloadSchema,
   INVENTORY_STOCK_UNIT_CREATED: inventoryStockUnitSearchEventPayloadSchema,
   INVENTORY_STOCK_UNIT_UPDATED: inventoryStockUnitSearchEventPayloadSchema,
   INVENTORY_STOCK_UNIT_DELETED: inventoryStockUnitSearchEventPayloadSchema,
+  INVENTORY_TRANSFER_DISPATCHED: inventoryTransferDispatchedEventPayloadSchema,
+  INVENTORY_TRANSFER_RECEIVED: inventoryTransferReceivedEventPayloadSchema,
+  INVENTORY_COUNT_SUBMITTED: inventoryCountSubmittedEventPayloadSchema,
+  INVENTORY_COUNT_APPROVED: inventoryCountApprovedEventPayloadSchema,
 
   // Generic unknown type for custom events
   UNKNOWN: CustomEventPayloadSchema,
@@ -1441,6 +1543,17 @@ export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>
 export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
 export type ProjectTaskAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED>;
 export type ProjectTaskUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_UPDATED>;
+export type ProjectMilestoneReadyEvent = z.infer<typeof EventSchemas.PROJECT_MILESTONE_READY>;
+export type ProjectBudgetThresholdReachedEvent = z.infer<typeof EventSchemas.PROJECT_BUDGET_THRESHOLD_REACHED>;
+export type ProjectBudgetExceededEvent = z.infer<typeof EventSchemas.PROJECT_BUDGET_EXCEEDED>;
+export type ProjectBillingConfigCreatedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_CONFIG_CREATED>;
+export type ProjectBillingConfigUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_CONFIG_UPDATED>;
+export type ProjectBillingConfigDeletedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_CONFIG_DELETED>;
+export type ProjectBillingScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_SCHEDULE_ENTRY_CREATED>;
+export type ProjectBillingScheduleEntryUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_SCHEDULE_ENTRY_UPDATED>;
+export type ProjectBillingScheduleStatusChangedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_SCHEDULE_STATUS_CHANGED>;
+export type ProjectBillingScheduleEntryDeletedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_SCHEDULE_ENTRY_DELETED>;
+export type ProjectBillingPaymentStatusChangedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_PAYMENT_STATUS_CHANGED>;
 export type TaskCommentAddedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_ADDED>;
 export type TaskCommentUpdatedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_UPDATED>;
 export type TimeEntrySubmittedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_SUBMITTED>;
@@ -1507,6 +1620,10 @@ export type InventoryPurchaseOrderDeletedEvent = z.infer<typeof EventSchemas.INV
 export type InventoryStockUnitCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_CREATED>;
 export type InventoryStockUnitUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_UPDATED>;
 export type InventoryStockUnitDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_DELETED>;
+export type InventoryTransferDispatchedEvent = z.infer<typeof EventSchemas.INVENTORY_TRANSFER_DISPATCHED>;
+export type InventoryTransferReceivedEvent = z.infer<typeof EventSchemas.INVENTORY_TRANSFER_RECEIVED>;
+export type InventoryCountSubmittedEvent = z.infer<typeof EventSchemas.INVENTORY_COUNT_SUBMITTED>;
+export type InventoryCountApprovedEvent = z.infer<typeof EventSchemas.INVENTORY_COUNT_APPROVED>;
 
 export type Event =
   {

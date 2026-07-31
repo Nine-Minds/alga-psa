@@ -25,6 +25,7 @@ import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // Keep GenericPlanServicesList for now, might remove in Phase 3
@@ -67,6 +68,7 @@ export function UsagePlanConfiguration({
   className = '',
 }: UsagePlanConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { money } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   // State for the base plan details
   const [plan, setPlan] = useState<IContractLine | null>(null);
@@ -848,7 +850,7 @@ export function UsagePlanConfiguration({
                             });
                           } else {
                             const rate = config.base_rate !== undefined
-                              ? `$${config.base_rate.toFixed(2)}`
+                              ? money(Math.round(Number(config.base_rate) * 100))
                               : t('configuration.usage.services.summary.notSet', { defaultValue: 'Not Set' });
                             const unit = config.unit_of_measure || t('configuration.usage.services.summary.defaultUnit', { defaultValue: 'Unit' });
                             return t('configuration.usage.services.summary.ratePerUnit', {

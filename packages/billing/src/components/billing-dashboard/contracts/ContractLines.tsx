@@ -16,8 +16,10 @@ import {
 } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { checkContractHasInvoices } from '@alga-psa/billing/actions/contractActions';
 import {
+  applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
+  type ContractLineServiceMembershipAddition,
 } from '@alga-psa/billing/actions/contractLineServiceActions';
 import {
   updateConfiguration,
@@ -33,6 +35,10 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
+import {
+  ServiceSelectionDialog,
+  type ContractLineServiceSelection,
+} from '../service-config/ServiceSelectionDialog';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
@@ -116,6 +122,13 @@ interface ServiceConfiguration {
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
 }
 
+interface PendingServiceAddition {
+  selection: ContractLineServiceSelection;
+  draftConfigurationId: string;
+}
+
+const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
+
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
   const { formatCurrency } = useFormatters();
@@ -150,11 +163,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showCreateCustomDialog, setShowCreateCustomDialog] = useState(false);
+  const [showServiceSelectionDialog, setShowServiceSelectionDialog] = useState(false);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [savingLineId, setSavingLineId] = useState<string | null>(null);
   const [editLineData, setEditLineData] = useState<Partial<DetailedContractLineMapping>>({});
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
+  const [pendingServiceAdditions, setPendingServiceAdditions] = useState<PendingServiceAddition[]>([]);
+  const [pendingServiceRemovalIds, setPendingServiceRemovalIds] = useState<string[]>([]);
 
   // Location grouping state
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
@@ -362,6 +378,63 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
+  const initializeServiceConfigEdits = (services: ServiceConfiguration[]) => {
+    const serviceConfigsData: Record<string, any> = {};
+    const bucketConfigsData: Record<string, BucketOverlayInput | null> = {};
+
+    // Bucket configurations are represented by the bucketConfig property on
+    // their parent service rather than as independently editable services.
+    services.filter(s => s.configuration.configuration_type !== 'Bucket').forEach(serviceConfig => {
+      const serviceId = serviceConfig.service.service_id;
+
+      serviceConfigsData[serviceConfig.configuration.config_id] = {
+        quantity: serviceConfig.configuration.quantity ?? 1,
+        custom_rate: serviceConfig.configuration.custom_rate,
+        hourly_rate: serviceConfig.typeConfig?.hourly_rate,
+        base_rate: serviceConfig.typeConfig?.base_rate,
+        unit_of_measure: serviceConfig.typeConfig?.unit_of_measure,
+      };
+
+      bucketConfigsData[serviceId] = serviceConfig.bucketConfig
+        ? {
+            total_minutes: serviceConfig.bucketConfig.total_minutes,
+            overage_rate: serviceConfig.bucketConfig.overage_rate,
+            allow_rollover: serviceConfig.bucketConfig.allow_rollover,
+            billing_period: serviceConfig.bucketConfig.billing_period,
+          }
+        : null;
+    });
+
+    setEditServiceConfigs(serviceConfigsData);
+    setEditBucketConfigs(bucketConfigsData);
+  };
+
+  const resetServiceMembershipDraft = () => {
+    setPendingServiceAdditions([]);
+    setPendingServiceRemovalIds([]);
+  };
+
+  const createDraftServiceConfiguration = (
+    contractLineId: string,
+    pendingAddition: PendingServiceAddition,
+  ): ServiceConfiguration => ({
+    service: {
+      service_id: pendingAddition.selection.service.service_id,
+      service_name: pendingAddition.selection.service.service_name,
+      billing_method: pendingAddition.selection.service.billing_method,
+    },
+    configuration: {
+      config_id: pendingAddition.draftConfigurationId,
+      service_id: pendingAddition.selection.service.service_id,
+      contract_line_id: contractLineId,
+      configuration_type: pendingAddition.selection.configurationType,
+      custom_rate: pendingAddition.selection.customRate,
+      quantity: pendingAddition.selection.quantity,
+    },
+    typeConfig: pendingAddition.selection.typeConfig,
+    bucketConfig: null,
+  });
+
   const handleAddContractLines = async () => {
     if (!contract.contract_id) return;
 
@@ -430,42 +503,96 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         round_up_to_nearest: line.round_up_to_nearest,
         location_id: line.location_id ?? defaultLocationId ?? null,
       });
-      const serviceConfigsData: Record<string, any> = {};
-      const bucketConfigsData: Record<string, BucketOverlayInput | null> = {};
-
-      // Filter out Bucket configurations - they're handled separately via bucketConfig property
-      services.filter(s => s.configuration.configuration_type !== 'Bucket').forEach(serviceConfig => {
-        const serviceId = serviceConfig.service.service_id;
-
-        serviceConfigsData[serviceConfig.configuration.config_id] = {
-          quantity: serviceConfig.configuration.quantity ?? 1,
-          custom_rate: serviceConfig.configuration.custom_rate,
-          hourly_rate: serviceConfig.typeConfig?.hourly_rate,
-          base_rate: serviceConfig.typeConfig?.base_rate,
-          unit_of_measure: serviceConfig.typeConfig?.unit_of_measure,
-        };
-
-        // Load existing bucket configuration from the bucketConfig property
-        if (serviceConfig.bucketConfig) {
-          bucketConfigsData[serviceId] = {
-            total_minutes: serviceConfig.bucketConfig.total_minutes,
-            overage_rate: serviceConfig.bucketConfig.overage_rate,
-            allow_rollover: serviceConfig.bucketConfig.allow_rollover,
-            billing_period: serviceConfig.bucketConfig.billing_period
-          };
-        } else {
-          bucketConfigsData[serviceId] = null;
-        }
-      });
-
-      setEditServiceConfigs(serviceConfigsData);
-      setEditBucketConfigs(bucketConfigsData);
+      initializeServiceConfigEdits(services);
+      resetServiceMembershipDraft();
     } catch (err) {
       console.error('Error checking contract invoices:', err);
       setError(t('contractLines.errors.failedToCheckEditable', {
         defaultValue: 'Failed to check if contract can be edited',
       }));
     }
+  };
+
+  const handleRemoveService = (contractLineId: string, serviceId: string, configId: string) => {
+    setError(null);
+    if (configId.startsWith(DRAFT_SERVICE_CONFIG_PREFIX)) {
+      setPendingServiceAdditions((current) =>
+        current.filter((addition) => addition.selection.service.service_id !== serviceId)
+      );
+      setEditServiceConfigs((current) => {
+        const next = { ...current };
+        delete next[configId];
+        return next;
+      });
+      setEditBucketConfigs((current) => {
+        const next = { ...current };
+        delete next[serviceId];
+        return next;
+      });
+      return;
+    }
+
+    if (!lineServices[contractLineId]?.some((service) => service.service.service_id === serviceId)) {
+      return;
+    }
+
+    setPendingServiceRemovalIds((current) =>
+      current.includes(serviceId) ? current : [...current, serviceId]
+    );
+  };
+
+  const handleServicesSelected = (
+    contractLineId: string,
+    selections: ContractLineServiceSelection[],
+  ) => {
+    const persistedServiceIds = new Set(
+      (lineServices[contractLineId] || []).map((service) => service.service.service_id)
+    );
+    const pendingServiceIds = new Set(
+      pendingServiceAdditions.map((addition) => addition.selection.service.service_id)
+    );
+    const newSelections = selections.filter((selection) => {
+      const serviceId = selection.service.service_id;
+      return !persistedServiceIds.has(serviceId) && !pendingServiceIds.has(serviceId);
+    });
+    const newAdditions = newSelections.map((selection) => ({
+      selection,
+      draftConfigurationId: `${DRAFT_SERVICE_CONFIG_PREFIX}${selection.service.service_id}`,
+    }));
+
+    setPendingServiceRemovalIds((current) =>
+      current.filter((serviceId) => !selections.some(
+        (selection) => selection.service.service_id === serviceId && persistedServiceIds.has(serviceId)
+      ))
+    );
+    setPendingServiceAdditions((current) => [...current, ...newAdditions]);
+    setEditServiceConfigs((configs) => {
+      const next = { ...configs };
+      for (const addition of newAdditions) {
+        const { selection, draftConfigurationId } = addition;
+        next[draftConfigurationId] = {
+          quantity: selection.quantity,
+          custom_rate: selection.customRate,
+          hourly_rate: 'hourly_rate' in selection.typeConfig
+            ? selection.typeConfig.hourly_rate
+            : undefined,
+          base_rate: 'base_rate' in selection.typeConfig
+            ? selection.typeConfig.base_rate
+            : undefined,
+          unit_of_measure: 'unit_of_measure' in selection.typeConfig
+            ? selection.typeConfig.unit_of_measure
+            : undefined,
+        };
+      }
+      return next;
+    });
+    setEditBucketConfigs((configs) => {
+      const next = { ...configs };
+      for (const addition of newAdditions) {
+        next[addition.selection.service.service_id] = null;
+      }
+      return next;
+    });
   };
 
   const handleSaveContractLine = async (contractLineId: string) => {
@@ -492,7 +619,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
 
       // Update all service configurations based on what was actually edited
       // Use editServiceConfigs keys to ensure we update the correct config_ids
-      const services = lineServices[contractLineId] || [];
+      const services = (lineServices[contractLineId] || []).filter(
+        (service) => !pendingServiceRemovalIds.includes(service.service.service_id)
+      );
 
       // Build a map of service_id to serviceConfig for bucket updates
       const serviceById = new Map();
@@ -537,8 +666,47 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         }
       }
 
-      // Update bucket configurations separately
+      const additions: ContractLineServiceMembershipAddition[] = pendingServiceAdditions.map((addition) => {
+        const editData = editServiceConfigs[addition.draftConfigurationId] || {};
+        const typeConfig = addition.selection.configurationType === 'Hourly'
+          ? { hourly_rate: editData.hourly_rate ?? addition.selection.customRate }
+          : addition.selection.configurationType === 'Usage'
+            ? {
+                base_rate: editData.base_rate ?? addition.selection.customRate,
+                unit_of_measure:
+                  editData.unit_of_measure || addition.selection.service.unit_of_measure || 'unit',
+              }
+            : { base_rate: editData.base_rate ?? addition.selection.customRate };
+
+        return {
+          serviceId: addition.selection.service.service_id,
+          quantity: editData.quantity ?? addition.selection.quantity,
+          customRate: editData.custom_rate ?? addition.selection.customRate,
+          configurationType: addition.selection.configurationType,
+          typeConfig,
+        };
+      });
+
+      if (additions.length > 0 || pendingServiceRemovalIds.length > 0) {
+        const membershipResult = await applyContractLineServiceMembershipChanges(
+          contractLineId,
+          {
+            additions,
+            removals: pendingServiceRemovalIds,
+          }
+        );
+        if (isReturnedActionError(membershipResult)) {
+          setError(getErrorMessage(membershipResult));
+          return;
+        }
+      }
+
+      // Persist memberships before bucket overlays so a newly selected service
+      // has its primary configuration available to the bucket upsert.
       for (const [serviceId, bucketConfig] of Object.entries(editBucketConfigs)) {
+        if (pendingServiceRemovalIds.includes(serviceId)) {
+          continue;
+        }
         if (bucketConfig && bucketConfig.total_minutes !== undefined && bucketConfig.overage_rate !== undefined) {
           const bucketResult = await upsertContractLineServiceBucketConfigurationAction(
             contractLineId,
@@ -571,6 +739,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       setEditLineData({});
       setEditServiceConfigs({});
       setEditBucketConfigs({});
+      resetServiceMembershipDraft();
+      setShowServiceSelectionDialog(false);
       onContractLinesChanged?.();
     } catch (err) {
       console.error('Error updating contract line:', err);
@@ -585,6 +755,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     setEditLineData({});
     setEditServiceConfigs({});
     setEditBucketConfigs({});
+    resetServiceMembershipDraft();
+    setShowServiceSelectionDialog(false);
   };
 
   const formatRate = (rate?: number | null) => {
@@ -593,6 +765,22 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
     return formatCurrency(rate / 100, contract.currency_code || 'USD');
   };
+
+  const editingLine = editingLineId
+    ? contractLines.find((line) => line.contract_line_id === editingLineId)
+    : undefined;
+  const editingLineServiceIds = useMemo(() => editingLineId
+    ? [
+        ...(lineServices[editingLineId] || [])
+          .filter(
+            (service) =>
+              service.configuration.configuration_type !== 'Bucket' &&
+              !pendingServiceRemovalIds.includes(service.service.service_id)
+          )
+          .map((service) => service.service.service_id),
+        ...pendingServiceAdditions.map((addition) => addition.selection.service.service_id),
+      ]
+    : [], [editingLineId, lineServices, pendingServiceAdditions, pendingServiceRemovalIds]);
 
   if (isLoading) {
     return (
@@ -770,7 +958,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                     <div className="space-y-2">
                       {group.lines.map((line) => {
               const isExpanded = expandedLines[line.contract_line_id];
-              const services = lineServices[line.contract_line_id] || [];
+              const persistedServices = lineServices[line.contract_line_id] || [];
+              const services = editingLineId === line.contract_line_id
+                ? [
+                    ...persistedServices.filter(
+                      (service) => !pendingServiceRemovalIds.includes(service.service.service_id)
+                    ),
+                    ...pendingServiceAdditions.map((addition) =>
+                      createDraftServiceConfiguration(line.contract_line_id, addition)
+                    ),
+                  ]
+                : persistedServices;
               const isLoadingServices = loadingServices[line.contract_line_id];
               const isSavingLine = savingLineId === line.contract_line_id;
 
@@ -1167,12 +1365,27 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
 
                           {/* Services List Section */}
                           <div>
-                            <h4 className="text-sm font-medium text-[rgb(var(--color-text-700))] mb-3">
-                              {t('contractLines.services.title', {
-                                count: services.filter(s => s.configuration.configuration_type !== 'Bucket').length,
-                                defaultValue: 'Services ({{count}})',
-                              })}
-                            </h4>
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                              <h4 className="text-sm font-medium text-[rgb(var(--color-text-700))]">
+                                {t('contractLines.services.title', {
+                                  count: services.filter(s => s.configuration.configuration_type !== 'Bucket').length,
+                                  defaultValue: 'Services ({{count}})',
+                                })}
+                              </h4>
+                              {editingLineId === line.contract_line_id && (
+                                <Button
+                                  id={`add-service-${line.contract_line_id}`}
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setShowServiceSelectionDialog(true)}
+                                  disabled={isSavingLine}
+                                >
+                                  <Plus className="mr-1 h-4 w-4" />
+                                  {t('createCustomLine.addItem', { defaultValue: 'Add Item' })}
+                                </Button>
+                              )}
+                            </div>
                             {services.filter(s => s.configuration.configuration_type !== 'Bucket').length === 0 ? (
                               <div className="text-center py-8 text-muted-foreground bg-muted rounded-lg border border-[rgb(var(--color-border-200))]">
                                 <p className="text-sm">
@@ -1217,6 +1430,24 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             </Badge>
                                           )}
                                         </div>
+                                        {isEditing && (
+                                          <Button
+                                            id={`remove-service-${serviceConfig.configuration.config_id}`}
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleRemoveService(
+                                              line.contract_line_id,
+                                              serviceConfig.service.service_id,
+                                              serviceConfig.configuration.config_id,
+                                            )}
+                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            disabled={isSavingLine}
+                                          >
+                                            <Trash2 className="mr-1 h-4 w-4" />
+                                            {t('common.actions.remove', { defaultValue: 'Remove' })}
+                                          </Button>
+                                        )}
                                       </div>
 
                                       <div className="grid gap-4 md:grid-cols-2">
@@ -1477,6 +1708,19 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             contractId={contract.contract_id}
             onCreated={handleAddContractLines}
           />
+
+          {editingLine && (
+            <ServiceSelectionDialog
+              isOpen={showServiceSelectionDialog}
+              onClose={() => setShowServiceSelectionDialog(false)}
+              contractLineType={editingLine.contract_line_type as 'Fixed' | 'Hourly' | 'Usage'}
+              currencyCode={contract.currency_code || 'USD'}
+              existingServiceIds={editingLineServiceIds}
+              onServicesSelected={(selections) =>
+                handleServicesSelected(editingLine.contract_line_id, selections)
+              }
+            />
+          )}
         </>
       ) : null}
     </Card>

@@ -11,6 +11,7 @@ import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
 import { AlgaDeskClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients/AlgaDeskClientCrossFeatureProvider';
 import { MspClientTagsProvider } from '@alga-psa/msp-composition/clients/MspClientTagsProvider';
+import { StaleActionBanner } from '@alga-psa/ui/components/StaleActionBanner';
 
 interface AlgaDeskMspShellProps {
   children: React.ReactNode;
@@ -80,6 +81,7 @@ export default function AlgaDeskMspShell({
             setRightSidebarOpen={setRightSidebarOpen}
           />
           <PlatformNotificationBanner />
+          <StaleActionBanner />
           <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
             <Body>{children}</Body>
           </main>

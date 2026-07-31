@@ -33,6 +33,9 @@ export const runGeneratorNow = withAuth(async (
 ): Promise<GeneratorRunSummary> => {
   await requirePermission(user, 'update');
   const parsedKey = opportunityGeneratorKeySchema.parse(key);
+  if (parsedKey === 'inbound-lead') {
+    throw new Error('inbound-lead suggestions are created by marketing capture events, not a sweep');
+  }
   const { knex } = await createTenantKnex();
   const [summary] = await runGenerators(knex, tenant, [parsedKey]);
   return summary;

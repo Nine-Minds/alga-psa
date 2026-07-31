@@ -71,6 +71,25 @@ export const getActiveClientLocationsForBilling = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
+  // Client portal users hold client-flagged copies of client:read, so the
+  // permission check alone does not scope results — client callers may only
+  // query their own client's locations.
+  if (user.user_type === 'client') {
+    let portalClientId = typeof user.clientId === 'string' && user.clientId.length > 0
+      ? user.clientId
+      : null;
+    if (!portalClientId && user.contact_id) {
+      const contact = await tenantDb(knex, tenant).table('contacts')
+        .where({ contact_name_id: user.contact_id })
+        .select('client_id')
+        .first<{ client_id: string | null }>();
+      portalClientId = contact?.client_id ?? null;
+    }
+    if (!portalClientId || portalClientId !== clientId) {
+      return permissionError('Permission denied: cannot access locations for another client');
+    }
+  }
+
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return tenantScopedTable(trx, tenant, 'client_locations')
       .select<BillingLocationSummary[]>(

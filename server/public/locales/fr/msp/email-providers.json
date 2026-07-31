@@ -144,6 +144,7 @@
     },
     "badges": {
       "disabled": "Désactivé",
+      "paused": "En pause",
       "connected": "Connecté",
       "disconnected": "Déconnecté",
       "error": "Erreur",
@@ -167,15 +168,29 @@
       "reconnectOauth": "Reconnecter OAuth",
       "resyncing": "Resynchronisation…",
       "resyncMailbox": "Resynchroniser la boîte aux lettres",
+      "pause": "Suspendre les e-mails entrants",
+      "resume": "Reprendre les e-mails entrants",
       "delete": "Supprimer le fournisseur"
     },
+    "feedback": {
+      "paused": "E-mails entrants suspendus.",
+      "resumed": "E-mails entrants repris.",
+      "pauseError": "Impossible de modifier l'état de pause des e-mails entrants."
+    },
+    "pausedHelp": "Les messages reçus pendant que cette boîte est en pause ne sont pas importés rétroactivement.",
     "fields": {
       "status": "Statut",
       "lastSync": "Dernière synchronisation",
+      "lastIngested": "Dernière ingestion",
+      "delivery": "Livraison",
       "created": "Créé",
       "subscription": "Abonnement",
       "defaults": "Valeurs par défaut des tickets",
       "error": "Erreur:"
+    },
+    "delivery": {
+      "polling": "Interrogation toutes les 3 minutes",
+      "webhook": "Livraison en temps réel : active"
     },
     "values": {
       "active": "Actif",

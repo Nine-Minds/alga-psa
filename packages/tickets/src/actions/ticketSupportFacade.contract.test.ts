@@ -12,7 +12,9 @@ function readRepoFile(relativePath: string): string {
 
 const sources = {
   resourceActions: readRepoFile('packages/tickets/src/actions/ticketResourceActions.ts'),
-  teamAssignmentActions: readRepoFile('packages/tickets/src/actions/teamAssignmentActions.ts'),
+  resourceCore: readRepoFile('packages/tickets/src/lib/ticketResourceCore.ts'),
+  reassignTicketResources: readRepoFile('packages/tickets/src/lib/reassignTicketResources.ts'),
+  teamAssignmentCore: readRepoFile('packages/tickets/src/lib/teamAssignmentCore.ts'),
   ticketBundleUtils: readRepoFile('packages/tickets/src/actions/ticketBundleUtils.ts'),
   ticketActivityActions: readRepoFile('packages/tickets/src/actions/ticketActivityActions.ts'),
   ticketNumberActions: readRepoFile('packages/tickets/src/actions/ticket-number-actions/ticketNumberActions.ts'),
@@ -68,9 +70,9 @@ describe('ticket support facade contract', () => {
   });
 
   it('uses facade joins for migrated support joins', () => {
-    expect(sources.teamAssignmentActions).toContain("tenantScopedTable(trx, 'team_members', tenant)");
-    expect(sources.teamAssignmentActions).toContain("tenantJoin(");
-    expect(sources.teamAssignmentActions).toContain("'users'");
+    expect(sources.teamAssignmentCore).toContain("tenantScopedTable(trx, 'team_members', tenant)");
+    expect(sources.teamAssignmentCore).toContain("tenantJoin(");
+    expect(sources.teamAssignmentCore).toContain("'users'");
 
     expect(sources.ticketBundleUtils).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
     expect(sources.ticketBundleUtils).toContain("tenantJoin(");

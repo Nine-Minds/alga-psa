@@ -226,12 +226,21 @@ export const getInvoiceSyncStatuses = withAuth(async (
   { tenant },
   invoiceIds: string[]
 ): Promise<Record<string, InvoiceSyncStatus>> => {
-  assertEnterpriseEdition();
+  // Invoice lists and details are shared by CE and EE. A capability probe on
+  // those core screens must not turn normal CE browsing into a 500 response.
+  if (!isEnterpriseEdition()) {
+    return {};
+  }
   await checkBillingReadAccess(user);
   const { knex } = await createTenantKnex();
 
   const ids = Array.from(new Set(invoiceIds)).filter(Boolean);
   if (ids.length === 0) {
+    return {};
+  }
+
+  const realm = await resolveDefaultRealm(knex, tenant).catch(() => null);
+  if (!realm) {
     return {};
   }
 

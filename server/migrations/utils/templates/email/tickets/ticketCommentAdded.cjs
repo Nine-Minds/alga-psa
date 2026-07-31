@@ -176,7 +176,7 @@ const COPY = {
   },
   pl: {
     headerLabel: 'Nowy komentarz',
-    intro: '<strong>{{comment.authorName}}</strong> dodał(a) komentarz do zgłoszenia <strong>{{ticket.clientName}}</strong>.',
+    intro: '<strong>{{comment.author}}</strong> dodał(a) komentarz do zgłoszenia <strong>{{ticket.clientName}}</strong>.',
     badgePrefix: 'Zgłoszenie #',
     priority: 'Priorytet',
     status: 'Status',
@@ -188,7 +188,7 @@ const COPY = {
     category: null, /* PL omits Category row */
     location: null, /* PL omits Location row */
     commentLabel: 'Treść komentarza',
-    commentVar: '{{comment.body}}',
+    commentVar: '{{comment.content}}',
     viewButton: 'Zobacz zgłoszenie',
     footer: 'Powered by Alga PSA',
     textHeader: 'Nowy komentarz',
@@ -341,7 +341,7 @@ ${c.textView}: {{ticket.url}}`;
 function buildTextPl(c) {
   return `${c.textHeader}
 
-{{comment.authorName}} dodał(a) komentarz do zgłoszenia {{ticket.clientName}}.
+{{comment.author}} dodał(a) komentarz do zgłoszenia {{ticket.clientName}}.
 
 Zgłoszenie #{{ticket.id}} • {{ticket.title}}
 ${c.priority}: {{ticket.priority}}

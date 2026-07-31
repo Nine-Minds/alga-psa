@@ -48,13 +48,16 @@ describe('ticket origin create-path persistence contracts', () => {
 
   it('T014: workflow/automation ticket creation without explicit origin persists internal default', async () => {
     const insertMock = vi.fn().mockResolvedValue(undefined);
+    const ticketQuery = {
+      where: vi.fn(),
+      insert: insertMock,
+    };
+    ticketQuery.where.mockReturnValue(ticketQuery);
 
     const trx = Object.assign(
       (table: string) => {
         if (table === 'tickets') {
-          return {
-            insert: insertMock,
-          };
+          return ticketQuery;
         }
 
         throw new Error(`Unexpected table: ${table}`);

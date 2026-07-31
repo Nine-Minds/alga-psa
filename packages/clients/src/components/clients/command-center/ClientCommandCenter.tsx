@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin } from 'lucide-react';
+import { Globe, Mail, MapPin, Phone, type LucideIcon } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { BentoTile, BentoTileEmpty, BentoTileSkeleton } from '@alga-psa/ui/components/bento/BentoTile';
+import { BentoTile, BentoTileEmpty, BentoTileSkeleton, useTileData } from '@alga-psa/ui/components/bento';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import { getClientPulse } from '../../../actions/clientPulseActions';
@@ -27,19 +27,9 @@ import {
   RecordCard,
   ServiceCard,
 } from './PulseCards';
-import {
-  getErrorMessage,
-  isActionMessageError,
-  isActionPermissionError,
-  type ActionMessageError,
-  type ActionPermissionError,
-} from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
-
-function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
-  return isActionMessageError(value) || isActionPermissionError(value);
-}
 
 interface ClientCommandCenterProps {
   idPrefix: string;
@@ -71,6 +61,16 @@ interface ClientCommandCenterProps {
 // dirty is the silent-data-loss path the close guard exists for.
 const RECORD_FORM_TAB_IDS = new Set(['details', 'additional-info']);
 
+// Tile widths across the mosaic's breakpoints. The six-column canvas only
+// opens at lg: between 640 and 1023px a 2-of-6 tile is under 200px, well below
+// the 280px width the tile type scale is truncation-safe at.
+const SPAN_FULL = 'sm:col-span-2 md:col-span-4 lg:col-span-6';
+const SPAN_HERO = 'sm:col-span-2 md:col-span-4 lg:col-span-4';
+const SPAN_HALF = 'sm:col-span-1 md:col-span-2 lg:col-span-3';
+const SPAN_THIRD = 'sm:col-span-1 md:col-span-2 lg:col-span-2';
+
+const IDENTITY_ICON_CLASS = 'inline w-3.5 h-3.5 -mt-0.5 mr-1 text-[rgb(var(--color-text-500))]';
+
 export default function ClientCommandCenter({
   idPrefix,
   clientId,
@@ -90,8 +90,6 @@ export default function ClientCommandCenter({
   t,
 }: ClientCommandCenterProps) {
   const router = useRouter();
-  const [pulse, setPulse] = useState<ClientPulse | null>(null);
-  const [pulseError, setPulseError] = useState<string | null>(null);
   const tabIds = useMemo(() => new Set(tabs.map((tab) => tab.id)), [tabs]);
   const [focusTabId, setFocusTabId] = useState<string | null>(null);
 
@@ -115,26 +113,15 @@ export default function ClientCommandCenter({
   // Bumped when a drawer edit changed data the cards summarize (e.g. a contact
   // saved from the quick view) — refetches in place, keeping the current cards.
   const [pulseRefreshKey, setPulseRefreshKey] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    getClientPulse(clientId)
-      .then((data) => {
-        if (cancelled) return;
-        if (isReturnedActionError(data)) {
-          setPulse(null);
-          setPulseError(getErrorMessage(data));
-          return;
-        }
-        setPulseError(null);
-        setPulse(data);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPulseError(t('clientCommandCenter.pulseError', { defaultValue: 'Could not load the client snapshot.' }));
-        }
-      });
-    return () => { cancelled = true; };
-  }, [clientId, t, pulseRefreshKey, refreshNonce]);
+  const pulseFallback = useCallback(
+    () => t('clientCommandCenter.pulseError', { defaultValue: 'Could not load the client snapshot.' }),
+    [t],
+  );
+  const { data: pulse, error: pulseError } = useTileData<ClientPulse>(
+    () => getClientPulse(clientId),
+    [clientId, pulseRefreshKey, refreshNonce],
+    pulseFallback,
+  );
 
   const openContactQuickView = useContactQuickViewDrawer();
   const handleOpenContact = useCallback((contactId: string) => {
@@ -177,6 +164,7 @@ export default function ClientCommandCenter({
     return target ? () => openFocus(target) : null;
   }, [resolveTab, openFocus]);
 
+  const { money } = useCurrencyFormat();
   const currencyCode = pulse?.money?.currencyCode ?? 'USD';
   const formatMoney = useCallback((cents: number) => {
     try {
@@ -186,9 +174,9 @@ export default function ClientCommandCenter({
         maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
       }).format(cents / 100);
     } catch {
-      return `$${(cents / 100).toFixed(2)}`;
+      return money(cents);
     }
-  }, [currencyCode]);
+  }, [currencyCode, money]);
 
   const navigateToRef = useCallback((refType: string, refId: string) => {
     switch (refType) {
@@ -242,32 +230,33 @@ export default function ClientCommandCenter({
   // and email, website, and primary address. Only fields that exist render.
   const identityLocation = pulse?.locations.find((location) => location.is_default) ?? pulse?.locations[0] ?? null;
   const identityItems: Array<{ key: string; href: string | null; text: React.ReactNode }> = [];
+  const identityText = (Icon: LucideIcon, value: string) => (
+    <>
+      <Icon className={IDENTITY_ICON_CLASS} aria-hidden="true" />
+      {value}
+    </>
+  );
   if (identityLocation?.phone) {
-    identityItems.push({ key: 'phone', href: `tel:${identityLocation.phone}`, text: `☎ ${identityLocation.phone}` });
+    identityItems.push({ key: 'phone', href: `tel:${identityLocation.phone}`, text: identityText(Phone, identityLocation.phone) });
   }
   if (identityLocation?.email) {
-    identityItems.push({ key: 'email', href: `mailto:${identityLocation.email}`, text: `✉ ${identityLocation.email}` });
+    identityItems.push({ key: 'email', href: `mailto:${identityLocation.email}`, text: identityText(Mail, identityLocation.email) });
   }
   if (pulse?.record.url) {
     const href = /^https?:\/\//i.test(pulse.record.url) ? pulse.record.url : `https://${pulse.record.url}`;
-    identityItems.push({ key: 'url', href, text: `🌐 ${pulse.record.url}` });
+    identityItems.push({ key: 'url', href, text: identityText(Globe, pulse.record.url) });
   }
   if (identityLocation?.address_line1) {
     identityItems.push({
       key: 'address',
       href: null,
-      text: (
-        <>
-          <MapPin className="inline w-3.5 h-3.5 -mt-0.5 mr-1 text-gray-500" aria-hidden="true" />
-          {[identityLocation.address_line1, identityLocation.city].filter(Boolean).join(', ')}
-        </>
-      ),
+      text: identityText(MapPin, [identityLocation.address_line1, identityLocation.city].filter(Boolean).join(', ')),
     });
   }
 
   return (
     <div id={`${idPrefix}-command-center`} className="min-w-0">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mb-3 text-[13px] text-gray-600">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mb-3 text-sm text-[rgb(var(--color-text-600))]">
         {identityItems.length > 0 && (
           <span id={`${idPrefix}-identity`} className="contents">
             {identityItems.map((item) => item.href ? (
@@ -298,19 +287,19 @@ export default function ClientCommandCenter({
       </div>
 
       {pulseError && (
-        <p id={`${idPrefix}-pulse-error`} className="text-[13px] text-red-600 mb-4">{pulseError}</p>
+        <p id={`${idPrefix}-pulse-error`} className="text-sm text-red-600 dark:text-red-400 mb-4">{pulseError}</p>
       )}
 
       {/* Bento mosaic: a 6-column canvas where tiles earn different widths —
           Concerns full-bleed, Service the hero, halves and thirds below. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-6 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {!pulse && !pulseError && (
             <>
-              <BentoTileSkeleton id={`${idPrefix}-skeleton-hero`} lines={2} className="sm:col-span-4" />
-              <BentoTileSkeleton id={`${idPrefix}-skeleton-side`} lines={2} className="sm:col-span-2" />
-              <BentoTileSkeleton id={`${idPrefix}-skeleton-left`} className="sm:col-span-3" />
-              <BentoTileSkeleton id={`${idPrefix}-skeleton-right`} className="sm:col-span-3" />
+              <BentoTileSkeleton id={`${idPrefix}-skeleton-hero`} lines={2} className={SPAN_HERO} />
+              <BentoTileSkeleton id={`${idPrefix}-skeleton-side`} lines={2} className={SPAN_THIRD} />
+              <BentoTileSkeleton id={`${idPrefix}-skeleton-left`} className={SPAN_HALF} />
+              <BentoTileSkeleton id={`${idPrefix}-skeleton-right`} className={SPAN_HALF} />
             </>
           )}
 
@@ -320,7 +309,7 @@ export default function ClientCommandCenter({
               flags={pulse.attention}
               formatMoney={formatMoney}
               onFlagClick={handleFlagClick}
-              className="sm:col-span-6"
+              className={SPAN_FULL}
               t={t}
             />
           )}
@@ -331,7 +320,7 @@ export default function ClientCommandCenter({
               onOpen={focusOpener('tickets')}
               onOpenTicket={(ticketId) => navigateToRef('ticket', ticketId)}
               onNewTicket={onNewTicket}
-              className="sm:col-span-4"
+              className={SPAN_HERO}
               t={t}
             />
           )}
@@ -341,7 +330,7 @@ export default function ClientCommandCenter({
               data={pulse.record}
               onOpen={focusOpener('details')}
               onOpenAdditionalInfo={focusOpener('additional-info')}
-              className={pulse.service ? 'sm:col-span-2' : 'sm:col-span-6'}
+              className={pulse.service ? SPAN_THIRD : SPAN_FULL}
               t={t}
             />
           )}
@@ -354,7 +343,7 @@ export default function ClientCommandCenter({
               onOpenInvoice={(invoiceId) => navigateToRef('invoice', invoiceId)}
               onOpenBillingSetup={focusOpener('billing')}
               onOpenTaxSettings={focusOpener('tax-settings')}
-              className="sm:col-span-3"
+              className={SPAN_HALF}
               t={t}
             />
           )}
@@ -367,7 +356,7 @@ export default function ClientCommandCenter({
               // header already opens Assets and the footer link would duplicate it.
               onOpenAssetList={tabIds.has('equipment') ? focusOpener('assets') : null}
               onOpenAsset={(assetId) => router.push(`/msp/assets/${assetId}`)}
-              className="sm:col-span-3"
+              className={SPAN_HALF}
               t={t}
             />
           )}
@@ -378,7 +367,7 @@ export default function ClientCommandCenter({
               onOpen={focusOpener('contacts')}
               onOpenContact={handleOpenContact}
               onAddContact={onAddContact}
-              className="sm:col-span-3"
+              className={SPAN_HALF}
               t={t}
             />
           )}
@@ -387,7 +376,7 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-locations`}
               locations={pulse.locations}
               onManage={onManageLocations}
-              className="sm:col-span-3"
+              className={SPAN_HALF}
               t={t}
             />
           )}
@@ -396,7 +385,7 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-documents`}
               data={pulse.documents}
               onOpen={focusOpener('documents')}
-              className="sm:col-span-2"
+              className={SPAN_THIRD}
               t={t}
             />
           )}
@@ -405,7 +394,7 @@ export default function ClientCommandCenter({
               id={`${idPrefix}-card-notes`}
               data={pulse.notes}
               onOpen={focusOpener('notes')}
-              className="sm:col-span-2"
+              className={SPAN_THIRD}
               t={t}
             />
           )}
@@ -413,11 +402,11 @@ export default function ClientCommandCenter({
               responses — an empty one said "no data" four ways. */}
           {pulse && surveySummary && (
             surveySummary.totalResponses > 0 ? (
-              <div id={`${idPrefix}-card-csat`} className="min-w-0 sm:col-span-2">
+              <div id={`${idPrefix}-card-csat`} className={`min-w-0 ${SPAN_THIRD}`}>
                 {renderSurveySummaryCard({ summary: surveySummary })}
               </div>
             ) : (
-              <BentoTile id={`${idPrefix}-card-csat`} className="sm:col-span-2 self-start">
+              <BentoTile id={`${idPrefix}-card-csat`} className={`${SPAN_THIRD} self-start`}>
                 <BentoTileEmpty id={`${idPrefix}-card-csat-empty`}>
                   {t('clientCommandCenter.csatEmpty', { defaultValue: 'No survey responses yet.' })}
                 </BentoTileEmpty>
@@ -426,7 +415,7 @@ export default function ClientCommandCenter({
           )}
         </div>
 
-        <div className="lg:col-span-1 min-w-0 lg:sticky lg:top-4 self-stretch">
+        <div className="lg:col-span-1 min-w-0 lg:sticky lg:top-4">
           <ClientTimelinePanel
             idPrefix={idPrefix}
             clientId={clientId}

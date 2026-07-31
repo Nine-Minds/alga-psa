@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Badawczy...",
       "noWorkItems": "Nie znaleziono żadnych elementów pracy"
-    }
+    },
+    "paymentWarningTitle": "Ostrzeżenie o wymaganej płatności",
+    "paymentWarning": "Płatność jest wymagana dla oznaczonego etapu rozliczenia projektu i nie została jeszcze potwierdzona. Potwierdź płatność przed kontynuowaniem pracy."
   },
   "workItemList": {
     "meta": {

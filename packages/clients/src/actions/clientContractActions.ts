@@ -84,6 +84,13 @@ function toClientContractActionError(error: unknown): ClientContractActionError 
     return permissionError(error.message);
   }
 
+  if (
+    error instanceof Error &&
+    error.message.includes('Mixed-currency contracts for the same client are not supported')
+  ) {
+    return actionError(error.message);
+  }
+
   return null;
 }
 

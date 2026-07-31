@@ -29,13 +29,17 @@ export * from './contractWizardActions';
 export * from './costRateActions';
 export * from './creditActions';
 export * from './creditExpirationSettingsActions';
-export * from './creditReconciliationActions';
-export * from './creditReconciliationFixActions';
 export * from './externalTaxImportActions';
 export * from './invoiceModification';
 export * from './invoiceCogsActions';
 export * from './invoiceQueries';
 export * from './invoiceJobActions';
+export {
+  createSeparateProjectProductInvoices,
+  getSeparateProjectProductInvoiceReview,
+  type SeparateProjectProductInvoiceReview,
+  type SeparateProjectProductInvoiceReviewRow,
+} from './invoiceGeneration';
 export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
 export * from './salesOrderInvoicingActions';
@@ -47,6 +51,9 @@ export * from './documentTemplateActions';
 export * from './materialActions';
 export * from './paymentActions';
 export * from './profitabilityReportActions';
+export * from './projectBillingConfigActions';
+export * from './projectBillingScheduleActions';
+export * from './projectBillingWarningActions';
 export * from './quoteActions';
 export * from './renewalsQueueActions';
 export * from './serviceActions';
@@ -110,6 +117,12 @@ export {
   completeOnboardingWizard,
   type HistMatch,
 } from './qboOnboardingActions';
+
+// QBO products & services import (EE only, flag-gated)
+export {
+  previewQboItemImport,
+  executeQboItemImport,
+} from './qboItemImportActions';
 
 // Accounting sync actions (EE only)
 export {

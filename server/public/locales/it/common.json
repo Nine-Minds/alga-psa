@@ -14,11 +14,16 @@
     "expiringForClient_one": "{{count}} credito di {{clientName}} scadrà presto",
     "expiringForClient_other": "{{count}} crediti di {{clientName}} scadranno presto"
   },
+  "staleAction": {
+    "message": "Questa pagina non è aggiornata. Aggiornala per ripristinare gli aggiornamenti e le azioni."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "La prova Enterprise scade tra {{count}} giorno. Inserisci una chiave di licenza per mantenere le funzionalità Enterprise.",
-    "trialExpiresIn_other": "La prova Enterprise scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Enterprise.",
-    "trialDaysRemaining_one": "Prova Enterprise attiva — {{count}} giorno rimanente.",
-    "trialDaysRemaining_other": "Prova Enterprise attiva — {{count}} giorni rimanenti.",
+    "trialExpiresIn_one": "La prova Pro scade tra {{count}} giorno. Inserisci una chiave di licenza per mantenere le funzionalità Pro.",
+    "trialExpiresIn_other": "La prova Pro scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Pro.",
+    "trialDaysRemaining_one": "Prova Pro attiva — {{count}} giorno rimanente.",
+    "trialDaysRemaining_other": "Prova Pro attiva — {{count}} giorni rimanenti.",
+    "trialAvailable": "Le funzionalità Essentials sono attive. Avvia una prova Pro gratuita di 15 giorni per sbloccare tutte le funzionalità.",
+    "trialExpired": "La prova Pro è scaduta. L'installazione ora utilizza le funzionalità Essentials.",
     "licenseExpiresIn_one": "La licenza scade tra {{count}} giorno. Rinnova per evitare interruzioni del servizio.",
     "licenseExpiresIn_other": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio."
   },

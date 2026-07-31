@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IQueueLesson } from '@alga-psa/types';
 import { WhySentenceText } from '../WhySentenceText';
 
@@ -13,6 +14,8 @@ import { WhySentenceText } from '../WhySentenceText';
  * insight library only speaks when the numbers support it.
  */
 export function LessonStrip({ lesson }: { lesson: IQueueLesson }) {
+  const { t } = useTranslation('msp/opportunities');
+
   return (
     <div
       id="opportunities-queue-lesson"
@@ -23,7 +26,7 @@ export function LessonStrip({ lesson }: { lesson: IQueueLesson }) {
         <WhySentenceText why={lesson.why} />
       </p>
       <Button id="opportunities-queue-lesson-action" size="xs" variant="outline" asChild>
-        <Link href={lesson.action_href}>{lesson.action_label}</Link>
+        <Link href={lesson.action_href}>{t(lesson.action_label.key, lesson.action_label.params)}</Link>
       </Button>
     </div>
   );

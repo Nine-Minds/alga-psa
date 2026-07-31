@@ -276,6 +276,13 @@ spec:
           - name: JOB_RUNNER_TYPE
             value: "{{ .Values.temporal.jobRunnerType }}"
           {{- end }}
+          {{- if .Values.correlationPathsJson }}
+          # Event.wait correlation derivation path override. Must match the
+          # workflow-worker chart's correlationPathsJson: publish-time wait
+          # validation runs in the server and evaluates the same config.
+          - name: WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON
+            value: {{ .Values.correlationPathsJson | quote }}
+          {{- end }}
 
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}
@@ -575,6 +582,9 @@ spec:
           {{- $rawAppUrl := .Values.appUrl | default (include "sebastian.resolveHost" .) }}
           {{- $publicAppUrl := hasPrefix "http" $rawAppUrl | ternary $rawAppUrl (printf "https://%s" $rawAppUrl) }}
           - name: NEXTAUTH_URL
+            value: "{{ $publicAppUrl }}"
+          # Runtime-only public URL for server-side jobs and outbound links
+          - name: APPLICATION_URL
             value: "{{ $publicAppUrl }}"
           # Public base URL for links in emails and client-side code
           - name: NEXT_PUBLIC_BASE_URL

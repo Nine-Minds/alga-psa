@@ -81,6 +81,28 @@ function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, proto
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
 
+async function rejectRevokedOrUnverifiableSession(
+    tenant: unknown,
+    sessionId: unknown,
+): Promise<boolean> {
+    if (
+        typeof tenant !== 'string'
+        || tenant.length === 0
+        || typeof sessionId !== 'string'
+        || sessionId.length === 0
+    ) {
+        console.error('[auth] Tracked session is missing its tenant or session identifier.');
+        return true;
+    }
+
+    try {
+        return await UserSession.isRevoked(tenant, sessionId);
+    } catch (error) {
+        console.error('[auth] Session revocation check failed closed:', error);
+        return true;
+    }
+}
+
 /**
  * Fetches the tenant's plan from the database.
  * Used for both initial sign-in and throttled refresh in JWT callbacks.
@@ -1603,6 +1625,10 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 await finalizePendingRememberedEmailCookie();
             }
 
+            if (extendedUser && providerId) {
+                extendedUser.loginMethod = providerId;
+            }
+
             if (providerId === 'credentials') {
                 const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
                 const canonicalBaseUrl = process.env.NEXTAUTH_URL;
@@ -1679,11 +1705,6 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         deviceType: deviceInfo.type,
                         locationData: null, // Will be fetched async in jwt callback
                     };
-
-                    // Capture login method from OAuth provider
-                    if (account?.provider) {
-                        (extendedUser as any).loginMethod = account.provider;
-                    }
                 } catch (error) {
                     console.error('[auth] Session tracking error:', error);
                     // Don't block login on session tracking errors
@@ -1748,10 +1769,18 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
 	            // NEW: Create session record on initial sign-in
 	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-	            if ((user as any)?.deviceInfo && !token.session_id) {
+	            if (user && !token.session_id) {
 	                try {
                     const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
                     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
+                    const deviceInfo = extendedUser.deviceInfo ?? {
+                        ip: 'unknown',
+                        userAgent: 'unknown',
+                        deviceFingerprint: 'unknown',
+                        deviceName: 'Unknown device',
+                        deviceType: 'unknown',
+                        locationData: null,
+                    };
 
                     // Determine login method - use captured provider from signIn, or default to credentials
                     const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
@@ -1759,12 +1788,12 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     const sessionId = await UserSession.create({
                         tenant: token.tenant as string,
                         user_id: token.id as string,
-                        ip_address: extendedUser.deviceInfo.ip,
-                        user_agent: extendedUser.deviceInfo.userAgent,
-                        device_fingerprint: extendedUser.deviceInfo.deviceFingerprint,
-                        device_name: extendedUser.deviceInfo.deviceName,
-                        device_type: extendedUser.deviceInfo.deviceType,
-                        location_data: extendedUser.deviceInfo.locationData,
+                        ip_address: deviceInfo.ip,
+                        user_agent: deviceInfo.userAgent,
+                        device_fingerprint: deviceInfo.deviceFingerprint,
+                        device_name: deviceInfo.deviceName,
+                        device_type: deviceInfo.deviceType,
+                        location_data: deviceInfo.locationData,
                         expires_at: expiresAt,
                         login_method: loginMethod,
                     });
@@ -1773,7 +1802,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     token.login_method = loginMethod;
 
                     // Fire-and-forget: Update location data asynchronously
-                    const ipForLocation = extendedUser.deviceInfo.ip;
+                    const ipForLocation = deviceInfo.ip;
                     const tenantForLocation = token.tenant as string;
                     getLocationFromIp(ipForLocation)
                         .then((locationData) => {
@@ -1786,39 +1815,18 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         });
 
                     // Clean up device info (don't store in token)
-                    delete (user as any).deviceInfo;
+                    if (extendedUser.deviceInfo) {
+                        delete extendedUser.deviceInfo;
+                    }
                 } catch (error) {
                     console.error('[auth] Failed to create session record:', error);
                 }
             }
 
-            // NEW: Check if session was revoked (throttled to reduce DB load)
-            // PERFORMANCE FIX: Only check revocation every 30 seconds, with in-memory cache
-            // REMOVED updateActivity() - it was called every 60s per user, exhausting connection pool
-            // Activity tracking is not critical and can be updated less frequently via background job
-            if (token.session_id) {
-                try {
-                    const lastRevocationCheck = token.last_revocation_check as number || 0;
-                    const now = Date.now();
-                    const shouldCheckRevocation = now - lastRevocationCheck > 30000; // 30 seconds
-
-                    if (shouldCheckRevocation) {
-                        const isRevoked = await UserSession.isRevoked(
-                            token.tenant as string,
-                            token.session_id as string
-                        );
-
-                        if (isRevoked) {
-                            console.log('[auth] Session revoked, forcing logout:', token.session_id);
-                            return null; // This will force a logout
-                        }
-
-                        token.last_revocation_check = now;
-                    }
-                } catch (error) {
-                    console.error('[auth] Session revocation check error:', error);
-                    // Don't block on session check errors
-                }
+            // Check durable revocation state on every authenticated request.
+            // Missing/untracked sessions fail closed so SCIM revocation is terminal.
+            if (await rejectRevokedOrUnverifiableSession(token.tenant, token.session_id)) {
+                return null;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session
@@ -2452,6 +2460,10 @@ export const options: NextAuthConfig = {
                 await finalizePendingRememberedEmailCookie();
             }
 
+            if (extendedUser && providerId) {
+                extendedUser.loginMethod = providerId;
+            }
+
             if (providerId === 'credentials') {
                 const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
                 const canonicalBaseUrl = process.env.NEXTAUTH_URL;
@@ -2545,10 +2557,18 @@ export const options: NextAuthConfig = {
 
 	            // NEW: Create session record on initial sign-in
 	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-	            if ((user as any)?.deviceInfo && !token.session_id) {
+	            if (user && !token.session_id) {
 	                try {
                     const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
                     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
+                    const deviceInfo = extendedUser.deviceInfo ?? {
+                        ip: 'unknown',
+                        userAgent: 'unknown',
+                        deviceFingerprint: 'unknown',
+                        deviceName: 'Unknown device',
+                        deviceType: 'unknown',
+                        locationData: null,
+                    };
 
                     // Determine login method - use captured provider from signIn, or default to credentials
                     const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
@@ -2556,12 +2576,12 @@ export const options: NextAuthConfig = {
                     const sessionId = await UserSession.create({
                         tenant: token.tenant as string,
                         user_id: token.id as string,
-                        ip_address: extendedUser.deviceInfo.ip,
-                        user_agent: extendedUser.deviceInfo.userAgent,
-                        device_fingerprint: extendedUser.deviceInfo.deviceFingerprint,
-                        device_name: extendedUser.deviceInfo.deviceName,
-                        device_type: extendedUser.deviceInfo.deviceType,
-                        location_data: extendedUser.deviceInfo.locationData,
+                        ip_address: deviceInfo.ip,
+                        user_agent: deviceInfo.userAgent,
+                        device_fingerprint: deviceInfo.deviceFingerprint,
+                        device_name: deviceInfo.deviceName,
+                        device_type: deviceInfo.deviceType,
+                        location_data: deviceInfo.locationData,
                         expires_at: expiresAt,
                         login_method: loginMethod,
                     });
@@ -2570,7 +2590,7 @@ export const options: NextAuthConfig = {
                     token.login_method = loginMethod;
 
                     // Fire-and-forget: Update location data asynchronously
-                    const ipForLocation = extendedUser.deviceInfo.ip;
+                    const ipForLocation = deviceInfo.ip;
                     const tenantForLocation = token.tenant as string;
                     getLocationFromIp(ipForLocation)
                         .then((locationData) => {
@@ -2583,39 +2603,18 @@ export const options: NextAuthConfig = {
                         });
 
                     // Clean up device info (don't store in token)
-                    delete (user as any).deviceInfo;
+                    if (extendedUser.deviceInfo) {
+                        delete extendedUser.deviceInfo;
+                    }
                 } catch (error) {
                     console.error('[auth] Failed to create session record:', error);
                 }
             }
 
-            // NEW: Check if session was revoked (throttled to reduce DB load)
-            // PERFORMANCE FIX: Only check revocation every 30 seconds, with in-memory cache
-            // REMOVED updateActivity() - it was called every 60s per user, exhausting connection pool
-            // Activity tracking is not critical and can be updated less frequently via background job
-            if (token.session_id) {
-                try {
-                    const lastRevocationCheck = token.last_revocation_check as number || 0;
-                    const now = Date.now();
-                    const shouldCheckRevocation = now - lastRevocationCheck > 30000; // 30 seconds
-
-                    if (shouldCheckRevocation) {
-                        const isRevoked = await UserSession.isRevoked(
-                            token.tenant as string,
-                            token.session_id as string
-                        );
-
-                        if (isRevoked) {
-                            console.log('[auth] Session revoked, forcing logout:', token.session_id);
-                            return null; // This will force a logout
-                        }
-
-                        token.last_revocation_check = now;
-                    }
-                } catch (error) {
-                    console.error('[auth] Session revocation check error:', error);
-                    // Don't block on session check errors
-                }
+            // Check durable revocation state on every authenticated request.
+            // Missing/untracked sessions fail closed so SCIM revocation is terminal.
+            if (await rejectRevokedOrUnverifiableSession(token.tenant, token.session_id)) {
+                return null;
             }
 
             // Slide the DB session expiry to track the rolling JWT so an active session

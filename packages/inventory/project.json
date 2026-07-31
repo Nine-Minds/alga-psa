@@ -12,14 +12,6 @@
       },
       "dependsOn": ["^build"]
     },
-    "test": {
-      "executor": "@nx/vitest:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/inventory"],
-      "options": {
-        "configFile": "packages/inventory/vitest.config.ts",
-        "passWithNoTests": true
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],

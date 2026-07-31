@@ -31,6 +31,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
 COPY packages/formatting/package.json ./packages/formatting/
+COPY packages/marketing/package.json ./packages/marketing/
 COPY packages/portal-shared/package.json ./packages/portal-shared/
 COPY packages/storage/package.json ./packages/storage/
 COPY packages/types/package.json ./packages/types/
@@ -51,6 +52,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
   --workspace=@alga-psa/formatting \
+  --workspace=@alga-psa/marketing \
   --workspace=@alga-psa/portal-shared \
   --workspace=@alga-psa/storage \
   --workspace=@alga-psa/types \
@@ -100,6 +102,9 @@ RUN npm run build
 
 # Build event bus (required by shared)
 WORKDIR /app/packages/event-bus
+RUN npm run build
+
+WORKDIR /app/packages/marketing
 RUN npm run build
 
 # Build shared workspace first (server is only referenced for type imports)

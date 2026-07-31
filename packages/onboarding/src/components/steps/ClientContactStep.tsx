@@ -170,7 +170,7 @@ export function ClientContactStep({ data, updateData }: StepProps) {
             })}
           </span>{' '}
           {t('clientContactStep.footer.optional', {
-            defaultValue: 'You can skip this step and add contacts later from the client\'s profile.'
+            defaultValue: 'Nothing here is final — you can skip this step and add or change contacts anytime from the client\'s profile.'
           })}
         </AlertDescription>
       </Alert>

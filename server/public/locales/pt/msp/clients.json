@@ -296,6 +296,155 @@
     "parentClientClear": "Limpar",
     "parentClientLegacy": "Inserido anteriormente como texto: {{name}}"
   },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Pontos de atenção",
+      "documents": "Documentos",
+      "installBase": "Base instalada",
+      "locations": "Localizações",
+      "money": "Finanças",
+      "notes": "Notas",
+      "people": "Pessoas",
+      "record": "Ficha do cliente",
+      "service": "Serviço",
+      "timeline": "Tudo, por ordem"
+    },
+    "csatEmpty": "Ainda não há respostas de inquéritos.",
+    "discardCancel": "Continuar a editar",
+    "discardConfirm": "Descartar alterações",
+    "discardMessage": "Tem alterações não guardadas na ficha do cliente. Fechar e descartá-las?",
+    "discardTitle": "Alterações não guardadas",
+    "documents": {
+      "more": "+{{count}} mais",
+      "none": "Ainda não há documentos."
+    },
+    "flags": {
+      "clientWaiting": "Cliente à espera há {{days}} d — {{ref}}",
+      "draftInvoices_one": "1 fatura em rascunho — {{amount}} por faturar · {{ref}}",
+      "draftInvoices_other": "{{count}} faturas em rascunho — {{amount}} por faturar · {{ref}}",
+      "rmaOpen_one": "1 RMA aberta — {{days}} d",
+      "rmaOpen_other": "{{count}} RMA abertas — a mais antiga {{days}} d",
+      "slaAtRisk_one": "SLA em risco — {{ref}}",
+      "slaAtRisk_other": "{{count}} tickets com SLA em risco — próximo {{ref}}",
+      "slaBreached_one": "SLA incumprido — {{ref}}",
+      "slaBreached_other": "{{count}} incumprimentos de SLA — o mais grave {{ref}}",
+      "soPartial": "{{ref}}: {{fulfilled}} de {{total}} linhas satisfeitas",
+      "ticketOverdue_one": "1 ticket em atraso — {{ref}} {{days}} d de atraso",
+      "ticketOverdue_other": "{{count}} tickets em atraso — {{ref}} {{days}} d de atraso",
+      "ticketUnassigned_one": "1 ticket sem atribuição — {{ref}}",
+      "ticketUnassigned_other": "{{count}} tickets sem atribuição — o mais antigo {{ref}}",
+      "wipAging_one": "1 item por faturar — {{days}} d{{materials}}",
+      "wipAging_other": "{{count}} itens por faturar — o mais antigo {{days}} d{{materials}}"
+    },
+    "installBase": {
+      "assets": "ativos geridos",
+      "assetsLink": "Ativos geridos",
+      "none": "Ainda não há equipamento entregue.",
+      "rmas": "RMA abertas",
+      "sold": "unidades vendidas",
+      "viewAsset": "ativo",
+      "warrantyExpired_one": "1 fora de garantia",
+      "warrantyExpired_other": "{{count}} fora de garantia",
+      "warrantyExpiring_one": "1 a expirar em ≤90 d",
+      "warrantyExpiring_other": "{{count}} a expirar em ≤90 d",
+      "warrantyTracked": " (de {{count}} monitorizados)"
+    },
+    "locations": {
+      "billing": "Faturação",
+      "manage": "Gerir",
+      "more": "+{{count}} mais",
+      "none": "Ainda não há localizações.",
+      "shipping": "Envio"
+    },
+    "money": {
+      "activeContracts": "Contratos ativos",
+      "agingNote": "{{total}} em dívida · pagamentos registados deduzidos",
+      "billingSetup": "Configuração de faturação",
+      "current": "corrente",
+      "draft": "rascunho",
+      "moreDrafts_one": "+1 rascunho",
+      "moreDrafts_other": "+{{count}} rascunhos",
+      "nothingOutstanding": "Nada em dívida nas faturas finalizadas.",
+      "taxSettings": "Definições de impostos",
+      "unbilledHours": "{{hours}} h",
+      "unbilledMaterials": "{{amount}} em materiais",
+      "unbilledWork": "Trabalho por faturar"
+    },
+    "notes": {
+      "add": "Adicionar nota",
+      "lastEdited": "Nota partilhada do cliente · editada há {{days}} d",
+      "none": "Ainda não há notas."
+    },
+    "openView": "Abrir",
+    "people": {
+      "addContact": "Adicionar contacto",
+      "more": "+{{count}} mais",
+      "noContactInfo": "sem dados de contacto registados",
+      "none": "Ainda não há contactos.",
+      "primary": "Principal"
+    },
+    "pulseError": "Não foi possível carregar o resumo do cliente.",
+    "rail": {
+      "close": "Fechar",
+      "installBase": "Base instalada",
+      "label": "Vistas do cliente",
+      "money": "Finanças",
+      "more": "Mais",
+      "records": "Registos",
+      "service": "Serviço"
+    },
+    "record": {
+      "accountManager": "Gestor de conta",
+      "additionalInfo": "Informação adicional",
+      "clientSince": "Cliente desde",
+      "defaultContact": "Contacto predefinido",
+      "edit": "Editar",
+      "unset": "não definido"
+    },
+    "service": {
+      "newTicket": "Novo ticket",
+      "none": "Sem tickets abertos.",
+      "oldest": "mais antigo aberto",
+      "open": "tickets abertos",
+      "overdue": "em atraso",
+      "overdueTag": "em atraso",
+      "unassigned": "Sem atribuição"
+    },
+    "sla": {
+      "atRisk": "SLA em risco",
+      "atRiskLeft": "SLA: faltam {{left}}",
+      "breached": "SLA incumprido",
+      "breachedAgo": "SLA incumprido há {{over}}",
+      "onTrack": "SLA dentro do prazo",
+      "onTrackLeft": "SLA: faltam {{left}}",
+      "paused": "SLA em pausa"
+    },
+    "timeline": {
+      "daysAgo": "há {{count}} d",
+      "empty": "Ainda não há nada registado para este cliente.",
+      "error": "Não foi possível carregar a cronologia.",
+      "filterAll": "Tudo",
+      "filterInteractions": "Interações",
+      "filterInventory": "Inventário",
+      "filterMoney": "Finanças",
+      "filterService": "Serviço",
+      "hoursAgo": "há {{count}} h",
+      "interaction": "Interação",
+      "invoiceCreated": "Fatura em rascunho",
+      "invoiceFinalized": "Fatura finalizada",
+      "justNow": "agora mesmo",
+      "loadMore": "Carregar mais",
+      "loading": "A carregar…",
+      "materialAdded": "Material utilizado",
+      "quoteActivity": "Atividade de orçamento",
+      "rmaClosed": "RMA fechada",
+      "rmaOpened": "RMA aberta",
+      "soCreated": "Encomenda de venda criada",
+      "ticketClosed": "Ticket fechado",
+      "ticketOpened": "Ticket aberto",
+      "unitDelivered": "Equipamento entregue"
+    }
+  },
   "quickAddClient": {
     "lifecycleStatus": "Ciclo de vida",
     "title": "Adicionar novo cliente",
@@ -1302,7 +1451,10 @@
         "serialNumber": "Número de série",
         "status": "Status",
         "type": "Tipo",
-        "warrantyEnd": "Fim da garantia"
+        "warrantyEnd": "Fim da garantia",
+        "agent": "Agente",
+        "patching": "Patches",
+        "coverage": "Cobertura"
       },
       "details": {
         "local": "Local",

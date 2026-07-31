@@ -34,7 +34,7 @@ describe('client, project, and asset API services tenant-scoped query contract',
 
     expect(clientSource).toContain("let dataQuery = db.table('clients as c')");
     expect(clientSource).toContain("db.tenantJoin(dataQuery, 'users as u'");
-    expect(clientSource).toContain("db.tenantJoin(dataQuery, 'client_locations as cl'");
+    expect(clientSource).toContain("db.tenantJoinFirstMatching(dataQuery, 'client_locations', 'cl'");
     expect(clientSource).toContain('deleteFromTenantTableIfExists');
 
     // row type moved to the method signature; the read keeps the facade root

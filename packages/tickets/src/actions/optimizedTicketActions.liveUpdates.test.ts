@@ -13,6 +13,7 @@ const validateStatusBelongsToBoardMock = vi.fn(
   async (_statusId: string, _boardId: string, _tenant: string, _trx: unknown) => ({ valid: true })
 );
 const auditLogInserts: Record<string, unknown>[] = [];
+const ticketUpdates: Record<string, unknown>[] = [];
 // Queue mirroring @alga-psa/db's after-commit hook registry: hooks registered
 // via registerAfterCommit during a transaction run after the (mocked)
 // transaction resolves, matching production's flush-after-commit semantics.
@@ -61,6 +62,10 @@ vi.mock('next/cache', () => ({
 
 vi.mock('@alga-psa/validation', () => ({
   validateData: (_schema: unknown, value: unknown) => value,
+}));
+
+vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({
+  convertBlockNoteToMarkdown: vi.fn(async () => 'Resolution text'),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -116,6 +121,10 @@ vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
 
 vi.mock('../lib/validateTicketClosure', () => ({
   enforceTicketCloseRules: vi.fn(async () => undefined),
+}));
+
+vi.mock('./ticketBundleUtils', () => ({
+  maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined),
 }));
 
 import {
@@ -179,13 +188,21 @@ function buildTrx(params: {
   const bundleSettings = params.bundleSettings;
 
   const ticketsTable = {
+    select() {
+      return {
+        where: vi.fn(() => ({
+          first: vi.fn(async () => ({ response_state: currentTicket.response_state ?? null })),
+        })),
+      };
+    },
     where(whereArgs: Record<string, unknown>) {
       if ('ticket_id' in whereArgs) {
         return {
           first: vi.fn(async () => currentTicket),
-          update: vi.fn((data: Record<string, unknown>) =>
-            makeUpdateResult(1, [{ ...currentTicket, ...data, updated_at: '2026-05-07T12:00:00.000Z' }])
-          ),
+          update: vi.fn((data: Record<string, unknown>) => {
+            ticketUpdates.push(data);
+            return makeUpdateResult(1, [{ ...currentTicket, ...data, updated_at: '2026-05-07T12:00:00.000Z' }]);
+          }),
         };
       }
 
@@ -230,7 +247,7 @@ function buildTrx(params: {
     })),
   };
 
-  return ((table: string) => {
+  const trx = ((table: string) => {
     if (table === 'tickets') {
       return ticketsTable;
     }
@@ -261,8 +278,26 @@ function buildTrx(params: {
       };
     }
 
+    if (table === 'comment_threads') {
+      return {
+        insert: vi.fn(async () => undefined),
+      };
+    }
+
+    if (table === 'comments') {
+      return {
+        insert: vi.fn((row: Record<string, unknown>) => ({
+          returning: vi.fn(async () => [{ ...row, comment_id: 'comment-1' }]),
+        })),
+      };
+    }
+
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
+  trx.raw = vi.fn(async () => ({
+    rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
+  }));
+  return trx;
 }
 
 describe('updateTicketWithCache live updates', () => {
@@ -270,6 +305,7 @@ describe('updateTicketWithCache live updates', () => {
     await resetTicketUpdatePublisherClientForTests();
     vi.clearAllMocks();
     auditLogInserts.length = 0;
+    ticketUpdates.length = 0;
     afterCommitHooksQueue.length = 0;
     setTicketUpdateEventBusLoaderForTests(async () => ({
       getRedisClient: vi.fn(async () => ({
@@ -610,5 +646,89 @@ describe('updateTicketWithCache live updates', () => {
         idempotencyKey: 'sla:ticket-1:resolution:met',
       })
     );
+  });
+
+  it.each([
+    {
+      label: 'contact notifications',
+      options: { suppressContactNotifications: true },
+      expectedInternalSuppression: false,
+    },
+    {
+      label: 'contact and internal notifications',
+      options: {
+        suppressContactNotifications: true,
+        suppressInternalNotifications: true,
+      },
+      expectedInternalSuppression: true,
+    },
+  ])('publishes selected suppression flags for a closing resolution comment ($label)', async ({
+    options,
+    expectedInternalSuppression,
+  }) => {
+    const { addTicketCommentWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      addTicketCommentWithCache(
+        'ticket-1',
+        '[{"type":"paragraph","content":"Resolution text"}]',
+        false,
+        true,
+        true,
+        options,
+      ),
+    ).resolves.toEqual(expect.objectContaining({ comment_id: 'comment-1' }));
+
+    expect(publishEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_COMMENT_ADDED',
+        payload: expect.objectContaining({
+          ticketId: 'ticket-1',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: expectedInternalSuppression,
+        }),
+      }),
+    );
+  });
+
+  it('clears a pending response state when closing the ticket', async () => {
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(
+        buildTrx({
+          currentTicket: makeTicket({
+            status_id: 'status-1',
+            response_state: 'awaiting_client',
+          }),
+        })
+      )
+    );
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(
+      updateTicketWithCache('ticket-1', { status_id: 'closed-status-1' })
+    ).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toEqual({
+      status_id: 'closed-status-1',
+      response_state: null,
+    });
+    expect(publishRedisMock).toHaveBeenCalledWith(
+      'alga-psa:ticket-updates:tenant-1:ticket-1',
+      expect.stringContaining('"updatedFields":["status_id","response_state"]')
+    );
+    expect(publishEventMock).toHaveBeenCalledWith({
+      eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+      payload: {
+        tenantId: 'tenant-1',
+        occurredAt: expect.any(String),
+        ticketId: 'ticket-1',
+        userId: 'user-1',
+        previousResponseState: 'awaiting_client',
+        newResponseState: null,
+        previousState: 'awaiting_client',
+        newState: null,
+        trigger: 'close',
+      },
+    });
   });
 });

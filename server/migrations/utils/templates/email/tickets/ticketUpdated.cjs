@@ -178,7 +178,7 @@ const COPY = {
     category: 'Kategoria',
     location: 'Lokalizacja',
     changesLabel: 'Podsumowanie zgłoszenia',
-    changesVar: '{{ticket.summary}}',
+    changesVar: '{{{ticket.changes}}}',
     viewButton: 'Zobacz zgłoszenie',
     footer: 'Powered by Alga PSA',
     textHeader: 'Zgłoszenie zaktualizowane',
@@ -187,8 +187,7 @@ const COPY = {
     textRequester: 'Zgłaszający',
     textChanges: 'Podsumowanie',
     textView: 'Zobacz zgłoszenie',
-    /* PL uses {{ticket.updatedAt}} · {{ticket.updatedBy}} in the "Updated By" row */
-    updatedByVar: '{{ticket.updatedAt}} &middot; {{ticket.updatedBy}}',
+    updatedByVar: '{{ticket.updatedBy}}',
   },
 };
 SUBJECTS.pt = 'Ticket atualizado • {{ticket.title}} ({{ticket.priority}})';

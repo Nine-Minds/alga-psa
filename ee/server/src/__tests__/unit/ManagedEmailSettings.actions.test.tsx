@@ -46,6 +46,20 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   testOutboundEmail: testOutboundEmailMock,
 }));
 
+vi.mock('@alga-psa/email/providerConfig', () => ({
+  createDefaultProviderConfig: (
+    providerType: 'smtp' | 'resend',
+    { isEnabled }: { isEnabled: boolean }
+  ) => ({
+    providerId: `${providerType}-provider`,
+    providerType,
+    isEnabled,
+    config: providerType === 'smtp'
+      ? { host: '', port: 587, username: '', password: '', from: '' }
+      : { apiKey: '', from: '' },
+  }),
+}));
+
 vi.mock('server/src/context/TierContext', () => ({
   useTier: () => ({ hasFeature: () => true, isHosted: tierContextState.isHosted }),
 }));
@@ -431,5 +445,51 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     expect(
       screen.queryByText(/Managed email domains are not available on your current plan/i)
     ).not.toBeInTheDocument();
+  });
+
+  it('accepts SMTP host input on self-host when provider configs are empty', async () => {
+    tierContextState.isHosted = false;
+    getEmailSettingsMock.mockResolvedValue(baseSettings);
+
+    render(<ManagedEmailSettings />);
+
+    const hostInput = await screen.findByLabelText(/smtp host/i);
+    fireEvent.change(hostInput, { target: { value: 'relay.appliance.lan' } });
+
+    expect(hostInput).toHaveValue('relay.appliance.lan');
+  });
+
+  it('creates and enables the SMTP config when saving from an empty provider list', async () => {
+    tierContextState.isHosted = false;
+    getEmailSettingsMock.mockResolvedValue(baseSettings);
+    updateEmailSettingsMock.mockResolvedValue(smtpSettings);
+
+    render(<ManagedEmailSettings />);
+
+    fireEvent.change(await screen.findByLabelText(/smtp host/i), {
+      target: { value: 'relay.appliance.lan' },
+    });
+    fireEvent.change(document.getElementById('smtp-from') as HTMLInputElement, {
+      target: { value: 'support@acme.test' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /save smtp settings/i }));
+
+    await waitFor(() => {
+      expect(updateEmailSettingsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailProvider: 'smtp',
+          providerConfigs: [
+            expect.objectContaining({
+              providerType: 'smtp',
+              isEnabled: true,
+              config: expect.objectContaining({
+                host: 'relay.appliance.lan',
+                from: 'support@acme.test',
+              }),
+            }),
+          ],
+        })
+      );
+    });
   });
 });

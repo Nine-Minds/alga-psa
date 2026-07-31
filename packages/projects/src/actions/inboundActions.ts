@@ -137,13 +137,12 @@ const createProjectTaskAction: InboundActionDefinition<CreateProjectTaskMappedVa
           description: mappedValues.description ?? null,
           assigned_to: mappedValues.assigned_to ?? null,
           estimated_hours: mappedValues.estimated_hours ?? null,
-          actual_hours: null,
           due_date: mappedValues.due_date ? new Date(mappedValues.due_date) : null,
           project_status_mapping_id: statusMappingId,
           priority_id: mappedValues.priority_id ?? null,
           task_type_key: mappedValues.task_type_key ?? 'task',
           service_id: mappedValues.service_id ?? null,
-        } as Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'>);
+        } as Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code' | 'actual_hours'>);
 
         if (mappedValues.external_id) {
           await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'project_task', created.task_id, mappedValues.external_id, {

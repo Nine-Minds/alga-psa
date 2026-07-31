@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
     const knex = await getConnection(tenantId);
     const db = tenantDb(knex, tenantId);
     const tenant = await db.table('tenants')
-      .first('tenant', 'client_name');
+      .first('tenant', 'client_name', 'suspended_at');
 
     if (!tenant) {
       logger.warn('[public-appointment-request] Tenant not found', {
@@ -188,6 +188,24 @@ export async function POST(req: NextRequest) {
           error: 'Invalid tenant'
         },
         { status: 400 }
+      );
+    }
+
+    // Suspended tenants (cancelled, pending deletion) must not accept
+    // bookings: a human submitter would otherwise believe a defunct MSP will
+    // respond. Neutral copy — no tenant-status detail leaked.
+    if (tenant.suspended_at) {
+      logger.info('[public-appointment-request] Rejecting request for suspended tenant', {
+        tenantId,
+        ip: clientIp
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Booking is temporarily unavailable. Please try again later.'
+        },
+        { status: 503 }
       );
     }
 

@@ -22,7 +22,7 @@ export interface MoneyFoundCardProps {
  * never asks the user to type anything.
  */
 export function MoneyFoundCard({ item, onAccept, onDismiss, onSnooze, onViewEvidence }: MoneyFoundCardProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const value = opportunityValueParts(item.mrr_cents, item.nrr_cents, 0, item.currency_code);
   const idBase = `opportunity-suggestion-card-${item.suggestion_id}`;
   const showEvidence = item.generator_key === 'tm_conversion' && onViewEvidence;
@@ -30,7 +30,7 @@ export function MoneyFoundCard({ item, onAccept, onDismiss, onSnooze, onViewEvid
   return (
     <div
       id={idBase}
-      className="flex flex-col rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4 transition-colors hover:border-[rgb(var(--color-primary-300))] dark:bg-[rgb(var(--color-card-bg,255_255_255))]"
+      className="flex flex-col rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 transition-colors hover:border-[rgb(var(--color-primary-300))] dark:bg-[rgb(var(--color-card-bg,255_255_255))]"
     >
       <div className="text-xl font-semibold tabular-nums text-[rgb(var(--badge-success-text))]">
         {value.amount}
@@ -38,8 +38,12 @@ export function MoneyFoundCard({ item, onAccept, onDismiss, onSnooze, onViewEvid
           {value.recurring ? t('opportunities.perMonthSuffix', '/mo') : ` ${t('opportunities.oneTime', 'one-time')}`}
         </span>
       </div>
-      <div className="mt-0.5 text-[13px] font-semibold text-[rgb(var(--color-text-900))]">{item.title}</div>
-      <p className="mt-0.5 mb-3 flex-1 text-xs leading-relaxed text-[rgb(var(--color-text-500))]">{item.how}</p>
+      <div className="mt-0.5 text-[13px] font-semibold text-[rgb(var(--color-text-900))]">
+        {t(item.title.key, item.title.params)}
+      </div>
+      <p className="mt-0.5 mb-3 flex-1 text-xs leading-relaxed text-[rgb(var(--color-text-500))]">
+        {t(item.how.key, item.how.params)}
+      </p>
       <WhySentenceText why={item.why} className="mb-3 text-xs text-[rgb(var(--color-text-600))]" />
       <div className="flex items-center gap-1.5">
         {showEvidence ? (

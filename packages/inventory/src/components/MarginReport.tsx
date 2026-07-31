@@ -3,11 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
+import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
+import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { marginReport, type MarginReport as MarginReportData, type MarginReportRow } from '../actions';
 import { CurrencyFormatProvider, useCurrencyFormat } from './dashboard/shared';
 
@@ -21,12 +27,20 @@ type InventoryTranslator = ReturnType<typeof useTranslation>['t'];
 const pct = (t: InventoryTranslator, value: number | null | undefined): string =>
   value == null ? t('common.emptyValue', '—') : `${value.toFixed(1)}%`;
 
+/** "From — To", or "All time" when the window is open-ended. */
+const rangeLabel = (t: InventoryTranslator, from: string, to: string): string => {
+  if (!from && !to) return t('common.allTime', 'All time');
+  return `${from || t('common.allTime', 'All time')} — ${to || t('common.today', 'Today')}`;
+};
+
 function MarginReportBody({
   report,
   t,
+  rangeSubtitle,
 }: {
   report: MarginReportData;
   t: InventoryTranslator;
+  rangeSubtitle: string;
 }) {
   const { money } = useCurrencyFormat();
   const rows: MarginReportRow[] = report.rows ?? [];
@@ -47,6 +61,19 @@ function MarginReportBody({
     { title: t('margin.columns.cogs', 'COGS'), dataIndex: 'cogs_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
     { title: t('margin.columns.margin', 'Margin'), dataIndex: 'margin_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
     { title: t('margin.columns.marginPct', 'Margin %'), dataIndex: 'margin_pct', render: (v: any) => <span className="tabular-nums">{pct(t, v)}</span> },
+  ];
+
+  const printColumns: PrintableTableColumn<MarginReportRow>[] = [
+    {
+      key: 'product',
+      header: t('margin.columns.product', 'Product'),
+      render: (row) => [row.service_name || t('common.emptyValue', '—'), row.sku].filter(Boolean).join(' · '),
+    },
+    { key: 'qtySold', header: t('margin.columns.qtySold', 'Qty sold'), render: (row) => Number(row.qty_sold ?? 0) },
+    { key: 'revenue', header: t('margin.columns.revenue', 'Revenue'), render: (row) => money(row.revenue_cents) },
+    { key: 'cogs', header: t('margin.columns.cogs', 'COGS'), render: (row) => money(row.cogs_cents) },
+    { key: 'margin', header: t('margin.columns.margin', 'Margin'), render: (row) => money(row.margin_cents) },
+    { key: 'marginPct', header: t('margin.columns.marginPct', 'Margin %'), render: (row) => pct(t, row.margin_pct) },
   ];
 
   return (
@@ -75,6 +102,28 @@ function MarginReportBody({
       ) : (
         <DataTable id="margin-report-table" data={rows} columns={columns} />
       )}
+
+      <div className="app-print-root app-print-only" id="margin-report-print">
+        <PrintableDetailHeader
+          title={t('margin.title', 'Margin Report')}
+          subtitle={t('margin.subtitle', 'Revenue, cost of goods sold, and margin per product from fulfilled sales orders.')}
+          fields={[{ label: t('common.period', 'Period'), value: rangeSubtitle }]}
+        />
+        <PrintableSummary
+          metrics={[
+            { label: t('margin.metrics.revenue', 'Revenue'), value: money(report.total_revenue_cents) },
+            { label: t('margin.metrics.cogs', 'COGS'), value: money(report.total_cogs_cents) },
+            { label: t('margin.metrics.margin', 'Margin'), value: money(report.total_margin_cents) },
+            { label: t('margin.metrics.marginPct', 'Margin %'), value: pct(t, report.total_margin_pct) },
+          ]}
+        />
+        <PrintableTable
+          rows={rows}
+          columns={printColumns}
+          getRowKey={(row) => row.service_id ?? row.sku ?? row.service_name}
+          emptyMessage={t('margin.empty', 'No sales-driven margin in this window.')}
+        />
+      </div>
     </>
   );
 }
@@ -117,14 +166,23 @@ export function MarginReport() {
             {t('margin.subtitle', 'Revenue, cost of goods sold, and margin per product from fulfilled sales orders.')}
           </p>
         </div>
-        <Button id="margin-report-refresh" variant="outline" onClick={run} disabled={loading}>
-          {loading ? t('common.refreshing', 'Refreshing…') : t('common.refresh', 'Refresh')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <PrintButton id="margin-report-print" variant="outline" disabled={!report || loading} />
+          <Button id="margin-report-refresh" variant="outline" onClick={run} disabled={loading}>
+            {loading ? t('common.refreshing', 'Refreshing…') : t('common.refresh', 'Refresh')}
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-end gap-3 flex-wrap">
-        <Input id="margin-report-from" label={t('common.from', 'From')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <Input id="margin-report-to" label={t('common.to', 'To')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <div>
+          <Label className="block mb-1" htmlFor="margin-report-from">{t('common.from', 'From')}</Label>
+          <DatePicker id="margin-report-from" label={t('common.from', 'From')} placeholder={t('common.from', 'From')} clearable className="w-40" value={dateFromString(from)} onChange={(date) => setFrom(dateToString(date))} />
+        </div>
+        <div>
+          <Label className="block mb-1" htmlFor="margin-report-to">{t('common.to', 'To')}</Label>
+          <DatePicker id="margin-report-to" label={t('common.to', 'To')} placeholder={t('common.to', 'To')} clearable className="w-40" value={dateFromString(to)} onChange={(date) => setTo(dateToString(date))} />
+        </div>
         <Button id="margin-report-run" onClick={run} disabled={loading}>
           {loading ? t('common.running', 'Running…') : t('common.runReport', 'Run report')}
         </Button>
@@ -135,7 +193,7 @@ export function MarginReport() {
           currencyCode={report.currency_code || 'USD'}
           locale={i18n.language || 'en'}
         >
-          <MarginReportBody report={report} t={t} />
+          <MarginReportBody report={report} t={t} rangeSubtitle={rangeLabel(t, from, to)} />
         </CurrencyFormatProvider>
       ) : loading ? (
         <p className="text-sm text-gray-500">{t('margin.loading', 'Loading margin…')}</p>

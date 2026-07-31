@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   withTransaction: vi.fn(),
   publishEvent: vi.fn(),
   computeWorkDateFields: vi.fn(),
+  recalculateProjectTaskActualHoursForEntryChange: vi.fn(),
   resolveUserTimeZone: vi.fn(),
   writeEntityMapping: vi.fn(),
 }));
@@ -39,6 +40,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
   computeWorkDateFields: mocks.computeWorkDateFields,
   createTenantKnex: mocks.createTenantKnex,
+  recalculateProjectTaskActualHoursForEntryChange: mocks.recalculateProjectTaskActualHoursForEntryChange,
   resolveUserTimeZone: mocks.resolveUserTimeZone,
   withTransaction: mocks.withTransaction,
 }));
@@ -199,6 +201,12 @@ describe('time entry inbound webhook actions', () => {
           delivery_id: 'delivery-1',
         },
       },
+    );
+    expect(mocks.recalculateProjectTaskActualHoursForEntryChange).toHaveBeenCalledWith(
+      trx,
+      'tenant-a',
+      null,
+      expect.objectContaining({ entry_id: 'entry-1' }),
     );
     expect(mocks.publishEvent).toHaveBeenCalledWith({
       eventType: 'TIME_ENTRY_CREATED',

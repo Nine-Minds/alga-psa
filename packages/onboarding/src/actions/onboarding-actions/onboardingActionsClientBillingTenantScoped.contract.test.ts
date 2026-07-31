@@ -24,11 +24,12 @@ describe('onboarding client and billing tenant-scoped query contract', () => {
     expect(section).toContain(".table('contacts");
     expect(section).toContain("tenantScopedTable('service_types')");
     expect(section).toContain("tenantScopedTable('default_billing_settings')");
-    expect(section).toContain("await trx('client_locations').insert({");
-    expect(section).toContain("await trx('service_catalog').insert({");
-    expect(section).toContain("await trx('service_prices').insert({");
+    expect(section).toContain("await tenantScopedTable('client_locations').insert({");
+    expect(section).toContain("await tenantScopedTable('service_catalog').insert({");
+    expect(section).toContain("await tenantScopedTable('service_prices').insert({");
 
     expect(section).not.toMatch(/trx\('(clients|client_locations|contacts|service_types|default_billing_settings)'\)\s*[\r\n]+\s*\.where\(\{[^}]*tenant/);
     expect(section).not.toMatch(/trx\('default_billing_settings'\)\.where\(\{\s*tenant\s*\}\)/);
+    expect(section).not.toMatch(/trx\('(clients|client_locations|contacts|service_types|service_catalog|service_prices|default_billing_settings)'\)/);
   });
 });

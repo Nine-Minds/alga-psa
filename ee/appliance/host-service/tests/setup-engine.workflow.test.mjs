@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, installFlux, resolveChannelMetadata } from '../setup-engine.mjs';
+import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, installFlux, installStorage, resolveChannelMetadata } from '../setup-engine.mjs';
 
 const initialTenant = {
   tenantName: 'Acme MSP',
@@ -31,7 +31,7 @@ function makeReleaseManifest(overrides = {}) {
       'temporal.single-node.yaml': 'temporal: packaged\n',
       'workflow-worker.single-node.yaml': 'workflow-worker: packaged\nimage:\n  tag: old\nextraEnv:\n  - name: TEMPORAL_ADDRESS\n    value: temporal-frontend.msp.svc.cluster.local:7233\n',
       'email-service.single-node.yaml': 'email-service: packaged\nimage:\n  tag: old\n',
-      'temporal-worker.single-node.yaml': 'temporal-worker: packaged\nimage:\n  tag: old\n'
+      'temporal-worker.single-node.yaml': 'temporal-worker: packaged\napplicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: old\n'
     },
     ...overrides
   };
@@ -55,6 +55,42 @@ test('installFlux records success when flux install command exits cleanly', () =
   const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   assert.equal(persisted.status, 'flux-install-complete');
   assert.equal(persisted.phase, 'flux');
+});
+
+test('installStorage records the runtime result of the storage reconciliation', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-storage-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const marker = path.join(tmp, 'storage-ok.txt');
+
+  const result = installStorage({
+    stateFile,
+    kubeconfigPath: path.join(tmp, 'k3s.yaml'),
+    storageInstallCommand: `printf 'storage-ready' > ${marker}`
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.phase, 'storage');
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'storage-ready');
+
+  const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persisted.status, 'storage-install-complete');
+  assert.equal(persisted.phase, 'storage');
+});
+
+test('installStorage blocks setup when the reconciliation command fails', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-storage-fail-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+
+  const result = installStorage({
+    stateFile,
+    storageInstallCommand: "printf 'provisioner failed' >&2; exit 7"
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.step, 'install-local-path-storage');
+  const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persisted.status, 'storage-install-blocked');
+  assert.match(persisted.installerOutput.stderr, /provisioner failed/);
 });
 
 test('resolveChannelMetadata resolves a channel to the registry release manifest', async () => {
@@ -153,6 +189,9 @@ test('applyRuntimeValuesAndReleaseSelection renders runtime values from the mani
     // image tag from the manifest is injected into the alga-core values
     const renderedCoreValues = fs.readFileSync(path.join(runtimeValuesDir, 'values', 'alga-core.single-node.yaml'), 'utf8');
     assert.match(renderedCoreValues, /tag: "coretag"/);
+    const renderedTemporalWorkerValues = fs.readFileSync(path.join(runtimeValuesDir, 'values', 'temporal-worker.single-node.yaml'), 'utf8');
+    assert.match(renderedTemporalWorkerValues, /applicationUrl: http:\/\/alga-core\.msp\.svc\.cluster\.local:3000/);
+    assert.match(renderedTemporalWorkerValues, /publicBaseUrl: "https:\/\/psa\.example\.test"/);
     const initialTenantSecret = fs.readFileSync(path.join(runtimeValuesDir, 'initial-tenant-secret.yaml'), 'utf8');
     assert.match(initialTenantSecret, /name: appliance-initial-tenant/);
     assert.match(initialTenantSecret, /INITIAL_ADMIN_EMAIL: "ava@example.com"/);

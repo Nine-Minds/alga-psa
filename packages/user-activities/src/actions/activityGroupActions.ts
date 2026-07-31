@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
@@ -48,15 +48,16 @@ export const createActivityGroup = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   const group = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     // Next sort order = max + 1
-    const maxSort = await trx('user_activity_groups')
-      .where({ tenant, user_id: user.user_id })
+    const maxSort = await scopedDb.table('user_activity_groups')
+      .where({ user_id: user.user_id })
       .max('sort_order as max')
       .first();
 
     const nextSortOrder = ((maxSort?.max as number | null) ?? -1) + 1;
 
-    const [created] = await trx('user_activity_groups')
+    const [created] = await scopedDb.table('user_activity_groups')
       .insert({
         tenant,
         user_id: user.user_id,
@@ -92,6 +93,7 @@ export const updateActivityGroup = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     const patch: Record<string, unknown> = { updated_at: new Date() };
     if (updates.groupName !== undefined) {
       if (!updates.groupName.trim()) {
@@ -103,8 +105,8 @@ export const updateActivityGroup = withAuth(async (
       patch.is_collapsed = updates.isCollapsed;
     }
 
-    await trx('user_activity_groups')
-      .where({ tenant, group_id: groupId, user_id: user.user_id })
+    await scopedDb.table('user_activity_groups')
+      .where({ group_id: groupId, user_id: user.user_id })
       .update(patch);
   });
 
@@ -123,16 +125,17 @@ export const deleteActivityGroup = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     // Verify ownership first
-    const group = await trx('user_activity_groups')
-      .where({ tenant, group_id: groupId, user_id: user.user_id })
+    const group = await scopedDb.table('user_activity_groups')
+      .where({ group_id: groupId, user_id: user.user_id })
       .first();
     if (!group) {
       throw new Error('Group not found');
     }
 
-    await trx('user_activity_group_items').where({ tenant, group_id: groupId }).del();
-    await trx('user_activity_groups').where({ tenant, group_id: groupId }).del();
+    await scopedDb.table('user_activity_group_items').where({ group_id: groupId }).del();
+    await scopedDb.table('user_activity_groups').where({ group_id: groupId }).del();
   });
 
   revalidatePath('/activities');
@@ -197,9 +200,10 @@ export const reorderGroups = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
+    const scopedDb = tenantDb(trx, tenant);
     for (const g of orderedGroups) {
-      await trx('user_activity_groups')
-        .where({ tenant, group_id: g.groupId, user_id: user.user_id })
+      await scopedDb.table('user_activity_groups')
+        .where({ group_id: g.groupId, user_id: user.user_id })
         .update({ sort_order: g.sortOrder, updated_at: new Date() });
     }
   });

@@ -292,6 +292,7 @@ const Contract = {
           isActive: Boolean(row.assignment_is_active),
           startDate: row.start_date,
           endDate: row.end_date,
+          contractStatus: row.contract_header_status,
         });
 
         return {

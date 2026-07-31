@@ -10,6 +10,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import NumberingSettings from '@alga-psa/reference-data/components/settings/NumberingSettings';
 import {
   readOpportunitySettings,
   runGeneratorNow,
@@ -322,6 +323,19 @@ export default function OpportunitiesSettingsBody() {
           </div>
         </section>
       ) : null}
+
+      <section className="border-t border-[rgb(var(--color-border-200))] pt-6">
+        <h2 className="mb-1 text-base font-semibold text-[rgb(var(--color-text-900))]">
+          {t('opportunities.settings.numbering', 'Opportunity numbering')}
+        </h2>
+        <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
+          {t(
+            'opportunities.settings.numberingHelp',
+            'Customize how opportunity numbers are generated and displayed.'
+          )}
+        </p>
+        <NumberingSettings entityType="OPPORTUNITY" />
+      </section>
     </div>
   );
 }

@@ -35,6 +35,17 @@ import type {
 import { insertStripeSubscriptionForTenant } from '../db/tenant-operations.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 
+export {
+  suspendTenantEmailIngestion,
+  resumeTenantEmailIngestion,
+  teardownTenantEmailIngestion,
+} from './tenant-email-ingestion-activities.js';
+
+export {
+  suspendTenantBackgroundActivity,
+  resumeTenantBackgroundActivity,
+} from './tenant-suspension-activities.js';
+
 /**
  * Comprehensive list of tables to delete from, in dependency order.
  * Most dependent tables first, then progressively less dependent.
@@ -70,6 +81,15 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // ref with no FK, so order among these does not matter)
   'workflow_data_store', 'workflow_entity_links',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
+
+  // === Marketing module (children first; campaigns/channels last).
+  // Engagements cascade from interactions, but the whole module block sits
+  // ahead of interactions/contacts/users, which its NO ACTION FKs reference.
+  'marketing_sequence_sends', 'marketing_engagements', 'social_post_targets',
+  'social_posts', 'marketing_sequence_enrollments', 'marketing_sequence_steps',
+  'marketing_sequences', 'marketing_capture_forms', 'marketing_content',
+  'marketing_contact_state', 'marketing_suppressions', 'marketing_channels',
+  'marketing_campaigns',
 
   // Interactions reference opportunities, while opportunities can reference
   // converted contracts. Keep the complete sales chain child-first here.
@@ -140,6 +160,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'authorization_bundle_revisions', 'authorization_bundles',
 
   // User related details
+  // SCIM operations/unresolved rows depend on connections; user links also
+  // reference users, so all SCIM records must be removed before users.
+  'scim_operations', 'scim_unresolved_identities', 'scim_user_links',
+  'scim_connections',
   'user_activity_group_items', 'user_activity_groups',
   'user_notification_preferences', 'user_internal_notification_preferences', 'user_preferences',
   'role_permissions', 'user_roles', 'user_auth_accounts',
@@ -247,7 +271,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Billing details
   // accounting_export_batches is referenced by transactions.accounting_export_batch_id
   // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
-  'credit_allocations', 'credit_reconciliation_reports', 'credit_tracking',
+  'credit_allocations', 'credit_tracking',
   'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
@@ -267,7 +291,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Contract templates (must be deleted before contracts)
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
-  'contract_template_compare_view', 'contract_template_line_defaults',
+  'contract_template_line_defaults',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
@@ -291,6 +315,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // but delete it explicitly so cleanup doesn't rely on the cascade). Hudu
   // mappings live in tenant_external_entity_mappings (deleted below).
   'hudu_integrations',
+
+  // Project billing: schedule entries and cap usage reference project_billing_configs;
+  // configs reference projects; phase rate overrides reference project_phases and
+  // service_catalog. All must be deleted before those parents.
+  'project_billing_schedule_entries', 'project_billing_cap_usage',
+  'project_billing_configs', 'project_phase_rate_overrides',
 
   // Project/task entities
   'project_tasks', 'project_phases', 'project_status_mappings',
@@ -418,8 +448,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // 3. Delete contacts after clients (before users that reference them)
   // 4. Delete contact_email_type_definitions after contacts
   //    (contacts.primary_email_custom_type_id → contact_email_type_definitions RESTRICT)
-  // 5. Delete password_reset_tokens, resources, tenant_telemetry_settings before users
-  //    (they all reference users via NO ACTION / RESTRICT)
+  // 5. Delete password_reset_tokens, resources, user_work_schedules,
+  //    tenant_telemetry_settings before users
+  //    (they all reference users via NO ACTION / RESTRICT / CASCADE)
   // 6. Delete users last (they have NOT NULL contact_id that references contacts)
 
   'contact_phone_numbers',
@@ -429,11 +460,19 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Delete them before clients so tenant cleanup does not leave this table behind.
   'client_portal_visibility_groups',
   'portal_invitations', // references contacts.contact_id with NO ACTION — must come before contacts
+  'user_invitations', // no DB FK (role_id is unenforced, for CitusDB compatibility); order is advisory
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
   'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION
   'resources',                 // resources.user_id → users with NO ACTION
+  // (tenant, user_id) → users with ON DELETE CASCADE, colocated with users.
+  // Deleted explicitly rather than left to the cascade: the tenant FK on this
+  // table is NO ACTION, so rows surviving until the final `tenants` delete would
+  // block it. Citus also rejects ON DELETE SET NULL on a key containing the
+  // distribution column, so CASCADE is the only automatic rule available here
+  // and an explicit delete is what keeps the order self-describing.
+  'user_work_schedules',
   'tenant_telemetry_settings', // tenant_telemetry_settings.updated_by → users with RESTRICT
 
   // === MCP agent governance (EE) ===
@@ -1262,12 +1301,15 @@ async function getTableTenantColumn(
 ): Promise<TenantColumnName | null> {
   try {
     const result = await knex.raw(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = ?
-        AND column_name IN ('tenant', 'tenant_id')
-        AND table_schema = 'public'
-      ORDER BY CASE column_name WHEN 'tenant' THEN 1 WHEN 'tenant_id' THEN 2 END
+      SELECT c.column_name
+      FROM information_schema.columns c
+      JOIN information_schema.tables t
+        ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+      WHERE c.table_name = ?
+        AND c.column_name IN ('tenant', 'tenant_id')
+        AND c.table_schema = 'public'
+        AND t.table_type = 'BASE TABLE'
+      ORDER BY CASE c.column_name WHEN 'tenant' THEN 1 WHEN 'tenant_id' THEN 2 END
       LIMIT 1
     `, [tableName]);
 

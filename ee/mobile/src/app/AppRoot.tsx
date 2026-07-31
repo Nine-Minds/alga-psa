@@ -29,6 +29,7 @@ import { ToastProvider } from "../ui/toast/ToastProvider";
 import { ThemeProvider } from "../ui/ThemeContext";
 import { I18nProvider } from "../i18n/I18nProvider";
 import { TimerProvider } from "../features/timer/TimerContext";
+import { CapabilitiesProvider } from "../capabilities/CapabilitiesContext";
 import { TimerBanner } from "../features/timer/components/TimerBanner";
 import { isSessionUsable, msUntilExpiry, msUntilRefresh, shouldRefreshOnResume, shouldRunRevocationCheck } from "./bootstrapUtils";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
@@ -343,6 +344,7 @@ export function AppRoot() {
           clearHost,
         }}
       >
+        <CapabilitiesProvider>
         <TimerProvider>
         {session && isBiometricLocked ? (
           <BiometricLockView onUnlocked={() => {
@@ -387,6 +389,7 @@ export function AppRoot() {
           </View>
         )}
         </TimerProvider>
+        </CapabilitiesProvider>
       </AuthContext.Provider>
     </ToastProvider>
     </I18nProvider>

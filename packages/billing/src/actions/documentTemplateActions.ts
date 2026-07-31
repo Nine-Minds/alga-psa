@@ -28,6 +28,7 @@ import {
   type DocumentTemplateListItem,
 } from '../lib/document-templates/storage';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
 
 /**
@@ -195,7 +196,9 @@ export const runAuthoritativeTemplatePreview = withAuth(
     }
     const sample = getDocumentTypeRegistryEntry(type).buildSampleViewModel();
     const { knex } = await createTenantKnex();
-    const evaluation = evaluateTemplateAst(templateAst, sample);
+    const evaluation = evaluateTemplateAst(templateAst, sample, {
+      bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES,
+    });
     const html = await renderTemplateAstHtmlDocument(templateAst, evaluation, { title: 'Preview', knex });
     return { html };
   },

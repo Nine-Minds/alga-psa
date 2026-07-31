@@ -1,7 +1,9 @@
+
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getEventBus } from '../index';
 import {
-  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent
-} from '@alga-psa/event-schemas';
+  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent, ProjectBudgetExceededEvent
+} from '@alga-psa/event-bus/events';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
@@ -37,6 +39,15 @@ function shouldCreateContactPortalTicketNotification(suppression: TicketNotifica
 
 function shouldCreateStaffTicketNotification(suppression: TicketNotificationSuppression): boolean {
   return !suppression.suppressInternalNotifications;
+}
+
+function shouldCreateTicketCommentNotification(
+  suppression: TicketNotificationSuppression,
+  recipientType: 'contact' | 'internal',
+): boolean {
+  return recipientType === 'internal'
+    ? shouldCreateStaffTicketNotification(suppression)
+    : shouldCreateContactPortalTicketNotification(suppression);
 }
 
 /**
@@ -1560,6 +1571,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId, comment } = payload;
+  const suppression = resolveTicketNotificationSuppression(payload);
 
   console.log('[InternalNotificationSubscriber] handleTicketCommentAdded START', {
     ticketId,
@@ -1620,10 +1632,20 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
       if (resolvedMentionedUserIds.length > 0) {
         const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .select(
+            'user_id',
+            'username',
+            'user_type',
+            db.raw("CONCAT(first_name, ' ', last_name) as display_name"),
+          )
           .whereIn('user_id', resolvedMentionedUserIds);
+        const mentionedUsersToNotify = mentionedUsers.filter((mentionedUser) =>
+          shouldCreateTicketCommentNotification(
+            suppression,
+            mentionedUser.user_type === 'client' ? 'contact' : 'internal',
+          ));
 
-        if (mentionedUsers.length > 0) {
+        if (mentionedUsersToNotify.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
             type: 'ticket',
             ticketId,
@@ -1631,7 +1653,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             commentId: comment?.id
           });
 
-          await Promise.all(mentionedUsers.map(mentionedUser => {
+          await Promise.all(mentionedUsersToNotify.map(mentionedUser => {
             notifiedUserIds.add(mentionedUser.user_id);
             return createNotificationFromTemplateInternal(db, {
               tenant: tenantId,
@@ -1662,7 +1684,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
           logger.info('[InternalNotificationSubscriber] Created mention notifications for ticket comment', {
             ticketId,
-            notifiedCount: mentionedUsers.length,
+            notifiedCount: mentionedUsersToNotify.length,
             tenantId
           });
         }
@@ -1677,7 +1699,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     });
 
     // Notify all assigned agents (if not internal comment)
-    if (!comment?.isInternal) {
+    if (
+      !comment?.isInternal &&
+      shouldCreateTicketCommentNotification(suppression, 'internal')
+    ) {
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
 
       for (const assigneeId of allAssignees) {
@@ -1719,7 +1744,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Create notification for client contact if they have portal access (and are not the comment author)
     // Skip if comment is internal - internal comments are not visible to client portal users
-    if (ticket.contact_name_id && !comment?.isInternal && ticketPortalUrl) {
+    if (
+      ticket.contact_name_id &&
+      !comment?.isInternal &&
+      ticketPortalUrl &&
+      shouldCreateTicketCommentNotification(suppression, 'contact')
+    ) {
       const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
@@ -2149,6 +2179,125 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       error,
       projectId,
       tenantId
+    });
+  }
+}
+
+function formatInternalProjectBillingAmount(
+  amountCents: number,
+  currency: string | null,
+  locale: string,
+): string {
+  const currencyCode = currency?.trim() || 'USD';
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: currencyCode })
+      .format(amountCents / 100);
+  } catch {
+    return `${currencyCode} ${(amountCents / 100).toFixed(2)}`;
+  }
+}
+
+async function handleProjectBillingInternalNotification(
+  event: ProjectMilestoneReadyEvent | ProjectBudgetThresholdReachedEvent | ProjectBudgetExceededEvent,
+): Promise<void> {
+  const { tenantId, projectId } = event.payload;
+  const notificationLocale = await getTenantDefaultLocale(tenantId, 'internal');
+  const db = await getConnection(tenantId);
+  const scopedDb = tenantDb(db, tenantId);
+  const projectQuery = scopedDb.table('projects as p')
+    .select(
+      'p.project_id',
+      'p.project_name',
+      'p.project_number',
+      'p.assigned_to',
+      'c.account_manager_id',
+      'pbc.currency'
+    );
+  scopedDb.tenantJoin(projectQuery, 'clients as c', 'p.client_id', 'c.client_id', { type: 'left' });
+  scopedDb.tenantJoin(projectQuery, 'project_billing_configs as pbc', 'p.project_id', 'pbc.project_id', { type: 'left' });
+  const project = await projectQuery.where('p.project_id', projectId).first();
+  if (!project) {
+    logger.warn('[InternalNotificationSubscriber] Project billing event project not found', {
+      eventId: event.id,
+      projectId,
+      tenantId,
+    });
+    return;
+  }
+
+  const recipients = Array.from(new Set<string>([
+    project.assigned_to,
+    project.account_manager_id,
+  ].filter(Boolean)));
+  const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+    type: 'project',
+    projectId,
+  });
+
+  for (const userId of recipients) {
+    if (event.eventType === 'PROJECT_MILESTONE_READY') {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: userId,
+        template_name: 'project-milestone-ready',
+        type: 'info',
+        category: 'projects',
+        link: internalUrl,
+        data: {
+          projectName: project.project_name,
+          entryDescription: event.payload.description,
+          amount: formatInternalProjectBillingAmount(event.payload.computedAmount, project.currency, notificationLocale),
+        },
+        metadata: {
+          projectId,
+          projectNumber: project.project_number,
+          scheduleEntryId: event.payload.entryId,
+          trigger: event.payload.trigger,
+        },
+      });
+      continue;
+    }
+
+    if (event.eventType === 'PROJECT_BUDGET_EXCEEDED') {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: userId,
+        template_name: 'project-budget-exceeded',
+        type: 'warning',
+        category: 'projects',
+        link: internalUrl,
+        data: {
+          projectName: project.project_name,
+          billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency, notificationLocale),
+          cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency, notificationLocale),
+          writtenDown: formatInternalProjectBillingAmount(event.payload.writtenDown, project.currency, notificationLocale),
+        },
+        metadata: {
+          projectId,
+          projectNumber: project.project_number,
+        },
+      });
+      continue;
+    }
+
+    await createNotificationFromTemplateInternal(db, {
+      tenant: tenantId,
+      user_id: userId,
+      template_name: 'project-budget-threshold-reached',
+      type: 'warning',
+      category: 'projects',
+      link: internalUrl,
+      data: {
+        projectName: project.project_name,
+        threshold: `${event.payload.threshold}%`,
+        billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency, notificationLocale),
+        cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency, notificationLocale),
+      },
+      metadata: {
+        projectId,
+        projectNumber: project.project_number,
+        threshold: event.payload.threshold,
+      },
     });
   }
 }
@@ -2825,6 +2974,15 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
     case 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED':
       await handleProjectTaskAdditionalAgentAssigned(validatedEvent as ProjectTaskAdditionalAgentAssignedEvent);
       break;
+    case 'PROJECT_MILESTONE_READY':
+      await handleProjectBillingInternalNotification(validatedEvent as ProjectMilestoneReadyEvent);
+      break;
+    case 'PROJECT_BUDGET_THRESHOLD_REACHED':
+      await handleProjectBillingInternalNotification(validatedEvent as ProjectBudgetThresholdReachedEvent);
+      break;
+    case 'PROJECT_BUDGET_EXCEEDED':
+      await handleProjectBillingInternalNotification(validatedEvent as ProjectBudgetExceededEvent);
+      break;
     case 'INVOICE_GENERATED':
       await handleInvoiceGenerated(validatedEvent as InvoiceGeneratedEvent);
       break;
@@ -2856,6 +3014,7 @@ export const internalNotificationSubscriberTestHarness = {
   resolveTicketNotificationSuppression,
   shouldCreateContactPortalTicketNotification,
   shouldCreateStaffTicketNotification,
+  shouldCreateTicketCommentNotification,
   handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,
@@ -2883,6 +3042,9 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+      'PROJECT_MILESTONE_READY',
+      'PROJECT_BUDGET_THRESHOLD_REACHED',
+      'PROJECT_BUDGET_EXCEEDED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
       'USER_MENTIONED_IN_DOCUMENT',
@@ -2926,6 +3088,9 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+      'PROJECT_MILESTONE_READY',
+      'PROJECT_BUDGET_THRESHOLD_REACHED',
+      'PROJECT_BUDGET_EXCEEDED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
       'USER_MENTIONED_IN_DOCUMENT',

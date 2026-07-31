@@ -22,10 +22,10 @@ describe('portal invitation send flow tenant-scoped query contract', () => {
     expect(section).toContain('tenantDb(knex, ');
     expect(section).toContain(".table('contacts");
     expect(section).toContain(".table('users");
-    expect(section).toContain('const tenantScopedTable = (table: string) => tenantDb(trx, ');
-    expect(section).toContain("tenantScopedTable('tenant_companies')");
-    expect(section).toContain("tenantScopedTable('client_locations')");
-    expect(section).toContain("tenantScopedTable('clients')");
+    expect(section).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(section).toContain("scopedDb.table('tenant_companies')");
+    expect(section).toContain("scopedDb.table('client_locations')");
+    expect(section).toContain("scopedDb.table('clients')");
 
     expect(section).not.toMatch(/knex\('contacts'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);

@@ -169,11 +169,11 @@
       "addSelected": "Aggiungi servizi selezionati",
       "adding": "Aggiunta..."
     },
-    "title": "Aggiungi servizi e prodotti al piano",
+    "title": "Aggiungi servizi e prodotti alla riga del contratto",
     "searchPlaceholder": "Cerca servizi/prodotti...",
     "errors": {
       "load": "Impossibile caricare i servizi",
-      "add": "Impossibile aggiungere servizi al piano"
+      "add": "Impossibile aggiungere servizi alla riga del contratto"
     },
     "states": {
       "loading": "Caricamento servizi...",

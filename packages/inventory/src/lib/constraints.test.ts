@@ -7,16 +7,9 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import knexLib, { Knex } from 'knex';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
@@ -24,10 +17,10 @@ let SERVICE: string;
 let SERVICE2: string;
 
 beforeAll(async () => {
-  const e = readEnv();
+  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
-    connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
+    connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
@@ -49,7 +42,7 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
   }
 }
 
-describe('inventory schema constraints (real server DB, rolled back)', () => {
+describe.skipIf(!databaseConnection)('inventory schema constraints (real server DB, rolled back)', () => {
   it('T002a: duplicate serial within (tenant, service_id) is rejected', async () => {
     await inTx(async (trx) => {
       await trx('stock_units').insert({ tenant: TENANT, service_id: SERVICE, serial_number: 'DUP-SERIAL', status: 'in_stock' });

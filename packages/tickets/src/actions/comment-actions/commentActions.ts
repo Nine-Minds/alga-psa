@@ -146,8 +146,11 @@ async function updateTicketResponseState(
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
         payload: {
           tenantId: tenant,
+          occurredAt: new Date().toISOString(),
           ticketId,
           userId,
+          previousResponseState: previousState,
+          newResponseState: newState,
           previousState,
           newState,
           trigger: 'comment'
@@ -314,7 +317,9 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
             eventType: 'TICKET_COMMENT_ADDED',
             payload: {
               tenantId: commentTenant,
+              occurredAt: new Date().toISOString(),
               ticketId: comment.ticket_id!,
+              commentId,
               userId: comment.user_id,
               thread_id: eventComment?.thread_id,
               parent_comment_id: eventComment?.parent_comment_id ?? null,

@@ -116,8 +116,10 @@ async function seedWorkflow(knex, tenantId, workflow) {
   };
   const existing = await db.table('workflow_definitions').where({ key: workflow.key }).first();
   if (existing) {
+    // Citus forbids SET on the tenant distribution column, even to the same value.
+    const { tenant: _tenant, ...updateRecord } = record;
     await db.table('workflow_definitions').where({ workflow_id: existing.workflow_id }).update({
-      ...record,
+      ...updateRecord,
       draft_definition: { ...definition, id: existing.workflow_id },
     });
     definition.id = existing.workflow_id;
@@ -165,7 +167,8 @@ async function seedWorkflow(knex, tenantId, workflow) {
       updated_at: now,
     };
     if (existingSchedule) {
-      await db.table('tenant_workflow_schedule').where({ id: existingSchedule.id }).update(scheduleRecord);
+      const { tenant: _scheduleTenant, ...scheduleUpdate } = scheduleRecord;
+      await db.table('tenant_workflow_schedule').where({ id: existingSchedule.id }).update(scheduleUpdate);
     } else {
       await db.table('tenant_workflow_schedule').insert({
         id: scheduleId,

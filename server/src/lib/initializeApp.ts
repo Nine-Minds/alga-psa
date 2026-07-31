@@ -17,7 +17,7 @@ import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { Temporal } from '@js-temporal/polyfill';
@@ -465,6 +465,7 @@ async function initializeJobScheduler(storageService: StorageService) {
       const rootKnex = await getConnection(null);
       const tenants = await tenantDb(rootKnex, '__billing_cycle_tenant_enumeration__')
         .unscoped('tenants', 'legacy billing cycle scheduler enumerates all tenants to run per-tenant cycle jobs')
+        .whereNull('suspended_at')
         .select('tenant');
 
       // Process each tenant
@@ -512,8 +513,33 @@ async function initializeJobScheduler(storageService: StorageService) {
     }
 
     let jobRecordId: string | null = null;
+    let tenantExists = true;
 
     try {
+      // A deleted tenant must end the chain here, before the finally block
+      // re-enqueues and before a jobs row is written for it.
+      const tenantCheckKnex = await getConnection(tenantId);
+      const tenantRow = await tenantCheckKnex('tenants').where({ tenant: tenantId }).first();
+      if (!tenantRow) {
+        tenantExists = false;
+        logger.warn('createNextTimePeriods: tenant no longer exists, ending job chain', {
+          tenantId,
+          jobId: job.id
+        });
+        return;
+      }
+
+      // A suspended tenant (cancelled, pending deletion) skips the run but
+      // keeps the chain alive — tenantExists stays true so the finally block
+      // reschedules, and creation resumes automatically after win-back.
+      if (tenantRow.suspended_at) {
+        logger.info('createNextTimePeriods: tenant suspended, skipping run (chain continues)', {
+          tenantId,
+          jobId: job.id
+        });
+        return;
+      }
+
       jobRecordId = await jobService.createJob('createNextTimePeriods', {
         tenantId,
         metadata: {
@@ -575,42 +601,47 @@ async function initializeJobScheduler(storageService: StorageService) {
 
       throw error;
     } finally {
-      // Always enqueue the next run so the job continues daily even after archives are cleaned
-      // Use UTC to avoid DST drift issues
-      try {
-        const nextRunInstant = Temporal.Now.instant().add({ hours: 24 });
-        const nextRun = new Date(nextRunInstant.epochMilliseconds);
-        const singletonKey = `createNextTimePeriods:${tenantId}`;
+      // Always enqueue the next run so the job continues daily even after archives are cleaned,
+      // unless the tenant is gone. Use UTC to avoid DST drift issues
+      if (tenantExists) {
+        try {
+          const nextRunInstant = Temporal.Now.instant().add({ hours: 24 });
+          const nextRun = new Date(nextRunInstant.epochMilliseconds);
+          const singletonKey = `createNextTimePeriods:${tenantId}`;
 
-        // Use scheduleRecurringJob which has singleton deduplication built-in
-        // This prevents duplicate jobs from stacking up on retries
-        const nextJobId = await jobScheduler.scheduleRecurringJob(
-          'createNextTimePeriods',
-          '24 hours',
-          { tenantId }
-        );
+          // Use scheduleRecurringJob which has singleton deduplication built-in
+          // This prevents duplicate jobs from stacking up on retries
+          const nextJobId = await jobScheduler.scheduleRecurringJob(
+            'createNextTimePeriods',
+            '24 hours',
+            { tenantId }
+          );
 
-        if (nextJobId) {
-          logger.debug('Queued next createNextTimePeriods job', {
-            tenantId,
-            jobId: nextJobId,
-            nextRun: nextRun.toISOString(),
-            singletonKey
-          });
-        } else {
-          logger.debug('createNextTimePeriods job already queued (singleton active)', {
-            tenantId,
-            singletonKey
-          });
+          if (nextJobId) {
+            logger.debug('Queued next createNextTimePeriods job', {
+              tenantId,
+              jobId: nextJobId,
+              nextRun: nextRun.toISOString(),
+              singletonKey
+            });
+          } else {
+            logger.debug('createNextTimePeriods job already queued (singleton active)', {
+              tenantId,
+              singletonKey
+            });
+          }
+        } catch (scheduleError) {
+          logger.error('Failed to enqueue next createNextTimePeriods job', { tenantId, scheduleError });
         }
-      } catch (scheduleError) {
-        logger.error('Failed to enqueue next createNextTimePeriods job', { tenantId, scheduleError });
       }
     }
   });
 
   // Schedule the time periods job for each tenant
   const rootKnex = await getConnection(null);
+  // Deliberately NOT filtered by suspended_at: the chain must stay armed for
+  // suspended tenants (the handler skips per run) so win-back resumes it
+  // without waiting for a server restart.
   const tenants = await tenantDb(rootKnex, '__time_period_tenant_enumeration__')
     .unscoped('tenants', 'legacy time period scheduler enumerates all tenants to schedule per-tenant jobs')
     .select('tenant');

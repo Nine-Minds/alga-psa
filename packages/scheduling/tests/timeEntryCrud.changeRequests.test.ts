@@ -22,6 +22,7 @@ vi.mock('@alga-psa/db', () => ({
   computeWorkDateFields: (...args: any[]) => computeWorkDateFieldsMock(...args),
   truncateToMinute: (value: string | Date) =>
     new Date(Math.floor(new Date(value).getTime() / 60000) * 60000),
+  recalculateProjectTaskActualHoursForEntryChange: vi.fn(async () => undefined),
   tenantDb: (conn: any, tenant: string) => ({
     tenant,
     table: (table: string) => conn(table),
@@ -300,7 +301,9 @@ describe('time entry change-request action integration', () => {
           changeRequestComment: 'Please fix this.',
         },
       ),
-    ).rejects.toThrow('Permission denied: Cannot update time entry approval status');
+    ).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot update time entry approval status',
+    });
 
     expect(createTimeEntryChangeRequestRecordMock).not.toHaveBeenCalled();
   });

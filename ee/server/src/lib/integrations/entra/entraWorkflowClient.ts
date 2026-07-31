@@ -64,6 +64,10 @@ export interface EntraSyncRunHistoryItem {
   processedTenants: number;
   succeededTenants: number;
   failedTenants: number;
+  /** A preflight: it classified identities and wrote nothing. */
+  isDryRun: boolean;
+  scopeManagedTenantId: string | null;
+  scopeClientId: string | null;
 }
 
 function sanitizeWorkflowIdSegment(value: string): string {
@@ -207,6 +211,81 @@ export async function startEntraTenantSyncWorkflow(
   return startWorkflow('entraTenantSyncWorkflow', workflowId, input);
 }
 
+/** Must match ENTRA_SCHEDULE_ID_PREFIX in ee/temporal-workflows/src/schedules/setupSchedules.ts. */
+const ENTRA_SCHEDULE_ID_PREFIX = 'entra-all-tenants-sync-schedule';
+const ENTRA_WORKFLOW_TASK_QUEUE = process.env.TEMPORAL_TASK_QUEUE || DEFAULT_TEMPORAL_TASK_QUEUE;
+
+/**
+ * Reconcile one tenant's recurring sync schedule right now.
+ *
+ * Schedules were only ever reconciled at worker boot, so turning automatic sync
+ * on or off did nothing until the next restart — which makes "Pause" a promise
+ * rather than an action. The boot-time reconciliation still runs and still wins
+ * on restart; this just stops the operator waiting for it.
+ */
+export async function applyEntraSyncSchedule(params: {
+  tenantId: string;
+  syncEnabled: boolean;
+  syncIntervalMinutes: number;
+}): Promise<{ applied: boolean; error?: string }> {
+  const scheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${params.tenantId}`;
+  let temporal: any | null = null;
+
+  try {
+    temporal = await getTemporalClient();
+    if (!temporal) {
+      return { applied: false, error: 'Temporal client not available' };
+    }
+
+    if (!params.syncEnabled) {
+      try {
+        await temporal.client.schedule.getHandle(scheduleId).delete();
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : '';
+        // Already gone is the desired state, not a failure.
+        if (!/not\s*found/i.test(message)) {
+          throw error;
+        }
+      }
+      return { applied: true };
+    }
+
+    const spec = { intervals: [{ every: `${params.syncIntervalMinutes}m` }] };
+    const action = {
+      type: 'startWorkflow' as const,
+      workflowType: 'entraAllTenantsSyncWorkflow',
+      args: [{ tenantId: params.tenantId, trigger: 'scheduled' }],
+      taskQueue: ENTRA_WORKFLOW_TASK_QUEUE,
+      workflowExecutionTimeout: '2h',
+    };
+
+    try {
+      await temporal.client.schedule.create({
+        scheduleId,
+        spec,
+        action,
+        policies: { overlap: 'SKIP', catchupWindow: '10m' },
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      if (!/already\s*exists/i.test(message)) {
+        throw error;
+      }
+      const handle = temporal.client.schedule.getHandle(scheduleId);
+      await handle.update((prev: any) => ({ ...prev, spec, action }));
+    }
+
+    return { applied: true };
+  } catch (error: unknown) {
+    return {
+      applied: false,
+      error: error instanceof Error ? error.message : 'Failed to apply the Entra sync schedule',
+    };
+  } finally {
+    await temporal?.connection?.close?.().catch(() => undefined);
+  }
+}
+
 export async function queryEntraWorkflowStatus(
   workflowId: string
 ): Promise<EntraWorkflowQueryResult> {
@@ -346,6 +425,12 @@ export async function getEntraSyncRunHistory(
       processedTenants: Number(row.processed_tenants || 0),
       succeededTenants: Number(row.succeeded_tenants || 0),
       failedTenants: Number(row.failed_tenants || 0),
+      // History shows preflights — "preview run at 14:22" is audit evidence —
+      // but every aggregate that means "the integration is working" filters
+      // them out, because a preview changed nothing.
+      isDryRun: Boolean(row.is_dry_run),
+      scopeManagedTenantId: row.scope_managed_tenant_id ? String(row.scope_managed_tenant_id) : null,
+      scopeClientId: row.scope_client_id ? String(row.scope_client_id) : null,
     }));
   });
 }

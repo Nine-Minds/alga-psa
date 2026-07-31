@@ -101,7 +101,7 @@ vi.mock('@alga-psa/integrations/components', () => ({
   EmailProviderConfiguration: () => <div data-testid="email-provider-stub" />,
 }));
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
-  EntraIntegrationSettings: () => <div data-testid="entra-stub" />,
+  EntraIntegrationSummaryCard: () => <div data-testid="entra-stub" />,
 }));
 
 describe('IntegrationsSettingsPage — Hudu IT Documentation category gating (T030)', () => {

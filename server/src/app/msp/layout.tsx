@@ -5,6 +5,7 @@ import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-act
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
 import type { Metadata } from 'next';
@@ -67,10 +68,12 @@ export default async function MspLayout({
   // Only self-host installs carry a license_state row; gate the trial/expiry
   // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
   const selfHostLicensing = await isSelfHostLicensing();
+  const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
 
   return (
     <MspLayoutClient
       session={session}
+      currencyCode={currencyCode}
       productCode={productCode}
       needsOnboarding={needsOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}

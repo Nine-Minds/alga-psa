@@ -34,7 +34,8 @@ import {
 } from '@ee/lib/actions/email-actions/managedDomainActions';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
-import type { TenantEmailSettings, EmailProviderConfig } from 'server/src/types/email.types';
+import type { TenantEmailSettings } from 'server/src/types/email.types';
+import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 import { getEmailSettings, updateEmailSettings, getEmailProviders, testOutboundEmail } from '@alga-psa/integrations/actions';
 import ManagedDomainList from './ManagedDomainList';
 
@@ -415,12 +416,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     // Ensure a config entry exists for the selected provider
     const hasProvider = emailSettings.providerConfigs.some(c => c.providerType === provider);
     if (!hasProvider) {
-      const newConfig: EmailProviderConfig = {
-        providerId: `${provider}-provider`,
-        providerType: provider,
-        isEnabled: true,
-        config: provider === 'smtp' ? { host: '', port: 587, username: '', password: '', from: '' } : { apiKey: '', from: '' }
-      };
+      const newConfig = createDefaultProviderConfig(provider, { isEnabled: true });
       updatedSettings.providerConfigs = [...(updatedSettings.providerConfigs || []), newConfig];
     }
 
@@ -447,9 +443,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const updateSmtpField = (field: string, value: string | number | boolean) => {
     if (!emailSettings) return;
     const smtpConfig = getSmtpConfig();
-    if (!smtpConfig) return;
+    const providerConfigs = smtpConfig
+      ? emailSettings.providerConfigs
+      : [...emailSettings.providerConfigs, createDefaultProviderConfig('smtp', { isEnabled: true })];
 
-    const updatedConfigs = emailSettings.providerConfigs.map(config =>
+    const updatedConfigs = providerConfigs.map(config =>
       config.providerType === 'smtp'
         ? { ...config, config: { ...config.config, [field]: value } }
         : config
@@ -458,8 +456,10 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
   const persistSmtpSettings = async (): Promise<TenantEmailSettings | null> => {
-    const smtpConfig = getSmtpConfig();
-    if (!smtpConfig || !emailSettings) return null;
+    if (!emailSettings) return null;
+    const existingSmtpConfig = getSmtpConfig();
+    const smtpConfig = existingSmtpConfig
+      ?? createDefaultProviderConfig('smtp', { isEnabled: true });
 
     const { host, from } = smtpConfig.config;
     if (!host?.trim()) {
@@ -471,9 +471,17 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       return null;
     }
 
+    const providerConfigs = (existingSmtpConfig
+      ? emailSettings.providerConfigs
+      : [...emailSettings.providerConfigs, smtpConfig]
+    ).map(config => ({
+      ...config,
+      isEnabled: config.providerType === 'smtp',
+    }));
+
     const updatedResult = await updateEmailSettings({
       emailProvider: 'smtp',
-      providerConfigs: emailSettings.providerConfigs,
+      providerConfigs,
       defaultFromDomain: from.trim().split('@').pop() || emailSettings.defaultFromDomain
     });
     const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.smtpSaveFailed'));

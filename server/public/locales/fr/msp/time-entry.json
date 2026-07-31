@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Recherche...",
       "noWorkItems": "Aucun élément de travail trouvé"
-    }
+    },
+    "paymentWarningTitle": "Avertissement de paiement préalable",
+    "paymentWarning": "Le paiement est requis pour un jalon de facturation de projet signalé et n’a pas été confirmé. Confirmez le paiement avant de poursuivre le travail."
   },
   "workItemList": {
     "meta": {

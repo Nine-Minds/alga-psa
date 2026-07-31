@@ -24,7 +24,7 @@ function quarterPeriod(): { start: string; end: string } {
  * history has earned it.
  */
 export function OpportunityForecastView({ currencyCode }: { currencyCode: string }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [band, setBand] = useState<IForecastBand | null>(null);
 
   const load = useCallback(async () => {

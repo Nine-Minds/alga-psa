@@ -14,7 +14,7 @@ import {
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 
@@ -75,7 +75,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),
@@ -117,7 +118,7 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         custom_rate: null
       });
 
-    if (clientContractLineId) {
+    if (clientContractLineId && await context.db.schema.hasTable('client_contract_lines')) {
       await context.db('client_contract_lines')
         .where({
           tenant: context.tenantId,

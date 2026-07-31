@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { recordExternalPayment } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
+import { isEnterpriseEdition } from 'server/src/lib/features';
 
 const PROVIDER = 'alternative_payments';
 const SUCCESS_STATUSES = new Set(['paid', 'completed', 'succeeded', 'success']);
@@ -209,6 +210,16 @@ async function updateWebhookEvent(knex: any, tenant: string, eventId: string, st
 }
 
 export async function POST(req: NextRequest) {
+  // External payment recording is Enterprise Edition functionality — it lands
+  // in invoice_payments, which only the EE migration chain creates. Cloud SaaS
+  // reports 'enterprise' too, so this only blocks CE self-hosts.
+  if (!isEnterpriseEdition()) {
+    return NextResponse.json(
+      { error: 'The alternative-payments webhook is Enterprise Edition functionality.' },
+      { status: 403 },
+    );
+  }
+
   const body = await req.text();
   const signature = req.headers.get('x-alternative-payments-signature')
     || req.headers.get('x-ap-signature')

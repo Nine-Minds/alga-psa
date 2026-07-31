@@ -64,6 +64,7 @@ import { CommentsSection } from "../features/ticketDetail/components/CommentsSec
 import { DescriptionSection } from "../features/ticketDetail/components/DescriptionSection";
 import { DocumentsSection } from "../features/ticketDetail/components/DocumentsSection";
 import { MaterialsSection } from "../features/ticketDetail/components/MaterialsSection";
+import { AssetsSection } from "../features/ticketDetail/components/AssetsSection";
 import { TimeEntriesSection } from "../features/ticketDetail/components/TimeEntriesSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
@@ -670,6 +671,12 @@ export function TicketDetailBody({
           />
           <View style={{ height: spacing.sm }} />
           <MaterialsSection
+            client={client}
+            apiKey={session.accessToken}
+            ticketId={ticketId}
+          />
+          <View style={{ height: spacing.sm }} />
+          <AssetsSection
             client={client}
             apiKey={session.accessToken}
             ticketId={ticketId}

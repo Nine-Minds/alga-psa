@@ -14,6 +14,9 @@ import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/Shar
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -792,20 +795,30 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
               }}
               placeholder={t('runList.filters.versionPlaceholder', { defaultValue: 'Any version' })}
             />
-            <Input
-              id="workflow-runs-from"
-              label={t('runList.filters.fromLabel', { defaultValue: 'From' })}
-              type="date"
-              value={filters.from}
-              onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value }))}
-            />
-            <Input
-              id="workflow-runs-to"
-              label={t('runList.filters.toLabel', { defaultValue: 'To' })}
-              type="date"
-              value={filters.to}
-              onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value }))}
-            />
+            <div>
+              <Label className="block mb-1" htmlFor="workflow-runs-from">{t('runList.filters.fromLabel', { defaultValue: 'From' })}</Label>
+              <DatePicker
+                id="workflow-runs-from"
+                label={t('runList.filters.fromLabel', { defaultValue: 'From' })}
+                placeholder={t('runList.filters.fromLabel', { defaultValue: 'From' })}
+                clearable
+                className="w-full"
+                value={dateFromString(filters.from)}
+                onChange={(date) => setFilters((prev) => ({ ...prev, from: dateToString(date) }))}
+              />
+            </div>
+            <div>
+              <Label className="block mb-1" htmlFor="workflow-runs-to">{t('runList.filters.toLabel', { defaultValue: 'To' })}</Label>
+              <DatePicker
+                id="workflow-runs-to"
+                label={t('runList.filters.toLabel', { defaultValue: 'To' })}
+                placeholder={t('runList.filters.toLabel', { defaultValue: 'To' })}
+                clearable
+                className="w-full"
+                value={dateFromString(filters.to)}
+                onChange={(date) => setFilters((prev) => ({ ...prev, to: dateToString(date) }))}
+              />
+            </div>
             <CustomSelect
               id="workflow-runs-sort"
               label={t('runList.filters.sortLabel', { defaultValue: 'Sort' })}

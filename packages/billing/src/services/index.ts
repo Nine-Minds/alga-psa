@@ -21,6 +21,20 @@ export {
 } from './quoteConversionService';
 export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';
 export { ClientContractServiceConfigurationService } from './clientContractServiceConfigurationService';
+export {
+  computeEntryAmounts,
+  validateAllocation,
+  evaluatePhaseReadiness,
+  evaluateDateReadiness,
+  computeCapWriteDown,
+  detectThresholdCrossings,
+  computeDepositReconciliation,
+} from './projectBillingService';
+export type {
+  AllocationValidationResult,
+  CapWriteDownResult,
+  DepositReconciliationEntry,
+} from './projectBillingService';
 
 // Accounting export services
 export { AccountingExportService, type ExternalTaxImporter } from './accountingExportService';

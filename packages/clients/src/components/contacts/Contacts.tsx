@@ -46,6 +46,7 @@ import { getUniqueTagTexts } from '@alga-psa/ui';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { EntraContactBadge } from './EntraContactBadge';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -643,7 +644,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       dataIndex: 'full_name',
       width: '20%',
       render: (value, record): React.ReactNode => (
-        <div className="flex items-center">
+        <div className="flex min-w-0 items-center gap-2">
           <ContactAvatar
             contactId={record.contact_name_id}
             contactName={record.full_name}
@@ -661,10 +662,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                 handleEditContact(record);
               }
             }}
-            className="text-blue-600 hover:underline cursor-pointer"
+            className="min-w-0 truncate text-blue-600 hover:underline cursor-pointer"
           >
             {record.full_name}
           </div>
+          {/* Renders nothing unless this contact is directory-maintained. */}
+          <EntraContactBadge contact={record as unknown as Record<string, unknown>} />
         </div>
       ),
     },

@@ -1,11 +1,18 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateManualInvoice } from '@alga-psa/billing/actions';
+import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/billing/actions';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, ensureDefaultBillingSettings, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, ensureDefaultBillingSettings, ensureClientPlanBundlesTable,
+  unwrapManualInvoice
+} from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
+
+// generateManualInvoice returns {success, invoice}; unwrap so call sites keep
+// receiving the invoice itself.
+const generateManualInvoice = async (request: any): Promise<any> =>
+  unwrapManualInvoice(await generateManualInvoiceRaw(request));
 
 
 vi.mock('@alga-psa/auth', async () => {
@@ -65,7 +72,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),

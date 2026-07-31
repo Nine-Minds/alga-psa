@@ -4,7 +4,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, waitFor } from '@testing-library/react';
 import AgentScheduleView from '../src/components/schedule/AgentScheduleView';
 
-const calendarSpy = vi.fn();
+// vi.hoisted: mock factories run while this module's imports evaluate —
+// plain consts would still be in their temporal dead zone at that point.
+const { calendarSpy, getScheduleEntries, getCurrentUser, getCurrentUserPermissions, useUsers } =
+  vi.hoisted(() => ({
+    calendarSpy: vi.fn(),
+    getScheduleEntries: vi.fn(),
+    getCurrentUser: vi.fn(),
+    getCurrentUserPermissions: vi.fn(),
+    useUsers: vi.fn(() => ({ users: [] })),
+  }));
 
 vi.mock('next/dynamic', () => ({
   default: () => (props: any) => {
@@ -13,21 +22,28 @@ vi.mock('next/dynamic', () => ({
   }
 }));
 
-const getScheduleEntries = vi.fn();
 vi.mock('@alga-psa/scheduling/actions', () => ({
   getScheduleEntries,
 }));
 
-const getCurrentUser = vi.fn();
-const getCurrentUserPermissions = vi.fn();
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser,
   getCurrentUserPermissions,
 }));
+// AgentScheduleView imports these from user-composition, not users.
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser,
+  getCurrentUserPermissions,
+}));
 
-const useUsers = vi.fn(() => ({ users: [] }));
-vi.mock('@alga-psa/users/hooks', () => ({
+// AgentScheduleView imports useUsers from user-composition. (Do NOT mock
+// '@alga-psa/users/hooks' — that subpath isn't in the users exports map, and
+// registering a mock for an unresolvable specifier aborts collection.)
+vi.mock('@alga-psa/user-composition/hooks', () => ({
   useUsers,
+  // ScheduleCalendar (rendered inside AgentScheduleView) reads a view
+  // preference from the same barrel.
+  useUserPreference: () => ({ value: undefined, setValue: vi.fn() }),
 }));
 
 const entryPopupSpy = vi.fn();
@@ -48,6 +64,8 @@ vi.mock('../src/components/schedule/AgentScheduleDrawerStyles', () => ({
 
 beforeEach(() => {
   calendarSpy.mockClear();
+  entryPopupSpy.mockClear();
+  getScheduleEntries.mockClear();
   getScheduleEntries.mockResolvedValue({ success: true, entries: [] });
   getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
   getCurrentUserPermissions.mockResolvedValue(['user_schedule:read:all']);
@@ -118,7 +136,7 @@ describe('AgentScheduleView', () => {
     expect(result.style.backgroundColor).toBe('rgb(var(--color-primary-200))');
   });
 
-  it('opens EntryPopup when an event is clicked', () => {
+  it('opens EntryPopup when an event is clicked', async () => {
     const { getByTestId } = render(<AgentScheduleView agentId="agent-1" />);
     const props = calendarSpy.mock.calls[0][0];
 
@@ -132,7 +150,8 @@ describe('AgentScheduleView', () => {
       });
     });
 
-    expect(getByTestId('entry-popup')).toBeTruthy();
+    // The popup waits for the async current-user resolution.
+    await waitFor(() => expect(getByTestId('entry-popup')).toBeTruthy());
   });
 
   it('sets scrollToTime to 8 AM', () => {

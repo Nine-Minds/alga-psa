@@ -1,7 +1,9 @@
 {
   "name": "@alga-psa/opportunities",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./src/index.ts",

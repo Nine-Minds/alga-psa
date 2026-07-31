@@ -26,7 +26,9 @@ import {
 import type { PreviewSessionState, PreviewSourceKind } from '../preview/previewSessionState';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../state/designerStore';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../../../lib/invoice-template-ast/evaluator';
+import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../../../lib/invoice-template-ast/bindingAliases';
 import { validateTemplateAst } from '../../../lib/invoice-template-ast/schema';
+import { resolveDesignerDocumentKind } from '../utils/documentKind';
 import {
   cloneDesignerTransformWorkspace,
   suggestTransformOutputBindingId,
@@ -417,7 +419,14 @@ const TransformsWorkspace: React.FC<Props> = ({
         };
       }
 
-      const evaluation = evaluateTemplateAst(validationResult.ast, previewData as unknown as Record<string, unknown>);
+      const documentKind = resolveDesignerDocumentKind(nodes);
+      const evaluation = evaluateTemplateAst(
+        validationResult.ast,
+        previewData as unknown as Record<string, unknown>,
+        documentKind === 'quote'
+          ? undefined
+          : { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
+      );
       const outputRows = Array.isArray(evaluation.output) ? evaluation.output.filter(isRecord) : [];
       return {
         issues: [] as PreviewIssue[],
@@ -465,7 +474,7 @@ const TransformsWorkspace: React.FC<Props> = ({
         rows: [],
       };
     }
-  }, [previewData, workspaceSnapshot]);
+  }, [nodes, previewData, workspaceSnapshot]);
 
   const combinedIssues = useMemo(
     () => [

@@ -12,6 +12,7 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '../../../../actions/timeEntryActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { 
@@ -26,6 +27,8 @@ import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
 import { validateTimeEntry } from './utils';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useSchedulingCrossFeatureOptional } from '../../../../context/SchedulingCrossFeatureContext';
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -49,6 +52,11 @@ interface TimeEntryDialogProps {
   inDrawer?: boolean;
 }
 
+function splitPaymentWarning(message: string): [string, string] {
+  const match = message.match(/^(.+?[.!?])(?:\s+|$)(.*)$/s);
+  return match ? [match[1], match[2]] : [message, ''];
+}
+
 // Main dialog content component
 const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeEntryDialogProps): React.JSX.Element {
   const {
@@ -69,6 +77,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     inDrawer,
   } = props;
   const { t } = useTranslation('msp/time-entry');
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  // Injected from the composition layer (billing owns the warning action).
+  const getProjectTaskPaymentWarning = useSchedulingCrossFeatureOptional()?.getProjectTaskPaymentWarning;
   const {
     entries,
     services,
@@ -89,6 +100,31 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   });
   const [closeConfirmation, setCloseConfirmation] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasProjectPaymentWarning, setHasProjectPaymentWarning] = useState(false);
+
+  useEffect(() => {
+    let stale = false;
+
+    if (!isOpen || workItem.type !== 'project_task' || !getProjectTaskPaymentWarning) {
+      setHasProjectPaymentWarning(false);
+      return () => {
+        stale = true;
+      };
+    }
+
+    getProjectTaskPaymentWarning(workItem.work_item_id)
+      .then((result) => {
+        if (stale) return;
+        setHasProjectPaymentWarning(Boolean(result && !isReturnedActionError(result)));
+      })
+      .catch(() => {
+        if (!stale) setHasProjectPaymentWarning(false);
+      });
+
+    return () => {
+      stale = true;
+    };
+  }, [isOpen, workItem.type, workItem.work_item_id, getProjectTaskPaymentWarning]);
 
   // Initialize a single-entry form whenever the dialog opens.
   useEffect(() => {
@@ -271,6 +307,13 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   const title = hasExistingEntry
     ? `${isEditable ? 'Edit' : 'View'} Time Entry for ${workItem.name}`
     : `Add New Time Entry for ${workItem.name}`;
+  // LEVERAGE: pattern payment-warning-banner — this duplicates the project-billing warning presentation because scheduling cannot import billing UI; extract through the cross-feature composition layer if another consumer appears.
+  const [paymentWarningEmphasis, paymentWarningRest] = splitPaymentWarning(t(
+    'workItemPicker.paymentWarning',
+    {
+      defaultValue: 'Payment is required for a flagged project billing milestone and has not been confirmed. Confirm payment before continuing work.',
+    },
+  ));
   const footerActions = (
     <div className="flex justify-end space-x-2">
       <Button
@@ -299,6 +342,19 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       data-automation-type="container"
     >
       {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+      {projectBillingUiEnabled && hasProjectPaymentWarning && (
+        <Alert id={`${id}-project-payment-warning`} variant="warning" className="mb-3">
+          <AlertDescription>
+            <span className="font-medium">
+              {t('workItemPicker.paymentWarningTitle', {
+                defaultValue: 'Payment prerequisite warning',
+              })}
+            </span>{' '}
+            <strong>{paymentWarningEmphasis}</strong>
+            {paymentWarningRest && <> {paymentWarningRest}</>}
+          </AlertDescription>
+        </Alert>
+      )}
       {workItem.type === 'ticket' && workItem.master_ticket_id && (
         <div className="mb-3 rounded-md bg-blue-50 dark:bg-blue-900/20 p-3 text-sm text-[rgb(var(--color-text-700))]">
           {workItem.master_ticket_number

@@ -9,16 +9,9 @@ import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { assertLocationWritable } from './scope';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
@@ -29,10 +22,10 @@ let CLIENT: string;
 let USER: string;
 
 beforeAll(async () => {
-  const e = readEnv();
+  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
-    connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
+    connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
@@ -62,7 +55,7 @@ async function onHand(trx: Knex.Transaction, serviceId: string, locationId: stri
   return r ? Number(r.quantity_on_hand) : 0;
 }
 
-describe('inventory — COGS, drop-ship, invoicing, scope (real DB, rolled back)', () => {
+describe.skipIf(!databaseConnection)('inventory — COGS, drop-ship, invoicing, scope (real DB, rolled back)', () => {
   it('T011: serialized consume captures COGS = unit_cost and decrements on_hand', async () => {
     await inTx(async (trx) => {
       await trx('product_inventory_settings').insert({ tenant: TENANT, service_id: SER_SERVICE, track_stock: true, is_serialized: true, cost_currency: 'USD', default_location_id: LOCATION }).onConflict(['tenant', 'service_id']).merge();

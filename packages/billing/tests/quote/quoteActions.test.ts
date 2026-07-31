@@ -8,6 +8,7 @@ const TENANT_ID = '22222222-2222-4222-8222-222222222222';
 const QUOTE_ID = '33333333-3333-4333-8333-333333333333';
 const SERVICE_ID = '44444444-4444-4444-8444-444444444444';
 const QUOTE_ITEM_ID = '55555555-5555-4555-8555-555555555555';
+const CLIENT_ID = '66666666-6666-4666-8666-666666666666';
 
 const currentUser = {
   id: USER_ID,
@@ -29,6 +30,14 @@ const generateAndStoreMock = vi.fn();
 const approvalSettingsMock = vi.fn();
 const documentInsertMock = vi.fn();
 const documentAssociationCreateMock = vi.fn();
+const fetchTenantPartyMock = vi.fn();
+const resolveEmailLocaleMock = vi.fn();
+// Rows returned by the quote email template lookup, keyed by table so tests
+// can exercise the tenant-override-before-system-template precedence.
+const emailTemplateRows: Record<string, any> = {};
+// Filters the email template lookups ran with, so tests can assert the
+// recipient's locale reaches the query rather than a hard-coded 'en'.
+const emailTemplateLookups: Array<{ table: string; filter: any }> = [];
 
 const makeQuery = (result: any) => {
   const chain: any = {};
@@ -78,6 +87,14 @@ vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getInstance: (...args: any[]) => getTenantEmailServiceInstance(...args),
   },
+}));
+
+vi.mock('../../src/lib/adapters/tenantPartyAdapter', () => ({
+  fetchTenantParty: (...args: any[]) => fetchTenantPartyMock(...args),
+}));
+
+vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
+  resolveEmailLocale: (...args: any[]) => resolveEmailLocaleMock(...args),
 }));
 
 vi.mock('../../src/lib/quoteApprovalSettings', async (importOriginal) => {
@@ -201,12 +218,37 @@ describe('quoteActions', () => {
       if (table === 'tenants') {
         return makeQuery({ client_name: 'Acme MSP' });
       }
+      if (table === 'tenant_email_templates' || table === 'system_email_templates') {
+        const chain = makeQuery(emailTemplateRows[table]);
+        chain.where = vi.fn((filter: any) => {
+          emailTemplateLookups.push({ table, filter });
+          return chain;
+        });
+        return chain;
+      }
+      if (table === 'clients') {
+        return makeQuery({ billing_email: null });
+      }
+      if (table === 'contacts') {
+        return makeQuery({ email: null });
+      }
       if (table === 'user_roles' || table === 'team_members' || table === 'users') {
         return makeListQuery([]);
       }
       throw new Error(`Unexpected mockKnex table access: ${table}`);
     });
     createTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: TENANT_ID });
+    delete emailTemplateRows.tenant_email_templates;
+    delete emailTemplateRows.system_email_templates;
+    emailTemplateLookups.length = 0;
+    resolveEmailLocaleMock.mockResolvedValue('en');
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Acme MSP',
+      address: null,
+      email: null,
+      phone: null,
+      logo_url: null,
+    });
     hasPermissionMock.mockResolvedValue(true);
     generatePDFMock.mockResolvedValue(Buffer.from('pdf-content'));
     generateAndStoreMock.mockResolvedValue({ file_id: 'stored-file-1', storage_path: 'tenant/pdfs/Q-0001.pdf', file_size: 1024 });
@@ -964,6 +1006,121 @@ describe('quoteActions', () => {
       html: expect.stringContaining('Q-0001'),
       text: expect.stringContaining('Valid Until:'),
       attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf', content: Buffer.from('pdf-content') })],
+    }));
+  });
+
+  it('T092a: quote email prefers a tenant template override over the system template', async () => {
+    emailTemplateRows.tenant_email_templates = {
+      subject: 'Tenant quote {{quote.number}} from {{company.name}}',
+      html_content: '<p>{{quote.amount}} until {{quote.validUntil}}</p>',
+      text_content: 'Tenant quote {{quote.number}}',
+    };
+    emailTemplateRows.system_email_templates = {
+      subject: 'System quote {{quote.number}}',
+      html_content: '<p>system</p>',
+      text_content: 'system',
+    };
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'Tenant quote Q-0001 from Acme MSP',
+      html: expect.stringContaining('$50.00 until '),
+      text: 'Tenant quote Q-0001',
+    }));
+  });
+
+  it('T092b: quote email falls back to the system template and the tenant default company name', async () => {
+    emailTemplateRows.system_email_templates = {
+      subject: 'System quote {{quote.number}} from {{company.name}}',
+      html_content: '<p>{{quote.amount}}</p>',
+      text_content: 'System quote {{quote.number}}',
+    };
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Contoso IT Services',
+      address: null,
+      email: null,
+      phone: null,
+      logo_url: null,
+    });
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(fetchTenantPartyMock).toHaveBeenCalledWith(mockKnex, TENANT_ID);
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'System quote Q-0001 from Contoso IT Services',
+    }));
+  });
+
+  it("T092c: quote email looks the template up in the recipient's resolved locale", async () => {
+    resolveEmailLocaleMock.mockResolvedValue('fr');
+    emailTemplateRows.system_email_templates = {
+      subject: 'Devis {{quote.number}}',
+      html_content: '<p>{{quote.amount}}</p>',
+      text_content: 'Devis {{quote.number}}',
+    };
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: CLIENT_ID,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(resolveEmailLocaleMock).toHaveBeenCalledWith(TENANT_ID, {
+      email: 'client@example.com',
+      userType: 'client',
+      clientId: CLIENT_ID,
+    });
+    expect(emailTemplateLookups).toContainEqual({
+      table: 'tenant_email_templates',
+      filter: { name: 'quote-email', language_code: 'fr' },
+    });
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'Devis Q-0001',
     }));
   });
 

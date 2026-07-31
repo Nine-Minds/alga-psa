@@ -155,5 +155,23 @@
   },
   "mention": {
     "noResultsFound": "11111"
+  },
+  "aiCredits": {
+    "indicatorTooltip": "11111 {{credits}} 11111",
+    "noSubscription": {
+      "title": "11111",
+      "body": "11111",
+      "cta": "11111"
+    },
+    "outOfCredits": {
+      "title": "11111",
+      "body": "11111",
+      "bodyWithBalance": "11111 {{balance}} 11111",
+      "cta": "11111"
+    },
+    "consentRequired": {
+      "title": "11111",
+      "body": "11111"
+    }
   }
 }

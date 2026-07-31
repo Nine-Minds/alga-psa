@@ -1,13 +1,13 @@
 import { badRequest, dynamic, ok, runtime } from '../../_responses';
-import { requireEntraUiFlagEnabled } from '../../_guards';
+import { requireEntraAccess } from '../../_guards';
 import { resolveEntraQueueToExistingContact } from '@enterprise/lib/integrations/entra/reconciliationQueueService';
 
 export { dynamic, runtime };
 
 export async function POST(request: Request): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('update');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('update');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
   const body = await request.json().catch(() => null);
@@ -22,10 +22,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const resolved = await resolveEntraQueueToExistingContact({
-    tenantId: flagGate.tenantId,
+    tenantId: accessGate.tenantId,
     queueItemId,
     contactNameId,
-    resolvedBy: flagGate.userId,
+    resolvedBy: accessGate.userId,
   });
 
   return ok(resolved);

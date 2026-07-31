@@ -37,6 +37,10 @@ export const SimulateWorkflowDefinitionInput = z.object({
   definition: workflowDefinitionSchema,
   /** Workflow payload used as-is. Wins over eventPayload/synthesis. */
   payload: z.record(z.any()).optional(),
+  /** Replay a persisted workflow runtime event by id. Mutually exclusive with payload. */
+  eventId: z.string().uuid().optional(),
+  /** Replay the latest persisted event for the trigger event type. Mutually exclusive with payload. */
+  useLatestEvent: z.boolean().optional(),
   /** Source event payload, run through the trigger's payloadMapping. */
   eventPayload: z.record(z.any()).optional(),
   /** Event to synthesize a payload for when neither payload nor eventPayload is given. */
@@ -48,6 +52,14 @@ export const SimulateWorkflowDefinitionInput = z.object({
     maxForEachIterations: z.number().int().positive().optional(),
     maxDurationMs: z.number().int().positive().optional()
   }).optional()
+}).superRefine((value, ctx) => {
+  if (value.payload !== undefined && (value.eventId !== undefined || value.useLatestEvent === true)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['payload'],
+      message: 'Provide either payload or eventId/useLatestEvent, not both.'
+    });
+  }
 });
 
 export const UpdateWorkflowDefinitionMetadataInput = z.object({

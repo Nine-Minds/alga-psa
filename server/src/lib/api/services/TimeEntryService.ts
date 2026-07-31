@@ -25,6 +25,7 @@ import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, Vali
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
+import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -332,9 +333,13 @@ export class TimeEntryService extends BaseService<any> {
       Object.assign(timeEntryData, billingInfo);
     }
 
-    const [timeEntry] = await this.buildTenantScopedQuery(knex, context)
-      .insert(timeEntryData)
-      .returning('*');
+    const timeEntry = await knex.transaction(async (trx) => {
+      const [created] = await tenantDb(trx, context.tenant).table('time_entries')
+        .insert(timeEntryData)
+        .returning('*');
+      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
+      return created;
+    });
 
     // Publish event
     await publishEvent({
@@ -442,9 +447,14 @@ export class TimeEntryService extends BaseService<any> {
       Object.assign(updateData, billingInfo);
     }
 
-    await this.buildTenantScopedQuery(knex, context)
-      .where(this.primaryKey, id)
-      .update(updateData);
+    await knex.transaction(async (trx) => {
+      const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
+        .where({ [this.primaryKey]: id })
+        .update(updateData)
+        .returning('*');
+      if (!updated) throw new NotFoundError('Time entry not found');
+      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, updated);
+    });
 
     // Publish event
     await publishEvent({
@@ -478,9 +488,12 @@ export class TimeEntryService extends BaseService<any> {
       throw new ConflictError('Cannot delete approved time entries');
     }
 
-    await this.buildTenantScopedQuery(knex, context)
-      .where(this.primaryKey, id)
-      .del();
+    await knex.transaction(async (trx) => {
+      await tenantDb(trx, context.tenant).table('time_entries')
+        .where({ [this.primaryKey]: id })
+        .del();
+      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, null);
+    });
 
     // Publish event
     await publishEvent({
@@ -584,9 +597,13 @@ export class TimeEntryService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const [session] = await this.buildTenantScopedQuery(knex, context)
-      .insert(timeEntryData)
-      .returning('*');
+    const session = await knex.transaction(async (trx) => {
+      const [created] = await tenantDb(trx, context.tenant).table('time_entries')
+        .insert(timeEntryData)
+        .returning('*');
+      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
+      return created;
+    });
 
     return {
       session_id: session.entry_id, // Use entry_id as session_id
@@ -640,9 +657,14 @@ export class TimeEntryService extends BaseService<any> {
       updateData.work_timezone = work_timezone;
     }
 
-    await this.buildTenantScopedQuery(knex, context)
-      .where('entry_id', sessionId)
-      .update(updateData);
+    await knex.transaction(async (trx) => {
+      const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
+        .where({ entry_id: sessionId })
+        .update(updateData)
+        .returning('*');
+      if (!updated) throw new NotFoundError('Active session not found');
+      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, session, updated);
+    });
 
     const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
       workItemType: session.work_item_type,

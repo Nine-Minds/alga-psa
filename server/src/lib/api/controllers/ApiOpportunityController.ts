@@ -78,6 +78,37 @@ export class ApiOpportunityController extends ApiBaseController {
     };
   }
 
+  workQueue() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+          const queue = await this.opportunityService.getWorkQueue(apiRequest.context);
+          return createSuccessResponse(queue);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  timeline() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+          const id = await this.extractIdFromPath(apiRequest);
+          const timeline = await this.opportunityService.listTimeline(id, apiRequest.context);
+          return createSuccessResponse(timeline);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
   listSuggestions() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {

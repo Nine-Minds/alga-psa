@@ -137,6 +137,24 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
       meta: zOpenApi.record(zOpenApi.unknown()).optional(),
     }),
   );
+  const WorkQueueSuccess = registry.registerSchema(
+    'OpportunityWorkQueueSuccessV1',
+    zOpenApi.object({
+      data: zOpenApi.record(zOpenApi.unknown()),
+    }),
+  );
+  const TimelineSuccess = registry.registerSchema(
+    'OpportunityTimelineSuccessV1',
+    zOpenApi.object({
+      data: zOpenApi.array(zOpenApi.object({
+        interaction_id: zOpenApi.string().uuid(),
+        title: zOpenApi.string(),
+        notes: zOpenApi.string().nullable().optional(),
+        interaction_date: zOpenApi.string().datetime(),
+        user_name: zOpenApi.string(),
+      })),
+    }),
+  );
 
   type Def = {
     method: 'get' | 'post' | 'put' | 'delete';
@@ -153,7 +171,9 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
   const defs: Def[] = [
     { method: 'get', path: '/api/v1/opportunities', summary: 'List opportunities', description: 'Lists tenant opportunities using the OpportunityListFilters contract.', query: ListQuery, successStatus: 200 },
     { method: 'post', path: '/api/v1/opportunities', summary: 'Create opportunity', description: 'Creates an open opportunity with a required next action.', body: CreateBody, successStatus: 201 },
+    { method: 'get', path: '/api/v1/opportunities/work-queue', summary: 'Get the current user work queue', description: 'Returns the shared server-composed opportunity work queue for the authenticated API-key user.' },
     { method: 'get', path: '/api/v1/opportunities/{id}', summary: 'Get opportunity', description: 'Gets one opportunity by UUID.', params: OpportunityIdParam },
+    { method: 'get', path: '/api/v1/opportunities/{id}/timeline', summary: 'List opportunity timeline', description: 'Lists interactions linked to the opportunity, newest first.', params: OpportunityIdParam },
     { method: 'put', path: '/api/v1/opportunities/{id}', summary: 'Update opportunity', description: 'Updates editable opportunity fields; status and stage use dedicated flows.', body: UpdateBody, params: OpportunityIdParam },
     { method: 'delete', path: '/api/v1/opportunities/{id}', summary: 'Delete opportunity', description: 'Deletes an open opportunity after linked quotes are removed.', successStatus: 204, params: OpportunityIdParam },
     { method: 'post', path: '/api/v1/opportunities/{id}/win', summary: 'Win opportunity', description: 'Marks an open opportunity won, optionally converting an accepted linked quote to a draft agreement.', body: WinBody, params: OpportunityIdParam },
@@ -192,16 +212,20 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
             description: 'Operation succeeded.',
             schema: def.path === '/api/v1/opportunities' && def.method === 'get'
               ? ApiPaginated
-              : def.method === 'get' && (
-                  def.path === '/api/v1/opportunities/suggestions'
-                  || def.path === '/api/v1/opportunities/{id}/evidence'
-                  || def.path === '/api/v1/opportunities/calibration'
-                  || def.path === '/api/v1/opportunities/{id}/commitments'
-                  || def.path === '/api/v1/opportunities/qbr/yield'
-                  || def.path === '/api/v1/opportunities/rollups'
-                )
-                ? ApiArraySuccess
-                : ApiSuccess,
+              : def.path === '/api/v1/opportunities/work-queue'
+                ? WorkQueueSuccess
+                : def.path === '/api/v1/opportunities/{id}/timeline'
+                  ? TimelineSuccess
+                  : def.method === 'get' && (
+                      def.path === '/api/v1/opportunities/suggestions'
+                      || def.path === '/api/v1/opportunities/{id}/evidence'
+                      || def.path === '/api/v1/opportunities/calibration'
+                      || def.path === '/api/v1/opportunities/{id}/commitments'
+                      || def.path === '/api/v1/opportunities/qbr/yield'
+                      || def.path === '/api/v1/opportunities/rollups'
+                    )
+                    ? ApiArraySuccess
+                    : ApiSuccess,
           },
       400: { description: 'Validation or request parsing failure.', schema: ApiError },
       401: { description: 'API key missing or invalid.', schema: ApiError },

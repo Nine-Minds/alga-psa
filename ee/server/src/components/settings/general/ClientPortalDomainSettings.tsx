@@ -283,11 +283,11 @@ const ClientPortalDomainSettings = () => {
     <Card>
       <CardHeader>
         <CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
+          <span className="flex flex-wrap items-center gap-2">
             <AtSign className="h-5 w-5" />
             {t('clientPortal.domain.title')}
             <Badge variant={badge.variant}>{badge.label}</Badge>
-          </div>
+          </span>
         </CardTitle>
         <CardDescription>
           {t('clientPortal.domain.description')}

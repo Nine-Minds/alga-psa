@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { withTenantScope } from '../utils/tenantScopedBuilderDouble';
 
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn();
@@ -52,20 +53,20 @@ describe('reconciliationQueueService resolve flows', () => {
     const trxMock = Object.assign(
       vi.fn((table: string) => {
         if (table === 'entra_contact_reconciliation_queue') {
-          return {
+          return withTenantScope({
             where: vi.fn(() => ({
               first: queueFirstMock,
               update: queueUpdateMock,
             })),
-          };
+          });
         }
 
         if (table === 'contacts') {
-          return {
+          return withTenantScope({
             where: vi.fn(() => ({
               first: contactFirstMock,
             })),
-          };
+          });
         }
 
         throw new Error(`Unexpected table ${table}`);
@@ -138,12 +139,12 @@ describe('reconciliationQueueService resolve flows', () => {
     const trxMock = Object.assign(
       vi.fn((table: string) => {
         if (table === 'entra_contact_reconciliation_queue') {
-          return {
+          return withTenantScope({
             where: vi.fn(() => ({
               first: queueFirstMock,
               update: queueUpdateMock,
             })),
-          };
+          });
         }
 
         throw new Error(`Unexpected table ${table}`);
@@ -226,20 +227,20 @@ describe('reconciliationQueueService resolve flows', () => {
     const crossClientTrxMock = Object.assign(
       vi.fn((table: string) => {
         if (table === 'entra_contact_reconciliation_queue') {
-          return {
+          return withTenantScope({
             where: vi.fn(() => ({
               first: queueFirstCrossClientMock,
               update: vi.fn(async () => 1),
             })),
-          };
+          });
         }
 
         if (table === 'contacts') {
-          return {
+          return withTenantScope({
             where: vi.fn(() => ({
               first: contactFirstCrossClientMock,
             })),
-          };
+          });
         }
 
         throw new Error(`Unexpected table ${table}`);
@@ -287,20 +288,20 @@ describe('reconciliationQueueService resolve flows', () => {
     const crossTenantTrxMock = Object.assign(
       vi.fn((table: string) => {
         if (table === 'entra_contact_reconciliation_queue') {
-          return {
+          return withTenantScope({
             where: vi.fn(() => ({
               first: queueFirstCrossTenantMock,
               update: vi.fn(async () => 1),
             })),
-          };
+          });
         }
 
         if (table === 'contacts') {
-          return {
+          return withTenantScope({
             where: vi.fn(() => ({
               first: contactFirstCrossTenantMock,
             })),
-          };
+          });
         }
 
         throw new Error(`Unexpected table ${table}`);

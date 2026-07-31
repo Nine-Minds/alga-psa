@@ -249,10 +249,6 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
                 if (isSaving) return;
                 handleCompanyChange(mapping.mapping_id, clientId);
               }}
-              filterState="active"
-              onFilterStateChange={() => {}}
-              clientTypeFilter="company"
-              onClientTypeFilterChange={() => {}}
               placeholder={t('integrations.rmm.ninjaone.selectCompany', { defaultValue: 'Select company' })}
               fitContent={true}
               className="w-full"

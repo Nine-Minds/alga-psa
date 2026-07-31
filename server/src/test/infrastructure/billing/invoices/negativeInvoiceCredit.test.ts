@@ -12,6 +12,7 @@ import { ClientContractLine } from '@alga-psa/billing/models';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDate, dateHelpers } from '../../../../../test-utils/dateUtils';
 import {
+  assignContractLineToClient,
   createTestService,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
@@ -22,6 +23,7 @@ import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billi
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
 process.env.DB_PORT = process.env.DB_PORT || '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 
@@ -87,7 +89,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),
@@ -175,15 +178,11 @@ async function generateInvoiceFromCharges(
 }
 
 async function ensureClientContractLine(context: TestContext, startDate: string): Promise<void> {
-  if (!(await hasSchemaTable(context, 'client_contract_lines'))) {
-    return;
-  }
-
-  const existingLine = await tenantTable(context, 'client_contract_lines')
+  const existingAssignment = await tenantTable(context, 'client_contracts')
     .where({ client_id: context.clientId, tenant: context.tenantId })
     .first();
 
-  if (existingLine) {
+  if (existingAssignment) {
     return;
   }
 
@@ -203,15 +202,7 @@ async function ensureClientContractLine(context: TestContext, startDate: string)
       billing_timing: 'arrears'
     });
 
-  await tenantTable(context, 'client_contract_lines')
-    .insert({
-      client_contract_line_id: uuidv4(),
-      client_id: context.clientId,
-      contract_line_id: contractLineId,
-      tenant: context.tenantId,
-      start_date: startDate,
-      is_active: true
-    });
+  await assignContractLineToClient(context, contractLineId, { startDate });
 }
 
 describe('Negative Invoice Credit Tests', () => {
@@ -697,7 +688,9 @@ describe('Negative Invoice Credit Tests', () => {
 
       await ensureClientContractLine(context, startDate1);
 
-      const existingContractLine = await tenantTable(context, 'client_contract_lines')
+      // client_contract_lines was dropped in 20251207140000; client_contracts is
+      // now the junction that proves the client has an assigned contract.
+      const existingContractLine = await tenantTable(context, 'client_contracts')
         .where({ client_id: client_id, tenant: context.tenantId })
         .first();
       expect(existingContractLine).toBeTruthy();

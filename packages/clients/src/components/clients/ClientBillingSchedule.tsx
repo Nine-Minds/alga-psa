@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -546,11 +547,14 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
           {(billingCycle === 'bi-weekly') && (
             <div className="space-y-2">
               <div className="text-sm font-medium">{t('clientBillingSchedule.firstCycleStartDate', { defaultValue: 'First cycle start date (UTC)' })}</div>
-              <Input
+              <DatePicker
                 id="client-billing-anchor-reference-date"
-                type="date"
-                value={anchorDraft.referenceDate ?? ''}
-                onChange={(e) => setAnchorDraft(d => ({ ...d, referenceDate: e.target.value || null }))}
+                label={t('clientBillingSchedule.firstCycleStartDate', { defaultValue: 'First cycle start date (UTC)' })}
+                placeholder={t('clientBillingSchedule.firstCycleStartDate', { defaultValue: 'First cycle start date (UTC)' })}
+                clearable
+                className="w-full"
+                value={dateFromString(anchorDraft.referenceDate ?? '')}
+                onChange={(date) => setAnchorDraft(d => ({ ...d, referenceDate: dateToString(date) || null }))}
               />
               <div className="text-xs text-gray-500">{t('clientBillingSchedule.firstCycleStartHelp', { defaultValue: 'Used to establish stable parity; leave blank for rolling bi-weekly cycles.' })}</div>
             </div>
@@ -583,11 +587,14 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
 
           <div className="space-y-2 border-t pt-3">
             <div className="text-sm font-medium">{t('clientBillingSchedule.historyStartDate', { defaultValue: 'Billing History Start Date (optional)' })}</div>
-            <Input
+            <DatePicker
               id="client-billing-history-start-date"
-              type="date"
-              value={billingHistoryStartDate ?? ''}
-              onChange={(e) => setBillingHistoryStartDate(e.target.value || null)}
+              label={t('clientBillingSchedule.historyStartDate', { defaultValue: 'Billing History Start Date (optional)' })}
+              placeholder={t('clientBillingSchedule.historyStartDate', { defaultValue: 'Billing History Start Date (optional)' })}
+              clearable
+              className="w-full"
+              value={dateFromString(billingHistoryStartDate ?? '')}
+              onChange={(date) => setBillingHistoryStartDate(dateToString(date) || null)}
             />
             <div className="text-xs text-gray-500">
               {t('clientBillingSchedule.historyStartHelp', { defaultValue: 'If set, historical client billing cycles are generated from the containing billing-cycle boundary through today.' })}

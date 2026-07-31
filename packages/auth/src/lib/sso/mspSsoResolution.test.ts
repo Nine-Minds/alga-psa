@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tenantSecrets = new Map<string, string>();
 const appSecrets = new Map<string, string>();
@@ -130,6 +130,17 @@ import {
 } from './mspSsoResolution';
 
 describe('mspSsoResolution helpers', () => {
+  // The suite shares one fork: whichever test runs last would otherwise leak
+  // its EDITION into every later file (edition-gated suites then flip paths).
+  const savedEdition = process.env.EDITION;
+  const savedPublicEdition = process.env.NEXT_PUBLIC_EDITION;
+  afterAll(() => {
+    if (savedEdition === undefined) delete process.env.EDITION;
+    else process.env.EDITION = savedEdition;
+    if (savedPublicEdition === undefined) delete process.env.NEXT_PUBLIC_EDITION;
+    else process.env.NEXT_PUBLIC_EDITION = savedPublicEdition;
+  });
+
   beforeEach(() => {
     delete process.env.EDITION;
     delete process.env.NEXT_PUBLIC_EDITION;

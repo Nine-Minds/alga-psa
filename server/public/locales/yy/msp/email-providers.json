@@ -144,6 +144,7 @@
     },
     "badges": {
       "disabled": "55555",
+      "paused": "55555",
       "connected": "55555",
       "disconnected": "55555",
       "error": "55555",
@@ -167,15 +168,29 @@
       "reconnectOauth": "55555",
       "resyncing": "55555",
       "resyncMailbox": "55555",
+      "pause": "55555",
+      "resume": "55555",
       "delete": "55555"
     },
+    "feedback": {
+      "paused": "55555",
+      "resumed": "55555",
+      "pauseError": "55555"
+    },
+    "pausedHelp": "55555",
     "fields": {
       "status": "55555",
       "lastSync": "55555",
+      "lastIngested": "55555",
+      "delivery": "55555",
       "created": "55555",
       "subscription": "55555",
       "defaults": "55555",
       "error": "55555"
+    },
+    "delivery": {
+      "polling": "55555",
+      "webhook": "55555"
     },
     "values": {
       "active": "55555",

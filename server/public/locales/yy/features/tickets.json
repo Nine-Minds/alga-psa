@@ -878,6 +878,10 @@
     "contactLoadFailed": "55555",
     "tenantNotDefined": "55555",
     "noContact": "55555",
+    "closeTicketTitle": "55555",
+    "resolveAndClose": "55555",
+    "closeTicketResolutionPrompt": "55555",
+    "selectCloseStatus": "55555",
     "cannotCloseYet": "55555",
     "closeRulesIntro": "55555",
     "viewChecklist": "55555",
@@ -1143,7 +1147,9 @@
     "clientRequired": "55555",
     "serialUnit": "55555",
     "selectUnit": "55555",
-    "onHandByLocation": "55555"
+    "onHandByLocation": "55555",
+    "catalogUnitCost": "55555",
+    "costNotConfigured": "55555"
   },
   "watchList": {
     "title": "55555",
@@ -1206,6 +1212,7 @@
   "categoryPicker": {
     "title": "55555",
     "placeholder": "55555",
+    "searchPlaceholder": "55555",
     "noCategory": "55555",
     "addNew": "55555",
     "itilBadge": "55555",
@@ -1492,7 +1499,6 @@
       "pausedHint": "55555"
     },
     "tiles": {
-      "request": "55555",
       "openedBy": "55555 {{name}} 55555",
       "showMore": "55555",
       "showLess": "55555",

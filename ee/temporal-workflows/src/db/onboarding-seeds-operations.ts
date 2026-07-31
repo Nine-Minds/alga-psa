@@ -20,6 +20,12 @@ export interface SeedRunLog {
 /**
  * Runs the onboarding seed files for a specific tenant
  */
+// LEVERAGE: friction builtin-content-distribution — this is the third invocation style
+// for the same seed files: here seed(trx, tenantId) per tenant; the appliance bootstrap
+// replays them ungated via knex seed:run with NO tenantId on every upgrade (relying on
+// each seed's first-tenant fallback); hosted gates seed:run off and uses readd_*
+// migrations for existing tenants. Every seed must silently satisfy all three contracts
+// and nothing enforces that (#2989). Wants one versioned per-tenant system-content sync.
 export async function runOnboardingSeeds(
   tenantId: string,
   productCode?: ProductCode | string | null,
