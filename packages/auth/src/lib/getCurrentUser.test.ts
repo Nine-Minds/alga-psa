@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Session } from 'next-auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
@@ -11,6 +13,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 // getCurrentUser reads the session via the local ./getSession module.
 vi.mock('./getSession', () => ({
   getSession: vi.fn(),
+  getSessionWithRevocationCheck: vi.fn(),
 }));
 
 // User lookups now go through the @alga-psa/db helpers directly.
@@ -20,19 +23,29 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
 }));
 
-import { getCurrentUser } from './getCurrentUser';
-import { getSession } from './getSession';
+import {
+  getCurrentUser,
+  getCurrentUserWithRevocationCheck,
+} from './getCurrentUser';
+import { getSession, getSessionWithRevocationCheck } from './getSession';
 import { getUserWithRoles } from '@alga-psa/db';
 
 const envSnapshot = { ...process.env };
 
 beforeEach(() => {
   vi.mocked(getSession).mockReset();
+  vi.mocked(getSessionWithRevocationCheck).mockReset();
   vi.mocked(getUserWithRoles).mockReset();
 });
 
 afterEach(() => {
-  process.env = { ...envSnapshot };
+  // Restore IN PLACE: modules that captured `process.env` by reference
+  // (e.g. `import { env } from 'node:process'`) would keep reading the
+  // old object if this reassigned process.env.
+  for (const key of Object.keys(process.env)) {
+    if (!(key in envSnapshot)) delete process.env[key];
+  }
+  Object.assign(process.env, envSnapshot);
 });
 
 describe('getCurrentUser', () => {
@@ -78,5 +91,44 @@ describe('getCurrentUser', () => {
     vi.mocked(getUserWithRoles).mockResolvedValue(null as any);
 
     await expect(getCurrentUser()).resolves.toBeNull();
+  });
+
+  it('returns null when the session user has been deactivated', async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      user: {
+        id: 'user-1',
+        tenant: 'tenant-1',
+      },
+    } as any);
+
+    vi.mocked(getUserWithRoles).mockResolvedValue({
+      user_id: 'user-1',
+      tenant: 'tenant-1',
+      is_inactive: true,
+      roles: [{ role_id: 'role-1' }],
+    } as any);
+
+    await expect(getCurrentUser()).resolves.toBeNull();
+  });
+
+  it('uses the full-auth-first resolver for authorization boundaries', async () => {
+    vi.mocked(getSessionWithRevocationCheck).mockResolvedValue({
+      user: {
+        id: 'user-1',
+        tenant: 'tenant-1',
+      },
+    } as unknown as Session);
+    vi.mocked(getUserWithRoles).mockResolvedValue({
+      user_id: 'user-1',
+      tenant: 'tenant-1',
+      roles: [{ role_id: 'role-1' }],
+    } as unknown as IUserWithRoles);
+
+    await expect(getCurrentUserWithRevocationCheck()).resolves.toMatchObject({
+      user_id: 'user-1',
+      tenant: 'tenant-1',
+    });
+    expect(getSessionWithRevocationCheck).toHaveBeenCalledOnce();
+    expect(getSession).not.toHaveBeenCalled();
   });
 });

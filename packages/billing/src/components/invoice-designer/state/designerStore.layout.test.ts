@@ -26,8 +26,14 @@ describe('designerStore CSS-first model (sizing primitives)', () => {
     expect(selected?.type).toBe('field');
     expect(selected).toBeTruthy();
     if (!selected) return;
-    expect(getNodeStyle(selected)?.width).toMatch(/px$/);
-    expect(getNodeStyle(selected)?.height).toMatch(/px$/);
+    // Fields hug their content since e6992dc686 (schema default width/height
+    // 'auto'); structural nodes keep px sizing.
+    expect(getNodeStyle(selected)?.width).toBe('auto');
+    expect(getNodeStyle(selected)?.height).toBe('auto');
+
+    const section = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === sectionId);
+    expect(getNodeStyle(section!)?.width).toMatch(/px$/);
+    expect(getNodeStyle(section!)?.height).toMatch(/px$/);
   });
 
   it('clamps resizing to practical minimums and mirrors into CSS style', () => {

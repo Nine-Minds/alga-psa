@@ -1,2 +1,4 @@
-export { getCurrentUser } from './lib/getCurrentUser';
-
+export {
+  getCurrentUser,
+  getCurrentUserWithRevocationCheck
+} from './lib/getCurrentUser';

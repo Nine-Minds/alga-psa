@@ -40,7 +40,7 @@
   },
   "general": {
     "title": "Ustawienia ogólne",
-    "description": "Zarządzanie nazwą organizacji i domyślnym klientem. Domyślny klient jest używany do celów konfiguracyjnych i reprezentuje Państwa MSP.",
+    "description": "Zarządzanie nazwą organizacji i wybór rekordu klienta, który reprezentuje Państwa własną firmę. Dane tego klienta pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
     "fields": {
       "organizationName": {
         "label": "Nazwa organizacji"
@@ -55,14 +55,24 @@
       "saveDefaultTimezone": "Zapisz domyślną strefę czasową"
     },
     "clients": {
-      "title": "Klienci",
+      "title": "Państwa firma",
+      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
+      "currentDefault": "Państwa firmą jest obecnie {{name}}.",
+      "yourCompanyBadge": "Państwa firma",
       "table": {
         "name": "Nazwa",
-        "default": "Domyślny",
+        "default": "Państwa firma (domyślny)",
         "actions": "Akcje"
       },
       "placeholder": "Wybierz klienta do dodania",
-      "addClient": "Dodaj klienta"
+      "addClient": "Dodaj klienta",
+      "confirmDialog": {
+        "title": "Zmienić Państwa firmę?",
+        "message": "Spowoduje to zmianę Państwa firmy z {{current}} na {{next}}. {{next}} będzie reprezentować Państwa własną organizację na fakturach, ofertach oraz w wiadomościach e-mail i zaproszeniach kierowanych do klientów.",
+        "messageInitial": "Spowoduje to ustawienie {{next}} jako Państwa firmy. {{next}} będzie reprezentować Państwa własną organizację na fakturach, ofertach oraz w wiadomościach e-mail i zaproszeniach kierowanych do klientów.",
+        "confirm": "Zmień firmę",
+        "cancel": "Anuluj"
+      }
     },
     "messages": {
       "success": {
@@ -78,6 +88,7 @@
         "updateTimezone": "Nie udało się zaktualizować strefy czasowej",
         "selectClient": "Proszę wybrać klienta",
         "clientNotFound": "Nie znaleziono klienta",
+        "clientAlreadyAdded": "Ten klient już znajduje się na liście",
         "addClient": "Nie udało się dodać klienta",
         "removeClient": "Nie udało się usunąć klienta",
         "setDefaultClient": "Nie udało się ustawić domyślnego klienta",
@@ -284,6 +295,27 @@
         "label": "Przełożony",
         "placeholder": "Wybierz przełożonego"
       },
+      "workSchedule": {
+        "label": "Godziny pracy",
+        "help": "Kiedy ta osoba jest na służbie. Używane w raportach wykorzystania. To nie jest dostępność do rezerwacji przez klientów.",
+        "setHours": "Ustaw godziny pracy",
+        "clear": "Wyczyść",
+        "weeklyTotal": "{{hours}} godz. tygodniowo",
+        "days": {
+          "0": "Niedziela",
+          "1": "Poniedziałek",
+          "2": "Wtorek",
+          "3": "Środa",
+          "4": "Czwartek",
+          "5": "Piątek",
+          "6": "Sobota"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Tygodniowa wydajność (godziny)",
+        "placeholder": "np. 40",
+        "help": "Używane tylko wtedy, gdy powyżej nie ustawiono godzin pracy."
+      },
       "lastLogin": "Ostatnie logowanie",
       "roles": "Role",
       "status": "Status",
@@ -328,7 +360,9 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
-        "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników."
+        "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
+        "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią.",
+        "invalidWorkSchedule": "Godziny pracy muszą być prawidłowymi przedziałami kończącymi się po rozpoczęciu."
       }
     },
     "loading": "Ładowanie szczegółów użytkownika..."
@@ -1062,6 +1096,15 @@
     "openMenu": "Otwórz menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funkcje portalu",
+      "description": "Wybierz funkcje samoobsługowe, do których klienci mają dostęp.",
+      "appointmentsLabel": "Spotkania",
+      "appointmentsHelp": "Zezwól klientom na wyświetlanie spotkań i wysyłanie próśb o spotkanie w portalu klienta.",
+      "appointmentsEnabled": "Spotkania są teraz dostępne w portalu klienta",
+      "appointmentsDisabled": "Spotkania są teraz ukryte w portalu klienta",
+      "updateFailed": "Nie udało się zaktualizować funkcji portalu klienta"
+    },
     "branding": {
       "title": "Branding i wygląd",
       "description": "Dostosuj wygląd portalu klienta za pomocą identyfikacji wizualnej Państwa firmy.",

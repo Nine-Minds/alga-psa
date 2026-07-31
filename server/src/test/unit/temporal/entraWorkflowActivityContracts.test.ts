@@ -166,7 +166,16 @@ describe('Entra Temporal workflow/activity contracts', () => {
 
     expect(activity).toContain('export async function loadMappedTenantsActivity');
     expect(activity).toContain("'m.is_active': true");
-    expect(activity).toContain("'m.mapping_state': 'mapped'");
+    expect(activity).toContain("query.andWhere('m.mapping_state', 'mapped')");
     expect(activity).not.toContain("'m.mapping_state': 'skip_for_now'");
+  });
+
+  it('T147: only explicit initial/manual workflows opt into create-new provisioning', () => {
+    const initialWorkflow = readRepoFile('ee/temporal-workflows/src/workflows/entra-initial-sync-workflow.ts');
+    const allTenantsWorkflow = readRepoFile('ee/temporal-workflows/src/workflows/entra-all-tenants-sync-workflow.ts');
+
+    expect(initialWorkflow).toContain('includeCreateNew: true');
+    expect(allTenantsWorkflow).toContain("includeCreateNew: input.trigger === 'manual'");
+    expect(allTenantsWorkflow).toContain("if (mapping.mappingState === 'create_new')");
   });
 });

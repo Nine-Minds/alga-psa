@@ -53,6 +53,7 @@ export * from './models/index';
 // Service infrastructure
 export * from './services/BaseService';
 export * from './services/SystemContext';
+export * from './services/projectTaskActualHours';
 
 // Connection Management
 export { getConnection as getDbConnection, cleanupConnections } from './lib/connection';

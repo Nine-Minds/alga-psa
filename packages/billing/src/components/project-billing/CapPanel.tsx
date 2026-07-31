@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { toast } from 'react-hot-toast';
-import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
+import { toMinorUnits } from '@alga-psa/core';
 import type { IProjectBillingConfig } from '@alga-psa/types';
 import { updateProjectBillingConfig } from '../../actions/projectBillingConfigActions';
 import {
@@ -15,6 +15,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface CapPanelProps {
   config: IProjectBillingConfig;
@@ -22,9 +23,8 @@ interface CapPanelProps {
   onChanged: () => void;
 }
 
-function centsToMajor(cents: number | null, currency: string | null): string {
+function centsToMajor(cents: number | null, digits: number): string {
   if (cents == null) return '';
-  const digits = currencyFractionDigits(currency ?? 'USD');
   return (cents / Math.pow(10, digits)).toString();
 }
 
@@ -35,8 +35,10 @@ function centsToMajor(cents: number | null, currency: string | null): string {
  */
 export default function CapPanel({ config, canManage, onChanged }: CapPanelProps) {
   const { t, i18n } = useTranslation(['features/projects', 'common']);
+  const { currencyCode, fractionDigits } = useCurrencyFormat();
   const currency = config.currency;
-  const [capText, setCapText] = useState(centsToMajor(config.cap_amount, currency));
+  const resolvedCurrency = currency ?? currencyCode;
+  const [capText, setCapText] = useState(centsToMajor(config.cap_amount, fractionDigits(currency ?? undefined)));
   const [thresholdsText, setThresholdsText] = useState((config.cap_notify_thresholds ?? []).join(', '));
   const [saving, setSaving] = useState(false);
 
@@ -49,7 +51,7 @@ export default function CapPanel({ config, canManage, onChanged }: CapPanelProps
         toast.error(t('billing.cap.errorAmount', 'Enter a cap greater than zero'));
         return;
       }
-      capAmount = toMinorUnits(major, i18n.language, currency ?? 'USD');
+      capAmount = toMinorUnits(major, i18n.language, resolvedCurrency);
     }
     const thresholds = thresholdsText
       .split(',')
@@ -87,7 +89,7 @@ export default function CapPanel({ config, canManage, onChanged }: CapPanelProps
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="billing-cap-amount">
-            {t('billing.cap.amount', 'Cap amount ({{currency}})', { currency: currency ?? 'USD' })}
+            {t('billing.cap.amount', 'Cap amount ({{currency}})', { currency: resolvedCurrency })}
           </Label>
           <Input
             id="billing-cap-amount"

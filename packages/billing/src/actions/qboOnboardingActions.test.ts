@@ -7,9 +7,14 @@
  */
 
 // Set EE flag before any module loads
+const prevEdition = process.env.EDITION;
 process.env.EDITION = 'ee';
+afterAll(() => {
+  if (prevEdition === undefined) delete process.env.EDITION;
+  else process.env.EDITION = prevEdition;
+});
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 
 // ─── Module mocks (must be hoisted before imports) ───────────────────────────
 
@@ -22,7 +27,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn()
+  createTenantKnex: vi.fn(),
+  // Facade passthrough: the fakes below dispatch by table name; tenant
+  // scoping is the real facade's concern, not this test's.
+  tenantDb: (conn: any, _tenant: string) => ({ table: (name: string) => conn(name) })
 }));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({

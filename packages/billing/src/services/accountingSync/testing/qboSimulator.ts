@@ -61,7 +61,7 @@ export class QboSimError extends Error {
   }
 }
 
-const SUPPORTED_ENTITIES = ['Customer', 'Invoice', 'CreditMemo', 'Payment'] as const;
+const SUPPORTED_ENTITIES = ['Customer', 'Invoice', 'CreditMemo', 'Payment', 'Item'] as const;
 type SimEntityType = (typeof SUPPORTED_ENTITIES)[number];
 
 function toCents(amount: unknown): number {
@@ -78,7 +78,8 @@ export class QboSimulator {
     Customer: new Map(),
     Invoice: new Map(),
     CreditMemo: new Map(),
-    Payment: new Map()
+    Payment: new Map(),
+    Item: new Map()
   };
 
   private journal: ChangeJournalEntry[] = [];
@@ -120,6 +121,9 @@ export class QboSimulator {
           SalesFormsPrefs: {
             AutoApplyCredit: Boolean(this.options.autoApplyCredits),
             CustomTxnNumbers: true
+          },
+          CurrencyPrefs: {
+            HomeCurrency: { value: 'USD' }
           }
         }) as any,
       findCustomerByDisplayName: async (displayName) => {
@@ -381,7 +385,7 @@ export class QboSimulator {
   }
 
   private runQuery(selectQuery: string): any[] {
-    // Support the one query shape the integration issues. Anything else is a
+    // Support the query shapes the integration issues. Anything else is a
     // loud failure so a new query gets modeled deliberately, not silently.
     const customerByName = selectQuery.match(/FROM\s+Customer\s+WHERE\s+DisplayName\s*=\s*'((?:[^']|'')*)'/i);
     if (customerByName) {
@@ -389,6 +393,24 @@ export class QboSimulator {
       // QBO queries return ACTIVE rows only unless Active is filtered explicitly.
       const found = this.findActiveCustomerByName(name);
       return found ? [{ ...found }] : [];
+    }
+    // Item paged fetch (products & services import): Type IN (...) with an
+    // optional explicit Active IN (true, false) filter and pagination.
+    const itemByType = selectQuery.match(
+      /FROM\s+Item\s+WHERE\s+Type\s+IN\s+\(([^)]*)\)(\s+AND\s+Active\s+IN\s+\(\s*true\s*,\s*false\s*\))?\s+STARTPOSITION\s+(\d+)\s+MAXRESULTS\s+(\d+)/i
+    );
+    if (itemByType) {
+      const types = new Set(
+        itemByType[1].split(',').map((t) => t.trim().replace(/^'|'$/g, ''))
+      );
+      const includeInactive = Boolean(itemByType[2]);
+      const startPosition = Number(itemByType[3]);
+      const maxResults = Number(itemByType[4]);
+      const rows = Array.from(this.stores.Item.values())
+        .filter((item) => types.has(String(item.Type)))
+        // QBO returns ACTIVE rows only unless Active is filtered explicitly.
+        .filter((item) => includeInactive || item.Active !== false);
+      return rows.slice(startPosition - 1, startPosition - 1 + maxResults).map((item) => ({ ...item }));
     }
     throw new QboSimError('SIM_UNSUPPORTED', `QboSimulator does not model query: ${selectQuery}`);
   }
@@ -439,6 +461,42 @@ export class QboSimulator {
         }
       ]
     });
+  }
+
+  seedItem(params: {
+    name: string;
+    type: 'Service' | 'NonInventory' | 'Inventory' | 'Category';
+    sku?: string;
+    description?: string;
+    /** Dollars, like QBO's UnitPrice. */
+    unitPrice?: number;
+    /** Dollars, like QBO's PurchaseCost. */
+    purchaseCost?: number;
+    active?: boolean;
+    /** QBO SalesTaxCodeRef value (e.g. 'TAX', 'NON', or a TaxCode id). */
+    taxCodeId?: string;
+    /** "Parent:Child" marks a sub-item; Name stays the leaf. */
+    fullyQualifiedName?: string;
+  }): QboSimEntity {
+    const at = this.tick();
+    const entity: QboSimEntity = {
+      Id: this.allocateId('Item'),
+      SyncToken: '0',
+      Name: params.name,
+      Type: params.type,
+      Active: params.active !== false,
+      FullyQualifiedName: params.fullyQualifiedName ?? params.name,
+      SubItem: Boolean(params.fullyQualifiedName && params.fullyQualifiedName.includes(':')),
+      ...(params.sku !== undefined ? { Sku: params.sku } : {}),
+      ...(params.description !== undefined ? { Description: params.description } : {}),
+      ...(params.unitPrice !== undefined ? { UnitPrice: params.unitPrice } : {}),
+      ...(params.purchaseCost !== undefined ? { PurchaseCost: params.purchaseCost } : {}),
+      ...(params.taxCodeId ? { SalesTaxCodeRef: { value: params.taxCodeId } } : {}),
+      MetaData: { CreateTime: at, LastUpdatedTime: at }
+    };
+    this.stores.Item.set(entity.Id, entity);
+    this.journalChange('Item', entity.Id);
+    return entity;
   }
 
   seedCreditMemo(params: { customerId: string; amountCents: number; docNumber?: string }): QboSimEntity {

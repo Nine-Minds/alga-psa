@@ -71,7 +71,8 @@ const projectBillingScheduleEntryBaseSchema = z.object({
   trigger_date: dateOnlySchema.optional().nullable(),
   status: projectBillingScheduleStatusSchema.default('pending'),
   requires_payment_before_work: z.boolean().default(false),
-  display_order: z.number().int().min(0).default(0)
+  display_order: z.number().int().min(0).default(0),
+  increase_total: z.boolean().default(false)
 });
 
 function validateAmountXorPercentage(
@@ -96,7 +97,16 @@ function validateAmountXorPercentage(
 }
 
 export const createProjectBillingScheduleEntrySchema = projectBillingScheduleEntryBaseSchema.superRefine(
-  validateAmountXorPercentage
+  (value, ctx) => {
+    validateAmountXorPercentage(value, ctx);
+    if (value.increase_total && value.amount == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'increase_total is only valid for amount-based entries',
+        path: ['increase_total']
+      });
+    }
+  }
 );
 
 export const updateProjectBillingScheduleEntrySchema = projectBillingScheduleEntryBaseSchema

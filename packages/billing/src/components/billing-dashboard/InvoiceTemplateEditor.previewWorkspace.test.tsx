@@ -334,7 +334,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     });
   });
 
-  it('materializes missing field border styles as none when reopening and saving a legacy template', async () => {
+  it('shows missing field border styles as none in the designer without materializing them on save', async () => {
     getInvoiceTemplateMock.mockResolvedValueOnce({
       template_id: 'tpl-legacy-border',
       name: 'Legacy Border Template',
@@ -377,7 +377,9 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     const savedField = findLayoutNodeById(savedAst.layout, 'legacy-border-field');
     expect(savedField?.type).toBe('field');
     if (!savedField || savedField.type !== 'field') return;
-    expect(savedField.borderStyle).toBe('none');
+    // Import fidelity (77cadf69ff): the designer displays 'none', but a saved
+    // legacy template must not grow a borderStyle its original AST never had.
+    expect('borderStyle' in savedField).toBe(false);
   });
 
   it('persists edited field designer placeholders through save and reopen', async () => {

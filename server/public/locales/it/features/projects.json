@@ -537,7 +537,16 @@
     "unknownProduct": "Prodotto sconosciuto",
     "billed": "Fatturato",
     "pending": "In sospeso",
-    "unbilledTotal": "Non fatturato ({{currency}}): "
+    "unbilledTotal": "Non fatturato ({{currency}}): ",
+    "priceCurrency": "Price currency", "salePrice": "Sale price", "catalogUnitCost": "Catalog unit cost", "costNotConfigured": "Not configured",
+    "invoiceDestination": "Invoice", "invoiceNextProject": "Next project invoice", "invoiceSeparate": "Separate product invoice",
+    "invoiceProjectCompletion": "When project is completed", "invoiceOnHold": "On hold", "currencySeparateHelp": "Products in a different currency use a separate product invoice.",
+    "invoiceColumn": "Invoice", "editProduct": "Edit product", "removeProduct": "Remove product", "salePriceOverrideHelp": "This price applies only to this project product row.",
+    "updateFailed": "Failed to update product", "updatedSuccess": "Product updated", "createProductInvoices": "Create product invoices",
+    "invoiceReviewTitle": "Review product invoices", "invoiceReviewHelp": "Eligible products are preselected. One draft invoice will be created per currency.",
+    "invoiceReviewFailed": "Failed to load invoice review", "invoiceCreateFailed": "Failed to create product invoices", "invoiceCreatedSuccess": "{{count}} draft product invoice(s) created",
+    "createDrafts": "Create drafts", "draftPreview": "{{currency}} draft ({{count}} products)", "invoiceLinksHelp": "Draft invoices were created. Open each currency group to review it.",
+    "currencyDraftLink": "{{currency}} draft invoice", "productCount": "{{count}} products", "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
   },
   "export": {
     "title": "Esporta attività progetto",
@@ -583,7 +592,7 @@
     "requiredFields": "Obbligatorio:",
     "requiredFieldsList": "task_name",
     "optionalFields": "Facoltativo:",
-    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, actual_hours, due_date, priority, service, task_type, status, tags",
+    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
     "noteLabel": "Nota:",
     "defaultPhaseNote": "Le attività senza phase_name verranno raggruppate in \"{{phaseName}}\"",
     "downloadTemplate": "Scarica modello CSV",
@@ -999,6 +1008,7 @@
       "copyPhases": "Copia fasi",
       "copyStatuses": "Copia stati",
       "copyTasks": "Copia attività",
+      "copyDependencies": "Copia dipendenze",
       "copyChecklists": "Copia checklist",
       "copyTaskServices": "Copia servizi attività",
       "taskAssignments": "Assegnazioni attività",
@@ -1525,6 +1535,20 @@
     "paymentSchedule": "Piano di pagamento",
     "invoicedOn": "Fatturato il {{date}}",
     "loading": "Caricamento fatturazione...",
+    "materials": {
+      "title": "Materiali e prodotti",
+      "hint": "Voci riaddebitate oltre al compenso del progetto.",
+      "manage": "Gestisci prodotti",
+      "loading": "Caricamento prodotti...",
+      "empty": "Nessun prodotto è associato a questo progetto.",
+      "product": "Prodotto",
+      "quantityRate": "Qtà × tariffa",
+      "extended": "Totale",
+      "status": "Stato",
+      "unnamed": "Prodotto",
+      "billed": "Fatturato",
+      "unbilled": "Non fatturato"
+    },
     "status": {
       "pending": "In attesa",
       "ready": "Pronto",
@@ -1594,6 +1618,7 @@
       "manualSub": "Attivazione manuale",
       "phaseRemoved": "Manuale · fase rimossa",
       "phaseTrigger": "Completamento fase",
+      "phaseOverdue": "La data di fine della fase è trascorsa — contrassegna la fase come completata per rendere pronta questa voce",
       "approve": "Approva",
       "approveInvoice": "Approva e fattura",
       "hold": "Sospendi",
@@ -1614,7 +1639,10 @@
       "holdReasonRequired": "È richiesto un motivo per la sospensione",
       "heldReason": "In sospeso: {{reason}}",
       "releaseHold": "Rimuovi sospensione",
-      "holdReleased": "Sospensione rimossa"
+      "holdReleased": "Sospensione rimossa", "productsMovedToHold": "{{count}} linked product(s) moved to On hold", "setProjectTotal": "Set project total to {{amount}}",
+      "recalculateTitle": "Recalculate project total", "currentProjectTotal": "Current project total", "currentScheduleSum": "Current schedule sum",
+      "resultingProjectTotal": "Resulting project total", "recalculateWarning": "Editable percentage entries will become fixed-dollar entries so the displayed amounts do not move.",
+      "confirmSetProjectTotal": "Set project total", "totalRecalculated": "Project total updated from the schedule"
     },
     "entry": {
       "addTitle": "Aggiungi traguardo o anticipo",
@@ -1663,9 +1691,9 @@
       "saving": "Salvataggio...",
       "errorAmount": "Inserisci un limite maggiore di zero"
     },
+    "generateProjectInvoice": "Genera fattura progetto",
+    "generatingProjectInvoice": "Generazione fattura...",
     "tm": {
-      "generateInvoice": "Genera fattura progetto",
-      "generatingInvoice": "Generazione fattura...",
       "invoiceGenerated": "Fattura progetto generata"
     },
     "overrides": {

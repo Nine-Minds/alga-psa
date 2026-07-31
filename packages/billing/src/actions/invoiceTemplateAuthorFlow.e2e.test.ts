@@ -8,6 +8,15 @@ const storedTemplates: Array<Record<string, unknown>> = [];
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
+  // These exercise the preview/render pipeline, not RBAC. Without this the
+  // real hasPermission runs, which needs a database — the action under test
+  // does not. The rbac subpath is a distinct module id, so it needs its own
+  // mock: actions import hasPermission from either specifier.
+  hasPermission: async () => true,
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async () => true,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -137,7 +146,7 @@ describe('invoice template AST author flow e2e', () => {
     storedTemplates.length = 0;
 
     const previewResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
-      { id: 'test-user' },
+      { id: 'test-user', tenant: 'test-tenant' },
       { tenant: 'test-tenant' },
       {
         workspace,
@@ -152,7 +161,7 @@ describe('invoice template AST author flow e2e', () => {
     const templateId = 'tpl-e2e-flow';
 
     const saveResult = await (saveInvoiceTemplate as any)(
-      { id: 'test-user' },
+      { id: 'test-user', tenant: 'test-tenant' },
       { tenant: 'test-tenant' },
       {
         template_id: templateId,
@@ -166,7 +175,7 @@ describe('invoice template AST author flow e2e', () => {
     expect(saveResult.success).toBe(true);
 
     const rendered = await (renderTemplateOnServer as any)(
-      { id: 'test-user' },
+      { id: 'test-user', tenant: 'test-tenant' },
       { tenant: 'test-tenant' },
       templateId,
       invoiceData

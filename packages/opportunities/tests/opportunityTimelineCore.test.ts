@@ -49,13 +49,21 @@ describe('listOpportunityTimelineCore', () => {
     vi.clearAllMocks();
   });
 
-  it('returns the newest linked interactions first and applies the requested limit', async () => {
+  it('starts with creation, keeps the newest linked interactions, and renders them oldest-first', async () => {
     const query = makeTimelineQuery([
       { interaction_id: 'older', interaction_date: '2026-07-14T12:00:00.000Z' },
       { interaction_id: 'newest', interaction_date: '2026-07-16T12:00:00.000Z' },
       { interaction_id: 'middle', interaction_date: '2026-07-15T12:00:00.000Z' },
     ]);
-    const table = vi.fn(() => query);
+    const opportunityQuery = {
+      where: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue({
+        opportunity_id: 'opportunity-1',
+        created_at: '2026-07-01T12:00:00.000Z',
+      }),
+    };
+    const table = vi.fn((name: string) => name === 'opportunities' ? opportunityQuery : query);
     dbMocks.tenantDb.mockReturnValue({ table });
     const knex = { raw: vi.fn((sql: string) => sql) } as any;
 
@@ -65,7 +73,10 @@ describe('listOpportunityTimelineCore', () => {
     expect(table).toHaveBeenCalledWith('interactions as i');
     expect(query.where).toHaveBeenCalledWith('i.opportunity_id', 'opportunity-1');
     expect(query.orderBy).toHaveBeenCalledWith('i.interaction_date', 'desc');
-    expect(query.limit).toHaveBeenCalledWith(2);
-    expect(result.map((row) => row.interaction_id)).toEqual(['newest', 'middle']);
+    expect(query.limit).toHaveBeenCalledWith(1);
+    expect(result.map((row) => row.interaction_id)).toEqual([
+      'opportunity-created:opportunity-1',
+      'newest',
+    ]);
   });
 });

@@ -82,7 +82,15 @@ describe('Entra tier guard (T103)', () => {
   it('T103: passes for a Pro tenant with no add-ons and returns tenant/user context', async () => {
     const result = await requireEntraAccess('read');
 
-    expect(result).toEqual({ tenantId: 'tenant-1', userId: 'user-1' });
+    expect(result).toEqual({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      user: {
+        user_id: 'user-1',
+        tenant: 'tenant-1',
+        user_type: 'internal',
+      },
+    });
     expect(hoisted.assertTierAccessMock).toHaveBeenNthCalledWith(1, TIER_FEATURES.INTEGRATIONS);
     expect(hoisted.assertTierAccessMock).toHaveBeenNthCalledWith(2, TIER_FEATURES.ENTRA_SYNC);
     expect(hoisted.assertAddOnAccessMock).not.toHaveBeenCalled();

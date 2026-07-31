@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, LayoutGrid, List } from 'lucide-react';
+import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IWorkQueue } from '@alga-psa/types';
 import { QueueGreeting } from './QueueGreeting';
@@ -9,10 +10,11 @@ import { QueueSection } from './QueueSection';
 import { QueueActionRow } from './QueueActionRow';
 import { MoneyFoundCard } from './MoneyFoundCard';
 import { LessonStrip } from './LessonStrip';
+import { QueueActionsTable } from './QueueActionsTable';
 
 export interface WorkQueueProps {
   queue: IWorkQueue;
-  onCompleteAction: (opportunityId: string) => void;
+  onCompleteAction: (opportunityId: string, stage: IWorkQueue['do_today'][number]['stage']) => void;
   onOpenOpportunity: (opportunityId: string) => void;
   onSnooze: (opportunityId: string) => void;
   onMarkLost: (opportunityId: string) => void;
@@ -22,6 +24,7 @@ export interface WorkQueueProps {
   onViewSuggestionEvidence?: (suggestionId: string) => void;
   /** When drafting is available, overdue rows lead with the draft instead of the checkbox. */
   onReviewDraft?: (opportunityId: string) => void;
+  preferenceKey: string;
 }
 
 /**
@@ -40,8 +43,24 @@ export function WorkQueue({
   onSnoozeSuggestion,
   onViewSuggestionEvidence,
   onReviewDraft,
+  preferenceKey,
 }: WorkQueueProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
+  const [view, setView] = useState<'cards' | 'table'>('cards');
+  const actionItems = useMemo(
+    () => [...queue.do_today, ...queue.going_quiet],
+    [queue.do_today, queue.going_quiet],
+  );
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(preferenceKey);
+    if (saved === 'cards' || saved === 'table') setView(saved);
+  }, [preferenceKey]);
+
+  const changeView = (next: 'cards' | 'table') => {
+    setView(next);
+    window.localStorage.setItem(preferenceKey, next);
+  };
   const draftOverride = (opportunityId: string, daysOverdue: number) =>
     onReviewDraft && daysOverdue > 0
       ? { label: t('opportunities.queue.reviewDraft', 'Review the draft'), onClick: () => onReviewDraft(opportunityId) }
@@ -50,7 +69,7 @@ export function WorkQueue({
     queue.do_today.length === 0 && queue.going_quiet.length === 0 && queue.money_found.length === 0;
 
   return (
-    <div id="opportunities-work-queue" className="mx-auto w-full max-w-2xl">
+    <div id="opportunities-work-queue" className="mx-auto w-full max-w-5xl">
       <QueueGreeting
         firstName={queue.user_first_name}
         actionCount={queue.do_today.length}
@@ -59,6 +78,31 @@ export function WorkQueue({
         foundNrrCents={queue.found_nrr_cents}
         currencyCode={queue.currency_code}
       />
+
+      {actionItems.length > 0 ? (
+        <div className="mb-4 flex justify-end" role="group" aria-label={t('opportunities.queue.viewLabel', 'Queue view')}>
+          <Button
+            id="opportunities-queue-view-cards"
+            size="xs"
+            variant={view === 'cards' ? 'soft' : 'ghost'}
+            aria-pressed={view === 'cards'}
+            onClick={() => changeView('cards')}
+          >
+            <LayoutGrid className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+            {t('opportunities.queue.cardsView', 'Cards')}
+          </Button>
+          <Button
+            id="opportunities-queue-view-table"
+            size="xs"
+            variant={view === 'table' ? 'soft' : 'ghost'}
+            aria-pressed={view === 'table'}
+            onClick={() => changeView('table')}
+          >
+            <List className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+            {t('opportunities.queue.tableView', 'Table')}
+          </Button>
+        </div>
+      ) : null}
 
       {empty ? (
         <div
@@ -72,39 +116,57 @@ export function WorkQueue({
         </div>
       ) : (
         <>
-          {queue.do_today.length > 0 ? (
+          {view === 'table' && actionItems.length > 0 ? (
+            <QueueSection
+              id="opportunities-queue-actions-table-section"
+              label={t('opportunities.queue.actions', 'Actions')}
+            >
+              <QueueActionsTable
+                items={actionItems}
+                onComplete={onCompleteAction}
+                onOpen={onOpenOpportunity}
+                onSnooze={onSnooze}
+              />
+            </QueueSection>
+          ) : null}
+
+          {view === 'cards' && queue.do_today.length > 0 ? (
             <QueueSection
               id="opportunities-queue-do-today"
               label={t('opportunities.queue.doToday', 'Do today')}
             >
-              {queue.do_today.map((item) => (
-                <QueueActionRow
-                  key={item.opportunity_id}
-                  item={item}
-                  onComplete={onCompleteAction}
-                  onOpen={onOpenOpportunity}
-                  onSnooze={onSnooze}
-                  primaryOverride={draftOverride(item.opportunity_id, item.days_overdue)}
-                />
-              ))}
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+                {queue.do_today.map((item) => (
+                  <QueueActionRow
+                    key={item.opportunity_id}
+                    item={item}
+                    onComplete={onCompleteAction}
+                    onOpen={onOpenOpportunity}
+                    onSnooze={onSnooze}
+                    primaryOverride={draftOverride(item.opportunity_id, item.days_overdue)}
+                  />
+                ))}
+              </div>
             </QueueSection>
           ) : null}
 
-          {queue.going_quiet.length > 0 ? (
+          {view === 'cards' && queue.going_quiet.length > 0 ? (
             <QueueSection
               id="opportunities-queue-going-quiet"
               label={t('opportunities.queue.goingQuiet', 'Going quiet')}
             >
-              {queue.going_quiet.map((item) => (
-                <QueueActionRow
-                  key={item.opportunity_id}
-                  item={item}
-                  onComplete={onCompleteAction}
-                  onOpen={onOpenOpportunity}
-                  onSnooze={onSnooze}
-                  onMarkLost={onMarkLost}
-                />
-              ))}
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+                {queue.going_quiet.map((item) => (
+                  <QueueActionRow
+                    key={item.opportunity_id}
+                    item={item}
+                    onComplete={onCompleteAction}
+                    onOpen={onOpenOpportunity}
+                    onSnooze={onSnooze}
+                    onMarkLost={onMarkLost}
+                  />
+                ))}
+              </div>
             </QueueSection>
           ) : null}
 

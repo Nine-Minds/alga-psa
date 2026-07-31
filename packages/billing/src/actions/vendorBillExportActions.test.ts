@@ -278,9 +278,10 @@ describe('retryVendorBillExport', () => {
     vi.mocked(hasPermission).mockResolvedValue(false);
     install({});
 
+    // Expected failures return typed errors since 4af6e76070 (#2892).
     await expect(
       (retryVendorBillExport as any)(USER, { tenant: TENANT }, 'bill-1')
-    ).rejects.toThrow(/Permission denied/);
+    ).resolves.toEqual({ permissionError: 'Permission denied: billing update required' });
     expect(enqueueVendorBillExportRetry).not.toHaveBeenCalled();
   });
 
@@ -324,12 +325,15 @@ describe('retryVendorBillExport', () => {
     expect(status.state).toBe('pending');
   });
 
-  it('missing bill → throws Vendor bill not found', async () => {
+  it('missing bill → returns Vendor bill not found error', async () => {
     install({ vendorBillRow: null });
 
     await expect(
       (retryVendorBillExport as any)(USER, { tenant: TENANT }, 'bill-missing')
-    ).rejects.toThrow('Vendor bill not found');
+    ).resolves.toEqual({
+      actionError:
+        'Vendor bill not found. It may have been updated or deleted. Please refresh and try again.',
+    });
     expect(enqueueVendorBillExportRetry).not.toHaveBeenCalled();
   });
 

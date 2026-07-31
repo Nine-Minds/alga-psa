@@ -20,7 +20,8 @@
     "select": "55555"
   },
   "filters": {
-    "allClients": "55555"
+    "allClients": "55555",
+    "allStatuses": "55555"
   },
   "status": {
     "active": "55555",
@@ -137,6 +138,8 @@
     "invoice": "55555",
     "transactions": "55555",
     "transactionType": "55555",
+    "date": "55555",
+    "amount": "55555",
     "noTransactions": "55555"
   },
   "expireDialog": {

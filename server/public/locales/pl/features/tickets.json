@@ -1265,7 +1265,9 @@
     "clientRequired": "Przed dodaniem materiałów do tego zgłoszenia musi być przypisany klient.",
     "serialUnit": "Numer seryjny / MAC (produkt seryjny)",
     "selectUnit": "Wybierz jednostkę do dostarczenia...",
-    "onHandByLocation": "Stan według lokalizacji"
+    "onHandByLocation": "Stan według lokalizacji",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Lista obserwujących",
@@ -1629,7 +1631,6 @@
       "pausedHint": "Licznik jest wstrzymany, gdy zgłoszenie oczekuje w statusie wstrzymanym."
     },
     "tiles": {
-      "request": "Zgłoszenie",
       "openedBy": "Otwarte przez {{name}}",
       "showMore": "Pokaż więcej",
       "showLess": "Pokaż mniej",

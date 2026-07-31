@@ -122,7 +122,9 @@
       "agent": "Agente",
       "client": "Cliente",
       "location": "Localização",
-      "actions": "Ações"
+      "actions": "Ações",
+      "patching": "Patches",
+      "coverage": "Cobertura"
     },
     "metrics": {
       "totalAssets": {
@@ -420,7 +422,7 @@
       "maintenance": "Manutenção",
       "relatedAssets": "Ativos Relacionados",
       "documentsPasswords": "Documentos e Senhas",
-      "auditLog": "Registro de auditoria"
+      "timeline": "Linha do tempo"
     }
   },
   "assetDetailView": {
@@ -1114,17 +1116,6 @@
     "title": "Barra de utilização",
     "description": "Componente de barra de progresso compartilhada para utilização e métricas de ativos baseadas em porcentagem"
   },
-  "auditLogTab": {
-    "title": "Registro de auditoria",
-    "description": "Guia Histórico de auditoria de ativos para eventos da linha do tempo e alterações de registros",
-    "changedBy": "Alterado por {{name}}",
-    "userFallback": "usuário {{id}}",
-    "empty": "Nenhum histórico de auditoria disponível.",
-    "changeTypes": {
-      "created": "Criado",
-      "updated": "Atualizado"
-    }
-  },
   "createMaintenanceScheduleDialog": {
     "title": "Criar cronograma de manutenção",
     "description": "Caixa de diálogo para definir cronogramas de manutenção e regras de recorrência para um ativo",
@@ -1369,6 +1360,135 @@
     "values": {
       "yes": "Sim",
       "no": "Não"
+    }
+  },
+  "assetBento": {
+    "health": "Integridade",
+    "security": "Segurança",
+    "openTickets": "Chamados abertos",
+    "warranty": "Garantia",
+    "identity": "Identificação",
+    "tag": "Marcação",
+    "serial": "Número de série",
+    "status": "Status",
+    "location": "Localização",
+    "purchased": "Comprado",
+    "warrantyEnds": "Garantia termina",
+    "hardware": "Hardware",
+    "os": "Sistema operacional",
+    "cpu": "CPU",
+    "cores": "Núcleos",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "Nenhum detalhe de hardware registrado.",
+    "notes": "Anotações",
+    "liveVitals": "Métricas ao vivo",
+    "checkedIn": "Último contato",
+    "neverCheckedIn": "Nunca fez contato",
+    "memory": "Memória",
+    "disk": "Disco",
+    "uptime": "Tempo de atividade",
+    "signedIn": "Conectado",
+    "securityTitle": "Segurança",
+    "antivirus": "Antivírus",
+    "pendingPatches": "Patches pendentes",
+    "failedPatches": "Patches com falha",
+    "lastScan": "Última verificação",
+    "agentVersion": "Agente",
+    "noRelated": "Não vinculado a nenhum outro ativo.",
+    "manage": "Gerenciar",
+    "reportedFacts": "Dados reportados",
+    "more": "Todo o restante",
+    "views": "Visualizações do ativo",
+    "editAsset": "Editar ativo",
+    "viewAll": "Ver tudo",
+    "open": "Abrir",
+    "close": "Fechar",
+    "packagesReported": "{{count}} pacotes reportados",
+    "noSoftware": "Nenhum inventário de software reportado.",
+    "noService": "Nenhum chamado faz referência a este ativo.",
+    "activeSchedules": "Agendamentos ativos",
+    "compliance": "Conformidade",
+    "lastDone": "Última realizada",
+    "noMaintenance": "Nada agendado.",
+    "docsHint": "Anexos e credenciais deste ativo."
+  },
+  "assetTimeline": {
+    "title": "Linha do tempo",
+    "empty": "Ainda não há nada registrado para este ativo.",
+    "emptyLane": "Nenhum evento de {{lane}} registrado.",
+    "moreEvents": "Exibindo {{shown}} de {{total}} eventos.",
+    "lanes": {
+      "all": "Tudo",
+      "service": "Serviço",
+      "changes": "Alterações",
+      "maintenance": "Manutenção",
+      "system": "Sistema"
+    },
+    "events": {
+      "maintenancePerformed": "Manutenção realizada",
+      "lastReboot": "Última reinicialização",
+      "patchScan": "Verificação de patches",
+      "patchScanDetail": "{{pending}} pendentes, {{failed}} com falha",
+      "purchased": "Comprado"
+    },
+    "changeTypes": {
+      "created": "Criado",
+      "updated": "Atualizado",
+      "status_change": "Status alterado",
+      "location_change": "Localização alterada",
+      "rmm_linked": "RMM vinculado",
+      "hardware_upgrade": "Hardware atualizado",
+      "warranty_updated": "Garantia atualizada"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "{{count}} d restantes",
+      "expiresToday": "expira hoje",
+      "expiredAgo": "expirou há {{count}} d"
+    },
+    "duration": {
+      "dayHour": "{{days}} d {{hours}} h",
+      "hourMinute": "{{hours}} h {{minutes}} min",
+      "minute": "{{minutes}} min"
+    },
+    "age": {
+      "justNow": "agora mesmo",
+      "minutesAgo": "há {{count}} min",
+      "hoursAgo": "há {{count}} h",
+      "daysAgo": "há {{count}} d"
+    },
+    "patching": {
+      "failed": "{{count}} com falha",
+      "pending": "{{count}} pendentes",
+      "upToDate": "em dia"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "não gerenciado",
+      "noAgent": "sem agente RMM",
+      "seen": "visto {{age}}",
+      "neverSeen": "nunca visto"
+    },
+    "agentStatus": {
+      "online": "on-line",
+      "offline": "off-line",
+      "overdue": "atrasado",
+      "unknown": "desconhecido"
+    },
+    "patching": {
+      "scanned": "verificado {{age}}",
+      "neverScanned": "nunca verificado"
+    },
+    "coverage": {
+      "noWarrantyDate": "sem data de garantia"
+    },
+    "status": {
+      "active": "ativo",
+      "inactive": "inativo",
+      "maintenance": "manutenção"
     }
   }
 }

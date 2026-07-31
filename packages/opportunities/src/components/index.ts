@@ -1,11 +1,13 @@
 export { WhySentenceText } from './WhySentenceText';
 export { EvidenceLadder } from './EvidenceLadder';
+export { ActionSuggestions } from './ActionSuggestions';
 export { WorkQueue } from './queue/WorkQueue';
 export type { WorkQueueProps } from './queue/WorkQueue';
 export { QueueGreeting } from './queue/QueueGreeting';
 export { QueueSection } from './queue/QueueSection';
 export { QueueActionRow } from './queue/QueueActionRow';
 export type { QueueActionRowProps } from './queue/QueueActionRow';
+export { QueueActionsTable } from './queue/QueueActionsTable';
 export { MoneyFoundCard } from './queue/MoneyFoundCard';
 export type { MoneyFoundCardProps } from './queue/MoneyFoundCard';
 export { LessonStrip } from './queue/LessonStrip';

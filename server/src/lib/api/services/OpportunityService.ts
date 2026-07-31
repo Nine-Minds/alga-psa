@@ -26,6 +26,7 @@ import {
   buildOpportunityStatusChangedPayload,
   completeOpportunityNextAction,
   correctEvidence,
+  declareStage,
   getOpportunityDetail,
   onQuoteAccepted,
   onQuoteSent,
@@ -40,6 +41,7 @@ import {
   runOpportunityCloseGates,
   prepareOpportunityWinConversions,
   listOpportunityTimelineCore,
+  promoteProspectClientAfterWin,
   type IOpportunityTimelineEntry,
 } from '@alga-psa/opportunities';
 import {
@@ -405,27 +407,12 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       await recordEvidence(trx, context.tenant, {
         opportunityId: id,
         checkpoint: 'won',
-        source: 'declared',
+        source: 'user_declared',
         detail: 'Opportunity marked won',
         recordedBy: context.userId,
       });
 
-      const db = tenantDb(trx, context.tenant);
-      const client = await db.table('clients')
-        .where({ client_id: updated.client_id })
-        .select('lifecycle_status')
-        .first();
-      if (client?.lifecycle_status === 'prospect') {
-        await db.table('clients')
-          .where({ client_id: updated.client_id })
-          .update({ lifecycle_status: 'active', updated_at: now });
-        publishOpportunityEventAfterCommit(trx, context.tenant, 'CLIENT_STATUS_CHANGED', {
-          clientId: updated.client_id,
-          previousStatus: 'prospect',
-          newStatus: 'active',
-          changedAt: now,
-        }, `client_status_changed:${updated.client_id}:${now}`);
-      }
+      await promoteProspectClientAfterWin(trx, context.tenant, updated.client_id, now);
       return updated;
     }).catch(throwOpportunityApiError);
   }
@@ -457,15 +444,16 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
     id: string,
     data: DeclaredOpportunityEvidenceApi,
     context: ServiceContext,
-  ): Promise<IOpportunityEvidence> {
+  ): Promise<IOpportunity> {
     const knex = await this.getDbForContext(context);
-    return withTransaction(knex, (trx) => recordEvidence(trx, context.tenant, {
-      opportunityId: id,
-      checkpoint: data.checkpoint,
-      source: 'declared',
-      detail: data.detail?.trim() || 'Decision-maker and budget conversation confirmed',
-      recordedBy: context.userId,
-    })).catch(throwOpportunityApiError);
+    return withTransaction(knex, (trx) => declareStage(
+      trx,
+      context.tenant,
+      id,
+      data.checkpoint,
+      context.userId,
+      data.detail,
+    )).catch(throwOpportunityApiError);
   }
 
   async correctEvidence(

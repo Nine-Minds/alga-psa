@@ -450,8 +450,16 @@ export async function applyProjectTemplate(
         .where({ template_id: templateId });
 
       for (const templateDep of templateDeps) {
-      const newPredecessorId = taskMap.get(templateDep.predecessor_task_id);
-      const newSuccessorId = taskMap.get(templateDep.successor_task_id);
+      // Template rows are normalized to 'blocks'/'related_to', but legacy
+      // rows may still carry 'blocked_by', which project_task_dependencies'
+      // CHECK constraint rejects — flip those to the equivalent 'blocks'.
+      const isLegacyBlockedBy = templateDep.dependency_type === 'blocked_by';
+      const newPredecessorId = taskMap.get(
+        isLegacyBlockedBy ? templateDep.successor_task_id : templateDep.predecessor_task_id
+      );
+      const newSuccessorId = taskMap.get(
+        isLegacyBlockedBy ? templateDep.predecessor_task_id : templateDep.successor_task_id
+      );
 
       if (newPredecessorId && newSuccessorId) {
         await tenantScopedTable(trx, 'project_task_dependencies', tenant)
@@ -459,7 +467,7 @@ export async function applyProjectTemplate(
             tenant,
             predecessor_task_id: newPredecessorId,
             successor_task_id: newSuccessorId,
-            dependency_type: templateDep.dependency_type,
+            dependency_type: isLegacyBlockedBy ? 'blocks' : templateDep.dependency_type,
             lead_lag_days: templateDep.lead_lag_days || 0,
             notes: templateDep.notes
           });

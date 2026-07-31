@@ -293,7 +293,14 @@ export interface AssetDocument {
 
 // Maintenance interfaces
 export type MaintenanceFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
-export type MaintenanceType = 'preventive' | 'inspection' | 'calibration' | 'replacement';
+/**
+ * Must stay in step with the maintenance_type CHECK on
+ * asset_maintenance_schedules / asset_maintenance_history and with the API Zod
+ * enum in server/src/lib/api/schemas/asset.ts. 'corrective' was accepted by the
+ * API and the mobile client while the DB rejected it — see migration
+ * 20260728100000_allow_corrective_maintenance_type.
+ */
+export type MaintenanceType = 'preventive' | 'corrective' | 'inspection' | 'calibration' | 'replacement';
 export type MaintenanceStatus = 'due' | 'overdue' | 'upcoming' | 'completed';
 
 export interface AssetMaintenanceSchedule {

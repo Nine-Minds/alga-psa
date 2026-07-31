@@ -10,7 +10,7 @@ import {
 
 export type { IOpportunityTimelineEntry } from '../lib/opportunityTimelineCore';
 
-/** The deal's courtship record: interactions linked to the opportunity, newest first. */
+/** The deal's courtship record, beginning with creation and followed oldest-first. */
 export const listOpportunityTimeline = withAuth(
   async (user, { tenant }, opportunityId: string): Promise<IOpportunityTimelineEntry[]> => {
     if (!(await hasPermission(user as any, 'opportunities', 'read'))) {

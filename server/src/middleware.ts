@@ -59,6 +59,8 @@ const apiKeySkipPaths = [
   '/api/health',
   '/api/healthz',
   '/api/readyz',
+  // SCIM v2 endpoints authenticate tenant-specific Bearer tokens in-route.
+  '/api/scim/',
   '/api/documents/download/',
   '/api/documents/view/',
   '/api/email/webhooks/',

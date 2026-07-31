@@ -14,7 +14,7 @@ const allocationEntry = (
   amount: number | null,
   percentage: number | null,
   status: AllocationEntry['status'] = 'pending',
-): AllocationEntry => ({ amount, percentage, status });
+): AllocationEntry => ({ amount, percentage, frozen_amount: null, status });
 
 const depositEntry = (
   entry_type: DepositEntry['entry_type'],

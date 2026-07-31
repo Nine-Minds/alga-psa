@@ -1,6 +1,6 @@
 import { createWriteStream, readFileSync } from 'fs';
 import archiver from 'archiver';
-import { FileStoreModel } from '../models/storage';
+import { FileStoreModel } from '@alga-psa/storage';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '../lib/db';

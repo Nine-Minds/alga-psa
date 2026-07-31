@@ -5,7 +5,7 @@ import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency, IPr
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, CheckCircle2, RotateCcw } from 'lucide-react';
-import { phaseBadgeClasses, formatCents, type PhaseBillingBadge } from '@alga-psa/core';
+import { phaseBadgeClasses, type PhaseBillingBadge } from '@alga-psa/core';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -284,7 +284,7 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
-  const { symbol } = useCurrencyFormat();
+  const { money, symbol } = useCurrencyFormat();
   const { isSelected, toggleTask, setTasksSelected, selectedTaskIds } = useTaskSelection();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
@@ -1424,7 +1424,10 @@ export default function TaskListView({
                                   {phaseGroup.totalTasks} {t(phaseGroup.totalTasks === 1 ? 'task' : 'tasks.title', phaseGroup.totalTasks === 1 ? 'task' : 'tasks')}
                                 </span>
                                 {phaseBillingBadges?.[phaseGroup.phase.phase_id] && (
-                                  <Tooltip content={formatCents(phaseBillingBadges[phaseGroup.phase.phase_id].amountCents, phaseBillingBadges[phaseGroup.phase.phase_id].currency)}>
+                                  <Tooltip content={money(
+                                    phaseBillingBadges[phaseGroup.phase.phase_id].amountCents,
+                                    phaseBillingBadges[phaseGroup.phase.phase_id].currency ?? undefined,
+                                  )}>
                                     <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${phaseBadgeClasses(phaseBillingBadges[phaseGroup.phase.phase_id].status)}`}>{symbol()}</span>
                                   </Tooltip>
                                 )}
@@ -1977,16 +1980,9 @@ export default function TaskListView({
                                     case 'actual_hours':
                                       return (
                                         <td key="actual_hours" className={`py-2.5 px-3 align-middle ${tdBorder}`}>
-                                          {onTaskUpdate ? (
-                                            <InlineHoursEdit
-                                              minutes={task.actual_hours}
-                                              onCommit={(mins) => onTaskUpdate(task.task_id, { actual_hours: mins ?? 0 })}
-                                            />
-                                          ) : (
-                                            <span className="text-[13px] text-[rgb(var(--color-text-700))]">
-                                              {task.actual_hours != null ? (task.actual_hours / 60).toFixed(1) : '-'}
-                                            </span>
-                                          )}
+                                          <span className="text-[13px] text-[rgb(var(--color-text-700))]">
+                                            {task.actual_hours != null ? (task.actual_hours / 60).toFixed(1) : '-'}
+                                          </span>
                                         </td>
                                       );
                                     case 'checklist':

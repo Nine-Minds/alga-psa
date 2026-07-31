@@ -24,7 +24,8 @@ describe('profitability report action SQL contracts', () => {
   it('normalizes invoice currency and flags unconverted foreign revenue with null exchange rates', () => {
     expect(source).toContain('exchange_rate_basis_points');
     expect(source).toContain('ROUND((cd.amount_cents::numeric * cd.exchange_rate_basis_points::numeric) / 10000)');
-    expect(source).toContain('cd.exchange_rate_basis_points IS NULL) AS unconverted');
+    // Whitespace-tolerant: the flag spans several lines, so assert the contract, not the formatting.
+    expect(source).toMatch(/cd\.exchange_rate_basis_points IS NULL\s*\)\s*AS unconverted/);
   });
 
   it('costs labor by work_date, actual duration, resolved cost rate, and approval warning minutes', () => {

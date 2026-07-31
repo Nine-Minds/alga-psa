@@ -3647,6 +3647,7 @@ const handleClose = () => {
                     agentOptions={agentOptions}
                     onSelectChange={handleSelectChange}
                     onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
+                    onUpdateDescription={handleUpdateDescription}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                     hideSlaStatus={hideSlaStatus}
                     hideBilling={hideBilling}

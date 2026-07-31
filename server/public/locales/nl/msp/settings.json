@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Algemene instellingen",
-    "description": "Beheer uw organisatienaam en standaardklant. De standaardklant wordt gebruikt voor configuratiedoeleinden en vertegenwoordigt uw MSP.",
+    "description": "Beheer uw organisatienaam en kies welke klantregistratie uw eigen bedrijf vertegenwoordigt. De gegevens van die klant verschijnen op facturen, offertes en communicatie naar klanten.",
     "fields": {
       "organizationName": {
         "label": "Organisatienaam"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Standaard tijdzone opslaan"
     },
     "clients": {
-      "title": "Klanten",
+      "title": "Uw bedrijf",
+      "help": "De klant die als uw bedrijf is gemarkeerd, is uw eigen organisatie. De naam, het adres en het logo van deze klant verschijnen op facturen, offertes en communicatie naar klanten.",
+      "currentDefault": "Uw bedrijf is momenteel {{name}}.",
+      "yourCompanyBadge": "Uw bedrijf",
       "table": {
         "name": "Naam",
-        "default": "Standaard",
+        "default": "Uw bedrijf (standaard)",
         "actions": "Acties"
       },
       "placeholder": "Selecteer een klant om toe te voegen",
-      "addClient": "Klant toevoegen"
+      "addClient": "Klant toevoegen",
+      "confirmDialog": {
+        "title": "Uw bedrijf wijzigen?",
+        "message": "Hiermee wijzigt u uw bedrijf van {{current}} naar {{next}}. {{next}} vertegenwoordigt dan uw eigen organisatie op facturen, offertes en in e-mails en uitnodigingen aan klanten.",
+        "messageInitial": "Hiermee stelt u {{next}} in als uw bedrijf. {{next}} vertegenwoordigt dan uw eigen organisatie op facturen, offertes en in e-mails en uitnodigingen aan klanten.",
+        "confirm": "Bedrijf wijzigen",
+        "cancel": "Annuleren"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Kan tijdzone niet bijwerken",
         "selectClient": "Selecteer een klant",
         "clientNotFound": "Klant niet gevonden",
+        "clientAlreadyAdded": "Die klant staat hier al in de lijst",
         "addClient": "Kan klant niet toevoegen",
         "removeClient": "Kan klant niet verwijderen",
         "setDefaultClient": "Kan standaardklant niet instellen",
@@ -282,6 +293,27 @@
         "label": "Rapporteert aan",
         "placeholder": "Manager selecteren"
       },
+      "workSchedule": {
+        "label": "Werktijden",
+        "help": "Wanneer deze persoon aan het werk is. Wordt gebruikt in bezettingsrapporten. Dit is niet de boekbaarheid voor klanten.",
+        "setHours": "Werktijden instellen",
+        "clear": "Wissen",
+        "weeklyTotal": "{{hours}} uur per week",
+        "days": {
+          "0": "Zondag",
+          "1": "Maandag",
+          "2": "Dinsdag",
+          "3": "Woensdag",
+          "4": "Donderdag",
+          "5": "Vrijdag",
+          "6": "Zaterdag"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Wekelijkse capaciteit (uren)",
+        "placeholder": "bijv. 40",
+        "help": "Alleen gebruikt als hierboven geen werktijden zijn ingesteld."
+      },
       "lastLogin": "Laatste aanmelding",
       "roles": "Rollen",
       "status": "Status",
@@ -326,7 +358,9 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
-        "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen."
+        "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen.",
+        "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
+        "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
       }
     },
     "loading": "Gebruikersdetails laden..."
@@ -1056,6 +1090,15 @@
     "openMenu": "Menu openen"
   },
   "clientPortal": {
+    "features": {
+      "title": "Portaalfuncties",
+      "description": "Kies tot welke selfservicefuncties klanten toegang hebben.",
+      "appointmentsLabel": "Afspraken",
+      "appointmentsHelp": "Sta klanten toe om afspraken in het klantenportaal te bekijken en aan te vragen.",
+      "appointmentsEnabled": "Afspraken zijn nu beschikbaar in het klantenportaal",
+      "appointmentsDisabled": "Afspraken zijn nu verborgen in het klantenportaal",
+      "updateFailed": "De functies van het klantenportaal konden niet worden bijgewerkt"
+    },
     "branding": {
       "title": "Huisstijl en uiterlijk",
       "description": "Pas het uiterlijk van uw klantenportaal aan met uw bedrijfshuisstijl.",

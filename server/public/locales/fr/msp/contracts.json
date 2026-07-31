@@ -259,7 +259,8 @@
       "invoices": "Factures",
       "lines": "Lignes de contrat",
       "overview": "Aperçu",
-      "pricing": "Barèmes de prix"
+      "pricing": "Barèmes de prix",
+      "simulator": "Simuler"
     },
     "validation": {
       "billingFrequencyRequired": "La fréquence de facturation est requise.",
@@ -1156,6 +1157,12 @@
         "active": "Actif",
         "inactive": "Inactif"
       }
+    },
+    "simulation": {
+      "client": "Contexte client",
+      "hypothetical": "Profil client hypothétique",
+      "open": "Simuler",
+      "title": "Simulation du modèle"
     }
   },
   "quickStart": {
@@ -1321,6 +1328,10 @@
       "saveDraft": "Enregistrer en brouillon",
       "saving": "Enregistrement...",
       "completing": "Finalisation..."
+    },
+    "simulation": {
+      "description": "Testez ce brouillon non enregistré avec une activité prévue. La simulation n'enregistre et n'émet rien.",
+      "title": "Simuler avant de créer"
     }
   },
   "wizardBasics": {
@@ -2067,6 +2078,240 @@
         "contract": "Si vous enregistrez cette ligne récurrente, les périodes futures se matérialiseraient selon un aperçu de type anniversaire ancré au 8 avant la génération des factures.",
         "client": "Si vous enregistrez cette ligne récurrente, les périodes futures se matérialiseraient selon l'aperçu du calendrier de facturation client avant la génération des factures."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "advanceHint": "Chaque facture facture sa période de service en cours.",
+      "arrearsHint": "Chaque facture facture la période de service précédente.",
+      "averageLoaded": "Moyenne d'activité chargée depuis {{window}}. {{count}} valeurs prévues modifiées.",
+      "empty": "Scénario à prix fixe uniquement — rien à supposer.",
+      "hoursUnit": "h",
+      "inputLabel": "{{unit}} prévues par période de service — {{service}}",
+      "invoicePeriodLabel": "Facture {{period}}",
+      "loadReplay": "Charger l'activité et les factures",
+      "loadingHistory": "Chargement de l'activité historique…",
+      "overrideInputLabel": "Facture {{period}} — {{unit}} de sa période de service — {{service}}",
+      "periodLabel": "P{{number}}",
+      "prefillChange": "Valeur chargée : {{before}} → {{after}} {{unit}} par période de service",
+      "prefillNextStep": "Les valeurs mises à jour sont surlignées. Actualisez la simulation pour recalculer les factures.",
+      "prefillOverrides": "{{count}} valeurs de période chargées",
+      "prefillUnchanged": "Les valeurs chargées depuis {{window}} correspondent à l'activité prévue actuelle.",
+      "replayEnd": "Jusqu'au",
+      "replayLoaded": "Activité historique chargée depuis {{window}} avec {{count}} factures émises. {{changed}} valeurs prévues modifiées.",
+      "replayRangeLoaded": "Activité historique et {{count}} factures émises chargées depuis {{window}}. L'activité prévue est inchangée.",
+      "replayStart": "À partir du",
+      "replayTitle": "Comparer avec les factures passées",
+      "rowLabel": "{{service}} — {{unit}} prévues par période de service",
+      "subtitle": "Saisissez le travail ou l'utilisation attendus par période de service. En facturation à terme échu, chaque facture utilise la période de service précédente.",
+      "title": "Activité prévue",
+      "useRecent": "Utiliser la moyenne des 3 dernières périodes de facturation",
+      "varyByPeriod": "Définir l'activité pour chaque facture",
+      "zeroActivity": "Ce service ne contribue à rien tant que l'activité prévue n'est pas supérieure à zéro."
+    },
+    "compare": {
+      "added": "Ajouté",
+      "changed": "Modifié",
+      "horizonImpact": "Variation totale sur {{count}} périodes de facturation",
+      "horizonImpactHint": "Par rapport au contrat actuel",
+      "noChange": "Aucun changement simulé",
+      "removed": "Retiré du contrat actuel"
+    },
+    "diagnostics": {
+      "title": "Notes de simulation"
+    },
+    "emptyScenario": {
+      "description": "Ce contrat ne comporte aucune ligne de contrat. Ajoutez d'abord des lignes de contrat, puis revenez pour simuler.",
+      "title": "Rien à simuler pour le moment"
+    },
+    "explanation": {
+      "amount": "Montant",
+      "close": "Fermer",
+      "inputs": "Entrées",
+      "noBreakdown": "Aucun détail disponible",
+      "steps": "Calcul",
+      "title": "Détail du montant"
+    },
+    "featureName": "Simulateur de contrat",
+    "invoiceDetail": {
+      "billedInAdvance": "Facturé d'avance",
+      "billedInArrears": "Facturé à terme échu",
+      "columns": {
+        "amount": "Montant",
+        "line": "Ligne",
+        "qty": "Quantité",
+        "rate": "Taux"
+      },
+      "draftNote": "brouillon, non émise",
+      "explainHint": "Afficher comment ce montant a été calculé",
+      "invoicePeriod": "Période de facturation : {{start}} – {{end}}",
+      "renderedPreview": "Aperçu de la mise en page de la facture",
+      "servicePeriod": "Période de service : {{start}} – {{end}}",
+      "subtotal": "Sous-total",
+      "tax": "Taxes",
+      "title": "Facture simulée de {{period}}",
+      "total": "Total"
+    },
+    "loadFailed": "Échec du chargement du scénario de contrat.",
+    "loadingSnapshot": "Chargement du scénario…",
+    "markers": {
+      "bucketOverage": "Dépassement du forfait",
+      "cadenceCoincidence": "Chevauchement de cadences",
+      "contractEnd": "Fin du contrat",
+      "oneTime": "Ponctuel",
+      "prorated": "Au prorata"
+    },
+    "preparingDraft": "Préparation de la simulation…",
+    "replay": {
+      "actualInvoice": "Facture émise {{number}}",
+      "issued": "émise",
+      "previewIssued": "Aperçu de la facture émise",
+      "projected": "simulé",
+      "simulatedDelta": "écart simulé"
+    },
+    "runBar": {
+      "compareToggle": "Afficher les écarts par rapport au contrat actuel",
+      "horizonOption": "{{count}} périodes de facturation",
+      "lastRun": "Simulation à jour · {{count}} périodes de facturation",
+      "neverRun": "Pas encore simulé",
+      "simulate": "Simuler",
+      "simulating": "Simulation en cours…",
+      "stale": "Modifications non simulées",
+      "staleBanner": "Ces montants proviennent de la simulation précédente. Actualisez la simulation pour inclure vos derniers changements.",
+      "updateSimulation": "Actualiser la simulation"
+    },
+    "scenario": {
+      "addAdjustment": "+ ajouter un ajustement",
+      "addBucket": "Ajouter des heures incluses",
+      "addCatalogService": "Ajouter un service du catalogue",
+      "addCatalogServiceOption": "+ Ajouter un service du catalogue…",
+      "addDiscount": "+ ajouter une remise",
+      "addIncludedHours": "Ajouter des heures incluses",
+      "addIncludedUnits": "Ajouter des unités incluses",
+      "addLine": "Ajouter une ligne",
+      "addSchedule": "+ ajouter un barème",
+      "addTier": "+ ajouter un palier",
+      "adjustments": "Ajustements",
+      "advancedChanges": "Modifications avancées du contrat",
+      "advancedSummary": "{{schedules}} barèmes · {{discounts}} remises · {{adjustments}} ajustements",
+      "allLines": "toutes les lignes",
+      "allocationRate": "Taux de répartition",
+      "bucketIncluded": "Inclut {{hours}} h ; le taux ci-dessus est le taux de dépassement",
+      "cadence": {
+        "client": "Utiliser le calendrier de facturation du client",
+        "contract": "Utiliser le calendrier de la ligne de contrat"
+      },
+      "catalogRate": "Tarif catalogue",
+      "collapseDetailsFor": "Réduire les détails de {{line}}",
+      "defaultRate": "par défaut",
+      "discountTypes": {
+        "fixed": "fixe",
+        "percentage": "pourcentage"
+      },
+      "discounts": "Remises",
+      "editDetails": "Modifier les règles",
+      "editDetailsFor": "Modifier les détails de {{line}}",
+      "fields": {
+        "adjustmentAmount": "Montant de l'ajustement en dollars",
+        "adjustmentDescription": "Description de l'ajustement",
+        "adjustmentPeriod": "Période de l'ajustement",
+        "billingFrequency": "Fréquence de facturation",
+        "billingTiming": "Moment de facturation",
+        "bucketQuantity": "Quantité incluse du forfait",
+        "cadenceOwner": "Calendrier de facturation",
+        "configurationType": "Méthode de facturation du service",
+        "discountLine": "Ligne de la remise",
+        "discountName": "Nom de la remise",
+        "discountType": "Type de remise",
+        "discountValue": "Valeur de la remise",
+        "includedHours": "Heures incluses",
+        "includedUnits": "Unités incluses",
+        "lineName": "Nom de la ligne de contrat",
+        "lineType": "Type de ligne",
+        "minimumBillableMinutes": "Minutes facturables minimales",
+        "minimumUsage": "Utilisation minimale",
+        "overtimeRate": "Taux des heures supplémentaires ($/h)",
+        "overtimeThreshold": "Seuil d'heures supplémentaires (heures)",
+        "roundUpMinutes": "Arrondir aux minutes",
+        "scheduleEffectiveDate": "Date d'effet du barème",
+        "scheduleEndDate": "Date de fin du barème",
+        "scheduleRate": "Tarif du barème en dollars",
+        "serviceQuantity": "Quantité de licences ou de produits",
+        "tierMaximum": "Maximum du palier",
+        "tierMinimum": "Minimum du palier",
+        "tierRate": "Tarif du palier en dollars",
+        "usageUnit": "Unité d'utilisation"
+      },
+      "frequencies": {
+        "annually": "Annuel",
+        "monthly": "Mensuel",
+        "quarterly": "Trimestriel",
+        "semi-annually": "Semestriel"
+      },
+      "fromServiceRates": "D'après les tarifs du service",
+      "hourlyRate": "Taux horaire",
+      "licenseSuffix": " · licence",
+      "lineCount": "{{count}} lignes",
+      "lineSummary": "{{type}} · {{frequency}} · {{timing}} · {{services}}",
+      "modified": "Modifié",
+      "newAdjustmentName": "Ajustement ponctuel",
+      "newDiscountName": "Remise du scénario",
+      "newLineName": "Ligne de scénario {{number}}",
+      "oneService": "1 service",
+      "oneTime": "ponctuel",
+      "overageRate": "Tarif de dépassement",
+      "overtime": "heures supplémentaires",
+      "placeholders": {
+        "minimum": "minimum",
+        "minimumMinutes": "minutes minimales",
+        "overtimeRate": "heures supp. $/h",
+        "roundMinutes": "arrondi en minutes",
+        "thresholdHours": "heures du seuil"
+      },
+      "pricingSchedules": "Barèmes de prix",
+      "productUnitPrice": "Prix unitaire",
+      "proration": "prorata",
+      "rateOverriddenByLine": "Tarif remplacé par le prix récurrent de la ligne",
+      "recurringLinePrice": "Prix récurrent de la ligne",
+      "removeAdjustment": "Supprimer l'ajustement",
+      "removeDiscount": "Supprimer la remise",
+      "removeLine": "Supprimer",
+      "removeSchedule": "Supprimer le barème de prix",
+      "removeService": "supprimer",
+      "removeTier": "Supprimer le palier",
+      "resetAll": "Tout réinitialiser",
+      "resetLine": "Réinitialiser",
+      "rollover": "report",
+      "serviceBaseRate": "Tarif de base du service",
+      "serviceCount": "{{count}} services",
+      "tieredPricing": "tarification par paliers",
+      "timing": {
+        "advance": "Facturer d'avance",
+        "arrears": "Facturer à terme échu"
+      },
+      "title": "Modifications du contrat",
+      "types": {
+        "bucket": "Forfait d'heures",
+        "fixed": "Fixe",
+        "hourly": "Horaire",
+        "usage": "Utilisation"
+      },
+      "usageRate": "Tarif d'utilisation"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} par rapport au contrat actuel",
+      "deltaUp": "+{{amount}} par rapport au contrat actuel",
+      "empty": "Simulez pour voir les prochaines périodes de facturation et inspecter chaque montant.",
+      "invoicePeriod": "Période de facturation",
+      "noDelta": "aucun changement vs contrat en vigueur",
+      "noPreviousDelta": "aucun changement vs précédente",
+      "periodAria": "{{period}}, {{total}}",
+      "previousDelta": "{{sign}}{{amount}} par rapport à la facture de {{period}}",
+      "title": "Périodes de facturation simulées"
+    },
+    "unavailable": {
+      "description": "Le simulateur de contrat est disponible dans l'édition Enterprise d'Alga PSA.",
+      "title": "Fonctionnalité Enterprise"
     }
   }
 }

@@ -453,7 +453,11 @@
           "unlinkFailed": "Dieser Kunde konnte nicht getrennt werden.",
           "hidePreview": "Vorschau ausblenden",
           "previewLoading": "Verzeichnis von {{client}} wird von Microsoft gelesen…",
-          "previewLoadingHint": "Die Dauer hängt davon ab, wie viele Benutzer der Client hat."
+          "previewLoadingHint": "Die Dauer hängt davon ab, wie viele Benutzer der Client hat.",
+          "previousCount": "Vorher",
+          "syncFinished": "Synchronisierung für {{client}} abgeschlossen.",
+          "syncing": "Synchronisierung läuft…",
+          "syncTrackingFailed": "Die Synchronisierung wurde gestartet, aber diese Seite konnte sie nicht bis zum Abschluss verfolgen. Aktualisieren Sie die Seite, um das neueste Ergebnis zu sehen."
         },
         "connection": {
           "changeAction": "Verbindung ändern",
@@ -601,6 +605,7 @@
       },
       "pilot": {
         "actions": {
+          "createAndSync": "Genehmigte Kunden erstellen und synchronisieren",
           "preview": "Änderungen vorschauen",
           "previewing": "Vorschau läuft…",
           "syncOne": "Diesen Client synchronisieren",
@@ -617,6 +622,7 @@
           "syncFailed": "Die Synchronisierung konnte nicht gestartet werden."
         },
         "gateNote": "Synchronisieren Sie zuerst einen Client. Die übrigen werden freigegeben, sobald dessen Lauf beendet ist.",
+        "pendingCreate": "Genehmigte neue Kunden ({{count}}) werden durch diese explizite Synchronisierung erstellt. Geplante Synchronisierungen können sie nicht erstellen.",
         "previewPrompt": "Sehen Sie sich die Änderungen für diesen Kunden an, bevor etwas geschrieben wird.",
         "remainingStarted": "Synchronisierung für die übrigen {{count}} Clients gestartet.",
         "started": "Synchronisierung für {{client}} gestartet."

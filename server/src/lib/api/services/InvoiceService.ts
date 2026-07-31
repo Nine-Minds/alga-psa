@@ -1296,7 +1296,7 @@ export class InvoiceService extends BaseService<IInvoice> {
    * Delegates to the canonical apply-credit engine
    * (creditActions.applyCreditToInvoiceInternal), which draws down
    * credit_tracking, writes the credit_application transaction and
-   * credit_allocations row, and moves clients.credit_balance — identical
+   * credit_allocations row, and moves the derived credit balance — identical
    * ledger state to the financial REST path and the UI server action.
    * Invoice status derivation (paid / partially_applied) stays here, as it
    * is this endpoint's contract rather than part of the credit ledger.

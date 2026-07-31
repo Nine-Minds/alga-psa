@@ -11,6 +11,10 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
+import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
+import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
@@ -101,9 +105,28 @@ function rowName(row: AgreementProfitabilityRow): string {
   return row.contractName;
 }
 
+type Translator = ReturnType<typeof useTranslation>['t'];
+
+function ticketLabel(row: TicketProfitabilityRow, t: Translator): string {
+  const title = row.title || t('contractReports.profitability.fallbacks.untitledTicket', { defaultValue: 'Untitled ticket' });
+  return row.ticketNumber
+    ? t('contractReports.profitability.formats.ticketWithNumber', {
+      defaultValue: '#{{number}} {{title}}',
+      number: row.ticketNumber,
+      title,
+    })
+    : title;
+}
+
+function attributionLabel(value: TicketProfitabilityRow['attribution'], t: Translator): string {
+  if (value === 'exact') return t('contractReports.profitability.attribution.exact', { defaultValue: 'Exact' });
+  if (value === 'allocated') return t('contractReports.profitability.attribution.allocated', { defaultValue: 'Allocated' });
+  return t('contractReports.profitability.attribution.none', { defaultValue: 'None' });
+}
+
 const ProfitabilityReport: React.FC = () => {
   const { t } = useTranslation('msp/reports');
-  const { formatCurrency } = useFormatters();
+  const { formatCurrency, formatDate } = useFormatters();
   const defaultRange = useMemo(() => getLastCompleteMonthRange(), []);
   const [dateRange, setDateRange] = useState<DateRange>(defaultRange);
   const [draftRange, setDraftRange] = useState<DateRange>(defaultRange);
@@ -300,15 +323,7 @@ const ProfitabilityReport: React.FC = () => {
     dataIndex: 'title',
     render: (_value: string | null, record: TicketProfitabilityRow) => (
       <div className="flex flex-col">
-        <span className="font-medium">
-          {record.ticketNumber
-            ? t('contractReports.profitability.formats.ticketWithNumber', {
-              defaultValue: '#{{number}} {{title}}',
-              number: record.ticketNumber,
-              title: record.title || t('contractReports.profitability.fallbacks.untitledTicket', { defaultValue: 'Untitled ticket' }),
-            })
-            : record.title || t('contractReports.profitability.fallbacks.untitledTicket', { defaultValue: 'Untitled ticket' })}
-        </span>
+        <span className="font-medium">{ticketLabel(record, t)}</span>
         <span className="text-xs text-muted-foreground">
           {t('contractReports.profitability.formats.billableHours', {
             defaultValue: '{{value}} billable hrs',
@@ -327,11 +342,7 @@ const ProfitabilityReport: React.FC = () => {
       render: (value: TicketProfitabilityRow['attribution'], record: TicketProfitabilityRow) => (
         <div className="flex items-center gap-2">
           <Badge variant={value === 'exact' ? 'success' : value === 'allocated' ? 'warning' : 'secondary'}>
-            {value === 'exact'
-              ? t('contractReports.profitability.attribution.exact', { defaultValue: 'Exact' })
-              : value === 'allocated'
-                ? t('contractReports.profitability.attribution.allocated', { defaultValue: 'Allocated' })
-                : t('contractReports.profitability.attribution.none', { defaultValue: 'None' })}
+            {attributionLabel(value, t)}
           </Badge>
           {record.uncosted && (
             <Badge variant="error">
@@ -343,12 +354,131 @@ const ProfitabilityReport: React.FC = () => {
     },
   ];
 
+  // Print mirrors the on-screen drill-down, but renders every row — the screen tables paginate at 10.
+  const printMetricColumns = <T extends ProfitabilityMetricFields>(
+    nameColumn: PrintableTableColumn<T>
+  ): PrintableTableColumn<T>[] => [
+    nameColumn,
+    {
+      key: 'revenue',
+      header: t('contractReports.profitability.table.revenue', { defaultValue: 'Revenue' }),
+      render: (row) => formatCents(row.revenue),
+    },
+    {
+      key: 'laborCost',
+      header: t('contractReports.profitability.table.laborCost', { defaultValue: 'Labor Cost' }),
+      render: (row) => formatCents(row.laborCost),
+    },
+    {
+      key: 'materialCost',
+      header: t('contractReports.profitability.table.materialCost', { defaultValue: 'Material Cost' }),
+      render: (row) => formatCents(row.materialCost),
+    },
+    {
+      key: 'margin',
+      header: t('contractReports.profitability.table.margin', { defaultValue: 'Margin' }),
+      render: (row) => formatCents(row.margin),
+    },
+    {
+      key: 'marginPct',
+      header: t('contractReports.profitability.table.marginPct', { defaultValue: 'Margin %' }),
+      render: (row) => formatPercent(row.marginPct),
+    },
+    {
+      key: 'hours',
+      header: t('contractReports.profitability.table.hours', { defaultValue: 'Hours' }),
+      render: (row) => formatHours(row.totalMinutes),
+    },
+    {
+      key: 'ehr',
+      header: t('contractReports.profitability.table.ehr', { defaultValue: 'EHR' }),
+      render: (row) => formatRate(row.effectiveHourlyRate),
+    },
+  ];
+
+  const printClientColumns = printMetricColumns<ClientProfitabilityRow>({
+    key: 'client',
+    header: t('contractReports.profitability.table.client', { defaultValue: 'Client' }),
+    render: (row) => row.clientName,
+  });
+
+  const printAgreementColumns = printMetricColumns<AgreementProfitabilityRow>({
+    key: 'agreement',
+    header: t('contractReports.profitability.table.agreement', { defaultValue: 'Agreement' }),
+    render: (row) => rowName(row),
+  });
+
+  const printTicketColumns: PrintableTableColumn<TicketProfitabilityRow>[] = [
+    ...printMetricColumns<TicketProfitabilityRow>({
+      key: 'ticket',
+      header: t('contractReports.profitability.table.ticket', { defaultValue: 'Ticket' }),
+      render: (row) => ticketLabel(row, t),
+    }),
+    {
+      key: 'attribution',
+      header: t('contractReports.profitability.table.attribution', { defaultValue: 'Attribution' }),
+      render: (row) => (
+        row.uncosted
+          ? t('contractReports.profitability.formats.attributionUncosted', {
+            defaultValue: '{{attribution}} (uncosted)',
+            attribution: attributionLabel(row.attribution, t),
+          })
+          : attributionLabel(row.attribution, t)
+      ),
+    },
+  ];
+
+  const printLineColumns: PrintableTableColumn<ContractLineProfitabilityRow>[] = [
+    {
+      key: 'line',
+      header: t('contractReports.profitability.table.contractLine', { defaultValue: 'Line' }),
+      render: (row) => (
+        row.rowType === 'unassigned'
+          ? t('contractReports.profitability.formats.unassignedLine', {
+            defaultValue: '{{line}} (unassigned)',
+            line: row.contractLineName,
+          })
+          : row.contractLineName
+      ),
+    },
+    {
+      key: 'revenue',
+      header: t('contractReports.profitability.table.revenue', { defaultValue: 'Revenue' }),
+      render: (row) => formatCents(row.revenue),
+    },
+    {
+      key: 'cost',
+      header: t('contractReports.profitability.table.cost', { defaultValue: 'Cost' }),
+      render: (row) => formatCents(row.laborCost + row.materialCost),
+    },
+    {
+      key: 'margin',
+      header: t('contractReports.profitability.table.margin', { defaultValue: 'Margin' }),
+      render: (row) => formatCents(row.margin),
+    },
+    {
+      key: 'hours',
+      header: t('contractReports.profitability.table.hours', { defaultValue: 'Hours' }),
+      render: (row) => formatHours(row.totalMinutes),
+    },
+  ];
+
   const selectedAgreementKey = selectedAgreement?.clientContractId ?? null;
   const visibleTickets = tickets.filter((ticket) => (
     !selectedAgreementKey || ticket.clientContractId === selectedAgreementKey
   ));
 
   const summaryWarnings = summary ? warningItems(summary, t) : [];
+
+  const expandedAgreementRows = agreements.filter(
+    (agreement) => expandedAgreements.has(agreement.clientContractId ?? agreement.rowType)
+  );
+
+  const printDateRange = t('contractReports.profitability.print.dateRange', {
+    defaultValue: '{{start}} to {{end}}',
+    start: formatDate(dateRange.startDate),
+    end: formatDate(dateRange.endDate),
+  });
 
   const applyDateRange = (event: React.FormEvent) => {
     event.preventDefault();
@@ -436,6 +566,7 @@ const ProfitabilityReport: React.FC = () => {
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             {t('contractReports.profitability.actions.apply', { defaultValue: 'Apply' })}
           </Button>
+          <PrintButton id="profitability-print" type="button" variant="outline" />
         </form>
       </div>
 
@@ -647,6 +778,116 @@ const ProfitabilityReport: React.FC = () => {
           )}
         </Card>
       )}
+
+      <div className="app-print-root app-print-only" id="profitability-report-print">
+        <PrintableDetailHeader
+          title={t('contractReports.sections.profitability.title', { defaultValue: 'Profitability Report' })}
+          subtitle={printDateRange}
+          fields={[
+            {
+              label: t('contractReports.profitability.print.client', { defaultValue: 'Client' }),
+              value: selectedClient
+                ? selectedClient.clientName
+                : t('contractReports.profitability.print.allClients', { defaultValue: 'All clients' }),
+            },
+            {
+              label: t('contractReports.profitability.print.agreement', { defaultValue: 'Agreement' }),
+              value: selectedAgreement
+                ? rowName(selectedAgreement)
+                : t('contractReports.profitability.print.allAgreements', { defaultValue: 'All agreements' }),
+            },
+            {
+              label: t('contractReports.profitability.print.currency', { defaultValue: 'Currency' }),
+              value: currencyCode,
+            },
+          ]}
+        />
+
+        {summary && (
+          <PrintableSummary
+            metrics={[
+              { label: t('contractReports.profitability.summary.revenue', { defaultValue: 'Revenue' }), value: formatCents(summary.revenue) },
+              { label: t('contractReports.profitability.summary.laborCost', { defaultValue: 'Labor Cost' }), value: formatCents(summary.laborCost) },
+              { label: t('contractReports.profitability.summary.materialCost', { defaultValue: 'Material Cost' }), value: formatCents(summary.materialCost) },
+              { label: t('contractReports.profitability.summary.margin', { defaultValue: 'Margin' }), value: formatCents(summary.margin) },
+              { label: t('contractReports.profitability.summary.marginPct', { defaultValue: 'Margin %' }), value: formatPercent(summary.marginPct) },
+              { label: t('contractReports.profitability.summary.ehr', { defaultValue: 'Effective Hourly Rate' }), value: formatRate(summary.effectiveHourlyRate) },
+            ]}
+          />
+        )}
+
+        {summaryWarnings.length > 0 && (
+          <section className="app-print-table-section" style={{ marginBottom: '10pt' }}>
+            <header className="app-print-table-header">
+              <h2>{t('contractReports.profitability.warnings.title', { defaultValue: 'Report warnings' })}</h2>
+            </header>
+            <p>{summaryWarnings.join(t('contractReports.profitability.formats.listSeparator', { defaultValue: ', ' }))}</p>
+          </section>
+        )}
+
+        {summary && !summary.costRatesConfigured && (
+          <section className="app-print-table-section" style={{ marginBottom: '10pt' }}>
+            <p>
+              {t('contractReports.profitability.empty.costRates', {
+                defaultValue: 'Cost rates are not configured. Labor hours are shown as uncosted until a tenant default or user rate exists.',
+              })}
+            </p>
+          </section>
+        )}
+
+        <PrintableTable
+          title={t('contractReports.profitability.sections.clients', { defaultValue: 'Clients' })}
+          rows={clients}
+          columns={printClientColumns}
+          getRowKey={(row) => row.clientId ?? row.clientName}
+          emptyMessage={t('contractReports.profitability.empty.clients', {
+            defaultValue: 'No client profitability data available for this range.',
+          })}
+        />
+
+        {selectedClient && (
+          <>
+            <PrintableTable
+              title={t('contractReports.profitability.sections.agreements', {
+                defaultValue: 'Agreements for {{client}}',
+                client: selectedClient.clientName,
+              })}
+              rows={agreements}
+              columns={printAgreementColumns}
+              getRowKey={(row) => row.clientContractId ?? row.rowType}
+              emptyMessage={t('contractReports.profitability.empty.agreements', {
+                defaultValue: 'No agreement profitability data available for this selection.',
+              })}
+            />
+
+            {expandedAgreementRows.map((agreement) => (
+              <PrintableTable
+                key={`print-lines-${agreement.clientContractId ?? agreement.rowType}`}
+                title={t('contractReports.profitability.sections.linesForAgreement', {
+                  defaultValue: 'Contract lines for {{agreement}}',
+                  agreement: rowName(agreement),
+                })}
+                rows={agreement.lines}
+                columns={printLineColumns}
+                getRowKey={(row) => row.contractLineId ?? row.rowType}
+                emptyMessage={t('contractReports.profitability.empty.lines', {
+                  defaultValue: 'No line-level detail for this row.',
+                })}
+              />
+            ))}
+
+            <PrintableTable
+              title={t('contractReports.profitability.sections.tickets', { defaultValue: 'Tickets' })}
+              rows={visibleTickets}
+              columns={printTicketColumns}
+              getRowKey={(row) => row.ticketId}
+              emptyMessage={t('contractReports.profitability.empty.tickets', {
+                defaultValue: 'No ticket profitability data available for this selection.',
+              })}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 };

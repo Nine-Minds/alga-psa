@@ -460,8 +460,8 @@ export async function resolveCreditExpirationDate(
 
 /**
  * Grant credit to a client directly — no invoice is created. Writes the
- * credit_issuance transaction, the credit_tracking entry, and the client's
- * credit_balance atomically, so the credit is spendable immediately.
+ * credit_issuance transaction and credit_tracking entry atomically, so the
+ * derived balance makes the credit spendable immediately.
  */
 export const grantCredit = withAuth(async (
     user,
@@ -657,8 +657,8 @@ export const createPrepaymentInvoice = withAuth(async (
  * Canonical apply-credit engine. Writes the full ledger for a credit
  * application: credit_tracking draw-down (FIFO by expiration), the
  * credit_application transaction, the credit_allocations row, invoice
- * credit_applied, clients.credit_balance, workflow events, and the QBO
- * apply_credit enqueue.
+ * credit_applied, workflow events, and the QBO apply_credit enqueue. Available
+ * client credit is derived from the tracking rows this function draws down.
  *
  * Callers own permission checks and tenant context (must run inside
  * runWithTenant / an authenticated server action). Both the
@@ -760,9 +760,11 @@ export async function applyCreditToInvoiceInternal(
         // Available credit in the invoice's currency, derived from tracking rows
         const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency);
 
-        // If no credit to apply, exit early
-        if (availableCredit <= 0 || requestedAmount <= 0) {
-            console.log(`No credit available to apply for client ${clientId}`);
+        // A non-positive request is the only safe early exit. Even when the
+        // invoice-currency balance is zero, inspect tracking rows below so a
+        // client with credit in another currency gets the explicit mismatch
+        // error instead of a silent no-op.
+        if (requestedAmount <= 0) {
             return;
         }
         

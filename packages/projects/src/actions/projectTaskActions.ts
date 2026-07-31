@@ -814,7 +814,7 @@ export const addTaskToPhase = withAuth(async (
     user,
     { tenant },
     phaseId: string,
-    taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>,
+    taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'actual_hours'>,
     checklistItems: Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>[]
 ): Promise<IProjectTask | null | ProjectTaskActionError> => {
     try {
@@ -2319,13 +2319,12 @@ export const duplicateTaskToPhase = withAuth(async (
             );
 
             // 4. Prepare new task data
-            const newTaskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'wbs_code' | 'created_at' | 'updated_at' | 'tenant'> = {
+            const newTaskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'wbs_code' | 'created_at' | 'updated_at' | 'tenant' | 'actual_hours'> = {
                 task_name: originalTask.task_name + ' (Copy)', // Add (Copy) suffix
                 description: originalTask.description,
                 description_rich_text: originalTask.description_rich_text,
                 due_date: originalTask.due_date,
                 estimated_hours: originalTask.estimated_hours,
-                actual_hours: 0, // Reset actual hours for the new task
                 assigned_to: options?.duplicatePrimaryAssignee ? originalTask.assigned_to : null,
                 project_status_mapping_id: finalStatusMappingId,
                 order_key: orderKey,

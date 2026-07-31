@@ -876,6 +876,12 @@ export const getTemplateCategories = withAuth(async (
 
 /**
  * Add a dependency to a template task
+ *
+ * Mirrors addTaskDependency for project tasks: 'blocked_by' is normalized by
+ * swapping the tasks and storing 'blocks' ("A blocked_by B" becomes
+ * "B blocks A"), so stored rows only ever use 'blocks'/'related_to' — the
+ * same set project_task_dependencies enforces via CHECK constraint, which
+ * template application copies into.
  */
 export const addTemplateDependency = withAuth(async (
   user,
@@ -890,27 +896,43 @@ export const addTemplateDependency = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
+    // LEVERAGE: pattern blocked-by-normalization — same swap lives in
+    // projectTaskActions.addTaskDependency and applyProjectTemplate.
+    let actualPredecessorId = predecessorTaskId;
+    let actualSuccessorId = successorTaskId;
+    let actualDependencyType = dependencyType;
+    if (dependencyType === 'blocked_by') {
+      actualPredecessorId = successorTaskId;
+      actualSuccessorId = predecessorTaskId;
+      actualDependencyType = 'blocks';
+    }
+
     return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Validate that both tasks belong to the template
     const tasks = await tenantScopedTable(trx, 'project_template_tasks', tenant)
-      .whereIn('template_task_id', [predecessorTaskId, successorTaskId]);
+      .whereIn('template_task_id', [actualPredecessorId, actualSuccessorId]);
 
     if (tasks.length !== 2) {
       throw new Error('Invalid task IDs');
     }
 
     // Check for self-reference
-    if (predecessorTaskId === successorTaskId) {
+    if (actualPredecessorId === actualSuccessorId) {
       throw new Error('A task cannot depend on itself');
     }
 
-    // Check for existing dependency
+    // Check for existing dependency (either direction)
     const existing = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
-      .where({
-        predecessor_task_id: predecessorTaskId,
-        successor_task_id: successorTaskId
+      .where(function() {
+        this.where({
+          predecessor_task_id: actualPredecessorId,
+          successor_task_id: actualSuccessorId
+        }).orWhere({
+          predecessor_task_id: actualSuccessorId,
+          successor_task_id: actualPredecessorId
+        });
       })
       .first();
 
@@ -923,9 +945,9 @@ export const addTemplateDependency = withAuth(async (
       .insert({
         tenant,
         template_id: templateId,
-        predecessor_task_id: predecessorTaskId,
-        successor_task_id: successorTaskId,
-        dependency_type: dependencyType,
+        predecessor_task_id: actualPredecessorId,
+        successor_task_id: actualSuccessorId,
+        dependency_type: actualDependencyType,
         lead_lag_days: leadLagDays,
         notes
       })
@@ -957,9 +979,29 @@ export const updateTemplateDependency = withAuth(async (
     return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
+    // Normalize 'blocked_by' the same way addTemplateDependency does:
+    // flip the stored direction and keep the type as 'blocks'.
+    let updateData: Record<string, unknown> = { ...data };
+    if (data.dependency_type === 'blocked_by') {
+      const current = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
+        .where({ template_dependency_id: dependencyId })
+        .first();
+
+      if (!current) {
+        throw new Error('Dependency not found');
+      }
+
+      updateData = {
+        ...updateData,
+        dependency_type: 'blocks',
+        predecessor_task_id: current.successor_task_id,
+        successor_task_id: current.predecessor_task_id
+      };
+    }
+
     const [dependency] = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
       .where({ template_dependency_id: dependencyId })
-      .update(data)
+      .update(updateData)
       .returning('*');
 
     if (!dependency) {

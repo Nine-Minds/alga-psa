@@ -96,7 +96,16 @@ describe('FeatureFlags cache scoping', () => {
 });
 
 afterAll(() => {
-  process.env.ALGA_USAGE_STATS = originalAlgaUsageStats;
-  process.env.DISABLE_FEATURE_FLAGS = originalDisableFeatureFlags;
-  process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS = originalNextDisableFeatureFlags;
+  // Assigning undefined to process.env coerces to the string "undefined",
+  // which later files read as a real (non-disable) value — delete instead.
+  const restore = (key: string, original: string | undefined) => {
+    if (original === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = original;
+    }
+  };
+  restore('ALGA_USAGE_STATS', originalAlgaUsageStats);
+  restore('DISABLE_FEATURE_FLAGS', originalDisableFeatureFlags);
+  restore('NEXT_PUBLIC_DISABLE_FEATURE_FLAGS', originalNextDisableFeatureFlags);
 });

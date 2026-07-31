@@ -1,4 +1,11 @@
-import { computeWorkDateFields, createTenantKnex, resolveUserTimeZone, tenantDb, withTransaction } from '@alga-psa/db';
+import {
+  computeWorkDateFields,
+  createTenantKnex,
+  recalculateProjectTaskActualHoursForEntryChange,
+  resolveUserTimeZone,
+  tenantDb,
+  withTransaction,
+} from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 import {
@@ -143,6 +150,13 @@ const createTimeEntryAction: InboundActionDefinition<CreateTimeEntryMappedValues
             metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
           });
         }
+
+        await recalculateProjectTaskActualHoursForEntryChange(
+          trx,
+          ctx.tenant,
+          null,
+          created,
+        );
 
         return created;
       });

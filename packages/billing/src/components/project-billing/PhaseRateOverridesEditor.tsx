@@ -9,19 +9,19 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
+import { toMinorUnits } from '@alga-psa/core';
 import type { IProjectPhase, IProjectPhaseRateOverride } from '@alga-psa/types';
 import {
   upsertPhaseRateOverride,
   deletePhaseRateOverride,
 } from '../../actions/projectBillingConfigActions';
 import { getServices } from '../../actions/serviceActions';
-import { formatCents } from './billingViewHelpers';
 import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 type OverrideView = IProjectPhaseRateOverride & {
   phase_name: string;
@@ -53,6 +53,8 @@ export default function PhaseRateOverridesEditor({
   onChanged,
 }: PhaseRateOverridesEditorProps) {
   const { t, i18n } = useTranslation(['features/projects', 'common']);
+  const { currencyCode, money } = useCurrencyFormat();
+  const resolvedCurrency = currency ?? currencyCode;
   const [services, setServices] = useState<{ value: string; label: string }[]>([]);
   const [adding, setAdding] = useState(false);
   const [phaseId, setPhaseId] = useState('');
@@ -101,7 +103,7 @@ export default function PhaseRateOverridesEditor({
         toast.error(t('billing.overrides.errorRate', 'Enter a valid rate'));
         return;
       }
-      rate = toMinorUnits(major, i18n.language, currency ?? 'USD');
+      rate = toMinorUnits(major, i18n.language, resolvedCurrency);
     }
     const remap = remapServiceId === NO_REMAP ? null : remapServiceId;
     if (rate == null && remap == null) {
@@ -172,7 +174,7 @@ export default function PhaseRateOverridesEditor({
               <div className="font-medium text-[rgb(var(--color-text-900))]">{override.phase_name}</div>
               <div className="text-[11.5px] text-[rgb(var(--color-text-500))]">
                 {override.service_name ?? t('billing.overrides.allServices', 'All services')}
-                {override.rate != null && ` · ${formatCents(override.rate, currency)}/h`}
+                {override.rate != null && ` · ${money(override.rate, currency ?? undefined)}/h`}
                 {override.override_service_name && ` · → ${override.override_service_name}`}
               </div>
             </div>
@@ -215,7 +217,7 @@ export default function PhaseRateOverridesEditor({
             </div>
             <div>
               <Label htmlFor="billing-override-rate">
-                {t('billing.overrides.rate', 'Rate ({{currency}}/h)', { currency: currency ?? 'USD' })}
+                {t('billing.overrides.rate', 'Rate ({{currency}}/h)', { currency: resolvedCurrency })}
               </Label>
               <Input
                 id="billing-override-rate"

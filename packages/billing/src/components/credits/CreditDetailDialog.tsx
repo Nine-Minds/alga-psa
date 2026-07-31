@@ -141,8 +141,8 @@ export default function CreditDetailDialog({ creditId, clientName, onClose }: Cr
                   <thead>
                     <tr className="border-b border-[rgb(var(--color-border-200))] text-left">
                       <th className="px-2 py-1">{t('viewDialog.transactionType', { defaultValue: 'Type' })}</th>
-                      <th className="px-2 py-1">{t('reconciliation.fields.date', { defaultValue: 'Date' })}</th>
-                      <th className="px-2 py-1 text-right">{t('reconciliation.fields.amount', { defaultValue: 'Amount' })}</th>
+                      <th className="px-2 py-1">{t('viewDialog.date', { defaultValue: 'Date' })}</th>
+                      <th className="px-2 py-1 text-right">{t('viewDialog.amount', { defaultValue: 'Amount' })}</th>
                     </tr>
                   </thead>
                   <tbody>

@@ -1580,7 +1580,8 @@ export class FinancialService extends BaseService<ITransaction> {
    * `approve` and `reject` set the transaction status. `reverse` posts a
    * compensating transaction (negated amount, linked to the original via
    * related_transaction_id), recomputes the running balance, marks the original
-   * reversed, and keeps the client's credit_balance in sync for credit types.
+   * reversed. Available credit is derived from credit-tracking rows, so there
+   * is no client balance cache to synchronize.
    * Each id is processed independently; one failure does not abort the rest.
    */
   async bulkTransactionOperation(
@@ -1590,8 +1591,6 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('update', 'transaction', context);
 
     const { knex } = await this.getKnex();
-    const CREDIT_TYPES = ['credit_issuance', 'credit_application', 'credit_adjustment', 'credit_transfer', 'credit_expiration'];
-
     return withTransaction(knex, async (trx) => {
       const results: Array<{ id: string; success: boolean; error?: string; result?: any }> = [];
 
@@ -1657,11 +1656,6 @@ export class FinancialService extends BaseService<ITransaction> {
                 .where('transaction_id', transactionId)
                 .update({ status: 'reversed' });
 
-              if (CREDIT_TYPES.includes(existing.type)) {
-                await tenantDb(trx, context.tenant).table('clients')
-                  .where('client_id', existing.client_id)
-                  .update({ credit_balance: balanceAfter, updated_at: new Date().toISOString() });
-              }
               result = reversal;
               break;
             }

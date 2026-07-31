@@ -20,9 +20,13 @@ export async function GET(): Promise<Response> {
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, accessGate.tenantId);
 
-    const [mappingCountRow, lastDiscoveryRow, syncSettingsRow, completedRunRow] = await Promise.all([
+    const [mappingCountRow, pendingCreateCountRow, lastDiscoveryRow, syncSettingsRow, completedRunRow] = await Promise.all([
       db.table('entra_client_tenant_mappings')
         .where({ is_active: true, mapping_state: 'mapped' })
+        .count<{ count: string }>('* as count')
+        .first(),
+      db.table('entra_client_tenant_mappings')
+        .where({ is_active: true, mapping_state: 'create_new' })
         .count<{ count: string }>('* as count')
         .first(),
       db.table('entra_managed_tenants')
@@ -40,6 +44,7 @@ export async function GET(): Promise<Response> {
 
     return {
       mappedTenantCount: Number(mappingCountRow?.count || 0),
+      pendingCreateTenantCount: Number(pendingCreateCountRow?.count || 0),
       lastDiscoveryAt: lastDiscoveryRow?.last_discovered_at || null,
       nextSyncIntervalMinutes: Number(syncSettingsRow?.sync_interval_minutes || 0) || null,
       hasCompletedFirstSync: Boolean(completedRunRow),
@@ -73,6 +78,7 @@ export async function GET(): Promise<Response> {
     connectionType: connection?.connection_type || null,
     lastDiscoveryAt: summary.lastDiscoveryAt,
     mappedTenantCount: summary.mappedTenantCount,
+    pendingCreateTenantCount: summary.pendingCreateTenantCount,
     nextSyncIntervalMinutes: summary.nextSyncIntervalMinutes,
     hasCompletedFirstSync: summary.hasCompletedFirstSync,
     availableConnectionTypes: ['direct', 'cipp'],

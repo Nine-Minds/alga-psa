@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Não há tickets abertos nesta faixa.",
       "noDate": "Sem data",
       "notAvailable": "n / D",
-      "noEmailChannels": "Nenhum canal de e-mail está configurado."
+      "noEmailChannels": "Nenhum canal de e-mail está configurado.",
+      "noCapacity": "n/d — sem capacidade definida"
     },
     "fallbackTitle": "Relatório",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Excedente do intervalo",
       "openAssigned": "Aberto atribuído",
       "activeAssignees": "Responsáveis ​​ativos",
-      "avgResolutionTime": "Média tempo de resolução"
+      "avgResolutionTime": "Média tempo de resolução",
+      "workedHours": "Horas trabalhadas",
+      "capacityHours": "Horas de capacidade",
+      "utilization": "Utilização",
+      "usersWithoutCapacity": "Capacidade ausente",
+      "activeUsers": "Usuários ativos"
     },
     "sections": {
       "openByStatus": "Aberto por status",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Próximas renovações",
       "bucketUsage": "Uso de balde",
       "performanceByAssignee": "Desempenho por responsável",
-      "closedByAssignee": "Fechado pelo responsável"
+      "closedByAssignee": "Fechado pelo responsável",
+      "utilizationByUser": "Utilização por usuário"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Desempenho da equipe",
         "description": "Taxa de transferência e propriedade de resposta em nível de equipe para espaços de trabalho multiusuários."
+      },
+      "employeeUtilization": {
+        "title": "Utilização de funcionários",
+        "description": "Horas trabalhadas em relação à capacidade semanal de cada membro da equipe."
       },
       "contractReports": {
         "title": "Relatórios de contrato",
@@ -158,7 +169,11 @@
       "entries": "Entradas",
       "ticket": "Ticket",
       "entered": "Entrou",
-      "age": "Idade"
+      "age": "Idade",
+      "workedHours": "Horas trabalhadas",
+      "capacityHours": "Horas de capacidade",
+      "utilization": "Utilização",
+      "capacityEstimated": "Estimado a partir da capacidade semanal; sem horário de trabalho definido."
     },
     "statusValues": {
       "connected": "Conectado",
@@ -258,7 +273,9 @@
         "hourlyRate": "{{value}}/h",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} h faturáveis",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (sem custo definido)",
+        "unassignedLine": "{{line}} (não atribuído)"
       },
       "errors": {
         "load": "Falha ao carregar dados de rentabilidade",
@@ -308,7 +325,8 @@
         "costRates": "As taxas de custo não estão configuradas. As horas de mão de obra são exibidas sem custo definido até que exista uma taxa padrão do locatário ou por usuário.",
         "clients": "Não há dados de rentabilidade por cliente disponíveis para este período.",
         "lines": "Não há detalhes no nível de linha para este item.",
-        "tickets": "Não há dados de rentabilidade por ticket disponíveis para esta seleção."
+        "tickets": "Não há dados de rentabilidade por ticket disponíveis para esta seleção.",
+        "agreements": "Não há dados de rentabilidade por contrato disponíveis para esta seleção."
       },
       "warnings": {
         "title": "Avisos do relatório",
@@ -340,6 +358,14 @@
       },
       "fallbacks": {
         "untitledTicket": "Ticket sem título"
+      },
+      "print": {
+        "dateRange": "{{start}} a {{end}}",
+        "client": "Cliente",
+        "allClients": "Todos os clientes",
+        "agreement": "Contrato",
+        "allAgreements": "Todos os contratos",
+        "currency": "Moeda"
       }
     }
   },

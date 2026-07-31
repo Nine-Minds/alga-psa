@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { formatCents } from './billingViewHelpers';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface ProjectBilledBarProps {
   invoicedCents: number;
@@ -31,6 +31,7 @@ export default function ProjectBilledBar({
   currency,
 }: ProjectBilledBarProps) {
   const { t } = useTranslation('features/projects');
+  const { money } = useCurrencyFormat();
   const captured = invoicedCents + approvedCents + readyCents;
   const denominator = totalCents && totalCents > 0 ? totalCents : captured;
 
@@ -41,19 +42,19 @@ export default function ProjectBilledBar({
         <span className="whitespace-nowrap text-base text-gray-800 dark:text-gray-200">
           {totalCents != null
             ? t('billing.billed.ofTotal', '{{invoiced}} of {{total}}', {
-              invoiced: formatCents(invoicedCents, currency),
-              total: formatCents(totalCents, currency),
+              invoiced: money(invoicedCents, currency ?? undefined),
+              total: money(totalCents, currency ?? undefined),
             })
-            : formatCents(invoicedCents, currency)}
+            : money(invoicedCents, currency ?? undefined)}
         </span>
         <Tooltip
           content={
             <div className="p-1">
-              <p className="text-sm">{t('billing.billed.invoiced', 'Invoiced: {{amount}}', { amount: formatCents(invoicedCents, currency) })}</p>
-              <p className="text-sm">{t('billing.billed.approved', 'Approved: {{amount}}', { amount: formatCents(approvedCents, currency) })}</p>
-              <p className="text-sm">{t('billing.billed.ready', 'Ready: {{amount}}', { amount: formatCents(readyCents, currency) })}</p>
+              <p className="text-sm">{t('billing.billed.invoiced', 'Invoiced: {{amount}}', { amount: money(invoicedCents, currency ?? undefined) })}</p>
+              <p className="text-sm">{t('billing.billed.approved', 'Approved: {{amount}}', { amount: money(approvedCents, currency ?? undefined) })}</p>
+              <p className="text-sm">{t('billing.billed.ready', 'Ready: {{amount}}', { amount: money(readyCents, currency ?? undefined) })}</p>
               {totalCents != null && (
-                <p className="text-sm">{t('billing.billed.total', 'Total: {{amount}}', { amount: formatCents(totalCents, currency) })}</p>
+                <p className="text-sm">{t('billing.billed.total', 'Total: {{amount}}', { amount: money(totalCents, currency ?? undefined) })}</p>
               )}
             </div>
           }

@@ -54,13 +54,23 @@
     },
     "clients": {
       "title": "55555",
+      "help": "55555",
+      "currentDefault": "55555 {{name}} 55555",
+      "yourCompanyBadge": "55555",
       "table": {
         "name": "55555",
         "default": "55555",
         "actions": "55555"
       },
       "placeholder": "55555",
-      "addClient": "55555"
+      "addClient": "55555",
+      "confirmDialog": {
+        "title": "55555",
+        "message": "55555 {{current}} 55555 {{next}} 55555 {{next}} 55555",
+        "messageInitial": "55555 {{next}} 55555 {{next}} 55555",
+        "confirm": "55555",
+        "cancel": "55555"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "55555",
         "selectClient": "55555",
         "clientNotFound": "55555",
+        "clientAlreadyAdded": "55555",
         "addClient": "55555",
         "removeClient": "55555",
         "setDefaultClient": "55555",
@@ -282,6 +293,27 @@
         "label": "55555",
         "placeholder": "55555"
       },
+      "workSchedule": {
+        "label": "55555",
+        "help": "55555",
+        "setHours": "55555",
+        "clear": "55555",
+        "weeklyTotal": "55555 {{hours}} 55555",
+        "days": {
+          "0": "55555",
+          "1": "55555",
+          "2": "55555",
+          "3": "55555",
+          "4": "55555",
+          "5": "55555",
+          "6": "55555"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "55555",
+        "placeholder": "55555",
+        "help": "55555"
+      },
       "lastLogin": "55555",
       "roles": "55555",
       "status": "55555",
@@ -326,7 +358,9 @@
         "passwordTooShort": "55555",
         "passwordChangeFailed": "55555",
         "passwordChangeError": "55555",
-        "permissionDenied": "55555"
+        "permissionDenied": "55555",
+        "invalidCapacity": "55555",
+        "invalidWorkSchedule": "55555"
       }
     },
     "loading": "55555"
@@ -1056,6 +1090,15 @@
     "openMenu": "55555"
   },
   "clientPortal": {
+    "features": {
+      "title": "55555",
+      "description": "55555",
+      "appointmentsLabel": "55555",
+      "appointmentsHelp": "55555",
+      "appointmentsEnabled": "55555",
+      "appointmentsDisabled": "55555",
+      "updateFailed": "55555"
+    },
     "branding": {
       "title": "55555",
       "description": "55555",

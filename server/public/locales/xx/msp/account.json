@@ -71,6 +71,7 @@
     "entraSync": "11111",
     "cipp": "11111",
     "teamsIntegration": "11111",
+    "scimProvisioning": "11111",
     "advancedAuthorizationBundles": "11111"
   },
   "summary": {

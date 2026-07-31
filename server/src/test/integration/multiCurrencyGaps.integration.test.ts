@@ -30,6 +30,7 @@ let tenantId: string;
 // Dynamic imports for actions that need tenant context
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
 let createPrepaymentInvoice: typeof import('@alga-psa/billing/actions/creditActions').createPrepaymentInvoice;
+let finalizeInvoice: typeof import('@alga-psa/billing/actions/invoiceModification').finalizeInvoice;
 let applyCreditToInvoice: typeof import('@alga-psa/billing/actions/creditActions').applyCreditToInvoice;
 let listClientCredits: typeof import('@alga-psa/billing/actions/creditActions').listClientCredits;
 let getCreditHistory: typeof import('@alga-psa/billing/actions/creditActions').getCreditHistory;
@@ -135,6 +136,7 @@ describe('Multi-Currency Gap Tests', () => {
     // Import actions after mocks are set up
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ createPrepaymentInvoice, applyCreditToInvoice, listClientCredits, getCreditHistory } = await import('@alga-psa/billing/actions/creditActions'));
+    ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
   }, 120_000);
 
   afterAll(async () => {
@@ -167,7 +169,6 @@ describe('Multi-Currency Gap Tests', () => {
         tenant: tenantId,
         client_name: 'EUR Prepayment Client',
         default_currency_code: 'EUR',
-        credit_balance: 0,
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -176,6 +177,7 @@ describe('Multi-Currency Gap Tests', () => {
       // Action: Create a prepayment invoice (which creates credit)
       const prepaymentInvoice = await createPrepaymentInvoice(clientId, 10000); // 100.00 EUR
       createdIds.invoiceIds.push(prepaymentInvoice.invoice_id);
+      await finalizeInvoice(prepaymentInvoice.invoice_id);
 
       // Verify: The transaction should have currency_code = 'EUR'
       const transaction = await tenantTable(db, tenantId, 'transactions')
@@ -201,7 +203,6 @@ describe('Multi-Currency Gap Tests', () => {
         tenant: tenantId,
         client_name: 'GBP Prepayment Client',
         default_currency_code: 'GBP',
-        credit_balance: 0,
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -210,6 +211,7 @@ describe('Multi-Currency Gap Tests', () => {
       // Action: Create prepayment
       const prepaymentInvoice = await createPrepaymentInvoice(clientId, 5000); // 50.00 GBP
       createdIds.invoiceIds.push(prepaymentInvoice.invoice_id);
+      await finalizeInvoice(prepaymentInvoice.invoice_id);
 
       // Verify: The credit tracking entry should have currency_code = 'GBP'
       const creditEntry = await tenantTable(db, tenantId, 'credit_tracking')
@@ -237,7 +239,6 @@ describe('Multi-Currency Gap Tests', () => {
         tenant: tenantId,
         client_name: 'Cross-Currency Credit Client',
         default_currency_code: 'USD',
-        credit_balance: 10000, // $100 USD credit
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -246,6 +247,7 @@ describe('Multi-Currency Gap Tests', () => {
       // Create USD credit via prepayment
       const usdPrepayment = await createPrepaymentInvoice(clientId, 10000);
       createdIds.invoiceIds.push(usdPrepayment.invoice_id);
+      await finalizeInvoice(usdPrepayment.invoice_id);
 
       // Create an EUR invoice (different currency!)
       const eurInvoiceId = uuidv4();
@@ -287,7 +289,6 @@ describe('Multi-Currency Gap Tests', () => {
         tenant: tenantId,
         client_name: 'Multi-Currency Credits Client',
         default_currency_code: 'USD',
-        credit_balance: 0,
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -298,12 +299,14 @@ describe('Multi-Currency Gap Tests', () => {
         .update({ default_currency_code: 'USD' });
       const usdPrepayment = await createPrepaymentInvoice(clientId, 10000);
       createdIds.invoiceIds.push(usdPrepayment.invoice_id);
+      await finalizeInvoice(usdPrepayment.invoice_id);
 
       // Update client to EUR and create EUR credit
       await tenantTable(db, tenantId, 'clients').where({ client_id: clientId, tenant: tenantId })
-        .update({ default_currency_code: 'EUR', credit_balance: 10000 });
+        .update({ default_currency_code: 'EUR' });
       const eurPrepayment = await createPrepaymentInvoice(clientId, 5000);
       createdIds.invoiceIds.push(eurPrepayment.invoice_id);
+      await finalizeInvoice(eurPrepayment.invoice_id);
 
       // Action: List credits - we need to be able to see them grouped by currency
       const allCredits = await listClientCredits(clientId, false, 1, 100);
@@ -330,7 +333,6 @@ describe('Multi-Currency Gap Tests', () => {
         tenant: tenantId,
         client_name: 'Credit History Client',
         default_currency_code: 'EUR',
-        credit_balance: 0,
         created_at: db.fn.now(),
         updated_at: db.fn.now()
       });
@@ -339,6 +341,7 @@ describe('Multi-Currency Gap Tests', () => {
       // Create EUR prepayment
       const prepayment = await createPrepaymentInvoice(clientId, 10000);
       createdIds.invoiceIds.push(prepayment.invoice_id);
+      await finalizeInvoice(prepayment.invoice_id);
 
       // Action: Get credit history
       const history = await getCreditHistory(clientId);
@@ -491,7 +494,6 @@ describe('Multi-Currency Gap Tests', () => {
           tenant: tenantId,
           client_name: 'No Currency Client',
           default_currency_code: null,
-          credit_balance: 0,
           created_at: db.fn.now(),
           updated_at: db.fn.now()
         });

@@ -83,6 +83,7 @@ tags:
   - name: ext-bundles
   - name: ext-debug
   - name: ext-proxy
+  - name: financial
   - name: import
   - name: inbound
   - name: integrations
@@ -4968,6 +4969,10 @@ components:
         credit_limit:
           type: number
           minimum: 0
+        default_currency_code:
+          type: string
+          minLength: 3
+          maxLength: 3
         preferred_payment_method:
           type: string
         auto_invoice:
@@ -8070,11 +8075,6 @@ components:
       required:
         - operation
         - credit_ids
-    FinancialReconciliationResolveBody:
-      type: object
-      properties:
-        notes:
-          type: string
     InvoiceCreateBody:
       type: object
       properties:
@@ -15135,6 +15135,64 @@ components:
         - quantity
         - rate
         - currency_code
+    WorkV1TicketAgentParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Ticket UUID.
+        userId:
+          type: string
+          format: uuid
+          description: User UUID of the additional agent.
+      required:
+        - id
+        - userId
+    WorkV1TicketAgentBody:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: User to add as an additional agent.
+        role:
+          type: string
+          maxLength: 50
+          description: Resource role recorded on the assignment; defaults to support.
+      required:
+        - user_id
+    WorkV1TicketTeamAssignBody:
+      type: object
+      properties:
+        team_id:
+          type: string
+          format: uuid
+          description: Team to assign to the ticket.
+        suppressContactNotifications:
+          type: boolean
+        suppressInternalNotifications:
+          type: boolean
+      required:
+        - team_id
+    WorkV1TicketTeamRemoveBody:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - remove_all
+            - keep_all
+            - selective
+          description: What to do with the team_member additional agents; defaults to
+            remove_all.
+        keep_user_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: "Required with mode=selective: the team members to keep as
+            additional agents."
     QuoteIdParamV1:
       type: object
       properties:
@@ -15667,7 +15725,11 @@ components:
         checkpoint:
           type: string
           enum:
+            - identified
             - qualified
+            - assessment
+            - proposed
+            - verbal
         detail:
           type:
             - string
@@ -33232,248 +33294,6 @@ paths:
                 $ref: "#/components/schemas/FinancialInvoiceApiError"
         "500":
           description: Unexpected operation failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
-  /api/v1/financial/reconciliation/run:
-    post:
-      summary: Run financial reconciliation
-      description: Triggers FinancialService.runCreditReconciliation(). Optional
-        client_id query narrows reconciliation target.
-      tags:
-        - Financial
-      security:
-        - ApiKeyAuth: []
-      extensions:
-        x-tenant-scoped: true
-        x-auth-mechanism: x-api-key header validated in ApiBaseController.authenticate()
-        x-tenant-header: x-tenant-id (optional; otherwise tenant inferred from key)
-        x-rbac-resource: financial
-        x-rbac-action: update
-      x-alga-products:
-        - psa
-      parameters:
-        - schema:
-            type: string
-          required: false
-          name: page
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: limit
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: sort
-          in: query
-        - schema:
-            type: string
-            enum: *a90
-          required: false
-          name: order
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: search
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: created_from
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: created_to
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: updated_from
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: updated_to
-          in: query
-        - schema:
-            type: string
-            format: uuid
-          required: false
-          name: client_id
-          in: query
-        - schema:
-            type: string
-            format: uuid
-          required: false
-          name: invoice_id
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: type
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: status
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: amount_min
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: amount_max
-          in: query
-        - schema:
-            type: string
-            enum: *a91
-          required: false
-          name: include_expired
-          in: query
-        - schema:
-            type: string
-            enum: *a92
-          required: false
-          name: expiring_soon
-          in: query
-        - schema:
-            type: string
-            enum: *a93
-          required: false
-          name: has_remaining
-          in: query
-        - schema:
-            type: string
-            enum: *a94
-          required: false
-          name: has_expiration
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: date_from
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: date_to
-          in: query
-        - schema:
-            type: string
-            enum: *a95
-          required: false
-          name: group_by
-          in: query
-        - schema:
-            type: string
-            enum: *a96
-          required: false
-          name: include_projections
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: as_of_date
-          in: query
-      responses:
-        "200":
-          description: Reconciliation run completed.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiSuccess"
-        "401":
-          description: API key missing/invalid.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "403":
-          description: financial:update permission denied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "500":
-          description: Unexpected reconciliation failure.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
-  /api/v1/financial/reconciliation/{id}/resolve:
-    post:
-      summary: Resolve reconciliation report
-      description: Resolves one reconciliation report by id with optional operator notes.
-      tags:
-        - Financial
-      security:
-        - ApiKeyAuth: []
-      extensions:
-        x-tenant-scoped: true
-        x-auth-mechanism: x-api-key header validated in ApiBaseController.authenticate()
-        x-tenant-header: x-tenant-id (optional; otherwise tenant inferred from key)
-        x-rbac-resource: financial
-        x-rbac-action: update
-      x-alga-products:
-        - psa
-      parameters:
-        - schema:
-            type: string
-            format: uuid
-            description: Path UUID parameter resolved by
-              ApiBaseController.extractIdFromPath().
-          required: true
-          description: Path UUID parameter resolved by
-            ApiBaseController.extractIdFromPath().
-          name: id
-          in: path
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/FinancialReconciliationResolveBody"
-      responses:
-        "200":
-          description: Reconciliation report resolved.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiSuccess"
-        "400":
-          description: Invalid id or payload.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "401":
-          description: API key missing/invalid.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "403":
-          description: financial:update permission denied.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "404":
-          description: Reconciliation report not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FinancialInvoiceApiError"
-        "500":
-          description: Unexpected resolution failure.
           content:
             application/json:
               schema:
@@ -63900,6 +63720,349 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/{id}/agents:
+    get:
+      summary: List ticket agents
+      description: Returns the ticket primary agent (tickets.assigned_to) and its
+        additional agents (ticket_resources), each with user_id, name and email.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Ticket primary and additional agents.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    post:
+      summary: Add a ticket additional agent
+      description: Adds a user as an additional agent on the ticket and publishes
+        TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the
+        UI. A ticket with no primary agent promotes the user to primary instead
+        (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns
+        409.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketAgentBody"
+      responses:
+        "201":
+          description: Agent added; updated agent list returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: User is already an additional agent on this ticket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/{id}/agents/{userId}:
+    delete:
+      summary: Remove a ticket additional agent
+      description: Removes the additional-agent assignment for the given user. The
+        primary agent is changed through PUT /api/v1/tickets/{id}/assignment
+        instead.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Ticket UUID.
+          required: true
+          description: Ticket UUID.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: User UUID of the additional agent.
+          required: true
+          description: User UUID of the additional agent.
+          name: userId
+          in: path
+      responses:
+        "204":
+          description: Additional agent removed.
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or additional agent not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/{id}/team:
+    put:
+      summary: Assign a team to a ticket
+      description: Sets assigned_team_id, resolves the primary agent (the existing
+        assignee, else the team lead) and records the team's active members as
+        team_member additional agents. Returns the updated ticket. A team
+        without a lead is rejected with 400.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketTeamAssignBody"
+      responses:
+        "200":
+          description: Team assigned; updated ticket returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Remove a ticket team assignment
+      description: Clears assigned_team_id. mode=remove_all (default) drops the
+        team_member additional agents, keep_all leaves them, and selective keeps
+        only keep_user_ids. Returns the updated ticket.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketTeamRemoveBody"
+      responses:
+        "200":
+          description: Team assignment removed; updated ticket returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
   /api/v1/tickets/{id}/materials:
     get:
       summary: List ticket materials
@@ -78063,6 +78226,84 @@ paths:
         - psa
       responses:
         "200":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/financial/reconciliation/run:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - financial
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
+          description: Placeholder success response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceholderObject"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/financial/reconciliation/{id}/resolve:
+    post:
+      summary: POST v1
+      description: This operation was generated automatically from the route
+        inventory. Replace with canonical OpenAPI metadata.
+      tags:
+        - financial
+      extensions:
+        x-generated-from: docs/openapi/route-inventory.json
+        x-placeholder: true
+      x-alga-products:
+        - psa
+      requestBody:
+        description: Placeholder request body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceholderObject"
+            description: Placeholder request body
+      responses:
+        "201":
           description: Placeholder success response
           content:
             application/json:

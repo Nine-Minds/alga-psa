@@ -43,6 +43,10 @@ const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
     count: 1,
     why: 'deliberate: "$0" is the snippet cursor placeholder, not currency',
   },
+  'ee/server/src/lib/scim/credentials.ts': {
+    count: 2,
+    why: 'deliberate: "$" delimits the algorithm/salt/digest fields of the scrypt hash encoding, not currency',
+  },
   'ee/server/src/services/chatWorkflowRegexTransformGuidance.ts': {
     count: 1,
     why: 'deliberate: documents regex replacement tokens ($1, $$), not currency',
@@ -56,7 +60,7 @@ const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
     why: 'deliberate: Nine Minds subscription pricing is USD (Stripe)',
   },
   'packages/notifications/src/lib/templateVariables/seed.ts': {
-    count: 8,
+    count: 10,
     why: 'deliberate: sample preview values documenting template-variable output',
   },
   'packages/validation/src/lib/clientFormValidation.ts': {
@@ -297,6 +301,212 @@ describe('hardcoded currency (source)', () => {
         actual === 0
           ? `"${file}" no longer has hardcoded currency — remove its KNOWN_HARDCODED_CURRENCY entry`
           : `"${file}" now has ${actual} hardcoded-currency sites (entry says ${count}) — update the count`,
+      ).toBe(count);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Detector 2: hardcoded currency-code / locale ARGUMENTS.
+//
+// The literal-"$" detector above can't see the newer creep shape: money routed
+// through the CORRECT formatters but with hardcoded arguments —
+//   formatCurrency(cents / 100, 'USD')
+//   formatCurrencyFromMinorUnits(x, 'en-US', currencyCode)
+//   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+//   value.toLocaleString('en-US', { style: 'currency', currency: code })
+// Currency codes derive from CURRENCY_OPTIONS (same as the symbol set); a
+// locale literal is only flagged inside a money-formatting call, so date
+// formatting (a separate i18n concern) and mock-data `currency: 'USD'` fields
+// on plain payload objects stay exempt by construction.
+const CURRENCY_CODES = new Set(CURRENCY_OPTIONS.map((option) => option.value));
+const LOCALE_LITERAL = /^[a-z]{2,3}(-[A-Z][a-zA-Z]{1,3})*$/;
+
+const KNOWN_HARDCODED_CURRENCY_ARGS: Record<string, { count: number; why: string }> = {
+  'ee/server/src/components/licensing/ReduceLicensesModal.tsx': {
+    count: 1,
+    why: 'deliberate: Nine Minds subscription billing is USD (Stripe)',
+  },
+  'ee/server/src/lib/platformReports/platformReportService.ts': {
+    count: 1,
+    why: 'deliberate: master-tenant internal platform reports render en-US',
+  },
+  'packages/billing/src/actions/invoiceGeneration.ts': {
+    count: 1,
+    why: 'deliberate: server log line (PO overage console.warn), not user-visible',
+  },
+  // Contract-simulator compute engine (landed 2026-07-31): formatCents in
+  // each compute module renders calculation-trace/step strings. Correct
+  // currency comes from the contract; locale threading through the engine is
+  // deferred to the simulator workstream.
+  'ee/server/src/lib/billing/simulator/simulateContractScenario.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeBucketCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeDiscountsAndAdjustments.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeFixedCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeRecurringQuantityCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+};
+
+const ARG_CANDIDATE = /formatCurrency|Intl\s*\.\s*NumberFormat|toLocaleString/;
+
+function calleeName(expr: ts.Expression): string | null {
+  if (ts.isIdentifier(expr)) return expr.text;
+  if (ts.isPropertyAccessExpression(expr)) return expr.name.text;
+  return null;
+}
+
+function isIntlNumberFormat(expr: ts.Expression): boolean {
+  return (
+    ts.isPropertyAccessExpression(expr) &&
+    expr.name.text === 'NumberFormat' &&
+    ts.isIdentifier(expr.expression) &&
+    expr.expression.text === 'Intl'
+  );
+}
+
+// An options object formats MONEY when it says so: style: 'currency' or a
+// `currency:` property. Plain toLocaleString date options never match.
+function moneyOptions(args: readonly ts.Expression[] | undefined): ts.ObjectLiteralExpression | null {
+  for (const arg of args ?? []) {
+    if (!ts.isObjectLiteralExpression(arg)) continue;
+    for (const prop of arg.properties) {
+      if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
+      if (prop.name.text === 'currency') return arg;
+      if (
+        prop.name.text === 'style' &&
+        ts.isStringLiteral(prop.initializer) &&
+        prop.initializer.text === 'currency'
+      ) {
+        return arg;
+      }
+    }
+  }
+  return null;
+}
+
+function scanFileArgs(absFile: string, out: Violation[]): void {
+  const text = fs.readFileSync(absFile, 'utf8');
+  if (!ARG_CANDIDATE.test(text)) return;
+
+  const scriptKind = /x$/.test(absFile) ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const sourceFile = ts.createSourceFile(absFile, text, ts.ScriptTarget.Latest, true, scriptKind);
+  const file = path.relative(REPO_ROOT, absFile);
+
+  const record = (node: ts.Node, snippet: string) => {
+    const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+    out.push({ file, line: line + 1, snippet });
+  };
+
+  const flagMoneyCall = (callish: ts.CallExpression | ts.NewExpression) => {
+    const options = moneyOptions(callish.arguments);
+    if (!options) return;
+    const first = callish.arguments?.[0];
+    if (first && ts.isStringLiteral(first) && LOCALE_LITERAL.test(first.text)) {
+      record(first, `hardcoded locale '${first.text}' in money formatting`);
+    }
+    for (const prop of options.properties) {
+      if (
+        ts.isPropertyAssignment(prop) &&
+        ts.isIdentifier(prop.name) &&
+        prop.name.text === 'currency' &&
+        ts.isStringLiteral(prop.initializer) &&
+        CURRENCY_CODES.has(prop.initializer.text)
+      ) {
+        record(prop.initializer, `hardcoded currency '${prop.initializer.text}'`);
+      }
+    }
+  };
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const name = calleeName(node.expression);
+      if (name && /^formatCurrency/.test(name)) {
+        for (const arg of node.arguments) {
+          if (!ts.isStringLiteral(arg)) continue;
+          if (CURRENCY_CODES.has(arg.text)) {
+            record(arg, `hardcoded currency '${arg.text}' in ${name}(…)`);
+          } else if (LOCALE_LITERAL.test(arg.text)) {
+            record(arg, `hardcoded locale '${arg.text}' in ${name}(…)`);
+          }
+        }
+      } else if (isIntlNumberFormat(node.expression) || name === 'toLocaleString') {
+        flagMoneyCall(node);
+      }
+    } else if (ts.isNewExpression(node) && isIntlNumberFormat(node.expression)) {
+      flagMoneyCall(node);
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(sourceFile);
+}
+
+function collectArgViolations(): Map<string, Violation[]> {
+  const files: string[] = [];
+  for (const root of SOURCE_ROOTS) {
+    collectSourceFiles(path.resolve(process.cwd(), root), files);
+  }
+  const violations: Violation[] = [];
+  for (const file of files) scanFileArgs(file, violations);
+
+  const byFile = new Map<string, Violation[]>();
+  for (const violation of violations) {
+    const list = byFile.get(violation.file) ?? [];
+    list.push(violation);
+    byFile.set(violation.file, list);
+  }
+  return byFile;
+}
+
+describe('hardcoded currency codes and locales (formatter arguments)', () => {
+  const byFile = collectArgViolations();
+
+  it('no hardcoded currency code or locale in money formatting outside the known list', () => {
+    const offenders = [...byFile.entries()]
+      .filter(([file, list]) => {
+        const known = KNOWN_HARDCODED_CURRENCY_ARGS[file];
+        return !known || list.length > known.count;
+      })
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    expect(
+      offenders.map(([file]) => file),
+      `money formatted with hardcoded currency codes or locales — take both from the tenant (useCurrencyFormat().money / the caller's locale) instead. If a surface is deliberately fixed, document it in KNOWN_HARDCODED_CURRENCY_ARGS:\n${offenders
+        .map(([file, list]) => describeFile(file, list))
+        .join('\n')}`,
+    ).toEqual([]);
+  });
+
+  it('known argument entries stay honest: counts match what is on disk', () => {
+    for (const [file, { count }] of Object.entries(KNOWN_HARDCODED_CURRENCY_ARGS)) {
+      const actual = byFile.get(file)?.length ?? 0;
+      expect(
+        actual,
+        actual === 0
+          ? `"${file}" no longer hardcodes formatter arguments — remove its KNOWN_HARDCODED_CURRENCY_ARGS entry`
+          : `"${file}" now has ${actual} hardcoded-argument sites (entry says ${count}) — update the count`,
       ).toBe(count);
     }
   });

@@ -28,7 +28,13 @@ describe('msp-composition client/contact tab i18n wiring', () => {
     expect(source).toContain("useTranslation('msp/clients')");
     expect(source).toContain("t('clientTabs.assets.types.all'");
     expect(source).toContain("t('clientTabs.assets.inventory.title'");
-    expect(source).toContain("t('clientTabs.assets.columns.assetTag'");
+    // Tag/type/status folded into the Name cell's meta line and the Coverage
+    // cell when the tab moved onto the shared asset list cells.
+    expect(source).toContain("t('clientTabs.assets.columns.name'");
+    expect(source).toContain("t('clientTabs.assets.columns.agent'");
+    expect(source).toContain("t('clientTabs.assets.columns.patching'");
+    expect(source).toContain("t('clientTabs.assets.columns.coverage'");
+    expect(source).toContain("t('clientTabs.assets.columns.location'");
     expect(jsxTextLiterals(source)).toEqual([]);
   });
 

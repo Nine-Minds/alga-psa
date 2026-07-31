@@ -265,6 +265,8 @@ describe('HybridThreadNode', () => {
     const cssPath = [
       'src/components/CommentThread.css',
       'packages/ui/src/components/CommentThread.css',
+      // The server vitest config runs with cwd=server/.
+      '../packages/ui/src/components/CommentThread.css',
     ]
       .map((candidate) => resolve(process.cwd(), candidate))
       .find(existsSync);

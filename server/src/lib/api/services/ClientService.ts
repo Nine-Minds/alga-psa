@@ -328,6 +328,7 @@ export class ClientService extends BaseService<IClient> {
         payment_terms: data.payment_terms,
         billing_cycle: data.billing_cycle,
         credit_limit: data.credit_limit,
+        default_currency_code: data.default_currency_code,
         preferred_payment_method: data.preferred_payment_method,
         auto_invoice: data.auto_invoice || false,
         invoice_delivery_method: data.invoice_delivery_method,

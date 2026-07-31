@@ -153,9 +153,9 @@ describe('TimeSheetListView focus filter mode', () => {
 
     const rows = container.querySelectorAll('[data-automation-id^="time-entry-row-"]');
     expect(rows).toHaveLength(1);
-    expect(container.textContent).toContain('Second entry');
-    expect(container.textContent).not.toContain('First entry');
-    expect(container.textContent).not.toContain('Other day entry');
+    // Rows render work-item info (not entry notes); identify the filtered
+    // entry by its row id.
+    expect(rows[0].getAttribute('data-automation-id')).toBe('time-entry-row-entry-2');
     expect(container.textContent).toContain('Showing 1 entries for TIC1001 - Missing White Rabbit on Apr 12');
 
     const clearButton = container.querySelector('#clear-time-entry-focus-filter-button');

@@ -7,6 +7,7 @@ import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
+  assignContractLineToClient,
   createTestService,
   createFixedPlanAssignment,
   addServiceToFixedPlan,
@@ -332,13 +333,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
+      await assignContractLineToClient(context, planId, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
 
       // Create test ticket

@@ -1,13 +1,38 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 
+// knexfile imports from '@alga-psa/core/secrets'; mock both specifiers so the
+// interception holds under configs that alias the subpath to its own module id
+// (the server vitest config) as well as ones that don't (this package's).
 vi.mock('@alga-psa/core', () => ({
   getSecret: vi.fn(async (_key: string, envVar?: string) => {
     if (!envVar) return null;
     return process.env[envVar] ?? null;
   }),
 }));
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: vi.fn(async (_key: string, envVar?: string) => {
+    if (!envVar) return null;
+    return process.env[envVar] ?? null;
+  }),
+}));
+
+const ENV_KEYS = [
+  'DB_HOST', 'DB_PORT', 'DB_USER_SERVER', 'DB_NAME_SERVER', 'DB_PASSWORD_SERVER',
+  'DB_HOST_ADMIN', 'DB_PORT_ADMIN', 'DB_USER_ADMIN', 'DB_PASSWORD_ADMIN',
+] as const;
 
 describe('knexfile', () => {
+  // Restore the real env when this file is done: the whole suite shares one
+  // fork, so leaked fake creds (DB_HOST=db-host, DB_USER_ADMIN=postgres)
+  // un-skip DB-opt-in suites in later files and send them to a phantom host.
+  const savedEnv = ENV_KEYS.map((k) => [k, process.env[k]] as const);
+  afterAll(() => {
+    for (const [k, v] of savedEnv) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+
   beforeEach(() => {
     vi.resetModules();
     process.env.DB_HOST = 'db-host';

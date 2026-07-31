@@ -2507,7 +2507,11 @@ async function fetchAssetMaintenanceReport(
 
     const completedCount = completed?.count ? Number(completed.count) : 0;
     const scheduledSum = scheduled?.sum ? Number(scheduled.sum) : 0;
-    const compliance_rate = scheduledSum > 0 ? (completedCount / scheduledSum) * 100 : 100;
+    // Clamp: ad-hoc and corrective runs are counted as completed but were never
+    // scheduled, so an unbounded ratio reports things like "133% compliant".
+    const compliance_rate = scheduledSum > 0
+      ? Math.min(100, (completedCount / scheduledSum) * 100)
+      : 100;
 
     const report = {
         asset_id,
@@ -2834,7 +2838,11 @@ async function getClientMaintenanceSummaryForTenant(
 
     const completedCount = completed?.count ? Number(completed.count) : 0;
     const scheduledSum = scheduled?.sum ? Number(scheduled.sum) : 0;
-    const compliance_rate = scheduledSum > 0 ? (completedCount / scheduledSum) * 100 : 100;
+    // Clamp: ad-hoc and corrective runs are counted as completed but were never
+    // scheduled, so an unbounded ratio reports things like "133% compliant".
+    const compliance_rate = scheduledSum > 0
+      ? Math.min(100, (completedCount / scheduledSum) * 100)
+      : 100;
 
     const summary = {
         client_id,

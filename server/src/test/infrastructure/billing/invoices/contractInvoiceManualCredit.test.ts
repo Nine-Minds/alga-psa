@@ -82,16 +82,18 @@ describe('Contract Invoice Manual Credit', () => {
         custom_rate: null
       });
 
-    await context.db('client_contract_lines')
-      .where({
-        tenant: context.tenantId,
-        client_contract_line_id: clientContractLineId
-      })
-      .update({
-        client_contract_id: clientContractId,
-        contract_line_id: contractLineId,
-        is_active: true
-      });
+    if (await context.db.schema.hasTable('client_contract_lines')) {
+      await context.db('client_contract_lines')
+        .where({
+          tenant: context.tenantId,
+          client_contract_line_id: clientContractLineId
+        })
+        .update({
+          client_contract_id: clientContractId,
+          contract_line_id: contractLineId,
+          is_active: true
+        });
+    }
   }
 
   async function ensureClientBillingSettings(
@@ -288,12 +290,18 @@ describe('Contract Invoice Manual Credit', () => {
 
     expect(contractDetail).toBeTruthy();
 
-    const linkedContractLine = await context.db('client_contract_lines')
-      .where({
-        tenant: context.tenantId,
-        contract_line_id: contractLineId
+    // Post-drop the line's client linkage is contract_lines.contract_id ->
+    // client_contracts, not the removed client_contract_lines row.
+    const linkedContractLine = await context.db('contract_lines')
+      .join('client_contracts', function joinOnContract() {
+        this.on('client_contracts.contract_id', 'contract_lines.contract_id')
+          .andOn('client_contracts.tenant', 'contract_lines.tenant');
       })
-      .first();
+      .where({
+        'contract_lines.tenant': context.tenantId,
+        'contract_lines.contract_line_id': contractLineId
+      })
+      .first('contract_lines.contract_line_id');
 
     expect(linkedContractLine).toBeTruthy();
     expect(contractDetail?.config_id).toBeTruthy();

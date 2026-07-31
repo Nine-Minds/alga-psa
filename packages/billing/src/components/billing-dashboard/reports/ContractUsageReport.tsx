@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card, Box } from '@radix-ui/themes';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
@@ -44,6 +45,7 @@ interface ContractUsageRecord {
 const ContractUsageReport: React.FC = () => {
   const { t } = useTranslation('msp/reports');
   const { formatCurrency, formatDate } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [contracts, setContracts] = useState<IContract[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contractUsage, setContractUsage] = useState<ContractUsageRecord[]>([]);
@@ -164,7 +166,7 @@ const ContractUsageReport: React.FC = () => {
     }
   };
 
-  const formatCents = (value: number) => formatCurrency(value / 100, 'USD');
+  const formatCents = (value: number) => formatCurrency(value / 100, tenantCurrency);
 
   const contractUsageColumns: ColumnDefinition<ContractUsageRecord>[] = [
     {
