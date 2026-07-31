@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { workItemDescriptionParagraphs } from '../lib/workItemDescription';
 
 export interface SchedulingTicketDetailsRecord {
   ticket_id: string;
@@ -68,12 +69,7 @@ export const getSchedulingTicketById = withAuth(async (
   const attributes = (ticket.attributes && typeof ticket.attributes === 'object')
     ? ticket.attributes as Record<string, unknown>
     : null;
-  const rawDescription = attributes?.description;
-  const description = typeof rawDescription === 'string'
-    ? rawDescription
-    : rawDescription == null
-      ? null
-      : JSON.stringify(rawDescription);
+  const description = workItemDescriptionParagraphs(attributes?.description) || null;
 
   return {
     ...(ticket as Omit<SchedulingTicketDetailsRecord, 'description'>),
