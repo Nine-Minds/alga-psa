@@ -178,9 +178,9 @@ async function openSimulator(
     `${baseUrl}/msp/billing?tab=client-contracts&contractId=${seeded.contractId}&clientContractId=${seeded.clientContractId}${tenantQuery}`,
     { waitUntil: "domcontentloaded", timeout: 60_000 },
   );
-  await page.getByRole("tab", { name: /Simulator/ }).click();
+  await page.getByRole("tab", { name: /Simulate/ }).click();
   await expect(
-    page.getByRole("heading", { name: "Projected activity" }),
+    page.getByRole("heading", { name: "Assumed activity" }),
   ).toBeVisible({ timeout: 30_000 });
 }
 
@@ -203,7 +203,7 @@ test.describe("Contract simulator journeys", () => {
 
       await expect(page.getByText("Pricing schedules")).not.toBeVisible();
       const projectedHours = page.getByLabel(
-        /Projected hrs per service period — Engineering/,
+        /Assumed hrs per service period — Engineering/,
       );
       await expect(projectedHours).toBeVisible();
       await projectedHours.fill("2");
@@ -214,7 +214,7 @@ test.describe("Contract simulator journeys", () => {
       // The first period can legitimately be a zero-dollar arrears stub when the
       // simulation begins mid-cycle. Use the first fully billable period.
       await page.locator('[id^="period-card-"]').nth(1).click();
-      await expect(page.getByText(/invoice projection/)).toBeVisible();
+      await expect(page.getByText(/simulated invoice/)).toBeVisible();
       await expect(page.getByText("2 hrs", { exact: true })).toBeVisible();
       await expect(
         page.getByText(/Service period: .* – .*/).first(),
@@ -258,7 +258,7 @@ test.describe("Contract simulator journeys", () => {
         page.getByText(/Historical activity loaded from/),
       ).toBeVisible();
       await expect(
-        page.getByText(/Update the projection to recalculate invoices/),
+        page.getByText(/Update the simulation to recalculate invoices/),
       ).toBeVisible();
       await expect(page.locator("#simulate-scenario-button")).toBeEnabled({
         timeout: 30_000,
@@ -288,7 +288,7 @@ test.describe("Contract simulator journeys", () => {
       await page.locator("#toggle-template-simulator").click();
       await expect(page.getByText("Template simulation")).toBeVisible();
       await expect(
-        page.getByRole("heading", { name: "Projected activity" }),
+        page.getByRole("heading", { name: "Assumed activity" }),
       ).toBeVisible({ timeout: 30_000 });
 
       await page.goto(`${baseUrl}/msp/billing?tab=contracts${tenantQuery}`, {
@@ -321,11 +321,9 @@ test.describe("Contract simulator journeys", () => {
         timeout: 30_000,
       });
       await expect(
-        page.getByRole("heading", { name: "Projected activity" }),
+        page.getByRole("heading", { name: "Assumed activity" }),
       ).toBeVisible();
-      await page
-        .getByRole("button", { name: "Project invoices", exact: true })
-        .click();
+      await page.locator("#simulate-scenario-button").click();
       await expect(page.locator('[id^="period-card-"]').first()).toBeVisible({
         timeout: 30_000,
       });

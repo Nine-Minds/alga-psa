@@ -129,7 +129,7 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
             {t("contractSimulator.assumptions.title", {
-              defaultValue: "Projected activity",
+              defaultValue: "Assumed activity",
             })}
           </h3>
           <Button
@@ -182,7 +182,7 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
             <p className="font-medium">
               {t("contractSimulator.assumptions.prefillUnchanged", {
                 defaultValue:
-                  "Loaded values from {{window}} match the current projected activity.",
+                  "Loaded values from {{window}} match the current assumed activity.",
                 window: sourceWindow,
               })}
             </p>
@@ -192,20 +192,20 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
                 {changedCount === 0
                   ? t("contractSimulator.assumptions.replayRangeLoaded", {
                       defaultValue:
-                        "Historical activity and {{count}} issued invoices loaded from {{window}}. Projected activity is unchanged.",
+                        "Historical activity and {{count}} issued invoices loaded from {{window}}. Assumed activity is unchanged.",
                       window: sourceWindow,
                       count: prefillFeedback.actualInvoiceCount,
                     })
                   : prefillFeedback.kind === "recent_average"
                     ? t("contractSimulator.assumptions.averageLoaded", {
                         defaultValue:
-                          "Activity average loaded from {{window}}. {{count}} projected values changed.",
+                          "Activity average loaded from {{window}}. {{count}} assumed values changed.",
                         window: sourceWindow,
                         count: changedCount,
                       })
                     : t("contractSimulator.assumptions.replayLoaded", {
                         defaultValue:
-                          "Historical activity loaded from {{window}} with {{count}} issued invoices. {{changed}} projected values changed.",
+                          "Historical activity loaded from {{window}} with {{count}} issued invoices. {{changed}} assumed values changed.",
                         window: sourceWindow,
                         count: prefillFeedback.actualInvoiceCount,
                         changed: changedCount,
@@ -214,7 +214,7 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
               <p className="mt-1">
                 {t("contractSimulator.assumptions.prefillNextStep", {
                   defaultValue:
-                    "Updated values are highlighted. Update the projection to recalculate invoices.",
+                    "Updated values are highlighted. Update the simulation to recalculate invoices.",
                 })}
               </p>
             </>
@@ -252,7 +252,7 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
                     <span className="block font-medium text-[rgb(var(--color-text-800))]">
                       {t("contractSimulator.assumptions.rowLabel", {
                         defaultValue:
-                          "{{service}} — projected {{unit}} per service period",
+                          "{{service}} — assumed {{unit}} per service period",
                         unit: row.unit,
                         service: row.serviceName,
                       })}
@@ -279,7 +279,7 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
                         "contractSimulator.assumptions.inputLabel",
                         {
                           defaultValue:
-                            "Projected {{unit}} per service period — {{service}}",
+                            "Assumed {{unit}} per service period — {{service}}",
                           unit: row.unit,
                           service: row.serviceName,
                         },
@@ -305,7 +305,7 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
                   <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">
                     {t("contractSimulator.assumptions.zeroActivity", {
                       defaultValue:
-                        "This service contributes $0 until projected activity is greater than zero.",
+                        "This service contributes $0 until assumed activity is greater than zero.",
                     })}
                   </p>
                 )}

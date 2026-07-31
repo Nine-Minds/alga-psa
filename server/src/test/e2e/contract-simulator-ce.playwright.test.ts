@@ -14,7 +14,7 @@ import {
 
 applyTestEnvDefaults();
 
-test("CE contract and wizard simulator entries render the Enterprise state", async ({
+test("CE contract and wizard simulator entries render the upgrade placeholder", async ({
   page,
 }) => {
   test.setTimeout(300_000);
@@ -69,15 +69,13 @@ test("CE contract and wizard simulator entries render the Enterprise state", asy
       `${getBaseUrl()}/msp/billing?tab=client-contracts&contractId=${contractId}&clientContractId=${clientContractId}&tenantId=${tenantId}`,
       { waitUntil: "domcontentloaded", timeout: 60_000 },
     );
-    const simulatorTab = page.getByRole("tab", { name: /Simulator/ });
+    const simulatorTab = page.getByRole("tab", { name: /Simulate/ });
     await expect(simulatorTab).toBeVisible({ timeout: 60_000 });
     await simulatorTab.click();
-    await expect(page.getByText("Enterprise Feature")).toBeVisible({
-      timeout: 30_000,
-    });
     await expect(
-      page.getByText(/contract simulator is available in the Enterprise edition/i),
-    ).toBeVisible();
+      page.getByRole("heading", { name: "Contract Simulator requires Pro" }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("link", { name: "View Plans" })).toBeVisible();
 
     await page.goto(
       `${getBaseUrl()}/msp/billing?tab=contracts&tenantId=${tenantId}`,
@@ -110,7 +108,7 @@ test("CE contract and wizard simulator entries render the Enterprise state", asy
       timeout: 30_000,
     });
     await expect(
-      page.getByText(/Draft contract simulation is available in the Enterprise edition/i),
+      page.getByRole("heading", { name: "Contract Simulator requires Pro" }),
     ).toBeVisible();
   } finally {
     await db.destroy().catch(() => undefined);

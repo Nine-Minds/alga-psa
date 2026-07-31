@@ -1,4 +1,9 @@
+'use client';
+
 import React from 'react';
+import { FEATURE_MINIMUM_TIER, TIER_FEATURES } from '@alga-psa/types';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // OSS stub implementation for Billing features
 export const BillingDashboard: React.FC = () => {
@@ -76,24 +81,24 @@ export const StripeConnectionSettings: React.FC = () => {
 };
 
 export const ContractSimulator = () => {
+  const { t } = useTranslation('msp/contracts');
   return (
-    <div className="text-center py-8 text-muted-foreground">
-      <p className="text-lg font-medium">Enterprise Feature</p>
-      <p className="mt-2 text-sm">
-        The contract simulator is available in the Enterprise edition of Alga PSA. Please upgrade to access this feature.
-      </p>
-    </div>
+    <FeatureUpgradeNotice
+      featureName={t('contractSimulator.featureName', { defaultValue: 'Contract Simulator' })}
+      requiredTier={FEATURE_MINIMUM_TIER[TIER_FEATURES.CONTRACT_SIMULATOR]}
+    />
   );
 };
 
-export const ContractDraftSimulator = () => (
-  <div className="text-center py-8 text-muted-foreground">
-    <p className="text-lg font-medium">Enterprise Feature</p>
-    <p className="mt-2 text-sm">
-      Draft contract simulation is available in the Enterprise edition of Alga PSA.
-    </p>
-  </div>
-);
+export const ContractDraftSimulator = () => {
+  const { t } = useTranslation('msp/contracts');
+  return (
+    <FeatureUpgradeNotice
+      featureName={t('contractSimulator.featureName', { defaultValue: 'Contract Simulator' })}
+      requiredTier={FEATURE_MINIMUM_TIER[TIER_FEATURES.CONTRACT_SIMULATOR]}
+    />
+  );
+};
 
 export const PaymentSettingsConfig = () => {
   return (

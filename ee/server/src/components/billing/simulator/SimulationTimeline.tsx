@@ -107,7 +107,7 @@ const SimulationTimeline: React.FC<SimulationTimelineProps> = ({
     <section>
       <h3 className="mb-2 text-xs font-semibold text-[rgb(var(--color-text-600))]">
         {t("contractSimulator.timeline.title", {
-          defaultValue: "Projected invoice periods",
+          defaultValue: "Simulated invoice periods",
         })}
       </h3>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">

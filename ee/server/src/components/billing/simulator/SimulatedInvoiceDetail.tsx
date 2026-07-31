@@ -66,7 +66,7 @@ const SimulatedInvoiceDetail: React.FC<SimulatedInvoiceDetailProps> = ({
         <div>
           <h4 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
             {t("contractSimulator.invoiceDetail.title", {
-              defaultValue: "{{period}} invoice projection",
+              defaultValue: "{{period}} simulated invoice",
               period: period.label,
             })}
           </h4>
@@ -300,7 +300,7 @@ const SimulatedInvoiceDetail: React.FC<SimulatedInvoiceDetailProps> = ({
                 {period.total - actualInvoice.total >= 0 ? "+" : "−"}
                 {money(Math.abs(period.total - actualInvoice.total))}{" "}
                 {t("contractSimulator.replay.simulatedDelta", {
-                  defaultValue: "projected difference",
+                  defaultValue: "simulated difference",
                 })}
               </div>
             </div>
@@ -342,7 +342,7 @@ const SimulatedInvoiceDetail: React.FC<SimulatedInvoiceDetailProps> = ({
                   <span className="font-mono text-[rgb(var(--color-text-500))]">
                     {money(simulated?.total ?? 0)}{" "}
                     {t("contractSimulator.replay.projected", {
-                      defaultValue: "projected",
+                      defaultValue: "simulated",
                     })}
                   </span>
                   <span className="font-mono text-[rgb(var(--color-primary-600))]">

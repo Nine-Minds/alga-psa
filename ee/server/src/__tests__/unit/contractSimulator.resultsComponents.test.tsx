@@ -274,7 +274,7 @@ describe("contract simulator result components", () => {
     );
     fireEvent.change(
       screen.getByLabelText(
-        "Projected hrs per service period — Remote support",
+        "Assumed hrs per service period — Remote support",
       ),
       { target: { value: "3" } },
     );
@@ -340,7 +340,7 @@ describe("contract simulator result components", () => {
       screen.getByText(/Loaded value: 2 → 3 hrs per service period/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Update the projection to recalculate invoices/),
+      screen.getByText(/Update the simulation to recalculate invoices/),
     ).toBeInTheDocument();
   });
 });

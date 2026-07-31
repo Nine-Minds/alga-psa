@@ -1381,12 +1381,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             {t('contractDetail.tabs.invoices', { defaultValue: 'Invoices' })}
           </TabsTrigger>
           <TabsTrigger value="simulator">
-            <span className="inline-flex items-center gap-1.5">
-              {t('contractDetail.tabs.simulator', { defaultValue: 'Simulator' })}
-              <span className="rounded-full border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-1.5 text-[9px] font-semibold uppercase leading-4 tracking-wider text-[rgb(var(--color-primary-700))]">
-                {t('contractDetail.tabs.enterpriseBadge', { defaultValue: 'Enterprise' })}
-              </span>
-            </span>
+            {t('contractDetail.tabs.simulator', { defaultValue: 'Simulate' })}
           </TabsTrigger>
         </TabsList>
 

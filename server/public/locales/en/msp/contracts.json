@@ -260,8 +260,7 @@
       "lines": "Contract Lines",
       "overview": "Overview",
       "pricing": "Pricing Schedules",
-      "simulator": "Simulator",
-      "enterpriseBadge": "Enterprise"
+      "simulator": "Simulate"
     },
     "validation": {
       "billingFrequencyRequired": "Billing frequency is required.",
@@ -2075,27 +2074,27 @@
     "assumptions": {
       "empty": "Fixed-only scenario — nothing to assume.",
       "hoursUnit": "hrs",
-      "inputLabel": "Projected {{unit}} per service period — {{service}}",
+      "inputLabel": "Assumed {{unit}} per service period — {{service}}",
       "loadReplay": "Load activity and invoices",
       "periodLabel": "P{{number}}",
       "replayEnd": "Through",
       "replayStart": "From",
       "replayTitle": "Compare with past invoices",
-      "rowLabel": "{{service}} — projected {{unit}} per service period",
+      "rowLabel": "{{service}} — assumed {{unit}} per service period",
       "subtitle": "Enter expected work or usage by service period. For arrears, each invoice uses the previous service period.",
-      "title": "Projected activity",
+      "title": "Assumed activity",
       "useRecent": "Use average from last 3 billing periods",
       "varyByPeriod": "Set activity for each invoice",
       "arrearsHint": "Each invoice bills the previous service period.",
       "advanceHint": "Each invoice bills its current service period.",
       "invoicePeriodLabel": "{{period}} invoice",
       "overrideInputLabel": "{{period}} invoice — {{unit}} from its service period — {{service}}",
-      "zeroActivity": "This service contributes $0 until projected activity is greater than zero.",
-      "averageLoaded": "Activity average loaded from {{window}}. {{count}} projected values changed.",
-      "replayLoaded": "Historical activity loaded from {{window}} with {{count}} issued invoices. {{changed}} projected values changed.",
-      "replayRangeLoaded": "Historical activity and {{count}} issued invoices loaded from {{window}}. Projected activity is unchanged.",
-      "prefillNextStep": "Updated values are highlighted. Update the projection to recalculate invoices.",
-      "prefillUnchanged": "Loaded values from {{window}} match the current projected activity.",
+      "zeroActivity": "This service contributes $0 until assumed activity is greater than zero.",
+      "averageLoaded": "Activity average loaded from {{window}}. {{count}} assumed values changed.",
+      "replayLoaded": "Historical activity loaded from {{window}} with {{count}} issued invoices. {{changed}} assumed values changed.",
+      "replayRangeLoaded": "Historical activity and {{count}} issued invoices loaded from {{window}}. Assumed activity is unchanged.",
+      "prefillNextStep": "Updated values are highlighted. Update the simulation to recalculate invoices.",
+      "prefillUnchanged": "Loaded values from {{window}} match the current assumed activity.",
       "loadingHistory": "Loading historical activity…",
       "prefillChange": "Loaded value: {{before}} → {{after}} {{unit}} per service period",
       "prefillOverrides": "{{count}} period values loaded"
@@ -2105,7 +2104,7 @@
       "changed": "Changed",
       "horizonImpact": "Total change over {{count}} billing periods",
       "horizonImpactHint": "Compared with the current contract",
-      "noChange": "No projected change",
+      "noChange": "No simulated change",
       "removed": "Removed from current contract"
     },
     "emptyScenario": {
@@ -2113,7 +2112,7 @@
       "title": "Nothing to simulate yet"
     },
     "diagnostics": {
-      "title": "Projection notes"
+      "title": "Simulation notes"
     },
     "explanation": {
       "amount": "Amount",
@@ -2123,6 +2122,7 @@
       "steps": "Arithmetic",
       "title": "Charge breakdown"
     },
+    "featureName": "Contract Simulator",
     "invoiceDetail": {
       "columns": {
         "amount": "Amount",
@@ -2139,7 +2139,7 @@
       "servicePeriod": "Service period: {{start}} – {{end}}",
       "subtotal": "Subtotal",
       "tax": "Tax",
-      "title": "{{period}} invoice projection",
+      "title": "{{period}} simulated invoice",
       "total": "Total"
     },
     "loadFailed": "Failed to load the contract scenario.",
@@ -2156,19 +2156,19 @@
       "actualInvoice": "Issued invoice {{number}}",
       "issued": "issued",
       "previewIssued": "Preview issued invoice",
-      "projected": "projected",
-      "simulatedDelta": "projected difference"
+      "projected": "simulated",
+      "simulatedDelta": "simulated difference"
     },
     "runBar": {
       "compareToggle": "Show changes from current contract",
       "horizonOption": "{{count}} billing periods",
-      "lastRun": "Projection current · {{count}} billing periods",
-      "neverRun": "No projection yet",
-      "simulate": "Project invoices",
-      "simulating": "Projecting…",
-      "stale": "Changes not projected",
-      "staleBanner": "These amounts are from the previous projection. Update the projection to include your latest changes.",
-      "updateProjection": "Update projection"
+      "lastRun": "Simulation current · {{count}} billing periods",
+      "neverRun": "Not simulated yet",
+      "simulate": "Simulate",
+      "simulating": "Simulating…",
+      "stale": "Changes not simulated",
+      "staleBanner": "These amounts are from the previous simulation. Update the simulation to include your latest changes.",
+      "updateSimulation": "Update simulation"
     },
     "scenario": {
       "addAdjustment": "+ add adjustment",
@@ -2291,13 +2291,13 @@
     "timeline": {
       "deltaDown": "−{{amount}} from current contract",
       "deltaUp": "+{{amount}} from current contract",
-      "empty": "Project invoices to see upcoming billing periods and inspect each charge.",
+      "empty": "Simulate to see upcoming billing periods and inspect each charge.",
       "noDelta": "no change vs live",
       "noPreviousDelta": "no change vs previous",
       "invoicePeriod": "Invoice period",
       "periodAria": "{{period}}, {{total}}",
       "previousDelta": "{{sign}}{{amount}} from {{period}} invoice",
-      "title": "Projected invoice periods"
+      "title": "Simulated invoice periods"
     },
     "unavailable": {
       "description": "The contract simulator is available in the Enterprise edition of Alga PSA.",

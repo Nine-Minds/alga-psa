@@ -609,14 +609,14 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
               )}
               {isSimulating
                 ? t("contractSimulator.runBar.simulating", {
-                    defaultValue: "Projecting…",
+                    defaultValue: "Simulating…",
                   })
                 : isStale && result
-                  ? t("contractSimulator.runBar.updateProjection", {
-                      defaultValue: "Update projection",
+                  ? t("contractSimulator.runBar.updateSimulation", {
+                      defaultValue: "Update simulation",
                     })
                   : t("contractSimulator.runBar.simulate", {
-                      defaultValue: "Project invoices",
+                      defaultValue: "Simulate",
                     })}
             </Button>
             <CustomSelect
@@ -666,7 +666,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                 <>
                   <Pencil className="h-3.5 w-3.5 text-[rgb(var(--color-primary-500))]" />
                   {t("contractSimulator.runBar.stale", {
-                    defaultValue: "Changes not projected",
+                    defaultValue: "Changes not simulated",
                   })}
                 </>
               ) : lastRunAt ? (
@@ -674,13 +674,13 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   {t("contractSimulator.runBar.lastRun", {
                     defaultValue:
-                      "Projection current · {{count}} billing periods",
+                      "Simulation current · {{count}} billing periods",
                     count: result?.periods.length ?? horizonCount,
                   })}
                 </>
               ) : (
                 t("contractSimulator.runBar.neverRun", {
-                  defaultValue: "No projection yet",
+                  defaultValue: "Not simulated yet",
                 })
               )}
             </div>
@@ -700,7 +700,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                   <AlertDescription>
                     {t("contractSimulator.runBar.staleBanner", {
                       defaultValue:
-                        "These amounts are from the previous projection. Update the projection to include your latest changes.",
+                        "These amounts are from the previous simulation. Update the simulation to include your latest changes.",
                     })}
                   </AlertDescription>
                 </Alert>
@@ -724,7 +724,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                   <div className="font-mono text-lg font-semibold text-[rgb(var(--color-text-900))]">
                     {comparison.horizon_total_delta === 0
                       ? t("contractSimulator.compare.noChange", {
-                          defaultValue: "No projected change",
+                          defaultValue: "No simulated change",
                         })
                       : `${
                           comparison.horizon_total_delta > 0 ? "+" : "−"
@@ -739,13 +739,13 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                 <ul
                   aria-live="polite"
                   aria-label={t("contractSimulator.diagnostics.title", {
-                    defaultValue: "Projection notes",
+                    defaultValue: "Simulation notes",
                   })}
                   className="space-y-1 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3"
                 >
                   <li className="pb-1 text-xs font-semibold text-[rgb(var(--color-text-700))]">
                     {t("contractSimulator.diagnostics.title", {
-                      defaultValue: "Projection notes",
+                      defaultValue: "Simulation notes",
                     })}
                   </li>
                   {result.diagnostics.map((diagnostic, index) => (
@@ -822,7 +822,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
             <div className="rounded-xl border border-dashed border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] py-14 text-center text-sm text-[rgb(var(--color-text-500))]">
               {t("contractSimulator.timeline.empty", {
                 defaultValue:
-                  "Project invoices to see upcoming billing periods and inspect each charge.",
+                  "Simulate to see upcoming billing periods and inspect each charge.",
               })}
             </div>
           )}
