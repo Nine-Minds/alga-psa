@@ -75,19 +75,40 @@ async function getActiveConnectionType(tenantId: string): Promise<EntraConnectio
   return activeConnection.connection_type as EntraConnectionType;
 }
 
-function parseWorkspaceSsoSettings(rawSettings: unknown): {
-  defaultProvisioningMode: 'disabled' | 'built_in' | 'workflow_managed';
-  defaultRoleName: string;
-} {
-  let settings: any = rawSettings;
+interface TenantSsoSettings {
+  clientPortalEntraProvisioningMode?: unknown;
+  clientPortalDefaultRoleName?: unknown;
+  deactivateEntraManagedPortalUsersOnEntitlementRemoval?: unknown;
+}
+
+/**
+ * `tenant_settings.settings` reaches us as jsonb or as a JSON string depending
+ * on the driver path, and every field inside is operator-authored, so it is
+ * read as `unknown` and narrowed by the resolvers that consume it.
+ */
+function readTenantSsoSettings(rawSettings: unknown): TenantSsoSettings {
+  let settings: unknown = rawSettings;
   if (typeof settings === 'string') {
     try {
       settings = JSON.parse(settings);
     } catch {
-      settings = {};
+      return {};
     }
   }
-  const sso = settings?.sso ?? {};
+
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    return {};
+  }
+
+  const sso = (settings as { sso?: unknown }).sso;
+  return sso && typeof sso === 'object' && !Array.isArray(sso) ? (sso as TenantSsoSettings) : {};
+}
+
+function parseWorkspaceSsoSettings(rawSettings: unknown): {
+  defaultProvisioningMode: 'disabled' | 'built_in' | 'workflow_managed';
+  defaultRoleName: string;
+} {
+  const sso = readTenantSsoSettings(rawSettings);
   const provisioningMode = normalizeWorkspaceProvisioningMode(
     sso.clientPortalEntraProvisioningMode
   );
@@ -368,18 +389,13 @@ export async function syncTenantUsersActivity(
       raw && typeof raw === 'object' && !Array.isArray(raw)
         ? (raw as Record<string, unknown>)
         : {};
-    let ssoSettingsRaw: any = tenantSettingsRow?.settings;
-    if (typeof ssoSettingsRaw === 'string') {
-      try {
-        ssoSettingsRaw = JSON.parse(ssoSettingsRaw);
-      } catch {
-        ssoSettingsRaw = {};
-      }
-    }
+    const ssoSettings = readTenantSsoSettings(tenantSettingsRow?.settings);
+    // Absent means the setting predates the toggle, where deactivation was
+    // unconditional; preserve that rather than silently changing behaviour.
     const deactivateOnEntitlementRemoval =
-      ssoSettingsRaw?.sso?.deactivateEntraManagedPortalUsersOnEntitlementRemoval === undefined
+      ssoSettings.deactivateEntraManagedPortalUsersOnEntitlementRemoval === undefined
         ? true
-        : Boolean(ssoSettingsRaw?.sso?.deactivateEntraManagedPortalUsersOnEntitlementRemoval);
+        : Boolean(ssoSettings.deactivateEntraManagedPortalUsersOnEntitlementRemoval);
     return { fieldSyncConfig, deactivateOnEntitlementRemoval };
   });
 
