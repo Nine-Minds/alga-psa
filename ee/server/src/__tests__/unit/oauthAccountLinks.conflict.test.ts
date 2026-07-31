@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { withTenantScope } from '../utils/tenantScopedBuilderDouble';
 
 const getAdminConnectionMock = vi.fn();
 
@@ -57,13 +58,17 @@ function buildFindHarness(records: Array<Record<string, unknown>>) {
         return chain;
       }),
       orderBy: vi.fn(() => chain),
+      // The tenant no longer arrives as one of this query's own filters — the
+      // tenantDb facade applies it — so it is matched from the recorded scope.
       first: vi.fn(async () =>
-        records.find((record) =>
-          Object.entries(filters).every(([key, value]) => record[key] === value)
+        records.find(
+          (record) =>
+            (chain.scopedTenant === null || record.tenant === chain.scopedTenant) &&
+            Object.entries(filters).every(([key, value]) => record[key] === value)
         )
       ),
     };
-    return chain;
+    return withTenantScope(chain);
   });
   return { knex: tableMock };
 }
