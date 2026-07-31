@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
-import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
+import {
+  requirePermission,
+  throwActionError,
+  withTenantTransaction
+} from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { registerIntegrationWorkflowModule, rmmIntegrationAvailability } from '../integrationModules';
 import type { TacticalAuthMode } from './tacticalRmmWorkflowRuntimeSupport';
@@ -9,6 +13,7 @@ import { workflowTenantTable } from '../../lib/workflowTenantDb';
 const loadTacticalRuntimeSupport = () => import('./tacticalRmmWorkflowRuntimeSupport');
 
 const PROVIDER = 'tacticalrmm';
+const RMM_COMMAND_PERMISSION = { resource: 'rmm', action: 'execute_command' } as const;
 
 const agentSchema = z.object({
   agent_id: z.string(),
@@ -94,6 +99,12 @@ async function requireTacticalIntegration(ctx: ActionContext): Promise<{
     instanceUrl,
     authMode: (settings.auth_mode as TacticalAuthMode | undefined) ?? 'api_key'
   };
+}
+
+async function requireRmmCommandPermission(ctx: ActionContext): Promise<void> {
+  await withTenantTransaction(ctx, async (tx) => {
+    await requirePermission(ctx, tx, RMM_COMMAND_PERMISSION);
+  });
 }
 
 const normalizeAgentStatus = (agent: Record<string, unknown>): boolean | null => {
@@ -331,6 +342,7 @@ export function registerTacticalRmmWorkflowActionsV2(): void {
     },
     handler: async (input, ctx) => {
       const { tenantId, instanceUrl, authMode } = await requireTacticalIntegration(ctx);
+      await requireRmmCommandPermission(ctx);
       const { createTacticalWorkflowClient } = await loadTacticalRuntimeSupport();
       const client = await createTacticalWorkflowClient({ tenantId, instanceUrl, authMode });
       const vendorResponse = await client.runCommand(input.agent_id, {
