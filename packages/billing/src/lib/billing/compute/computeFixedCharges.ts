@@ -744,6 +744,7 @@ export function computeFixedCharges(
 
   const chargesWithMeta = chargesAfterSettlement.map((charge) => ({
     ...charge,
+    servicePeriodRecordId: timing.servicePeriodRecordId ?? null,
     servicePeriodStart,
     servicePeriodEnd,
     billingTiming: lineBillingTiming,

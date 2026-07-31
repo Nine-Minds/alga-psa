@@ -118,6 +118,7 @@ type DiscountQueryRow = IDiscount & {
 };
 
 type ResolvedRecurringChargeTiming = {
+  servicePeriodRecordId: string | null;
   duePosition: "arrears" | "advance";
   servicePeriodStart: ISO8601String;
   servicePeriodEnd: ISO8601String;
@@ -213,6 +214,7 @@ type ProjectScheduleCharge = (
 
 type PersistedRecurringTimingSelectionRecord = Pick<
   IRecurringServicePeriodRecord,
+  | "recordId"
   | "sourceObligation"
   | "cadenceOwner"
   | "duePosition"
@@ -982,6 +984,7 @@ export class BillingEngine {
       .orderBy("service_period_start", "asc")
       .orderBy("revision", "asc")
       .select(
+        "record_id",
         "obligation_id",
         "obligation_type",
         "charge_family",
@@ -1006,6 +1009,7 @@ export class BillingEngine {
 
     return this.buildRecurringTimingSelectionsFromPersistedRecords(
       dueRows.map((row) => ({
+        recordId: row.record_id,
         sourceObligation: {
           tenant: this.tenant!,
           obligationId: row.obligation_id,
@@ -3170,6 +3174,7 @@ export class BillingEngine {
       );
 
       recurringTimingSelections[lineId] = {
+        servicePeriodRecordId: record.recordId,
         duePosition: record.duePosition,
         servicePeriodStart: toISODate(
           toPlainDate(coverage.coveredPeriod.start),
@@ -3368,6 +3373,7 @@ export class BillingEngine {
     }
 
     return {
+      servicePeriodRecordId: null,
       duePosition,
       servicePeriodStart: toISODate(
         toPlainDate(settlement.coveredServicePeriod.start),
@@ -3595,6 +3601,9 @@ export class BillingEngine {
 
     const timingResolution: ResolvedRecurringChargeTiming | null = projectTarget
       ? {
+          // Project-driven billing is not cadence-driven: there is no persisted
+          // recurring service period record backing these charges.
+          servicePeriodRecordId: null,
           duePosition: "arrears",
           servicePeriodStart: billingPeriod.startDate,
           servicePeriodEnd: billingPeriod.endDate,

@@ -219,6 +219,9 @@
     },
     "errors": {
       "title": "Ocorreram erros ao finalizar faturas:",
+      "titleFinalize": "Ocorreram erros ao finalizar faturas:",
+      "titleDelete": "Ocorreram erros ao excluir faturas:",
+      "titleReverse": "Ocorreram erros ao reverter faturas:",
       "loadReady": "Falha ao carregar períodos de faturamento. Por favor, tente novamente.",
       "loadHistory": "Falha ao carregar o histórico de faturas recorrentes. Por favor, tente novamente."
     },

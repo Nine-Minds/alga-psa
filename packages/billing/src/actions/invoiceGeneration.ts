@@ -699,6 +699,41 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
   selectorInput: IRecurringDueSelectionInput;
 }): Promise<{ invoiceId: string } | null> {
   const executionWindow = params.selectorInput.executionWindow;
+  const findExistingByChargeDetails = async () => withTransaction(
+    params.knex,
+    async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, params.tenant);
+      const query = db.table('invoices as i')
+        .distinct('i.invoice_id')
+        .where({
+          'i.tenant': params.tenant,
+          'i.billing_period_start': params.selectorInput.windowStart,
+          'i.billing_period_end': params.selectorInput.windowEnd,
+        })
+        .whereNotIn('i.status', ['cancelled']);
+
+      db.tenantJoin(query, 'invoice_charges as ic', 'ic.invoice_id', 'i.invoice_id');
+      db.tenantJoin(query, 'invoice_charge_details as iid', 'iid.item_id', 'ic.item_id');
+
+      if (executionWindow.kind === 'contract_cadence_window' && executionWindow.contractLineId) {
+        db.tenantJoin(
+          query,
+          'contract_line_service_configuration as clsc',
+          'clsc.config_id',
+          'iid.config_id',
+        );
+        query.where('clsc.contract_line_id', executionWindow.contractLineId);
+      } else if (executionWindow.kind === 'client_cadence_window') {
+        query.where('i.client_id', params.selectorInput.clientId);
+      } else {
+        return null;
+      }
+
+      const row = await query.first('i.invoice_id');
+      return row?.invoice_id ? { invoiceId: row.invoice_id } : null;
+    },
+  );
+
   if (
     executionWindow.kind === 'client_cadence_window'
     && executionWindow.scheduleKey
@@ -717,7 +752,9 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
         .first('invoice_id');
     });
 
-    return linkedRow?.invoice_id ? { invoiceId: linkedRow.invoice_id } : null;
+    return linkedRow?.invoice_id
+      ? { invoiceId: linkedRow.invoice_id }
+      : findExistingByChargeDetails();
   }
 
   if (
@@ -736,7 +773,9 @@ async function findExistingRecurringInvoiceForSelectionInput(params: {
         .first('invoice_id');
     });
 
-    return linkedRow?.invoice_id ? { invoiceId: linkedRow.invoice_id } : null;
+    return linkedRow?.invoice_id
+      ? { invoiceId: linkedRow.invoice_id }
+      : findExistingByChargeDetails();
   }
 
   return null;
@@ -2903,7 +2942,13 @@ export const createInvoiceFromBillingResult = withAuth(async (
       standardCharges,
       client,
       sessionObject,
-      tenant
+      tenant,
+      {
+        // Project invoices bill project work directly; their charges are not
+        // backed by persisted recurring service periods, so the recurring
+        // linkage assertion does not apply to them.
+        requireRecurringServicePeriodLinkage: !options.projectId,
+      }
     );
     const projectScheduleSubtotal = await persistProjectScheduleCharges(
       trx,

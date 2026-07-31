@@ -94,6 +94,7 @@ function createQueryBuilder(rows: Row[], tableName: string) {
       return builder;
     }),
     select: vi.fn(() => builder),
+    distinct: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),

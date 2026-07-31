@@ -219,6 +219,9 @@
     },
     "errors": {
       "title": "Errors occurred while finalizing invoices:",
+      "titleFinalize": "Errors occurred while finalizing invoices:",
+      "titleDelete": "Errors occurred while deleting invoices:",
+      "titleReverse": "Errors occurred while reversing invoices:",
       "loadReady": "Failed to load billing periods. Please try again.",
       "loadHistory": "Failed to load recurring invoice history. Please try again."
     },

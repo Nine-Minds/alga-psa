@@ -11,7 +11,6 @@ import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
-import { buildPostDropRecurringObligationCandidates } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
@@ -37,32 +36,6 @@ function tenantScopedTable(knexOrTrx: Knex | Knex.Transaction, tenant: string, t
   return tenantDb(knexOrTrx, tenant).table(table);
 }
 
-function normalizeRecurringDateForPersistence(value: unknown): string | null {
-  if (!value) {
-    return null;
-  }
-
-  if (typeof value === 'string') {
-    return value.slice(0, 10);
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
-  }
-
-  try {
-    return new Date(value as any).toISOString().slice(0, 10);
-  } catch (_error) {
-    return null;
-  }
-}
-
-function addUtcDayToDateOnly(value: string): string {
-  const next = new Date(`${value}T00:00:00.000Z`);
-  next.setUTCDate(next.getUTCDate() + 1);
-  return next.toISOString().slice(0, 10);
-}
-
 async function linkRecurringServicePeriodToInvoiceDetail(params: {
   tx: Knex.Transaction;
   tenant: string;
@@ -70,9 +43,9 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
   invoiceId: string;
   invoiceChargeId: string;
   invoiceChargeDetailId: string;
+  servicePeriodRecordId?: string | null;
   configId?: string | null;
   contractLineId?: string | null;
-  chargeFamily: RecurringChargeFamily;
   servicePeriodStart?: string | null;
   servicePeriodEnd?: string | null;
   billingTiming?: 'arrears' | 'advance' | null;
@@ -85,9 +58,9 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     invoiceId,
     invoiceChargeId,
     invoiceChargeDetailId,
+    servicePeriodRecordId,
     configId,
     contractLineId,
-    chargeFamily,
     servicePeriodStart,
     servicePeriodEnd,
     billingTiming,
@@ -98,87 +71,16 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     return 0;
   }
 
-  const invoiceBuilder = tenantScopedTable(tx, tenant, 'invoices') as any;
-  if (!invoiceBuilder || typeof invoiceBuilder.where !== 'function') {
+  if (!servicePeriodRecordId) {
     return 0;
   }
-
-  // `invoices.billing_period_start/end` is misleadingly named — it actually stores the
-  // invoice window (when this cycle may be cut), not a service period. That's why we read
-  // it into `invoiceWindow*` locals here. Column rename to `invoice_window_*` is pending.
-  const invoiceWindow = await invoiceBuilder
-    .where('invoice_id', invoiceId)
-    .first(['billing_period_start', 'billing_period_end']);
-
-  const invoiceWindowStart = normalizeRecurringDateForPersistence(invoiceWindow?.billing_period_start);
-  const invoiceWindowEnd = normalizeRecurringDateForPersistence(invoiceWindow?.billing_period_end);
-  const normalizedServicePeriodStart = normalizeRecurringDateForPersistence(servicePeriodStart);
-  const normalizedServicePeriodEnd = normalizeRecurringDateForPersistence(servicePeriodEnd);
-  const normalizedServicePeriodEndExclusive = normalizedServicePeriodEnd
-    ? addUtcDayToDateOnly(normalizedServicePeriodEnd)
-    : null;
-
-  if (!invoiceWindowStart || !invoiceWindowEnd || !normalizedServicePeriodStart || !normalizedServicePeriodEnd) {
-    return 0;
-  }
-
-  let resolvedContractLineId = contractLineId ?? null;
-  if (!resolvedContractLineId && configId) {
-    const configBuilder = tenantScopedTable(tx, tenant, 'contract_line_service_configuration') as any;
-    if (!configBuilder || typeof configBuilder.where !== 'function') {
-      return 0;
-    }
-
-    const configRow = await configBuilder
-      .where('config_id', configId)
-      .first('contract_line_id') as { contract_line_id?: string } | undefined;
-
-    resolvedContractLineId = configRow?.contract_line_id ?? null;
-  }
-
-  if (!resolvedContractLineId) {
-    return 0;
-  }
-
-  const obligationCandidates = buildPostDropRecurringObligationCandidates({
-    contractLineId: resolvedContractLineId,
-    chargeFamily: chargeFamily,
-  }).map((candidate) => ({
-    obligation_type: candidate.obligationType,
-    obligation_id: candidate.obligationId,
-  }));
 
   return tenantScopedTable(tx, tenant, 'recurring_service_periods')
-    .where({ charge_family: chargeFamily, due_position: billingTiming })
-    .where(function recurringObligationMatch() {
-      for (const [index, candidate] of obligationCandidates.entries()) {
-        if (index === 0) {
-          this.where(function matchObligationCandidate() {
-            this.where('obligation_type', candidate.obligation_type)
-              .andWhere('obligation_id', candidate.obligation_id);
-          });
-          continue;
-        }
-
-        this.orWhere(function matchObligationCandidate() {
-          this.where('obligation_type', candidate.obligation_type)
-            .andWhere('obligation_id', candidate.obligation_id);
-        });
-      }
+    .where({
+      record_id: servicePeriodRecordId,
     })
     .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
     .whereNull('invoice_charge_detail_id')
-    .where({
-      service_period_start: normalizedServicePeriodStart,
-      invoice_window_start: invoiceWindowStart,
-      invoice_window_end: invoiceWindowEnd,
-    })
-    .where(function recurringServicePeriodEndMatch() {
-      this.where('service_period_end', normalizedServicePeriodEnd);
-      if (normalizedServicePeriodEndExclusive) {
-        this.orWhere('service_period_end', normalizedServicePeriodEndExclusive);
-      }
-    })
     .update({
       lifecycle_state: 'billed',
       invoice_id: invoiceId,
@@ -187,6 +89,25 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
       invoice_linked_at: linkedAt,
       updated_at: linkedAt,
     });
+}
+
+function assertRecurringPeriodLinked(params: {
+  updatedCount: number;
+  invoiceId: string;
+  invoiceChargeId: string;
+  invoiceChargeDetailId: string;
+  servicePeriodRecordId?: string | null;
+}) {
+  if (!params.servicePeriodRecordId) {
+    throw new Error(
+      `Internal error: recurring invoice detail ${params.invoiceChargeDetailId} for invoice ${params.invoiceId} is missing servicePeriodRecordId.`,
+    );
+  }
+  if (params.updatedCount !== 1) {
+    throw new Error(
+      `Internal error: recurring service period ${params.servicePeriodRecordId} could not be linked to invoice ${params.invoiceId}, charge ${params.invoiceChargeId}, detail ${params.invoiceChargeDetailId}.`,
+    );
+  }
 }
 
 async function linkAndMarkSourceBillingRecord(params: {
@@ -263,6 +184,10 @@ function getRecurringChargeFamilyForInvoiceLinkage(
     default:
       return null;
   }
+}
+
+function requiresRecurringServicePeriodLinkage(charge: IBillingCharge): boolean {
+  return Boolean(charge.servicePeriodRecordId || charge.client_contract_line_id);
 }
 
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
@@ -671,7 +596,8 @@ async function persistFixedInvoiceCharges(
   fixedCharges: IFixedPriceCharge[],
   client: any,
   session: Session,
-  tenant: string
+  tenant: string,
+  requireRecurringServicePeriodLinkage: boolean
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
@@ -859,6 +785,7 @@ async function persistFixedInvoiceCharges(
 
   // Iterate using clientContractLineId as the key
   for (const [fixedPlanGroupKey, planEntry] of fixedPlanDetailsMap.entries()) {
+    const linkedServicePeriodRecordIds = new Set<string>();
     const planInfo = planInfoMap.get(planEntry.sourceClientContractLineId);
     if (!planInfo) {
         console.error(`Could not find plan info for clientContractLineId: ${planEntry.sourceClientContractLineId}`);
@@ -969,21 +896,35 @@ async function persistFixedInvoiceCharges(
         tenant
       });
 
-      await linkRecurringServicePeriodToInvoiceDetail({
-        tx,
-        tenant,
-        clientId: client.client_id,
-        invoiceId,
-        invoiceChargeId: parentItemId,
-        invoiceChargeDetailId: detailId,
-        configId: detail.config_id,
-        contractLineId: detail.client_contract_line_id ?? null,
-        chargeFamily: 'fixed',
-        servicePeriodStart: detail.servicePeriodStart ?? null,
-        servicePeriodEnd: detail.servicePeriodEnd ?? null,
-        billingTiming: detail.billingTiming ?? null,
-        linkedAt: now,
-      });
+      if (
+        requireRecurringServicePeriodLinkage
+        && isRecurringFixedCharge(detail)
+        && !linkedServicePeriodRecordIds.has(detail.servicePeriodRecordId ?? '')
+      ) {
+        const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
+          tx,
+          tenant,
+          clientId: client.client_id,
+          invoiceId,
+          invoiceChargeId: parentItemId,
+          invoiceChargeDetailId: detailId,
+          servicePeriodRecordId: detail.servicePeriodRecordId ?? null,
+          configId: detail.config_id,
+          contractLineId: detail.client_contract_line_id ?? null,
+          servicePeriodStart: detail.servicePeriodStart ?? null,
+          servicePeriodEnd: detail.servicePeriodEnd ?? null,
+          billingTiming: detail.billingTiming ?? null,
+          linkedAt: now,
+        });
+        assertRecurringPeriodLinked({
+          updatedCount: linkedCount,
+          invoiceId,
+          invoiceChargeId: parentItemId,
+          invoiceChargeDetailId: detailId,
+          servicePeriodRecordId: detail.servicePeriodRecordId ?? null,
+        });
+        linkedServicePeriodRecordIds.add(detail.servicePeriodRecordId ?? '');
+      }
     }
 
     fixedSubtotal += planNetTotal;
@@ -1005,8 +946,20 @@ export async function persistInvoiceCharges(
   billingCharges: IBillingCharge[],
   client: any,
   session: Session,
-  tenant: string
+  tenant: string,
+  options: {
+    /**
+     * Recurring (cadence-driven) invoices must consume exactly one persisted
+     * recurring_service_periods row per charge, and generation aborts if a
+     * charge cannot claim one. Project-driven invoices bill project work
+     * directly and have no recurring service period to claim, so callers on
+     * that path opt out.
+     */
+    requireRecurringServicePeriodLinkage?: boolean;
+  } = {}
 ): Promise<number> {
+  const requireRecurringServicePeriodLinkage =
+    options.requireRecurringServicePeriodLinkage ?? true;
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
@@ -1031,7 +984,8 @@ export async function persistInvoiceCharges(
     fixedCharges,
     client,
     session,
-    tenant
+    tenant,
+    requireRecurringServicePeriodLinkage
   );
 
   // --- Handle Other Billing Charge Types (Usage, Hourly, Product, License etc.) ---
@@ -1081,6 +1035,10 @@ export async function persistInvoiceCharges(
       recurringChargeFamily !== null
       && Boolean(charge.config_id)
       && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
+    const shouldLinkRecurringServicePeriod =
+      requireRecurringServicePeriodLinkage
+      && shouldPersistDetail
+      && requiresRecurringServicePeriodLinkage(charge);
 
     await linkAndMarkSourceBillingRecord({
       tx,
@@ -1112,21 +1070,30 @@ export async function persistInvoiceCharges(
         tenant
       });
 
-      await linkRecurringServicePeriodToInvoiceDetail({
-        tx,
-        tenant,
-        clientId: client.client_id,
-        invoiceId,
-        invoiceChargeId: invoiceItem.item_id,
-        invoiceChargeDetailId: detailId,
-        configId: charge.config_id,
-        contractLineId: charge.client_contract_line_id ?? null,
-        chargeFamily: recurringChargeFamily,
-        servicePeriodStart: charge.servicePeriodStart ?? null,
-        servicePeriodEnd: charge.servicePeriodEnd ?? null,
-        billingTiming: charge.billingTiming ?? null,
-        linkedAt: now,
-      });
+      if (shouldLinkRecurringServicePeriod) {
+        const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
+          tx,
+          tenant,
+          clientId: client.client_id,
+          invoiceId,
+          invoiceChargeId: invoiceItem.item_id,
+          invoiceChargeDetailId: detailId,
+          servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
+          configId: charge.config_id,
+          contractLineId: charge.client_contract_line_id ?? null,
+          servicePeriodStart: charge.servicePeriodStart ?? null,
+          servicePeriodEnd: charge.servicePeriodEnd ?? null,
+          billingTiming: charge.billingTiming ?? null,
+          linkedAt: now,
+        });
+        assertRecurringPeriodLinked({
+          updatedCount: linkedCount,
+          invoiceId,
+          invoiceChargeId: invoiceItem.item_id,
+          invoiceChargeDetailId: detailId,
+          servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
+        });
+      }
     }
 
     otherSubtotal += netAmount;

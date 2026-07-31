@@ -219,6 +219,9 @@
     },
     "errors": {
       "title": "Beim Abschluss der Rechnungen sind Fehler aufgetreten:",
+      "titleFinalize": "Beim Abschluss der Rechnungen sind Fehler aufgetreten:",
+      "titleDelete": "Beim Löschen der Rechnungen sind Fehler aufgetreten:",
+      "titleReverse": "Beim Rückgängigmachen der Rechnungen sind Fehler aufgetreten:",
       "loadReady": "Abrechnungszeiträume konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
       "loadHistory": "Der Verlauf der wiederkehrenden Rechnungen konnte nicht geladen werden. Bitte versuchen Sie es erneut."
     },

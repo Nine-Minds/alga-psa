@@ -219,6 +219,9 @@
     },
     "errors": {
       "title": "55555",
+      "titleFinalize": "55555",
+      "titleDelete": "55555",
+      "titleReverse": "55555",
       "loadReady": "55555",
       "loadHistory": "55555"
     },

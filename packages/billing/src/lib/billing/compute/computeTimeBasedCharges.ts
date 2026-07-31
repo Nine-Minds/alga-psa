@@ -307,6 +307,7 @@ export function computeTimeBasedCharges(
       is_taxable: isTaxable,
       servicePeriodStart,
       servicePeriodEnd,
+      servicePeriodRecordId: timing.servicePeriodRecordId ?? null,
       billingTiming: timing.duePosition,
       client_contract_id: clientContractLine.client_contract_id || undefined,
       contract_name: clientContractLine.contract_name || undefined,
