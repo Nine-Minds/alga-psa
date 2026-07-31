@@ -3601,6 +3601,9 @@ export class BillingEngine {
 
     const timingResolution: ResolvedRecurringChargeTiming | null = projectTarget
       ? {
+          // Project-driven billing is not cadence-driven: there is no persisted
+          // recurring service period record backing these charges.
+          servicePeriodRecordId: null,
           duePosition: "arrears",
           servicePeriodStart: billingPeriod.startDate,
           servicePeriodEnd: billingPeriod.endDate,
