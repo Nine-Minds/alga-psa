@@ -74,7 +74,9 @@
     "emailSent": "Email della fattura inviata correttamente.",
     "advanceTiming": "Anticipato",
     "arrearsTiming": "Posticipato",
-    "paymentSummaryServicePeriods": "Il pagamento salda il saldo della fattura per questi periodi di servizio ricorrenti. Apri i dettagli della fattura di seguito per la ripartizione completa riga per riga."
+    "paymentSummaryServicePeriods": "Il pagamento salda il saldo della fattura per questi periodi di servizio ricorrenti. Apri i dettagli della fattura di seguito per la ripartizione completa riga per riga.",
+    "creditNote": "Nota di credito",
+    "prepayment": "Pagamento anticipato"
   },
   "frequency": {
     "monthly": "Mensile",
@@ -328,5 +330,11 @@
       "tenantDefault": "Predefinito tenant",
       "changeLayout": "Modifica"
     }
+  },
+  "credits": {
+    "availableCredit": "Credito disponibile",
+    "appliedAutomatically": "Applicato automaticamente alla prossima fattura.",
+    "credit": "Credito",
+    "expires": "Scade il {{date}}"
   }
 }

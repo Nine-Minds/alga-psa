@@ -61,7 +61,9 @@
     "emailSent": "55555",
     "advanceTiming": "55555",
     "arrearsTiming": "55555",
-    "paymentSummaryServicePeriods": "55555"
+    "paymentSummaryServicePeriods": "55555",
+    "creditNote": "55555",
+    "prepayment": "55555"
   },
   "invoices": {
     "locations": {
@@ -328,5 +330,11 @@
       "prepayment": "55555",
       "partially_applied": "55555"
     }
+  },
+  "credits": {
+    "availableCredit": "55555",
+    "appliedAutomatically": "55555",
+    "credit": "55555",
+    "expires": "55555 {{date}} 55555"
   }
 }

@@ -61,7 +61,9 @@
     "emailSent": "E-mail de fatura enviado com sucesso.",
     "advanceTiming": "Avançar",
     "arrearsTiming": "Atrasados",
-    "paymentSummaryServicePeriods": "O pagamento liquida o saldo da fatura para esses períodos de serviço recorrentes. Abra os detalhes da fatura abaixo para ver o detalhamento completo linha por linha."
+    "paymentSummaryServicePeriods": "O pagamento liquida o saldo da fatura para esses períodos de serviço recorrentes. Abra os detalhes da fatura abaixo para ver o detalhamento completo linha por linha.",
+    "creditNote": "Nota de crédito",
+    "prepayment": "Pré-pagamento"
   },
   "invoices": {
     "locations": {
@@ -328,5 +330,11 @@
       "prepayment": "Faturas de pagamento antecipado ou depósito",
       "partially_applied": "Faturas com pagamentos parciais aplicados"
     }
+  },
+  "credits": {
+    "availableCredit": "Crédito disponível",
+    "appliedAutomatically": "Aplicado automaticamente à sua próxima fatura.",
+    "credit": "Crédito",
+    "expires": "Expira em {{date}}"
   }
 }

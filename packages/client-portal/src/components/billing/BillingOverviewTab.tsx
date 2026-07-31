@@ -13,6 +13,7 @@ import type { InvoiceViewModel } from '@alga-psa/types';
 import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
+import CreditsSummaryCard from './CreditsSummaryCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getRecurringServicePeriodSummary } from './recurringServicePeriodSummary';
 
@@ -91,9 +92,11 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
 
   // Find the most recent unpaid invoice for the "Next Invoice" card
   const nextInvoice = useMemo(() => {
-    // Filter to unpaid invoices and sort by due_date ascending to get the nearest due
+    // Filter to unpaid invoices and sort by due_date ascending to get the
+    // nearest due. Credit notes are money owed TO the client, never "due".
     const unpaidInvoices = invoices.filter(inv =>
-      inv.status !== 'paid' && inv.status !== 'cancelled'
+      inv.status !== 'paid' && inv.status !== 'cancelled' &&
+      inv.invoice_type !== 'credit_note' && inv.total >= 0
     );
     if (unpaidInvoices.length === 0) return null;
     // Sort by due_date ascending (nearest due first)
@@ -238,6 +241,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
           {planCard}
           {invoiceCard}
           {quotesCard}
+          <CreditsSummaryCard formatCurrency={formatCurrency} formatDate={formatDate} />
         </div>
 
         {/* Enhanced Bucket Usage Visualization - optionally hidden */}

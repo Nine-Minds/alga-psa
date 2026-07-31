@@ -74,7 +74,9 @@
     "emailSent": "Rechnungs-E-Mail erfolgreich gesendet.",
     "advanceTiming": "Im Voraus",
     "arrearsTiming": "Nachträglich",
-    "paymentSummaryServicePeriods": "Die Zahlung begleicht den Rechnungssaldo für diese wiederkehrenden Leistungszeiträume. Öffnen Sie unten die Rechnungsdetails für die vollständige zeilenweise Aufschlüsselung."
+    "paymentSummaryServicePeriods": "Die Zahlung begleicht den Rechnungssaldo für diese wiederkehrenden Leistungszeiträume. Öffnen Sie unten die Rechnungsdetails für die vollständige zeilenweise Aufschlüsselung.",
+    "creditNote": "Gutschrift",
+    "prepayment": "Vorauszahlung"
   },
   "frequency": {
     "monthly": "Monatlich",
@@ -328,5 +330,11 @@
       "tenantDefault": "Mandanten-Standard",
       "changeLayout": "Ändern"
     }
+  },
+  "credits": {
+    "availableCredit": "Verfügbares Guthaben",
+    "appliedAutomatically": "Wird automatisch mit Ihrer nächsten Rechnung verrechnet.",
+    "credit": "Guthaben",
+    "expires": "Läuft ab am {{date}}"
   }
 }

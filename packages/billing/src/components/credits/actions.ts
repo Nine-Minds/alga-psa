@@ -70,6 +70,7 @@ function creditActionErrorMessage(error: unknown, fallback: string): string {
     'Credit is already expired',
     'Insufficient credit balance',
     'Transfer amount must be greater than zero',
+    'Credits cannot mix currencies: the target client uses a different currency',
   ]);
 
   return expectedMessages.has(message) ? message : fallback;

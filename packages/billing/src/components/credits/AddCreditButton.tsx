@@ -104,6 +104,7 @@ export default function AddCreditButton() {
       }
 
       toast.success(t('addCredit.success', { defaultValue: 'Credit added successfully' }));
+      window.dispatchEvent(new CustomEvent('alga:credits-changed'));
       handleClose();
       router.refresh();
     } catch (submitError) {

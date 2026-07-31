@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -31,11 +32,11 @@ function getStatusLabel(
   record: CreditRow,
 ) {
   if (record.is_expired) {
-    return <span className="text-red-600 font-medium">{t('status.expired', { defaultValue: 'Expired' })}</span>;
+    return <Badge variant="error">{t('status.expired', { defaultValue: 'Expired' })}</Badge>;
   }
 
   if (Number(record.remaining_amount) <= 0) {
-    return <span className="text-[rgb(var(--color-text-500))] font-medium">{t('status.depleted', { defaultValue: 'Depleted' })}</span>;
+    return <Badge variant="default-muted">{t('status.depleted', { defaultValue: 'Depleted' })}</Badge>;
   }
 
   if (record.expiration_date) {
@@ -45,17 +46,17 @@ function getStatusLabel(
 
     if (daysUntilExpiration <= EXPIRING_SOON_DAYS) {
       return (
-        <span className="text-orange-500 font-medium">
+        <Badge variant="warning">
           {t('status.expiringSoon', {
             count: daysUntilExpiration,
             defaultValue: 'Expires in {{count}} days',
           })}
-        </span>
+        </Badge>
       );
     }
   }
 
-  return <span className="text-blue-600 font-medium">{t('status.active', { defaultValue: 'Active' })}</span>;
+  return <Badge variant="success">{t('status.active', { defaultValue: 'Active' })}</Badge>;
 }
 
 interface CreditActionHandlers {
@@ -88,11 +89,12 @@ function createColumns(
       render: (value: number, record) => {
         const original = Number(record.amount);
         const remaining = Number(value);
+        const currency = record.currency_code || 'USD';
         return (
           <span>
-            {formatCurrencyFromMinorUnits(remaining)}
+            {formatCurrencyFromMinorUnits(remaining, undefined, currency)}
             {remaining !== original && (
-              <span className="text-[rgb(var(--color-text-500))]">{' '}{t('columns.balanceOf', { amount: formatCurrencyFromMinorUnits(original), defaultValue: 'of {{amount}}' })}</span>
+              <span className="text-[rgb(var(--color-text-500))]">{' '}{t('columns.balanceOf', { amount: formatCurrencyFromMinorUnits(original, undefined, currency), defaultValue: 'of {{amount}}' })}</span>
             )}
           </span>
         );
@@ -227,6 +229,13 @@ export default function CreditsTable() {
 
   useEffect(() => {
     loadCredits();
+  }, [loadCredits]);
+
+  // Mutating dialogs announce changes so the table reflects them immediately.
+  useEffect(() => {
+    const handler = () => { loadCredits(); };
+    window.addEventListener('alga:credits-changed', handler);
+    return () => window.removeEventListener('alga:credits-changed', handler);
   }, [loadCredits]);
 
   const columns = createColumns(t, {

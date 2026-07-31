@@ -338,7 +338,15 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.number', 'Invoice Number')}</p>
-              <p className="mt-1">{invoice.invoice_number}</p>
+              <p className="mt-1 inline-flex items-center gap-2">
+                {invoice.invoice_number}
+                {(invoice.invoice_type === 'credit_note' || invoice.total < 0) && (
+                  <Badge variant="secondary">{t('invoice.creditNote', 'Credit Note')}</Badge>
+                )}
+                {invoice.invoice_type === 'prepayment' && (
+                  <Badge variant="secondary">{t('invoice.prepayment', 'Prepayment')}</Badge>
+                )}
+              </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.date', 'Invoice Date')}</p>

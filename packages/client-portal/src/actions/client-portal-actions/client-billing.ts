@@ -30,6 +30,7 @@ import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import {
   getClientIdFromPortalUser as getClientIdFromUser,
@@ -298,6 +299,87 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Clie
       return expected;
     }
     console.error('Error fetching client invoices:', error);
+    throw error;
+  }
+});
+
+export interface ClientPortalCredit {
+  credit_id: string;
+  description: string | null;
+  amount: number;
+  remaining_amount: number;
+  created_at: string;
+  expiration_date: string | null;
+  is_expired: boolean;
+  currency_code: string | null;
+}
+
+export interface ClientPortalCreditSummary {
+  available_credit: number;
+  credits: ClientPortalCredit[];
+}
+
+/**
+ * The client's available credit (derived from non-expired credit_tracking
+ * remainders) plus their credit history, for portal billing surfaces.
+ */
+export const getClientCreditSummary = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<ClientPortalCreditSummary>> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access billing data');
+      }
+
+      const db = tenantDb(trx, tenant);
+      const [availableCredit, credits] = await Promise.all([
+        getAvailableCredit(trx, tenant, clientId),
+        db.table('credit_tracking')
+          .where({ 'credit_tracking.client_id': clientId, 'credit_tracking.tenant': tenant })
+          .modify((q: Knex.QueryBuilder) =>
+            db.tenantJoin(q, 'transactions', 'credit_tracking.transaction_id', 'transactions.transaction_id', { type: 'left' })
+          )
+          .select(
+            'credit_tracking.credit_id',
+            'credit_tracking.amount',
+            'credit_tracking.remaining_amount',
+            'credit_tracking.created_at',
+            'credit_tracking.expiration_date',
+            'credit_tracking.is_expired',
+            'credit_tracking.currency_code',
+            { description: 'transactions.description' }
+          )
+          .orderBy('credit_tracking.created_at', 'desc')
+          .limit(50),
+      ]);
+
+      return {
+        available_credit: availableCredit,
+        credits: credits.map((row: Record<string, unknown>) => ({
+          credit_id: String(row.credit_id),
+          description: (row.description as string) ?? null,
+          amount: Number(row.amount ?? 0),
+          remaining_amount: Number(row.remaining_amount ?? 0),
+          created_at: String(row.created_at),
+          expiration_date: row.expiration_date ? String(row.expiration_date) : null,
+          is_expired: Boolean(row.is_expired),
+          currency_code: (row.currency_code as string) ?? null,
+        })),
+      };
+    });
+  } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error fetching client credit summary:', error);
     throw error;
   }
 });

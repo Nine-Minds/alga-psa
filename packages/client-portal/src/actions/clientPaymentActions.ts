@@ -100,6 +100,12 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
       return { success: false, error: 'Invoice is cancelled' };
     }
 
+    // Credit notes and fully-covered invoices carry no payable amount.
+    const amountDue = Number(invoice.total_amount ?? 0) - Number(invoice.credit_applied ?? 0);
+    if (invoice.invoice_type === 'credit_note' || amountDue <= 0) {
+      return { success: false, error: 'Invoice has no amount due' };
+    }
+
     const paymentUrl = await getOrCreateInvoicePaymentLinkUrl(invoiceId);
     if (!paymentUrl) {
       return { success: false, error: 'payment_not_configured' };

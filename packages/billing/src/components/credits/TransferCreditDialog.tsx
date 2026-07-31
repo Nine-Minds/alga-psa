@@ -23,6 +23,7 @@ interface TransferCreditDialogProps {
 }
 
 export default function TransferCreditDialog({ credit, onClose }: TransferCreditDialogProps) {
+  const creditCurrency = credit?.currency_code || 'USD';
   const { t, i18n } = useTranslation('msp/credits');
   const router = useRouter();
   const [clients, setClients] = useState<IClient[]>([]);
@@ -71,7 +72,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
     const amountInCents = toMinorUnits(parsed, i18n.language);
     if (amountInCents > remaining) {
       setError(t('transferDialog.errors.exceedsRemaining', {
-        amount: formatCurrencyFromMinorUnits(remaining),
+        amount: formatCurrencyFromMinorUnits(remaining, undefined, creditCurrency),
         defaultValue: 'The transfer cannot exceed the remaining {{amount}}',
       }));
       return;
@@ -90,6 +91,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
 
       if (result.success) {
         toast.success(t('transferDialog.success', { defaultValue: 'Credit transferred' }));
+        window.dispatchEvent(new CustomEvent('alga:credits-changed'));
         router.refresh();
         onClose();
       } else {
@@ -145,7 +147,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
               />
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 {t('transferDialog.hints.amount', {
-                  amount: formatCurrencyFromMinorUnits(remaining),
+                  amount: formatCurrencyFromMinorUnits(remaining, undefined, creditCurrency),
                   defaultValue: 'Up to {{amount}} available',
                 })}
               </p>
@@ -170,7 +172,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
                 <span className="text-[rgb(var(--color-text-500))]">
                   {t('transferDialog.impact.current', { defaultValue: 'Current Remaining' })}:
                 </span>
-                <span className="font-medium text-right">{formatCurrencyFromMinorUnits(remaining)}</span>
+                <span className="font-medium text-right">{formatCurrencyFromMinorUnits(remaining, undefined, creditCurrency)}</span>
                 <span className="text-[rgb(var(--color-text-500))]">
                   {t('transferDialog.impact.after', { defaultValue: 'Remaining After Transfer' })}:
                 </span>

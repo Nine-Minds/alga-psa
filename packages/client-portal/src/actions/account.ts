@@ -74,7 +74,7 @@ export interface Invoice {
   number: string;
   date: string;
   amount: number;
-  status: 'paid' | 'pending' | 'overdue';
+  status: 'paid' | 'pending' | 'overdue' | 'credit note';
 }
 
 export interface PaymentMethod {
@@ -494,9 +494,15 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[] 
   });
 
   return invoices.map((invoice): Invoice => {
-    // Determine status based on due date and existing status
+    // Determine status based on due date and existing status. Credit notes
+    // reduce what the client owes — pending/overdue semantics don't apply.
+    const isCreditNote =
+      (invoice as { invoice_type?: string }).invoice_type === 'credit_note' ||
+      Number(invoice.total_amount || 0) < 0;
     let status: Invoice['status'] = 'pending';
-    if (invoice.status === 'paid') {
+    if (isCreditNote) {
+      status = 'credit note';
+    } else if (invoice.status === 'paid') {
       status = 'paid';
     } else if (invoice.due_date && new Date(invoice.due_date) < new Date()) {
       status = 'overdue';

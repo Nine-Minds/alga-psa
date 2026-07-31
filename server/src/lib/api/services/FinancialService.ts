@@ -756,6 +756,12 @@ export class FinancialService extends BaseService<ITransaction> {
         throw new NotFoundError(`Target client with ID ${request.target_client_id} not found`);
       }
 
+      // Credits never change currency.
+      const transferCurrency = sourceCredit.currency_code || 'USD';
+      if ((targetClient.default_currency_code || 'USD') !== transferCurrency) {
+        throw new ConflictError('Credits cannot mix currencies: the target client uses a different currency');
+      }
+
       const now = new Date().toISOString();
 
       // 1. Reduce source credit remaining amount
@@ -775,6 +781,7 @@ export class FinancialService extends BaseService<ITransaction> {
         created_at: now,
         tenant,
         related_transaction_id: sourceCredit.transaction_id,
+        currency_code: transferCurrency,
         metadata: { transfer_to: request.target_client_id, transfer_reason: request.reason || 'Administrative transfer' }
       });
 
@@ -789,6 +796,7 @@ export class FinancialService extends BaseService<ITransaction> {
         description: request.reason || `Credit transferred from client ${sourceCredit.client_id}`,
         created_at: now,
         tenant,
+        currency_code: transferCurrency,
         metadata: { transfer_from: sourceCredit.client_id, transfer_reason: request.reason || 'Administrative transfer', source_credit_id: request.source_credit_id }
       });
 
@@ -805,7 +813,8 @@ export class FinancialService extends BaseService<ITransaction> {
         created_at: now,
         expiration_date: sourceCredit.expiration_date,
         is_expired: false,
-        updated_at: now
+        updated_at: now,
+        currency_code: transferCurrency
       }).returning('*');
 
       return {

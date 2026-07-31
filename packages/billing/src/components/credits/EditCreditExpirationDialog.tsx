@@ -19,6 +19,7 @@ interface EditCreditExpirationDialogProps {
 }
 
 export default function EditCreditExpirationDialog({ credit, onClose }: EditCreditExpirationDialogProps) {
+  const creditCurrency = credit?.currency_code || 'USD';
   const { t } = useTranslation('msp/credits');
   const router = useRouter();
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
@@ -55,6 +56,7 @@ export default function EditCreditExpirationDialog({ credit, onClose }: EditCred
 
       if (result.success) {
         toast.success(t('expirationDialog.updateSuccess', { defaultValue: 'Credit expiration updated' }));
+        window.dispatchEvent(new CustomEvent('alga:credits-changed'));
         router.refresh();
         onClose();
       } else {
@@ -81,11 +83,11 @@ export default function EditCreditExpirationDialog({ credit, onClose }: EditCred
               <span className="text-[rgb(var(--color-text-500))]">
                 {t('expirationDialog.creditAmount', { defaultValue: 'Original' })}
               </span>
-              <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.amount))}</span>
+              <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.amount), undefined, creditCurrency)}</span>
               <span className="text-[rgb(var(--color-text-500))]">
                 {t('expirationDialog.remainingAmount', { defaultValue: 'Remaining' })}
               </span>
-              <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.remaining_amount))}</span>
+              <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.remaining_amount), undefined, creditCurrency)}</span>
               <span className="text-[rgb(var(--color-text-500))]">
                 {t('expirationDialog.currentExpiration', { defaultValue: 'Current Expiration' })}
               </span>

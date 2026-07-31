@@ -19,6 +19,7 @@ interface ExpireCreditDialogProps {
 }
 
 export default function ExpireCreditDialog({ credit, onClose }: ExpireCreditDialogProps) {
+  const creditCurrency = credit?.currency_code || 'USD';
   const { t } = useTranslation('msp/credits');
   const router = useRouter();
   const [reason, setReason] = useState('');
@@ -43,6 +44,7 @@ export default function ExpireCreditDialog({ credit, onClose }: ExpireCreditDial
 
       if (result.success) {
         toast.success(t('expireDialog.success', { defaultValue: 'Credit expired' }));
+        window.dispatchEvent(new CustomEvent('alga:credits-changed'));
         router.refresh();
         onClose();
       } else {
@@ -68,7 +70,7 @@ export default function ExpireCreditDialog({ credit, onClose }: ExpireCreditDial
             <Alert variant="destructive">
               <AlertDescription>
                 {t('expireDialog.warning', {
-                  amount: formatCurrencyFromMinorUnits(Number(credit.remaining_amount)),
+                  amount: formatCurrencyFromMinorUnits(Number(credit.remaining_amount), undefined, creditCurrency),
                   defaultValue: 'The client loses the remaining {{amount}}. You can\'t undo this.',
                 })}
               </AlertDescription>
@@ -78,11 +80,11 @@ export default function ExpireCreditDialog({ credit, onClose }: ExpireCreditDial
               <span className="text-[rgb(var(--color-text-500))]">
                 {t('expireDialog.creditAmount', { defaultValue: 'Original' })}
               </span>
-              <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.amount))}</span>
+              <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.amount), undefined, creditCurrency)}</span>
               <span className="text-[rgb(var(--color-text-500))]">
                 {t('expireDialog.remainingAmount', { defaultValue: 'Remaining' })}
               </span>
-              <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.remaining_amount))}</span>
+              <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.remaining_amount), undefined, creditCurrency)}</span>
             </div>
 
             <div>
