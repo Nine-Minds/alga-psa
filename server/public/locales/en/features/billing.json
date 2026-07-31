@@ -11,6 +11,7 @@
   "viewContractLineDetails": "View Contract Line Details",
   "viewAllInvoices": "View All Invoices",
   "failedToLoad": "Failed to load invoices. Please try again.",
+  "externalCreditNotice": "Your account has a credit balance on file with our billing team. Recent invoices may show as open until that credit is applied.",
   "payments": "Payments",
   "contractLines": "Service Contract Lines",
   "usage": "Usage Metrics",

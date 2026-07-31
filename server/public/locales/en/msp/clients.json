@@ -909,6 +909,18 @@
     "updateError": "Failed to update settings",
     "useDefaultSuccess": "Client will now use default credit expiration settings."
   },
+  "clientExternalCreditSettings": {
+    "title": "External Credit on File",
+    "enable": "Customer holds credit in the accounting system",
+    "enableHelp": "For customers whose credit balance lives in QuickBooks (e.g. paid ahead by check). Shows a notice on their portal billing page so open invoices are not mistaken for delinquency.",
+    "note": "Note shown to the customer",
+    "notePlaceholder": "e.g., Paid through December 2026",
+    "save": "Save",
+    "loadError": "Failed to load settings",
+    "saveError": "Failed to save settings",
+    "updatedSuccess": "External credit setting updated.",
+    "noteUpdatedSuccess": "External credit note updated."
+  },
   "clientGridCard": {
     "actions": "Client Actions",
     "quickView": "Quick View",

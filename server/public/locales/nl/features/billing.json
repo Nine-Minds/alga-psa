@@ -11,6 +11,7 @@
   "viewContractLineDetails": "Abonnementsdetails bekijken",
   "viewAllInvoices": "Alle facturen bekijken",
   "failedToLoad": "Facturen laden is mislukt. Probeer het opnieuw.",
+  "externalCreditNotice": "Voor uw account staat een tegoed geregistreerd bij ons facturatieteam. Recente facturen kunnen als openstaand worden weergegeven totdat dat tegoed is verrekend.",
   "invoices": {
     "locations": {
       "groupHeading": "Locatie",

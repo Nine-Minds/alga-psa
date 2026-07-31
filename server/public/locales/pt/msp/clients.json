@@ -909,6 +909,18 @@
     "updateError": "Falha ao atualizar as configurações",
     "useDefaultSuccess": "O cliente agora usará as configurações padrão de expiração de crédito."
   },
+  "clientExternalCreditSettings": {
+    "title": "Crédito externo registrado",
+    "enable": "O cliente possui crédito no sistema contábil",
+    "enableHelp": "Para clientes cujo saldo de crédito está no QuickBooks (por exemplo, pago antecipadamente em cheque). Exibe um aviso na página de faturamento do portal para que faturas em aberto não sejam confundidas com inadimplência.",
+    "note": "Nota exibida ao cliente",
+    "notePlaceholder": "por exemplo, pago até dezembro de 2026",
+    "save": "Salvar",
+    "loadError": "Falha ao carregar as configurações",
+    "saveError": "Falha ao salvar as configurações",
+    "updatedSuccess": "A configuração de crédito externo foi atualizada.",
+    "noteUpdatedSuccess": "A nota de crédito externo foi atualizada."
+  },
   "clientGridCard": {
     "actions": "Ações do cliente",
     "quickView": "Visualização rápida",

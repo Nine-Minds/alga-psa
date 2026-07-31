@@ -11,6 +11,7 @@
   "viewContractLineDetails": "Visualizza dettagli della linea di contratto",
   "viewAllInvoices": "Mostra tutte le fatture",
   "failedToLoad": "Impossibile caricare le fatture. Riprova.",
+  "externalCreditNotice": "Il tuo account ha un saldo a credito registrato presso il nostro reparto fatturazione. Le fatture recenti potrebbero risultare aperte finché tale credito non viene applicato.",
   "invoices": {
     "locations": {
       "groupHeading": "Posizione",

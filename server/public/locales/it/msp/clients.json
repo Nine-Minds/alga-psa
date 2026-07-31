@@ -909,6 +909,18 @@
     "updateError": "Impossibile aggiornare le impostazioni",
     "useDefaultSuccess": "Il cliente ora utilizzerà le impostazioni predefinite di scadenza del credito."
   },
+  "clientExternalCreditSettings": {
+    "title": "Credito esterno registrato",
+    "enable": "Il cliente ha un credito nel sistema contabile",
+    "enableHelp": "Per i clienti il cui saldo a credito è in QuickBooks (ad esempio pagato in anticipo con assegno). Mostra un avviso nella pagina di fatturazione del loro portale affinché le fatture aperte non vengano scambiate per insolvenza.",
+    "note": "Nota mostrata al cliente",
+    "notePlaceholder": "ad esempio, pagato fino a dicembre 2026",
+    "save": "Salva",
+    "loadError": "Impossibile caricare le impostazioni",
+    "saveError": "Impossibile salvare le impostazioni",
+    "updatedSuccess": "L'impostazione del credito esterno è stata aggiornata.",
+    "noteUpdatedSuccess": "La nota sul credito esterno è stata aggiornata."
+  },
   "clientGridCard": {
     "actions": "Azioni del cliente",
     "quickView": "Visualizzazione rapida",

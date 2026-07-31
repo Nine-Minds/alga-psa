@@ -11,6 +11,7 @@
   "viewContractLineDetails": "Zobacz szczegóły linii umowy",
   "viewAllInvoices": "Zobacz wszystkie faktury",
   "failedToLoad": "Nie udało się wczytać faktur. Spróbuj ponownie.",
+  "externalCreditNotice": "Na Twoim koncie zarejestrowano saldo dodatnie w naszym dziale rozliczeń. Ostatnie faktury mogą być widoczne jako otwarte do czasu rozliczenia tych środków.",
   "invoices": {
     "locations": {
       "groupHeading": "Lokalizacja",
