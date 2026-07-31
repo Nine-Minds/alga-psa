@@ -3,8 +3,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 describe('isFeatureFlagEnabled', () => {
   const ORIGINAL_DISABLE = process.env.DISABLE_FEATURE_FLAGS;
   const ORIGINAL_PUBLIC_DISABLE = process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS;
+  const FEATURE_FLAG_CHECKER_KEY = Symbol.for('alga.core.featureFlagChecker');
 
   afterEach(async () => {
+    const registry = globalThis as typeof globalThis & {
+      [key: symbol]: unknown;
+    };
+    delete registry[FEATURE_FLAG_CHECKER_KEY];
+
     vi.resetModules();
 
     if (ORIGINAL_DISABLE === undefined) {
@@ -34,5 +40,29 @@ describe('isFeatureFlagEnabled', () => {
     const { isFeatureFlagEnabled } = await import('./features');
 
     await expect(isFeatureFlagEnabled('teams-integration-ui')).resolves.toBe(true);
+  });
+
+  it('returns false when no checker is registered', async () => {
+    const { isFeatureFlagEnabled } = await import('./features');
+
+    await expect(isFeatureFlagEnabled('marketing-module')).resolves.toBe(false);
+  });
+
+  it('shares the registered checker across isolated module instances', async () => {
+    const firstModule = await import('./features');
+    const checker = vi.fn().mockResolvedValue(true);
+    const context = {
+      tenantId: 'tenant-nine-minds',
+      userId: 'user-robert',
+    };
+
+    firstModule.registerFeatureFlagChecker(checker);
+    vi.resetModules();
+
+    const secondModule = await import('./features');
+    await expect(
+      secondModule.isFeatureFlagEnabled('marketing-module', context),
+    ).resolves.toBe(true);
+    expect(checker).toHaveBeenCalledWith('marketing-module', context);
   });
 });

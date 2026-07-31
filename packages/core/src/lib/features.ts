@@ -42,10 +42,14 @@ type FeatureFlagChecker = (
   context: FeatureFlagContext,
 ) => Promise<boolean>;
 
-let _checker: FeatureFlagChecker | null = null;
+const FEATURE_FLAG_CHECKER_KEY = Symbol.for('alga.core.featureFlagChecker');
+
+type FeatureFlagCheckerRegistry = typeof globalThis & {
+  [FEATURE_FLAG_CHECKER_KEY]?: FeatureFlagChecker | null;
+};
 
 export function registerFeatureFlagChecker(checker: FeatureFlagChecker): void {
-  _checker = checker;
+  (globalThis as FeatureFlagCheckerRegistry)[FEATURE_FLAG_CHECKER_KEY] = checker;
 }
 
 export async function isFeatureFlagEnabled(
@@ -56,6 +60,7 @@ export async function isFeatureFlagEnabled(
     return true;
   }
 
-  if (!_checker) return false;
-  return _checker(flagKey, context);
+  const checker = (globalThis as FeatureFlagCheckerRegistry)[FEATURE_FLAG_CHECKER_KEY];
+  if (!checker) return false;
+  return checker(flagKey, context);
 }
