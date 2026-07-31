@@ -215,7 +215,7 @@ describe('confirmEntraMappings client linkage updates', () => {
     const trxMock = vi.fn((table: string) => {
       if (table === 'entra_managed_tenants') {
         const chain = { first: managedTenantFirstMock };
-        return { where: vi.fn(() => chain) };
+        return withTenantScope({ where: vi.fn(() => chain) });
       }
 
       if (table === 'entra_client_tenant_mappings') {
@@ -223,19 +223,19 @@ describe('confirmEntraMappings client linkage updates', () => {
           first: activeMappingFirstMock,
           update: deactivateUpdateMock,
         };
-        return {
+        return withTenantScope({
           where: vi.fn(() => chain),
           insert: mappingInsertMock,
-        };
+        });
       }
 
       if (table === 'clients') {
         const chain = {
           update: vi.fn(async () => 1),
         };
-        return {
+        return withTenantScope({
           where: vi.fn(() => chain),
-        };
+        });
       }
 
       throw new Error(`Unexpected table ${table}`);
@@ -281,21 +281,21 @@ describe('confirmEntraMappings client linkage updates', () => {
 
     const trxMock = vi.fn((table: string) => {
       if (table === 'entra_managed_tenants') {
-        return { where: vi.fn(() => ({ first: managedTenantFirstMock })) };
+        return withTenantScope({ where: vi.fn(() => ({ first: managedTenantFirstMock })) });
       }
 
       if (table === 'entra_client_tenant_mappings') {
-        return {
+        return withTenantScope({
           where: vi.fn(() => ({
             first: activeMappingFirstMock,
             update: vi.fn(async () => 1),
           })),
           insert: mappingInsertMock,
-        };
+        });
       }
 
       if (table === 'clients') {
-        return { where: vi.fn(() => ({ update: vi.fn(async () => 1) })) };
+        return withTenantScope({ where: vi.fn(() => ({ update: vi.fn(async () => 1) })) });
       }
 
       throw new Error(`Unexpected table ${table}`);
