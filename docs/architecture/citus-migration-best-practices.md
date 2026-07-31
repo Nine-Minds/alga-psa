@@ -11,6 +11,12 @@ CitusDB distributes tables across multiple worker nodes (shards). This creates u
 3. **Query Routing**: Some queries run on coordinator, some on workers, some on both
 4. **Schema Changes**: DDL operations may need to be applied to both coordinator and shards
 
+## No Separate Citus Migrations Folder
+
+**There is no `ee/server/migrations/citus/` folder, and there must never be one again.** A folder like that existed for over a year (33 files, incl. a README and shell scripts) and was deleted in 2026-07 because nothing in the migration runner, CI, or deploy tooling ever executed it — every "fix" and every table distribution it claimed to perform was a no-op everywhere, including production. Production tables that needed distribution ended up distributed only via manual out-of-band DDL, discovered piecemeal, well after the fact.
+
+Citus distribution — including the "must run outside a transaction" requirement — belongs **inline in the same CE migration that creates the table** (or a later CE migration touching that table), guarded so it's a no-op on plain PostgreSQL and on already-distributed tables. Use the shared helper `server/migrations/utils/citusDistribution.cjs` (`ensureTenantDistribution`) and set `exports.config = { transaction: false }` on that migration. See `server/migrations/20260626100100_create_inventory_stock.cjs` or `server/migrations/20260719100000_create_marketing_tables.cjs` for the pattern, and the four `20260715090000`-`20260715090003_create_project_billing_*.cjs` migrations for a recent example. Never propose a "companion" or "parity" migration living in a separate EE-only directory — if it isn't in the one chain that `knex migrate:latest` actually runs (`server/migrations` + top-level `ee/server/migrations`), it will never run.
+
 ## Common Issues
 
 ### Issue 1: ALTER TABLE NOT NULL Fails Despite No NULL Values

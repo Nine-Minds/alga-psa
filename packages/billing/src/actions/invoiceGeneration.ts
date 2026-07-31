@@ -416,32 +416,36 @@ async function persistProjectScheduleCharges(
 
   let subtotal = 0;
   const now = Temporal.Now.instant().toString();
-  const exportServiceIds = await ensureProjectScheduleExportServices(trx, tenant);
+  let exportServiceIds: Awaited<ReturnType<typeof ensureProjectScheduleExportServices>> | null = null;
 
   for (const charge of charges) {
     const projectCharge = charge as IBillingCharge & {
       schedule_entry_id: string;
     };
-    const itemId = uuidv4();
-    await tenantDb(trx, tenant).table('invoice_charges').insert({
-      item_id: itemId,
-      invoice_id: invoiceId,
-      service_id: charge.serviceId ?? exportServiceIds[charge.type as 'project_milestone' | 'project_deposit'],
-      description: charge.serviceName,
-      quantity: charge.quantity ?? 1,
-      unit_price: charge.rate,
-      net_amount: charge.total,
-      tax_amount: charge.tax_amount || 0,
-      tax_region: charge.tax_region || client.tax_region,
-      tax_rate: charge.tax_rate || 0,
-      total_price: charge.total + (charge.tax_amount || 0),
-      is_manual: false,
-      is_discount: false,
-      is_taxable: charge.is_taxable ?? false,
-      created_by: userId,
-      created_at: now,
-      tenant,
-    });
+    let itemId: string | null = null;
+    if (charge.total !== 0 || (charge.tax_amount || 0) !== 0) {
+      exportServiceIds ??= await ensureProjectScheduleExportServices(trx, tenant);
+      itemId = uuidv4();
+      await tenantDb(trx, tenant).table('invoice_charges').insert({
+        item_id: itemId,
+        invoice_id: invoiceId,
+        service_id: charge.serviceId ?? exportServiceIds[charge.type as 'project_milestone' | 'project_deposit'],
+        description: charge.serviceName,
+        quantity: charge.quantity ?? 1,
+        unit_price: charge.rate,
+        net_amount: charge.total,
+        tax_amount: charge.tax_amount || 0,
+        tax_region: charge.tax_region || client.tax_region,
+        tax_rate: charge.tax_rate || 0,
+        total_price: charge.total + (charge.tax_amount || 0),
+        is_manual: false,
+        is_discount: false,
+        is_taxable: charge.is_taxable ?? false,
+        created_by: userId,
+        created_at: now,
+        tenant,
+      });
+    }
 
     const transitioned = await ProjectBillingScheduleEntry.transitionStatus(
       projectCharge.schedule_entry_id,
@@ -2111,7 +2115,7 @@ export const generateProjectInvoice = withAuth(async (
   { tenant },
   projectId: string,
   entryIds?: string[],
-): Promise<{ invoice_id: string } | InvoiceGenerationActionError> => {
+): Promise<{ invoice_id: string; warnings: string[] } | InvoiceGenerationActionError> => {
   return withInvoiceGenerationActionErrors(async () => {
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoices');
@@ -2145,7 +2149,11 @@ export const generateProjectInvoice = withAuth(async (
     throw new Error(billingResult.error);
   }
   if (billingResult.charges.length === 0) {
-    throw new Error('Nothing to bill');
+    throw new Error(billingResult.warnings?.[0] ?? 'Nothing to bill');
+  }
+  const hasNonZeroContent = billingResult.charges.some((charge) => charge.total !== 0 || (charge.tax_amount || 0) !== 0);
+  if (!hasNonZeroContent) {
+    throw new Error('A product-only phase needs at least one billable assigned product before an invoice can be created.');
   }
 
   const cycleStart = toISOTimestamp(toPlainDate(project.start_date ?? project.created_at));
@@ -2160,7 +2168,145 @@ export const generateProjectInvoice = withAuth(async (
     { projectId },
   );
 
-  return { invoice_id: createdInvoice.invoice_id };
+  return {
+    invoice_id: createdInvoice.invoice_id,
+    warnings: billingResult.warnings ?? [],
+  };
+  });
+});
+
+export interface SeparateProjectProductInvoiceReviewRow {
+  project_material_id: string;
+  service_id: string;
+  service_name: string;
+  description: string | null;
+  quantity: number;
+  rate: number;
+  currency_code: string;
+  total: number;
+}
+
+export interface SeparateProjectProductInvoiceReview {
+  project_id: string;
+  client_id: string;
+  rows: SeparateProjectProductInvoiceReviewRow[];
+}
+
+async function loadSeparateProjectProductRows(
+  knex: Knex,
+  tenant: string,
+  projectId: string,
+  materialIds?: string[],
+): Promise<{ client_id: string; start_date: string | Date | null; created_at: string | Date; rows: SeparateProjectProductInvoiceReviewRow[] }> {
+  const db = tenantDb(knex, tenant);
+  const project = await db.table('projects')
+    .where({ project_id: projectId })
+    .first('project_id', 'client_id', 'start_date', 'created_at');
+  if (!project) throw new Error('Project not found');
+
+  const query = db.table('project_materials as material');
+  db.tenantJoin(query, 'service_catalog as service', 'material.service_id', 'service.service_id');
+  query.where({
+    'material.project_id': projectId,
+    'material.is_billed': false,
+    'material.billing_destination': 'separate',
+  });
+  if (materialIds) query.whereIn('material.project_material_id', materialIds);
+  const rows = await query
+    .select(
+      'material.project_material_id',
+      'material.service_id',
+      'service.service_name',
+      'material.description',
+      'material.quantity',
+      'material.rate',
+      'material.currency_code',
+    )
+    .orderBy('material.created_at', 'asc');
+
+  return {
+    client_id: project.client_id,
+    start_date: project.start_date,
+    created_at: project.created_at,
+    rows: rows.map((row: Omit<SeparateProjectProductInvoiceReviewRow, 'total'>) => ({
+      ...row,
+      quantity: Number(row.quantity),
+      rate: Number(row.rate),
+      total: Number(row.quantity) * Number(row.rate),
+    })),
+  };
+}
+
+export const getSeparateProjectProductInvoiceReview = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+): Promise<SeparateProjectProductInvoiceReview | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
+    if (!await hasPermission(user, 'project', 'read')) {
+      throw new Error('Permission denied: Cannot read project products');
+    }
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+      throw new Error('Permission denied: Cannot generate invoices');
+    }
+    const { knex } = await createTenantKnex();
+    const result = await loadSeparateProjectProductRows(knex, tenant, projectId);
+    return { project_id: projectId, client_id: result.client_id, rows: result.rows };
+  });
+});
+
+export const createSeparateProjectProductInvoices = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+  selectedMaterialIds: string[],
+): Promise<{ invoices: Array<{ invoice_id: string; currency_code: string; product_count: number }> } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
+    if (!await hasPermission(user, 'project', 'update')) {
+      throw new Error('Permission denied: Cannot update project products');
+    }
+    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+      throw new Error('Permission denied: Cannot generate invoices');
+    }
+    const uniqueIds = [...new Set(selectedMaterialIds)];
+    if (uniqueIds.length === 0) throw new Error('Select at least one product to invoice');
+
+    const { knex } = await createTenantKnex();
+    const selection = await loadSeparateProjectProductRows(knex, tenant, projectId, uniqueIds);
+    if (selection.rows.length !== uniqueIds.length) {
+      throw new Error('One or more selected products are no longer eligible for a separate invoice. Refresh and review the batch.');
+    }
+    const rowsByCurrency = selection.rows.reduce((groups, row) => {
+      const group = groups.get(row.currency_code) ?? [];
+      group.push(row);
+      groups.set(row.currency_code, group);
+      return groups;
+    }, new Map<string, SeparateProjectProductInvoiceReviewRow[]>());
+
+    const cycleStart = toISOTimestamp(toPlainDate(selection.start_date ?? selection.created_at));
+    const cycleEnd = toISOTimestamp(Temporal.Now.plainDateISO().add({ days: 1 }));
+    const invoices: Array<{ invoice_id: string; currency_code: string; product_count: number }> = [];
+    for (const [currencyCode, rows] of rowsByCurrency) {
+      const billingResult = await new BillingEngine().calculateSeparateProjectProductBilling(
+        projectId,
+        rows.map((row) => row.project_material_id),
+        currencyCode,
+      );
+      if (billingResult.charges.length !== rows.length) {
+        throw new Error(`The ${currencyCode} product selection changed before the invoice could be created. Refresh and try again.`);
+      }
+      const invoice = await createInvoiceFromBillingResult(
+        billingResult,
+        selection.client_id,
+        cycleStart,
+        cycleEnd,
+        null,
+        user.user_id,
+        { projectId },
+      );
+      invoices.push({ invoice_id: invoice.invoice_id, currency_code: currencyCode, product_count: rows.length });
+    }
+    return { invoices };
   });
 });
 
@@ -2773,44 +2919,48 @@ export const createInvoiceFromBillingResult = withAuth(async (
     // These materials were included by BillingEngine as non-contract charges (like usage/time).
     try {
       const billedAt = Temporal.Now.instant().toString();
-      if (options.projectId) {
-        await tenantDb(trx, tenant).table('project_materials')
-          .where({
-            client_id: client.client_id,
-            project_id: options.projectId,
-            is_billed: false,
-          })
-          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
-          .update({
-            is_billed: true,
-            billed_invoice_id: newInvoice!.invoice_id,
-            billed_at: billedAt,
-            updated_at: billedAt
-          });
-      } else {
-        await tenantDb(trx, tenant).table('ticket_materials')
-          .where({ client_id: client.client_id, is_billed: false })
-          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
-          .andWhere('created_at', '>=', cycleStart)
-          .andWhere('created_at', '<', cycleEnd)
-          .update({
-            is_billed: true,
-            billed_invoice_id: newInvoice!.invoice_id,
-            billed_at: billedAt,
-            updated_at: billedAt
-          });
+      const materialCharges = billingResult.charges.filter((charge): charge is IProductCharge => (
+        charge.type === 'product'
+        && Boolean((charge as IProductCharge).material_source_id)
+        && Boolean((charge as IProductCharge).material_source_type)
+      ));
+      const projectMaterialIds = materialCharges
+        .filter((charge) => charge.material_source_type === 'project')
+        .map((charge) => charge.material_source_id!);
+      const ticketMaterialIds = materialCharges
+        .filter((charge) => charge.material_source_type === 'ticket')
+        .map((charge) => charge.material_source_id!);
 
-        await tenantDb(trx, tenant).table('project_materials')
-          .where({ client_id: client.client_id, is_billed: false })
-          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
-          .andWhere('created_at', '>=', cycleStart)
-          .andWhere('created_at', '<', cycleEnd)
+      if (projectMaterialIds.length > 0) {
+        const uniqueProjectMaterialIds = [...new Set(projectMaterialIds)];
+        const updatedCount = await tenantDb(trx, tenant).table('project_materials')
+          .where({ is_billed: false })
+          .whereIn('project_material_id', uniqueProjectMaterialIds)
           .update({
             is_billed: true,
             billed_invoice_id: newInvoice!.invoice_id,
             billed_at: billedAt,
             updated_at: billedAt
           });
+        if (updatedCount !== uniqueProjectMaterialIds.length) {
+          throw new Error('A project product changed before the invoice could be committed. Refresh and try again.');
+        }
+      }
+      if (ticketMaterialIds.length > 0) {
+        const uniqueTicketMaterialIds = [...new Set(ticketMaterialIds)];
+        const updatedCount = await tenantDb(trx, tenant).table('ticket_materials')
+          .where({ is_billed: false })
+          .whereIn('ticket_material_id', uniqueTicketMaterialIds)
+          .update({
+            is_billed: true,
+            billed_invoice_id: newInvoice!.invoice_id,
+            billed_at: billedAt,
+            updated_at: billedAt
+          });
+        if (updatedCount !== uniqueTicketMaterialIds.length) {
+          throw new Error('A ticket product changed before the invoice could be committed. Refresh and try again.');
+        }
+
       }
     } catch (err) {
       if (!isMissingRelationError(err)) {

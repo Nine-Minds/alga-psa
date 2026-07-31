@@ -37,6 +37,8 @@ vi.mock('@alga-psa/db/admin.js', () => ({
     const builder = {
       where: vi.fn(() => builder),
       leftJoin: vi.fn(() => builder),
+      join: vi.fn(() => builder),
+      whereNull: vi.fn(() => builder),
       select: vi.fn(async () => {
         return state.ninjaRows.map((row) => ({
           tenantId: row.tenantId,

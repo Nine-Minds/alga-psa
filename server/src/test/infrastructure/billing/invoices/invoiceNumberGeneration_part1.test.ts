@@ -8,6 +8,8 @@ import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import { expectError } from '../../../../../test-utils/errorUtils';
 import {
+  assignContractLineToClient,
+  unwrapInvoiceResult,
   createTestService,
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
@@ -267,24 +269,25 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       billingFrequency: 'monthly',
       baseRateCents: 10000,
       startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      billingTiming: 'advance'
+      billingTiming: 'advance',
+      ensureBillingEmail: true,
+      materializeServicePeriods: true
     });
 
     // Restore original clientId
     (context as any).clientId = originalClientId;
 
     // First successful generation
-    const invoice1 = await generateInvoice(successCycle1);
-    if (!invoice1) {
-      throw new Error('Failed to generate first invoice');
-    }
+    const invoice1 = unwrapInvoiceResult(await generateInvoice(successCycle1));
     expect(invoice1.invoice_number).toBe('INV-000001');
 
     // Failed generation attempt (no contract line for this client)
     await expectError(
       () => generateInvoice(failCycle),
       {
-        messagePattern: /No active contract lines found for this client in the selected billing period\./
+        // A client with no contract lines has no materialized recurring service
+        // periods, so generation stops before the billing engine's own guard.
+        messagePattern: /Recurring service periods were not materialized for this client billing schedule window\./
       }
     );
 
@@ -380,7 +383,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         billingFrequency: 'monthly',
         baseRateCents: 10000,
         startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        billingTiming: 'advance'
+        billingTiming: 'advance',
+        ensureBillingEmail: true,
+        materializeServicePeriods: true
       });
 
       // Restore original clientId
@@ -395,20 +400,13 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: clientId,
-        contract_line_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      });
+      // createFixedPlanAssignment above already assigns a fully configured
+      // contract line to this client; assigning the bare `planId` line as well
+      // leaves a second, contract-cadence line whose execution window has no
+      // materialized periods.
 
       // Generate invoice and verify prefix handling
-      const invoice = await generateInvoice(billingCycle);
-      if (!invoice) {
-        throw new Error(`Failed to generate invoice for prefix: ${testCase.prefix}`);
-      }
+      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycle));
       expect(invoice.invoice_number).toBe(testCase.expected);
 
       // Verify invoice items were created - should be single consolidated row for fixed plan
@@ -465,7 +463,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       billingFrequency: 'monthly',
       baseRateCents: 10000,
       startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      billingTiming: 'advance'
+      billingTiming: 'advance',
+      ensureBillingEmail: true,
+      materializeServicePeriods: true
     });
 
     // Generate invoices and verify they increment correctly from initial value

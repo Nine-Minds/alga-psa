@@ -45,14 +45,27 @@ afterEach(() => {
 
 describe('DesignerShell print settings controls', () => {
   beforeEach(() => {
+    // Radix Select scrolls the highlighted item into view on open; jsdom has
+    // no scrollIntoView, and the resulting throw unmounts the whole tree.
+    // writable matters: jsdom is reused across files in the shared fork, and
+    // a non-writable descriptor here makes every later file's plain
+    // `Element.prototype.scrollIntoView = ...` assignment throw.
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
-  it('renders named preset options in the reachable page-setup control when nothing is selected', () => {
+  it('renders named preset options in the reachable page-setup control when nothing is selected', async () => {
     render(<DesignerShell />);
 
     expect(document.querySelector('[data-automation-id="designer-page-setup-panel"]')).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Letter' })).toBeTruthy();
+    // The preset control is a Radix CustomSelect: options render in a portal
+    // only once the trigger is opened.
+    fireEvent.click(screen.getByRole('combobox'));
+    expect(await screen.findByRole('option', { name: 'Letter' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'A4' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Legal' })).toBeTruthy();
   });
@@ -60,8 +73,8 @@ describe('DesignerShell print settings controls', () => {
   it('reshapes the visible design canvas to A4 without requiring page-node selection', async () => {
     render(<DesignerShell />);
 
-    const presetSelect = document.querySelector('[data-automation-id="designer-paper-preset-select"]') as HTMLSelectElement;
-    fireEvent.change(presetSelect, { target: { value: 'A4' } });
+    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(await screen.findByRole('option', { name: 'A4' }));
 
     await waitFor(() => {
       const canvas = document.querySelector('[data-automation-id="design-canvas-mock"]');
@@ -74,8 +87,8 @@ describe('DesignerShell print settings controls', () => {
   it('reshapes the visible design canvas and ruler extents for Legal paper', async () => {
     render(<DesignerShell />);
 
-    const presetSelect = document.querySelector('[data-automation-id="designer-paper-preset-select"]') as HTMLSelectElement;
-    fireEvent.change(presetSelect, { target: { value: 'Legal' } });
+    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Legal' }));
 
     await waitFor(() => {
       const canvas = document.querySelector('[data-automation-id="design-canvas-mock"]');

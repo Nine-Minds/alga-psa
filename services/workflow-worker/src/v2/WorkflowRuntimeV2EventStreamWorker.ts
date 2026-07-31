@@ -24,7 +24,7 @@ import {
   signalWorkflowRuntimeV2HumanTask,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2Temporal';
 import { resolveWorkflowEventCorrelation } from '@alga-psa/workflows/lib/workflowEventCorrelation';
-import { tenantDb } from '@alga-psa/db';
+import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
 
@@ -153,6 +153,20 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     const knex = await getAdminConnection();
     const processedAt = new Date().toISOString();
+
+    // Suspended tenants (cancelled, pending deletion) get their events acked
+    // without starting any workflow runs. isTenantSuspended fails open, so a
+    // flag-read error can never stall the stream for active tenants.
+    if (await isTenantSuspended(knex, event.tenant)) {
+      logger.debug('[WorkflowRuntimeV2EventStreamWorker] Skipping event for suspended tenant', {
+        workerId: this.workerId,
+        eventId: event.event_id,
+        eventType: event.event_type,
+        tenant: event.tenant,
+        event: 'workflow_event_tenant_suspended',
+      });
+      return;
+    }
 
     // Idempotency: if we already ingested this event_id, do not start runs again.
     const existing = await WorkflowRuntimeEventModelV2.getById(knex, event.event_id, event.tenant).catch(() => null);

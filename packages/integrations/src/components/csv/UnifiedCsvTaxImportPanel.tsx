@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
@@ -61,6 +62,7 @@ interface QuickBooksImportResult {
 
 export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImportPanelProps) {
   const { t } = useTranslation('msp/integrations');
+  const { money } = useCurrencyFormat();
   const [source, setSource] = useState<ImportSource>('xero');
   const [file, setFile] = useState<File | null>(null);
   const [csvContent, setCsvContent] = useState<string | null>(null);
@@ -281,10 +283,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
     : qbValidationResult?.valid && !isValidating;
 
   const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(cents / 100);
+    return money(cents);
   };
 
   return (

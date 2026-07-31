@@ -26,16 +26,19 @@ import { resolveClientPortalTitleKey } from './clientPortalRouteTitles';
 interface ClientPortalLayoutProps {
   children: ReactNode;
   productCode?: ProductCode;
+  appointmentsEnabled?: boolean;
   initialSidebarCollapsed?: boolean;
 }
 
 function LayoutShell({
   children,
   productCode,
+  appointmentsEnabled,
   initialSidebarCollapsed,
 }: {
   children: ReactNode;
   productCode: ProductCode;
+  appointmentsEnabled: boolean;
   initialSidebarCollapsed: boolean;
 }) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
@@ -112,6 +115,7 @@ function LayoutShell({
           isLicenseDistributor: permissions.isLicenseDistributor,
         }}
         permissionsLoaded={permissionsLoaded}
+        appointmentsEnabled={appointmentsEnabled}
         initialCollapsed={initialSidebarCollapsed}
       />
 
@@ -140,6 +144,7 @@ function LayoutShell({
 export default function ClientPortalLayout({
   children,
   productCode = 'psa',
+  appointmentsEnabled = true,
   initialSidebarCollapsed = false,
 }: ClientPortalLayoutProps) {
   return (
@@ -147,6 +152,7 @@ export default function ClientPortalLayout({
       <ClientPortalPageProvider>
         <LayoutShell
           productCode={productCode}
+          appointmentsEnabled={appointmentsEnabled}
           initialSidebarCollapsed={initialSidebarCollapsed}
         >
           {children}

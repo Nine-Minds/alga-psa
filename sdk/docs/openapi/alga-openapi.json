@@ -98,6 +98,12 @@
       "name": "Integrations - QuickBooks"
     },
     {
+      "name": "Interactions v1"
+    },
+    {
+      "name": "Inventory v1"
+    },
+    {
       "name": "Invoices"
     },
     {
@@ -108,6 +114,9 @@
     },
     {
       "name": "Meta & Utility v1"
+    },
+    {
+      "name": "Mobile v1"
     },
     {
       "name": "Opportunities v1"
@@ -228,6 +237,9 @@
     },
     {
       "name": "ext-proxy"
+    },
+    {
+      "name": "financial"
     },
     {
       "name": "import"
@@ -7013,6 +7025,11 @@
             "type": "number",
             "minimum": 0
           },
+          "default_currency_code": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
           "preferred_payment_method": {
             "type": "string"
           },
@@ -11377,14 +11394,6 @@
           "credit_ids"
         ]
       },
-      "FinancialReconciliationResolveBody": {
-        "type": "object",
-        "properties": {
-          "notes": {
-            "type": "string"
-          }
-        }
-      },
       "InvoiceCreateBody": {
         "type": "object",
         "properties": {
@@ -15466,7 +15475,7 @@
           },
           "types": {
             "type": "string",
-            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
           },
           "limit": {
             "type": "integer",
@@ -15507,6 +15516,9 @@
               "project_task",
               "project_task_comment",
               "asset",
+              "sales_order",
+              "purchase_order",
+              "stock_unit",
               "invoice",
               "invoice_item",
               "invoice_annotation",
@@ -16628,6 +16640,12 @@
             "type": "boolean"
           },
           "sku": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "barcode": {
             "type": [
               "string",
               "null"
@@ -21311,6 +21329,84 @@
           "currency_code"
         ]
       },
+      "WorkV1TicketAgentParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ticket UUID."
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User UUID of the additional agent."
+          }
+        },
+        "required": [
+          "id",
+          "userId"
+        ]
+      },
+      "WorkV1TicketAgentBody": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User to add as an additional agent."
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Resource role recorded on the assignment; defaults to support."
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      },
+      "WorkV1TicketTeamAssignBody": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Team to assign to the ticket."
+          },
+          "suppressContactNotifications": {
+            "type": "boolean"
+          },
+          "suppressInternalNotifications": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "team_id"
+        ]
+      },
+      "WorkV1TicketTeamRemoveBody": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "remove_all",
+              "keep_all",
+              "selective"
+            ],
+            "description": "What to do with the team_member additional agents; defaults to remove_all."
+          },
+          "keep_user_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Required with mode=selective: the team members to keep as additional agents."
+          }
+        }
+      },
       "QuoteIdParamV1": {
         "type": "object",
         "properties": {
@@ -22063,7 +22159,11 @@
           "checkpoint": {
             "type": "string",
             "enum": [
-              "qualified"
+              "identified",
+              "qualified",
+              "assessment",
+              "proposed",
+              "verbal"
             ]
           },
           "detail": {
@@ -22360,6 +22460,60 @@
           "meta": {
             "type": "object",
             "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "OpportunityWorkQueueSuccessV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "OpportunityTimelineSuccessV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "interaction_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "interaction_date": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "user_name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "interaction_id",
+                "title",
+                "interaction_date",
+                "user_name"
+              ]
+            }
           }
         },
         "required": [
@@ -22887,6 +23041,13 @@
               "archived"
             ]
           },
+          "campaign_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
           "steps": {
             "type": "array",
             "items": {
@@ -22949,6 +23110,13 @@
               "paused",
               "archived"
             ]
+          },
+          "campaign_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "steps": {
             "type": "array",
@@ -23055,6 +23223,842 @@
         },
         "required": [
           "data"
+        ]
+      },
+      "InteractionIdParamV1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "InteractionListQueryV1": {
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "date_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "page": {
+            "type": "string",
+            "pattern": "^\\d+$"
+          },
+          "page_size": {
+            "type": "string",
+            "pattern": "^\\d+$"
+          }
+        }
+      },
+      "CreateInteractionBodyV1": {
+        "type": "object",
+        "properties": {
+          "type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contact_name_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "interaction_date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "type_id"
+        ]
+      },
+      "InteractionSuccessV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "interaction_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "icon": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "contact_name_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "contact_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "client_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "user_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ticket_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "project_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "opportunity_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "interaction_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "start_time": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "end_time": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "duration": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "status_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "status_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_status_closed": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "internal",
+                  "client_visible"
+                ]
+              }
+            },
+            "required": [
+              "tenant",
+              "interaction_id",
+              "type_id",
+              "type_name",
+              "icon",
+              "contact_name_id",
+              "contact_name",
+              "client_id",
+              "client_name",
+              "user_id",
+              "user_name",
+              "ticket_id",
+              "project_id",
+              "opportunity_id",
+              "title",
+              "notes",
+              "interaction_date",
+              "start_time",
+              "end_time",
+              "duration",
+              "status_id",
+              "status_name",
+              "is_status_closed",
+              "visibility"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "InteractionListV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tenant": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "interaction_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "icon": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "contact_name_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "contact_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "client_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "client_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "user_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ticket_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "project_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "opportunity_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "interaction_date": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "start_time": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "end_time": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "duration": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "status_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "status_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "is_status_closed": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "internal",
+                    "client_visible"
+                  ]
+                }
+              },
+              "required": [
+                "tenant",
+                "interaction_id",
+                "type_id",
+                "type_name",
+                "icon",
+                "contact_name_id",
+                "contact_name",
+                "client_id",
+                "client_name",
+                "user_id",
+                "user_name",
+                "ticket_id",
+                "project_id",
+                "opportunity_id",
+                "title",
+                "notes",
+                "interaction_date",
+                "start_time",
+                "end_time",
+                "duration",
+                "status_id",
+                "status_name",
+                "is_status_closed",
+                "visibility"
+              ]
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number"
+              },
+              "limit": {
+                "type": "number"
+              },
+              "total": {
+                "type": "number"
+              },
+              "totalPages": {
+                "type": "number"
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ]
+      },
+      "InteractionTypeListV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type_name": {
+                  "type": "string"
+                },
+                "icon": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "is_system": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type_id",
+                "type_name",
+                "icon",
+                "is_system"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "InteractionApiErrorV1": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "InventoryUnitParamsV1": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "unitId"
+        ]
+      },
+      "InventoryCountParamsV1": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "InventoryPurchaseOrderParamsV1": {
+        "type": "object",
+        "properties": {
+          "poId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "poId"
+        ]
+      },
+      "InventoryPurchaseOrderLineParamsV1": {
+        "type": "object",
+        "properties": {
+          "poId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "poId",
+          "lineId"
+        ]
+      },
+      "InventoryTransferParamsV1": {
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "transferId"
+        ]
+      },
+      "InventoryLookupQueryV1": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "InventoryListQueryV1": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "search": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "location_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "low_stock": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        }
+      },
+      "InventoryLooseBodyV1": {
+        "type": "object",
+        "additionalProperties": {}
+      },
+      "InventoryLooseSuccessV1": {
+        "type": "object",
+        "properties": {
+          "data": {}
+        }
+      },
+      "InventoryApiErrorV1": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "MobileCapabilitiesSuccessV1": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "features": {
+                "type": "object",
+                "properties": {
+                  "inventory": {
+                    "type": "boolean"
+                  },
+                  "opportunities": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "inventory",
+                  "opportunities"
+                ]
+              }
+            },
+            "required": [
+              "features"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "MobileCapabilitiesApiErrorV1": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
         ]
       },
       "FeatureFlagsPostBodyV1": {
@@ -47134,406 +48138,6 @@
           },
           "500": {
             "description": "Unexpected operation failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/financial/reconciliation/run": {
-      "post": {
-        "summary": "Run financial reconciliation",
-        "description": "Triggers FinancialService.runCreditReconciliation(). Optional client_id query narrows reconciliation target.",
-        "tags": [
-          "Financial"
-        ],
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "extensions": {
-          "x-tenant-scoped": true,
-          "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
-          "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
-          "x-rbac-resource": "financial",
-          "x-rbac-action": "update"
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "page",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "sort",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            },
-            "required": false,
-            "name": "order",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "created_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "created_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "updated_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "updated_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "client_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "invoice_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "type",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "status",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_min",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_max",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "include_expired",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "expiring_soon",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_remaining",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_expiration",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "day",
-                "week",
-                "month"
-              ]
-            },
-            "required": false,
-            "name": "group_by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "include_projections",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "as_of_date",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Reconciliation run completed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiSuccess"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "API key missing/invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "financial:update permission denied.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected reconciliation failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/financial/reconciliation/{id}/resolve": {
-      "post": {
-        "summary": "Resolve reconciliation report",
-        "description": "Resolves one reconciliation report by id with optional operator notes.",
-        "tags": [
-          "Financial"
-        ],
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "extensions": {
-          "x-tenant-scoped": true,
-          "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
-          "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
-          "x-rbac-resource": "financial",
-          "x-rbac-action": "update"
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
-            },
-            "required": true,
-            "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath().",
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FinancialReconciliationResolveBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Reconciliation report resolved.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiSuccess"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid id or payload.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "API key missing/invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "financial:update permission denied.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Reconciliation report not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected resolution failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -71939,10 +72543,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+              "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
             },
             "required": false,
-            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
+            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
             "name": "types",
             "in": "query"
           },
@@ -74695,6 +75299,20 @@
                       }
                     ]
                   },
+                  "barcode": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 255
+                      },
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "cost": {
                     "anyOf": [
                       {
@@ -74867,6 +75485,16 @@
           },
           "403": {
             "description": "Authenticated user lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A product with the submitted SKU or barcode already exists.",
             "content": {
               "application/json": {
                 "schema": {
@@ -75089,6 +75717,20 @@
                       }
                     ]
                   },
+                  "barcode": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 255
+                      },
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "cost": {
                     "anyOf": [
                       {
@@ -75266,6 +75908,16 @@
           },
           "404": {
             "description": "Product not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A product with the submitted SKU or barcode already exists.",
             "content": {
               "application/json": {
                 "schema": {
@@ -94621,6 +95273,536 @@
         }
       }
     },
+    "/api/v1/tickets/{id}/agents": {
+      "get": {
+        "summary": "List ticket agents",
+        "description": "Returns the ticket primary agent (tickets.assigned_to) and its additional agents (ticket_resources), each with user_id, name and email.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket primary and additional agents.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a ticket additional agent",
+        "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketAgentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Agent added; updated agent list returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User is already an additional agent on this ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/agents/{userId}": {
+      "delete": {
+        "summary": "Remove a ticket additional agent",
+        "description": "Removes the additional-agent assignment for the given user. The primary agent is changed through PUT /api/v1/tickets/{id}/assignment instead.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket UUID."
+            },
+            "required": true,
+            "description": "Ticket UUID.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "User UUID of the additional agent."
+            },
+            "required": true,
+            "description": "User UUID of the additional agent.",
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Additional agent removed."
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or additional agent not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/team": {
+      "put": {
+        "summary": "Assign a team to a ticket",
+        "description": "Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team's active members as team_member additional agents. Returns the updated ticket. A team without a lead is rejected with 400.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketTeamAssignBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Team assigned; updated ticket returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a ticket team assignment",
+        "description": "Clears assigned_team_id. mode=remove_all (default) drops the team_member additional agents, keep_all leaves them, and selective keeps only keep_user_ids. Returns the updated ticket.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketTeamRemoveBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Team assignment removed; updated ticket returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tickets/{id}/materials": {
       "get": {
         "summary": "List ticket materials",
@@ -98142,6 +99324,101 @@
         }
       }
     },
+    "/api/v1/opportunities/work-queue": {
+      "get": {
+        "summary": "Get the current user work queue",
+        "description": "Returns the shared server-composed opportunity work queue for the authenticated API-key user.",
+        "tags": [
+          "Opportunities v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "opportunities"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityWorkQueueSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for the opportunities resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Opportunity or nested resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Opportunity state conflicts with the requested operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/opportunities/{id}": {
       "get": {
         "summary": "Get opportunity",
@@ -98401,6 +99678,114 @@
         "responses": {
           "204": {
             "description": "Operation succeeded with no response body."
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for the opportunities resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Opportunity or nested resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Opportunity state conflicts with the requested operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/opportunities/{id}/timeline": {
+      "get": {
+        "summary": "List opportunity timeline",
+        "description": "Lists interactions linked to the opportunity, newest first.",
+        "tags": [
+          "Opportunities v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "opportunities"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opportunity UUID from opportunities.opportunity_id."
+            },
+            "required": true,
+            "description": "Opportunity UUID from opportunities.opportunity_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityTimelineSuccessV1"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation or request parsing failure.",
@@ -102920,6 +104305,2641 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MarketingApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interactions": {
+      "get": {
+        "summary": "List interactions",
+        "tags": [
+          "Interactions v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "interaction"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "contact_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "opportunity_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "ticket_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "project_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "user_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "type_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "date_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "date_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "required": false,
+            "name": "page_size",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated tenant interactions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionListV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or query parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interaction RBAC denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interaction not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an interaction",
+        "tags": [
+          "Interactions v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "interaction"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInteractionBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Interaction created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or query parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interaction RBAC denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interaction not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interactions/{id}": {
+      "get": {
+        "summary": "Get an interaction",
+        "tags": [
+          "Interactions v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "interaction"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant interaction.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or query parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interaction RBAC denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interaction not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interaction-types": {
+      "get": {
+        "summary": "List interaction types",
+        "description": "Returns the union of system and tenant-defined interaction types.",
+        "tags": [
+          "Interactions v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "interaction"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "responses": {
+          "200": {
+            "description": "Available interaction types.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionTypeListV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or query parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interaction RBAC denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interaction not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/lookup": {
+      "get": {
+        "summary": "Look up an inventory barcode or identifier",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "inventory",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "code",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/stock": {
+      "get": {
+        "summary": "List stock levels",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "inventory",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "service_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "low_stock",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/stock-locations": {
+      "get": {
+        "summary": "List stock locations",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "inventory",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/units": {
+      "get": {
+        "summary": "List serialized stock units",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "inventory",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "service_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "low_stock",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/units/{unitId}": {
+      "get": {
+        "summary": "Get a serialized stock unit",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "inventory",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "unitId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/receipts": {
+      "post": {
+        "summary": "Receive stock manually",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "inventory",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryLooseBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/adjustments": {
+      "post": {
+        "summary": "Adjust stock",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "inventory",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryLooseBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/counts": {
+      "get": {
+        "summary": "List cycle count sessions",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "cycle_count",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "service_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "low_stock",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Start a cycle count session",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "cycle_count",
+          "x-rbac-action": "create"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryLooseBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/counts/{sessionId}": {
+      "get": {
+        "summary": "Get a cycle count session",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "cycle_count",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/counts/{sessionId}/records": {
+      "post": {
+        "summary": "Record a cycle count quantity",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "cycle_count",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryLooseBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/counts/{sessionId}/submit": {
+      "post": {
+        "summary": "Submit a cycle count session",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "cycle_count",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "sessionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/purchase-orders": {
+      "get": {
+        "summary": "List purchase orders",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "purchase_order",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "service_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "low_stock",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/purchase-orders/{poId}": {
+      "get": {
+        "summary": "Get a purchase order",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "purchase_order",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "poId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/purchase-orders/{poId}/lines/{lineId}/receive": {
+      "post": {
+        "summary": "Receive a purchase-order line",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "purchase_order",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "poId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "lineId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryLooseBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/transfers": {
+      "get": {
+        "summary": "List stock transfers",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "stock_transfer",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "service_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "low_stock",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/transfers/{transferId}/receive": {
+      "post": {
+        "summary": "Receive a stock transfer",
+        "tags": [
+          "Inventory v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "stock_transfer",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "transferId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryLooseSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Product access, RBAC, or location scope denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Inventory resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Inventory state or uniqueness conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mobile/me/capabilities": {
+      "get": {
+        "summary": "Get current mobile feature capabilities",
+        "description": "Returns tenant-product and RBAC-derived mobile feature availability for the authenticated API-key user.",
+        "tags": [
+          "Mobile v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-rbac-resource": "inventory/read and opportunities/read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "responses": {
+          "200": {
+            "description": "Current mobile feature capabilities.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MobileCapabilitiesSuccessV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MobileCapabilitiesApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MobileCapabilitiesApiErrorV1"
                 }
               }
             }
@@ -113920,6 +117940,126 @@
         ],
         "responses": {
           "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/financial/reconciliation/run": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "financial"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/financial/reconciliation/{id}/resolve": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "financial"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {

@@ -9,6 +9,11 @@ const { getEntraSyncRunHistoryMock, fetchMock } = vi.hoisted(() => ({
   fetchMock: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('../utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/integrations');
+});
+
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraSyncRunHistory: getEntraSyncRunHistoryMock,
 }));

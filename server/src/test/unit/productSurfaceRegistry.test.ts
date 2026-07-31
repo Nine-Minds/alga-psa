@@ -31,12 +31,15 @@ describe('product surface registry', () => {
     expect(resolveProductApiBehavior('algadesk', '/api/v1/contacts')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/kb-articles')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/meta/endpoints')).toBe('allowed');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/mobile/me/capabilities')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/email/oauth/initiate')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/tickets/ticket-1/time-entries')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/tickets/ticket-1/materials')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/tickets/from-asset')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/billing')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/financial')).toBe('denied');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/inventory/stock')).toBe('denied');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/opportunities/work-queue')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/unknown-area')).toBe('denied');
   });
 

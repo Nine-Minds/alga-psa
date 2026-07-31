@@ -13,6 +13,7 @@ import { recordMarketingEngagement } from './engagements';
 import { signTrackingDestination } from './signing';
 import { addSuppression, isSuppressed, normalizeEmail } from './suppression';
 import type { SequenceInput } from '../schemas/marketingSchemas';
+import type { MarketingSequenceSendSummary } from './marketingJobContract';
 
 // ---------------------------------------------------------------------------
 // CRUD
@@ -241,14 +242,7 @@ function trackableLinks(html: string, clickBase: string, sign: (url: string) => 
     `href="${clickBase}?u=${encodeURIComponent(url)}&s=${sign(url)}"`);
 }
 
-export interface SequenceSendSummary {
-  sent: number;
-  completed: number;
-  stopped: number;
-  failed: number;
-  /** Steps another runner had already claimed or delivered (idempotent replay). */
-  skipped: number;
-}
+export type SequenceSendSummary = MarketingSequenceSendSummary;
 
 /**
  * Sends every due sequence step for the tenant. Each (enrollment, step) pair

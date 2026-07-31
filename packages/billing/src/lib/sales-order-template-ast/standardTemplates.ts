@@ -40,7 +40,7 @@ const buildStandardSalesOrderConfirmationAst = (): TemplateAst => ({
                 type: 'image',
                 src: { type: 'binding', bindingId: 'tenantLogo' },
                 alt: { type: 'template', template: '{{name}} logo', args: { name: { type: 'binding', bindingId: 'tenantName' } } },
-                style: { inline: { width: '180px', maxHeight: '72px', margin: '0 0 6px 0' } },
+                style: { inline: { width: '180px', maxHeight: '72px', margin: '0 0 6px 0', objectFit: 'contain', objectPosition: 'left' } },
               },
               { id: 'issuer-name', type: 'text', content: { type: 'binding', bindingId: 'tenantName' }, style: { inline: { fontSize: '18px', fontWeight: 700, lineHeight: 1.2 } } },
               { id: 'issuer-address', type: 'text', content: { type: 'binding', bindingId: 'tenantAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },

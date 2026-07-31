@@ -41,6 +41,7 @@ vi.mock('@tiptap/react', () => ({
 vi.mock('@alga-psa/ui/editor', () => ({
   Emoticon: {},
   createYjsProvider: (...args: any[]) => createYjsProvider(...args),
+  AiResponseBlock: {},
   EmojiSuggestionExtension: { configure: vi.fn(() => ({})) },
   EmojiSuggestionPopup: () => null,
   MentionNode: {},

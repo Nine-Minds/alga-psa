@@ -21,9 +21,6 @@ describe('financial service apply-credit tenant-scoped query contract', () => {
 
     expect(applyCreditSection).toContain('tenantDb(');
     expect(applyCreditSection).toContain(".table('invoices')");
-    expect(applyCreditSection).toContain(".table('credit_allocations')");
-    expect(applyCreditSection).toContain(".table('clients')");
-    expect(applyCreditSection).toContain(".table('credit_tracking')");
 
     expect(applyCreditSection).not.toMatch(/trx\('(?:invoices|credit_allocations|clients|credit_tracking)'\)\s*\.(?:where|first|update|delete|sum|select)/);
     expect(applyCreditSection).not.toMatch(/where\(\{\s*[^}]*tenant\s*[,}]/);

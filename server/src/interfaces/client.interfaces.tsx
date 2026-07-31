@@ -18,7 +18,8 @@ export interface IClient extends SharedIClient, TenantEntity, ITaggable {
   is_inactive: boolean;
 
   // Additional server-specific fields
-  credit_balance: number;
+  // Derived from credit_tracking at read time; not a stored column.
+  credit_balance?: number;
   tax_id_number?: string;
   notes_document_id?: string | null;
   properties?: ({ [key: string]: any } & {

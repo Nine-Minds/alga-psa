@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -23,7 +24,7 @@ import type {
 import { getProjectStatuses, getTemplates } from '@alga-psa/projects/actions';
 import {
   completeNextAction,
-  declareQualified,
+  declareOpportunityStage,
   deleteOpportunity,
   linkQuoteToOpportunity,
   listLinkableQuotesForOpportunity,
@@ -62,6 +63,7 @@ export function OpportunityDetailHost({
   drafting,
   autoOpenDraft = false,
   commitments,
+  returnTab,
 }: {
   detail: IOpportunityDetail;
   /** Injected by the host app only when the tenant's AI module allows drafting. */
@@ -70,8 +72,9 @@ export function OpportunityDetailHost({
   autoOpenDraft?: boolean;
   /** EE commitments ledger section, injected when the management tier allows it. */
   commitments?: ReactNode;
+  returnTab?: string;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
   const [completeOpen, setCompleteOpen] = useState(false);
   const [loseOpen, setLoseOpen] = useState(false);
@@ -86,6 +89,7 @@ export function OpportunityDetailHost({
   const [winProjectStatusId, setWinProjectStatusId] = useState('');
   const [winProjectName, setWinProjectName] = useState(detail.title);
   const [winProjectStartDate, setWinProjectStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [winConvertQuoteId, setWinConvertQuoteId] = useState('');
   const [valuesOpen, setValuesOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [linkQuoteOpen, setLinkQuoteOpen] = useState(false);
@@ -95,6 +99,14 @@ export function OpportunityDetailHost({
   const [draftOpen, setDraftOpen] = useState(Boolean(drafting && autoOpenDraft));
 
   const refresh = () => router.refresh();
+
+  // Accepted linked quotes can be converted to a draft agreement as part of
+  // marking the deal won (winOpportunity → prepareOpportunityWinConversions).
+  const acceptedLinkedQuotes = detail.linked_quotes.filter((q) => q.status === 'accepted');
+
+  useEffect(() => {
+    setWinProjectName(detail.title);
+  }, [detail.opportunity_id, detail.title]);
 
   useEffect(() => {
     if (!winOpen) return;
@@ -133,6 +145,16 @@ export function OpportunityDetailHost({
 
   return (
     <>
+      <Button
+        id="opportunity-back-to-list"
+        size="sm"
+        variant="ghost"
+        className="mb-3"
+        onClick={() => router.push(`/msp/opportunities?tab=${encodeURIComponent(returnTab ?? 'queue')}`)}
+      >
+        <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden />
+        {t('opportunities.detail.backToList', 'Back to opportunities')}
+      </Button>
       <OpportunityDetailView
         detail={detail}
         timeline={
@@ -146,9 +168,17 @@ export function OpportunityDetailHost({
         onEditDetails={() => setEditOpen(true)}
         onDraftFollowUp={drafting ? () => setDraftOpen(true) : undefined}
         onCompleteAction={() => setCompleteOpen(true)}
-        onDeclareQualified={(id) =>
-          void run(() => declareQualified(id, undefined), t('opportunities.toast.qualified', 'Qualified checkpoint recorded'))
-        }
+        onStageSelect={(stage) => {
+          if (stage === 'won') {
+            setWinOpen(true);
+            return;
+          }
+          const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+          void run(
+            () => declareOpportunityStage(detail.opportunity_id, stage),
+            t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }),
+          );
+        }}
         onConfidenceChange={(id, confidence: OpportunityConfidence) =>
           void run(() => updateOpportunity(id, { confidence }), t('opportunities.toast.saved', 'Saved'))
         }
@@ -161,7 +191,9 @@ export function OpportunityDetailHost({
             quoteId: 'new',
             opportunityId: detail.opportunity_id,
             clientId: detail.client_id,
-            title: `Quote for ${detail.title}`,
+            title: t('opportunities.detail.quoteTitle', 'Quote for {{title}}', {
+              title: detail.title,
+            }),
           });
           if (detail.contact_id) params.set('contactId', detail.contact_id);
           router.push(`/msp/billing?${params.toString()}`);
@@ -278,6 +310,7 @@ export function OpportunityDetailHost({
             t('opportunities.toast.actionCompleted', 'Done. Next action scheduled.')
           )
         }
+        stage={detail.stage}
       />
       <LoseOpportunityDialog
         isOpen={loseOpen}
@@ -354,6 +387,26 @@ export function OpportunityDetailHost({
                 )}
           </p>
           <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            {acceptedLinkedQuotes.length > 0 ? (
+              <div>
+                <Label htmlFor="opportunity-win-convert-quote">
+                  {t('opportunities.winDialog.convertQuote', 'Convert an accepted quote to a draft agreement (optional)')}
+                </Label>
+                <CustomSelect
+                  id="opportunity-win-convert-quote"
+                  value={winConvertQuoteId}
+                  onValueChange={setWinConvertQuoteId}
+                  disabled={winning}
+                  options={[
+                    { value: '', label: t('opportunities.winDialog.noConvertQuote', 'Do not convert a quote') },
+                    ...acceptedLinkedQuotes.map((q) => ({
+                      value: q.quote_id,
+                      label: `${q.quote_number} · ${formatCurrencyFromMinorUnits(q.total_amount, undefined, q.currency_code)}`,
+                    })),
+                  ]}
+                />
+              </div>
+            ) : null}
             <div>
               <Label htmlFor="opportunity-win-project-template">
                 {t('opportunities.winDialog.projectTemplate', 'Create an onboarding project (optional)')}
@@ -427,12 +480,15 @@ export function OpportunityDetailHost({
                 setWinning(true);
                 try {
                   await run(
-                    () => winOpportunity(detail.opportunity_id, winProjectTemplateId ? {
-                      project_template_id: winProjectTemplateId,
-                      project_name: winProjectName.trim(),
-                      project_status_id: winProjectStatusId || undefined,
-                      project_start_date: winProjectStartDate || undefined,
-                    } : {}),
+                    () => winOpportunity(detail.opportunity_id, {
+                      ...(winProjectTemplateId ? {
+                        project_template_id: winProjectTemplateId,
+                        project_name: winProjectName.trim(),
+                        project_status_id: winProjectStatusId || undefined,
+                        project_start_date: winProjectStartDate || undefined,
+                      } : {}),
+                      ...(winConvertQuoteId ? { convert_quote_id: winConvertQuoteId } : {}),
+                    }),
                     t('opportunities.toast.won', 'Won'),
                   );
                   setWinOpen(false);

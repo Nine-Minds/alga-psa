@@ -13,3 +13,4 @@ export * from './posts';
 export * from './sequences';
 export * from './signing';
 export * from './tracking';
+export * from './marketingJobContract';

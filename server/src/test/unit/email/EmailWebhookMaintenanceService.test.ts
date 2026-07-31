@@ -37,6 +37,14 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // getEmailWebhookBaseUrl reads these; a leaked localhost NEXTAUTH_URL from
+    // another file makes probeSubscription's public-HTTPS guard silently
+    // enter polling mode ('skipped' instead of 'recreated'). setup.ts guards
+    // them per test now, but pin here too — this file's assertions depend on
+    // the resolved URL being public HTTPS.
+    delete process.env.APPLICATION_URL;
+    delete process.env.NEXTAUTH_URL;
+    delete process.env.NEXT_PUBLIC_BASE_URL;
     provider = {
       id: '11111111-1111-4111-8111-111111111111',
       tenant: '22222222-2222-4222-8222-222222222222',
@@ -60,6 +68,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+    let providerListServed = false;
     const query = {
       join: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
@@ -81,9 +90,17 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
           last_reconciliation_cursor: provider.last_reconciliation_at,
         });
       }),
-      select: vi.fn()
-        .mockResolvedValueOnce([provider])
-        .mockResolvedValueOnce([]),
+      // Keyed on call shape, not call order: provider discovery is the only
+      // select rooted at email_providers ('ep.id' first). The old once-queue
+      // ([provider] then []) misaligned whenever fork pairing injected an
+      // extra query, silently emptying the provider list.
+      select: vi.fn().mockImplementation(async (...columns: string[]) => {
+        if (columns[0] === 'ep.id' && !providerListServed) {
+          providerListServed = true;
+          return [provider];
+        }
+        return [];
+      }),
       update: vi.fn().mockImplementation(async (values: Record<string, unknown>) => {
         if (values.webhook_silent_runs === 'webhook_silent_runs + 1') {
           provider.webhook_silent_runs = Number(provider.webhook_silent_runs || 0) + 1;
@@ -192,6 +209,12 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       tenantId: provider.tenant,
     });
 
+    // Root cause of the historic flake in this test: a leaked localhost
+    // NEXTAUTH_URL flipped probeSubscription's public-HTTPS guard into
+    // enterPollingMode ('skipped'). Result asserted first so a regression
+    // prints the action taken.
+    expect(results[0]).toMatchObject({ success: true, action: 'recreated' });
+
     const knex = await mocks.getAdminConnection();
     const query = knex();
     expect(query.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -199,7 +222,6 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       webhook_silent_runs: 0,
       next_subscription_probe_at: null,
     }));
-    expect(results[0]).toMatchObject({ success: true, action: 'recreated' });
   });
 
   it('polling reconciliation imports missed messages without silence detection', async () => {

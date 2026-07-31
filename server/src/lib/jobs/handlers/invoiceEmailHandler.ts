@@ -1,15 +1,15 @@
 import { JobService, JobStepResult } from 'server/src/services/job.service';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
 import { getEmailService } from 'server/src/services/emailService';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
 import { JobStatus } from 'server/src/types/job';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoicePaymentLinkUrlForEmail } from '@alga-psa/billing/actions/paymentActions';
+import { fetchTenantParty } from '@alga-psa/billing/lib/adapters/tenantPartyAdapter';
 import logger from '@alga-psa/core/logger';
-import { tenantDb } from '@alga-psa/db';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 /**
@@ -18,9 +18,8 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 async function getTenantCompanyName(tenantId: string): Promise<string> {
   try {
     const knex = await getConnection();
-    const tenant = await tenantDb(knex, tenantId).table('tenants')
-      .first();
-    return tenant?.company_name || 'Your Company';
+    const party = await fetchTenantParty(knex, tenantId);
+    return party?.name || 'Your Company';
   } catch {
     return 'Your Company';
   }

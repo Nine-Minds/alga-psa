@@ -17,7 +17,7 @@ import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
 import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 import { Temporal } from '@js-temporal/polyfill';
@@ -465,6 +465,7 @@ async function initializeJobScheduler(storageService: StorageService) {
       const rootKnex = await getConnection(null);
       const tenants = await tenantDb(rootKnex, '__billing_cycle_tenant_enumeration__')
         .unscoped('tenants', 'legacy billing cycle scheduler enumerates all tenants to run per-tenant cycle jobs')
+        .whereNull('suspended_at')
         .select('tenant');
 
       // Process each tenant
@@ -522,6 +523,17 @@ async function initializeJobScheduler(storageService: StorageService) {
       if (!tenantRow) {
         tenantExists = false;
         logger.warn('createNextTimePeriods: tenant no longer exists, ending job chain', {
+          tenantId,
+          jobId: job.id
+        });
+        return;
+      }
+
+      // A suspended tenant (cancelled, pending deletion) skips the run but
+      // keeps the chain alive — tenantExists stays true so the finally block
+      // reschedules, and creation resumes automatically after win-back.
+      if (tenantRow.suspended_at) {
+        logger.info('createNextTimePeriods: tenant suspended, skipping run (chain continues)', {
           tenantId,
           jobId: job.id
         });
@@ -627,6 +639,9 @@ async function initializeJobScheduler(storageService: StorageService) {
 
   // Schedule the time periods job for each tenant
   const rootKnex = await getConnection(null);
+  // Deliberately NOT filtered by suspended_at: the chain must stay armed for
+  // suspended tenants (the handler skips per run) so win-back resumes it
+  // without waiting for a server restart.
   const tenants = await tenantDb(rootKnex, '__time_period_tenant_enumeration__')
     .unscoped('tenants', 'legacy time period scheduler enumerates all tenants to schedule per-tenant jobs')
     .select('tenant');

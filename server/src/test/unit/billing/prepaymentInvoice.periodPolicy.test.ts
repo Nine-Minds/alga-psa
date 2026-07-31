@@ -155,37 +155,12 @@ describe('prepayment invoice service-period policy', () => {
       billing_period_end: expect.any(String),
     });
     expect(mocks.db.tables.invoices[0]).not.toHaveProperty('billing_cycle_id');
-    expect(mocks.db.tables.transactions[0]).toMatchObject({
-      invoice_id: 'prepayment-invoice-1',
-      amount: 5000,
-      type: 'credit_issuance',
-      description: 'Credit issued from prepayment',
-    });
-    expect(mocks.db.tables.credit_tracking[0]).toMatchObject({
-      client_id: 'client-1',
-      amount: 5000,
-      remaining_amount: 5000,
-    });
+    // Credit issuance now happens at finalization, not at creation: a draft
+    // prepayment writes no ledger rows and emits no credit-note event.
+    expect(mocks.db.tables.transactions).toHaveLength(0);
+    expect(mocks.db.tables.credit_tracking).toHaveLength(0);
     expect(mocks.db.accessedTables).not.toContain('invoice_charge_details');
-    expect(mocks.buildCreditNoteCreatedPayload).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sourceDocumentKind: 'prepayment_invoice',
-        sourceInvoiceId: 'prepayment-invoice-1',
-        sourceInvoiceNumber: 'INV-1001',
-        sourceInvoiceStatus: 'draft',
-        sourceInvoiceDateBasis: 'financial_document_date',
-        sourceServicePeriodStart: null,
-        sourceServicePeriodEnd: null,
-      }),
-    );
-    expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        eventType: 'CREDIT_NOTE_CREATED',
-        payload: expect.objectContaining({
-          sourceDocumentKind: 'prepayment_invoice',
-          sourceInvoiceDateBasis: 'financial_document_date',
-        }),
-      }),
-    );
+    expect(mocks.buildCreditNoteCreatedPayload).not.toHaveBeenCalled();
+    expect(mocks.publishWorkflowEvent).not.toHaveBeenCalled();
   });
 });

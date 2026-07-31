@@ -8,6 +8,7 @@ import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } fr
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { createDefaultTaxSettingsInternal } from '@alga-psa/billing/actions';
+import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { ConflictError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
@@ -251,6 +252,7 @@ export class ClientService extends BaseService<IClient> {
       // Select fields
       dataQuery = dataQuery.select(
         'c.*',
+        trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
         trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
       );
 
@@ -289,6 +291,7 @@ export class ClientService extends BaseService<IClient> {
       const client = await clientQuery
         .select(
           'c.*',
+          trx.raw(`${availableCreditSubquerySql('c')} as credit_balance`),
           trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
         )
         .where({ 'c.client_id': id })
@@ -324,8 +327,8 @@ export class ClientService extends BaseService<IClient> {
         properties: data.properties,
         payment_terms: data.payment_terms,
         billing_cycle: data.billing_cycle,
-        credit_balance: 0,
         credit_limit: data.credit_limit,
+        default_currency_code: data.default_currency_code,
         preferred_payment_method: data.preferred_payment_method,
         auto_invoice: data.auto_invoice || false,
         invoice_delivery_method: data.invoice_delivery_method,
@@ -872,11 +875,11 @@ export class ClientService extends BaseService<IClient> {
           .groupBy('client_type')
           .select('client_type', trx.raw('COUNT(*) as count')),
 
-        // Credit balance statistics
+        // Credit balance statistics (derived from credit_tracking)
         clientsTable.clone()
           .select(
-            trx.raw('SUM(credit_balance) as total_credit_balance'),
-            trx.raw('AVG(credit_balance) as average_credit_balance')
+            trx.raw(`SUM(${availableCreditSubquerySql('clients')}) as total_credit_balance`),
+            trx.raw(`AVG(${availableCreditSubquerySql('clients')}) as average_credit_balance`)
           )
           .first()
       ]);
@@ -932,10 +935,10 @@ export class ClientService extends BaseService<IClient> {
           query.where('c.region_code', value);
           break;
         case 'credit_balance_min':
-          query.where('c.credit_balance', '>=', value);
+          query.whereRaw(`${availableCreditSubquerySql('c')} >= ?`, [value]);
           break;
         case 'credit_balance_max':
-          query.where('c.credit_balance', '<=', value);
+          query.whereRaw(`${availableCreditSubquerySql('c')} <= ?`, [value]);
           break;
         case 'has_credit_limit':
           if (value) {

@@ -9,7 +9,6 @@
  * - Financial reporting and analytics
  * - Payment method management
  * - Transaction history and auditing
- * - Financial reconciliation processes
  * - Bulk financial operations
  */
 
@@ -73,10 +72,6 @@ import {
   UpdateContractLineRequest,
   calculateBillingSchema,
   
-  // Reconciliation schemas
-  createCreditReconciliationReportSchema,
-  reconciliationListQuerySchema,
-  CreateCreditReconciliationReportRequest,
   
   // Reporting schemas
   financialAnalyticsQuerySchema,
@@ -91,7 +86,6 @@ import {
   BulkCreditOperation,
   
   // Utility schemas
-  validateCreditBalanceSchema,
   updateBillingSettingsSchema
 } from '../schemas/financialSchemas';
 
@@ -331,29 +325,6 @@ export class ApiFinancialController extends ApiBaseController {
 
           const result = await this.financialService.transferCredit(validatedData, apiRequest.context!);
           return createSuccessResponse(result, 201);
-        });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
-  }
-
-  /**
-   * POST /api/v1/financial/credits/balance/validate - Validate credit balance
-   */
-  validateCreditBalance() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        const apiRequest = await this.authenticate(req);
-        
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'read');
-
-          const body = await apiRequest.json();
-          const validatedData = validateCreditBalanceSchema.parse(body);
-
-          const result = await this.financialService.validateCreditBalance(validatedData.client_id, apiRequest.context!);
-          return createSuccessResponse(result);
         });
       } catch (error) {
         return handleApiError(error);
@@ -602,64 +573,6 @@ export class ApiFinancialController extends ApiBaseController {
           const validatedQuery = financialAnalyticsQuerySchema.parse(query);
 
           const result = await this.financialService.getFinancialAnalytics(validatedQuery, apiRequest.context!);
-          return createSuccessResponse(result);
-        });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
-  }
-
-  // ============================================================================
-  // RECONCILIATION ENDPOINTS
-  // ============================================================================
-
-  /**
-   * POST /api/v1/financial/reconciliation/run - Run reconciliation
-   */
-  runReconciliation() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        const apiRequest = await this.authenticate(req);
-        
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'update');
-
-          const url = new URL(apiRequest.url);
-          const clientId = url.searchParams.get('client_id') || undefined;
-
-          const result = await this.financialService.runCreditReconciliation(clientId, apiRequest.context!);
-          return createSuccessResponse(result);
-        });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
-  }
-
-  /**
-   * POST /api/v1/financial/reconciliation/{id}/resolve - Resolve reconciliation report
-   */
-  resolveReconciliationReport() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        const apiRequest = await this.authenticate(req);
-        
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
-          await this.checkPermission(apiRequest, 'update');
-
-          const body = await apiRequest.json();
-          const notesSchema = z.object({
-            notes: z.string().optional()
-          });
-          const validatedData = notesSchema.parse(body);
-
-          const reportId = await this.extractIdFromPath(apiRequest);
-          const result = await this.financialService.resolveReconciliationReport(
-            reportId,
-            validatedData.notes,
-            apiRequest.context!
-          );
           return createSuccessResponse(result);
         });
       } catch (error) {

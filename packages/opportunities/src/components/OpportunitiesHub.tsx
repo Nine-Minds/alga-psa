@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -12,6 +12,7 @@ import type {
   IOpportunityListItem,
   IWorkQueue,
   OpportunityLossReason,
+  OpportunityStage,
 } from '@alga-psa/types';
 import {
   completeNextAction,
@@ -44,26 +45,33 @@ export function OpportunitiesHub({
   clients,
   draftingAvailable = false,
   eeTabs = [],
-  renderProspectCreator,
+  renderClientCreator,
+  userPreferenceKey,
 }: {
   initialItems: IOpportunityListItem[];
   initialTotal: number;
   initialQueue: IWorkQueue;
   clients: IClient[];
   draftingAvailable?: boolean;
-  renderProspectCreator?: (onCreated: (client: IClient) => void) => ReactNode;
+  renderClientCreator?: (props: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onCreated: (client: IClient) => void;
+  }) => ReactNode;
+  userPreferenceKey: string;
   /** EE surfaces (Meeting, Forecast) injected by the host app when the management tier allows them. */
   eeTabs?: Array<{ id: string; label: string; content: ReactNode }>;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<IOpportunityListItem[]>(initialItems);
   const [queue, setQueue] = useState<IWorkQueue>(initialQueue);
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState('queue');
+  const [tab, setTab] = useState(() => searchParams.get('tab') ?? 'queue');
   const [createOpen, setCreateOpen] = useState(false);
-  const [completeFor, setCompleteFor] = useState<string | null>(null);
+  const [completeFor, setCompleteFor] = useState<{ id: string; stage: OpportunityStage } | null>(null);
   const [loseFor, setLoseFor] = useState<string | null>(null);
   const [onePagerFor, setOnePagerFor] = useState<string | null>(null);
 
@@ -79,8 +87,8 @@ export function OpportunitiesHub({
   }, [page]);
 
   const openDeal = useCallback(
-    (opportunityId: string) => router.push(`/msp/opportunities/${opportunityId}`),
-    [router]
+    (opportunityId: string) => router.push(`/msp/opportunities/${opportunityId}?fromTab=${tab}`),
+    [router, tab]
   );
 
   const handleCreate = async (input: CreateOpportunityInput) => {
@@ -98,7 +106,7 @@ export function OpportunitiesHub({
   const handleComplete = async (nextAction: string, dueIso: string) => {
     if (!completeFor) return;
     try {
-      await completeNextAction(completeFor, { next_action: nextAction, next_action_due: dueIso });
+      await completeNextAction(completeFor.id, { next_action: nextAction, next_action_due: dueIso });
       toast.success(t('opportunities.toast.actionCompleted', 'Done. Next action scheduled.'));
       await refresh();
     } catch (err) {
@@ -196,6 +204,24 @@ export function OpportunitiesHub({
 
   const openItems = useMemo(() => items.filter((i) => i.status === 'open'), [items]);
   const closedItems = useMemo(() => items.filter((i) => i.status !== 'open'), [items]);
+  const requestedStage = searchParams.get('stage');
+  const initialPipelineStage = (
+    ['identified', 'qualified', 'assessment', 'proposed', 'verbal', 'won', 'lost'] as const
+  ).find((stage) => stage === requestedStage);
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab') ?? 'queue';
+    const validTabs = new Set(['queue', 'pipeline', 'board', 'suggestions', ...eeTabs.map((item) => item.id)]);
+    setTab(validTabs.has(requestedTab) ? requestedTab : 'queue');
+  }, [eeTabs, searchParams]);
+
+  const handleTabChange = (nextTab: string) => {
+    setTab(nextTab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', nextTab);
+    if (nextTab !== 'pipeline') params.delete('stage');
+    router.replace(`/msp/opportunities?${params.toString()}`, { scroll: false });
+  };
 
   const tabs = [
     {
@@ -204,7 +230,7 @@ export function OpportunitiesHub({
       content: (
         <WorkQueue
           queue={queue}
-          onCompleteAction={setCompleteFor}
+          onCompleteAction={(id, stage) => setCompleteFor({ id, stage })}
           onOpenOpportunity={openDeal}
           onSnooze={handleSnooze}
           onMarkLost={setLoseFor}
@@ -215,6 +241,7 @@ export function OpportunitiesHub({
           onReviewDraft={
             draftingAvailable ? (id) => router.push(`/msp/opportunities/${id}?draft=1`) : undefined
           }
+          preferenceKey={`opportunities.queue.view.${userPreferenceKey}`}
         />
       ),
     },
@@ -225,6 +252,7 @@ export function OpportunitiesHub({
         <PipelineList
           items={items}
           onOpen={openDeal}
+          initialStage={initialPipelineStage}
           pagination={{ currentPage: page, pageSize: PAGE_SIZE, totalItems: total, onPageChange: (p) => void refresh(p) }}
         />
       ),
@@ -307,19 +335,20 @@ export function OpportunitiesHub({
           {t('opportunities.new', 'New opportunity')}
         </Button>
       </div>
-      <CustomTabs tabs={tabs} value={tab} onTabChange={setTab} />
+      <CustomTabs tabs={tabs} value={tab} onTabChange={handleTabChange} />
 
       <CreateOpportunityDialog
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         clients={clients}
-        renderProspectCreator={renderProspectCreator}
+        renderClientCreator={renderClientCreator}
         onSubmit={handleCreate}
       />
       <CompleteActionDialog
         isOpen={completeFor != null}
         onClose={() => setCompleteFor(null)}
         onSubmit={handleComplete}
+        stage={completeFor?.stage}
       />
       <LoseOpportunityDialog isOpen={loseFor != null} onClose={() => setLoseFor(null)} onSubmit={handleLose} />
       <TmOnePagerDialog

@@ -72,6 +72,8 @@ export type CatalogPickerItem = Pick<
   'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku'
 > & {
   default_rate: number;
+  cost: number | null;
+  cost_currency: string | null;
 } & import('@alga-psa/inventory/lib/integrationTypes').PickerStockFields;
 
 export const searchServiceCatalogForPicker = withAuth(async (

@@ -10,6 +10,9 @@ import type {
   TemplateValueFormat,
 } from '@alga-psa/types';
 import { formatTemplateFieldValue } from './fieldFormatting';
+
+// Last-resort currency when template metadata carries an invalid code.
+const FALLBACK_CURRENCY = 'USD';
 import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
@@ -228,7 +231,8 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
         currency: ctx.currencyCode || 'USD',
       }).format(numeric / 100);
     } catch {
-      return formatCurrencyFromMinorUnits(numeric, 'en-US', 'USD');
+      // Invalid currency code in template metadata — last-resort fallback.
+      return formatCurrencyFromMinorUnits(numeric, ctx.locale, FALLBACK_CURRENCY);
     }
   }
 
@@ -478,6 +482,7 @@ const renderNode = (
         value: value ?? node.emptyValue ?? '',
         format: node.format,
         currencyCode: ctx.currencyCode,
+        locale: ctx.locale,
         displayFormat: node.displayFormat,
       });
       const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline

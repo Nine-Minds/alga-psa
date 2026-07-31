@@ -25,14 +25,14 @@ describe('invoice service lower helper tenant-scoped query contract', () => {
     expect(helperSection).toContain(".table('client_billing_cycles')");
     expect(helperSection).toContain(".table('tax_rates')");
     expect(helperSection).toContain(".table('invoice_payments')");
-    expect(helperSection).toContain(".table('invoice_credits')");
+    expect(helperSection).toContain(".table('credit_allocations')");
 
     expect(helperSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|first)/);
     expect(helperSection).not.toMatch(/trx\('clients as c'\)\s*\./);
     expect(helperSection).not.toMatch(/trx\('client_billing_cycles'\)\s*\./);
     expect(helperSection).not.toMatch(/trx\('tax_rates'\)\s*\./);
     expect(helperSection).not.toMatch(/trx\('invoice_payments'\)\s*\.(?:where|orderBy)/);
-    expect(helperSection).not.toMatch(/trx\('invoice_credits'\)\s*\.(?:where|orderBy)/);
+    expect(helperSection).not.toMatch(/trx\('credit_allocations'\)\s*\.(?:where|orderBy)/);
     expect(helperSection).not.toMatch(/\.where\(\{\s*invoice_id: invoiceId,\s*tenant: context\.tenant\s*\}\)/);
   });
 });

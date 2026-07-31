@@ -86,6 +86,7 @@ import {
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
   } from './clientDetailsEntraSyncAction';
+import { useEntraSyncPermission } from './useEntraSyncPermission';
 
 function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -295,10 +296,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
     defaultValue: false,
   });
+  const entraSyncPermission = useEntraSyncPermission();
   const showEntraSyncAction = shouldShowEntraSyncAction(
     isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
     entraClientSyncFlag.enabled,
-    editedClient
+    editedClient,
+    entraSyncPermission.canManage
   );
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
   // F070: EE + Hudu connected + this client mapped.

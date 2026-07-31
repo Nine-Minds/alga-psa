@@ -13,3 +13,4 @@ export * from './visibilityGroupActions';
 export * from './dashboard';
 export * from './notificationActivities';
 export * from './client-assets';
+export * from './clientPortalFeatureSettingsActions';

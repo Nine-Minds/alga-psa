@@ -291,11 +291,6 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const ReconciliationResolveBody = registry.registerSchema(
-    'FinancialReconciliationResolveBody',
-    zOpenApi.object({ notes: zOpenApi.string().optional() }),
-  );
-
   const InvoiceCreateBody = registry.registerSchema(
     'InvoiceCreateBody',
     zOpenApi.object({
@@ -746,44 +741,6 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
       edition: 'both',
     });
   }
-
-  registry.registerRoute({
-    method: 'post',
-    path: '/api/v1/financial/reconciliation/run',
-    summary: 'Run financial reconciliation',
-    description: 'Triggers FinancialService.runCreditReconciliation(). Optional client_id query narrows reconciliation target.',
-    tags: [financialTag],
-    security: [{ ApiKeyAuth: [] }],
-    request: { query: FinancialListQuery },
-    responses: {
-      200: { description: 'Reconciliation run completed.', schema: ApiSuccess },
-      401: { description: 'API key missing/invalid.', schema: ApiError },
-      403: { description: 'financial:update permission denied.', schema: ApiError },
-      500: { description: 'Unexpected reconciliation failure.', schema: ApiError },
-    },
-    extensions: { ...commonExtensions, 'x-rbac-resource': 'financial', 'x-rbac-action': 'update' },
-    edition: 'both',
-  });
-
-  registry.registerRoute({
-    method: 'post',
-    path: '/api/v1/financial/reconciliation/{id}/resolve',
-    summary: 'Resolve reconciliation report',
-    description: 'Resolves one reconciliation report by id with optional operator notes.',
-    tags: [financialTag],
-    security: [{ ApiKeyAuth: [] }],
-    request: { params: UuidIdParam, body: { schema: ReconciliationResolveBody } },
-    responses: {
-      200: { description: 'Reconciliation report resolved.', schema: ApiSuccess },
-      400: { description: 'Invalid id or payload.', schema: ApiError },
-      401: { description: 'API key missing/invalid.', schema: ApiError },
-      403: { description: 'financial:update permission denied.', schema: ApiError },
-      404: { description: 'Reconciliation report not found.', schema: ApiError },
-      500: { description: 'Unexpected resolution failure.', schema: ApiError },
-    },
-    extensions: { ...commonExtensions, 'x-rbac-resource': 'financial', 'x-rbac-action': 'update' },
-    edition: 'both',
-  });
 
   const financialReportRoutes: Array<[string, string, string]> = [
     ['/api/v1/financial/reports/aging', 'Get aging report', 'Returns aging buckets and summary for tenant-wide receivables or one client.'],

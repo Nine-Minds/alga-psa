@@ -8,8 +8,8 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from '@alga-psa/db';
 import { toISODate } from '@alga-psa/core';
 // import { auditLog } from '@alga-psa/db';
-import ClientContractLine from '../models/clientContractLine';
-import { applyCreditToInvoice } from './creditActions';
+import { applyCreditToInvoice, resolveCreditExpirationDate } from './creditActions';
+import { getAvailableCredit } from '../lib/creditBalance';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
@@ -273,7 +273,7 @@ async function issueProjectDepositCreditsForInvoice(
     const client = await tenantScopedTable(trx, tenant, 'clients')
       .where({ client_id: invoice.client_id })
       .forUpdate()
-      .first('credit_balance');
+      .first('client_id');
     if (!client) {
       throw new Error(`Client ${invoice.client_id} not found`);
     }
@@ -296,7 +296,11 @@ async function issueProjectDepositCreditsForInvoice(
       expirationDate = expiresAt.toISOString();
     }
 
-    let balance = Number(client.credit_balance ?? 0);
+    const lastTransaction = await tenantScopedTable(trx, tenant, 'transactions')
+      .where({ client_id: invoice.client_id })
+      .orderBy('created_at', 'desc')
+      .first();
+    let balance = Number(lastTransaction?.balance_after ?? 0);
     const events: ProjectDepositCreditEvent[] = [];
     for (const deposit of deposits) {
       const projectId = String(deposit.project_id);
@@ -364,12 +368,6 @@ async function issueProjectDepositCreditsForInvoice(
       });
     }
 
-    if (events.length > 0) {
-      await tenantScopedTable(trx, tenant, 'clients')
-        .where({ client_id: invoice.client_id })
-        .update({ credit_balance: balance, updated_at: now });
-    }
-
     return events;
   });
 }
@@ -385,7 +383,6 @@ async function rollbackProjectDepositCreditsForInvoice(
     .whereRaw("metadata->>'project_billing_credit_kind' = ?", ['project_deposit'])
     .select('transaction_id');
 
-  let balanceRollback = 0;
   for (const transaction of transactions) {
     const credit = await tenantScopedTable(trx, tenant, 'credit_tracking')
       .where({ transaction_id: transaction.transaction_id })
@@ -396,7 +393,6 @@ async function rollbackProjectDepositCreditsForInvoice(
       );
     }
     if (credit) {
-      balanceRollback += Number(credit.remaining_amount ?? 0);
       await tenantScopedTable(trx, tenant, 'credit_tracking')
         .where({ credit_id: credit.credit_id })
         .delete();
@@ -404,13 +400,6 @@ async function rollbackProjectDepositCreditsForInvoice(
     await tenantScopedTable(trx, tenant, 'transactions')
       .where({ transaction_id: transaction.transaction_id })
       .delete();
-  }
-
-  if (balanceRollback > 0) {
-    await tenantScopedTable(trx, tenant, 'clients')
-      .where({ client_id: clientId })
-      .decrement('credit_balance', balanceRollback)
-      .update({ updated_at: new Date().toISOString() });
   }
 }
 
@@ -806,11 +795,71 @@ export async function finalizeInvoiceWithKnex(
   const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
 
   if (invoice && invoiceCreditHandlingKind === 'prepayment') {
-    // For prepayment invoices, update the client's credit balance
-    await ClientContractLine.updateClientCredit(invoice.client_id, invoice.subtotal);
+    // Prepayment credit is issued here, at finalization — a draft prepayment
+    // grants nothing. The invoice carries the chosen expiration date from
+    // creation; absent one, the client/default billing settings decide.
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const now = new Date().toISOString();
+      const creditAmount = invoice.subtotal;
+      const currencyCode = String(invoice.currency_code ?? 'USD');
+      const expirationDate = invoice.credit_expiration_date
+        ? new Date(invoice.credit_expiration_date).toISOString()
+        : await resolveCreditExpirationDate(trx, tenant, invoice.client_id);
 
-    // Log the credit update
-    console.log(`Updated credit balance for client ${invoice.client_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
+      const lastTransaction = await tenantScopedTable(trx, tenant, 'transactions')
+        .where({ client_id: invoice.client_id })
+        .orderBy('created_at', 'desc')
+        .first();
+
+      const transactionId = uuidv4();
+      await tenantScopedTable(trx, tenant, 'transactions').insert({
+        transaction_id: transactionId,
+        client_id: invoice.client_id,
+        invoice_id: invoiceId,
+        amount: creditAmount,
+        type: 'credit_issuance',
+        status: 'completed',
+        description: 'Credit issued from prepayment',
+        created_at: now,
+        balance_after: (lastTransaction?.balance_after || 0) + creditAmount,
+        tenant,
+        expiration_date: expirationDate,
+        currency_code: currencyCode
+      });
+
+      const creditNoteId = uuidv4();
+      await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
+        credit_id: creditNoteId,
+        tenant,
+        client_id: invoice.client_id,
+        transaction_id: transactionId,
+        amount: creditAmount,
+        remaining_amount: creditAmount,
+        created_at: now,
+        expiration_date: expirationDate,
+        is_expired: false,
+        updated_at: now,
+        currency_code: currencyCode
+      });
+
+      createdCreditNote = {
+        creditNoteId,
+        clientId: invoice.client_id,
+        createdAt: now,
+        createdByUserId: userId,
+        amount: creditAmount,
+        currency: currencyCode,
+        sourceDocumentKind: 'prepayment_invoice',
+        sourceInvoiceId: invoiceId,
+        sourceInvoiceNumber: invoice.invoice_number ?? null,
+        sourceInvoiceStatus: 'sent',
+        sourceInvoiceDateBasis: 'financial_document_date',
+        sourceServicePeriodStart: null,
+        sourceServicePeriodEnd: null,
+      };
+    });
+
+    console.log(`Issued prepayment credit of ${invoice.subtotal} for client ${invoice.client_id} from invoice ${invoiceId}`);
   }
   // Handle regular invoices with negative totals
   else if (invoice && invoiceCreditHandlingKind === 'negative_total') {
@@ -818,59 +867,15 @@ export async function finalizeInvoiceWithKnex(
     const creditAmount = Math.abs(invoice.total_amount);
 
     // Update client credit balance and record transaction in a single transaction
-    // We handle this directly without using ClientContractLine.updateClientCredit to avoid validation issues
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       const now = new Date().toISOString();
-      // Get current credit balance
-      const client = await tenantScopedTable(trx, tenant, 'clients')
+      const expirationDate = await resolveCreditExpirationDate(trx, tenant, invoice.client_id);
+
+      const lastTransaction = await tenantScopedTable(trx, tenant, 'transactions')
         .where({ client_id: invoice.client_id })
-        .select('credit_balance')
+        .orderBy('created_at', 'desc')
         .first();
 
-      if (!client) {
-        throw new Error(`Client ${invoice.client_id} not found`);
-      }
-
-      // Get client's credit expiration settings or default settings
-      const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
-        .where({
-          client_id: invoice.client_id
-        })
-        .first();
-
-      const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
-        .first();
-
-      // Determine expiration days - use client setting if available, otherwise use default
-      let expirationDays: number | undefined;
-      if (clientSettings?.credit_expiration_days != null) {
-        expirationDays = clientSettings.credit_expiration_days;
-      } else if (defaultSettings?.credit_expiration_days != null) {
-        expirationDays = defaultSettings.credit_expiration_days;
-      }
-
-      // Calculate expiration date if applicable
-      let expirationDate: string | undefined;
-      if (expirationDays && expirationDays > 0) {
-        const today = new Date();
-        const expDate = new Date(today);
-        expDate.setDate(today.getDate() + expirationDays);
-        expirationDate = expDate.toISOString();
-      }
-
-      // Calculate new balance
-      const newBalance = (client.credit_balance || 0) + creditAmount;
-
-      // Update client credit balance within the transaction
-      await tenantScopedTable(trx, tenant, 'clients')
-        .where({ client_id: invoice.client_id })
-        .update({
-          credit_balance: newBalance,
-          updated_at: new Date().toISOString()
-        });
-
-      // Record transaction with the correct balance and expiration date
-      // Skip validation for negative invoices since we're creating credit
       const transactionId = uuidv4();
       await tenantScopedTable(trx, tenant, 'transactions').insert({
         transaction_id: transactionId,
@@ -881,9 +886,10 @@ export async function finalizeInvoiceWithKnex(
         status: 'completed',
         description: `Credit issued from negative invoice ${invoice.invoice_number}`,
         created_at: now,
-        balance_after: newBalance,
+        balance_after: (lastTransaction?.balance_after || 0) + creditAmount,
         tenant,
-        expiration_date: expirationDate
+        expiration_date: expirationDate,
+        currency_code: String(invoice.currency_code ?? 'USD')
       });
 
       // Create credit tracking entry
@@ -898,7 +904,8 @@ export async function finalizeInvoiceWithKnex(
         created_at: now,
         expiration_date: expirationDate,
         is_expired: false,
-        updated_at: now
+        updated_at: now,
+        currency_code: String(invoice.currency_code ?? 'USD')
       });
 
       createdCreditNote = {
@@ -944,7 +951,7 @@ export async function finalizeInvoiceWithKnex(
   }
   // For regular invoices, check if there's available credit to apply
   else if (invoice && invoice.client_id) {
-    const availableCredit = await ClientContractLine.getClientCredit(invoice.client_id);
+    const availableCredit = await getAvailableCredit(knex, tenant, invoice.client_id, invoice.currency_code ?? undefined);
 
     if (availableCredit > 0) {
       // Get the current invoice with updated totals
@@ -1745,16 +1752,11 @@ export const hardDeleteInvoice = withAuth(async (
             .where({ transaction_id: creditAppTransaction?.transaction_id })
             .delete();
 
-        // Delete the credit application transaction itself
+        // Delete the credit application transaction itself. The restored
+        // remaining_amounts above put the credit back in the derived balance.
         await tenantScopedTable(trx, tenant, 'transactions')
             .where({ transaction_id: creditAppTransaction?.transaction_id })
             .delete();
-
-        // Update the client's credit balance
-        await ClientContractLine.updateClientCredit(
-            invoice.client_id,
-            invoice.credit_applied // Add the credit back
-        );
     }
 
     // Handle credit issued *from* this invoice (if it was negative)
@@ -1789,14 +1791,10 @@ export const hardDeleteInvoice = withAuth(async (
                   voidedByUserId: user.user_id,
                   reason: 'invoice_deleted',
                 });
+                // Deleting the tracking row removes it from the derived balance.
                 await tenantScopedTable(trx, tenant, 'credit_tracking')
                     .where({ credit_id: creditTrackingEntry.credit_id })
                     .delete();
-                // Also update client balance back
-                 await ClientContractLine.updateClientCredit(
-                    invoice.client_id,
-                    -creditTrackingEntry.amount // Subtract the credit that was issued
-                );
             }
         }
         // Delete the credit issuance transaction

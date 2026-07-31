@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const queryRows = vi.hoisted(() => ({
-  value: [] as Array<{ client_id: string; entry_count: string | number }>,
+  value: [] as Array<{ client_id: string; schedule_entry_id: string }>,
 }));
 const whereCalls = vi.hoisted(() => [] as unknown[][]);
 
@@ -42,7 +42,11 @@ describe('recurring project billing readiness warnings', () => {
   });
 
   it('T024: adds a warning without creating a blocker for each due-work identity of the client', async () => {
-    queryRows.value = [{ client_id: 'client-1', entry_count: '2' }];
+    // The action fetches plain entry rows and counts distinct entries in JS.
+    queryRows.value = [
+      { client_id: 'client-1', schedule_entry_id: 'entry-1' },
+      { client_id: 'client-1', schedule_entry_id: 'entry-2' },
+    ];
     const now = new Date('2026-07-15T12:00:00.000Z');
 
     const warnings = await detectRecurringApprovalWarnings({

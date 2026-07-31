@@ -121,6 +121,9 @@ function createDbMock(params: {
         andWhere() {
           return builder;
         },
+        whereNull() {
+          return builder;
+        },
         async first() {
           return params.microsoftRow || null;
         },
@@ -134,6 +137,9 @@ function createDbMock(params: {
           return builder;
         },
         andWhere() {
+          return builder;
+        },
+        whereNull() {
           return builder;
         },
         async first() {
@@ -170,6 +176,9 @@ function createDbMock(params: {
           return builder;
         },
         andWhere() {
+          return builder;
+        },
+        whereNull() {
           return builder;
         },
         async first() {
@@ -229,6 +238,57 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     imapLogoutMock.mockResolvedValue(undefined);
     imapCloseMock.mockResolvedValue(undefined);
     getTenantSecretMock.mockResolvedValue('password-1');
+  });
+
+  it.each([
+    ['T009', 'microsoft', true, '2026-07-23T18:00:00.000Z', 'provider_paused'],
+    ['T010', 'google', true, '2026-07-23T18:00:00.000Z', 'provider_paused'],
+    ['T011', 'imap', true, '2026-07-23T18:00:00.000Z', 'provider_paused'],
+    ['T012', 'microsoft', false, null, 'provider_inactive'],
+  ])('%s: %s gated jobs complete as skips without processing records', async (
+    _id,
+    provider,
+    isActive,
+    inboundPausedAt,
+    expectedReason
+  ) => {
+    const { db, emailProcessedInsertMock } = createDbMock({
+      googleProviderRow: {
+        id: `provider-${provider}-gated`,
+        tenant: 'tenant-1',
+        provider_type: provider,
+        is_active: isActive,
+        inbound_paused_at: inboundPausedAt,
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+    const { processUnifiedInboundEmailQueueJob } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+
+    const result = await processUnifiedInboundEmailQueueJob({
+      jobId: `job-${provider}-gated`,
+      schemaVersion: 1,
+      tenantId: 'tenant-1',
+      providerId: `provider-${provider}-gated`,
+      provider,
+      pointer: provider === 'microsoft'
+        ? { subscriptionId: 'sub-1', messageId: 'msg-1', resource: '/messages/msg-1', changeType: 'created' }
+        : provider === 'google'
+          ? { historyId: '42', emailAddress: 'support@example.com' }
+          : { mailbox: 'INBOX', uid: '77', messageId: 'msg-1' },
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob);
+
+    expect(result).toMatchObject({
+      outcome: 'skipped',
+      skippedCount: 1,
+      reason: expectedReason,
+    });
+    expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
+    expect(emailProcessedInsertMock).not.toHaveBeenCalled();
   });
 
   it('T012: Microsoft pointer fetch resolves full email payload before processing', async () => {

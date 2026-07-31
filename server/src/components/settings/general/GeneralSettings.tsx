@@ -7,6 +7,8 @@ import { Input } from "@alga-psa/ui/components/Input";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@alga-psa/ui/components/Table";
+import { Badge } from "@alga-psa/ui/components/Badge";
+import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -38,6 +40,10 @@ const GeneralSettings = () => {
   const [allClients, setAllClients] = React.useState<IClient[]>([]);
   const [filterState, setFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
+  const [pendingDefaultClient, setPendingDefaultClient] = React.useState<{ id: string; name: string } | null>(null);
+
+  const defaultClient = clients.find(c => c.isDefault) ?? null;
+  const selectableClients = allClients.filter(c => !clients.some(tc => tc.id === c.client_id));
 
   const loadTenantData = async () => {
     try {
@@ -92,6 +98,12 @@ const GeneralSettings = () => {
       const clientToAdd = allClients.find(c => c.client_id === selectedClientId);
       if (!clientToAdd) {
         throw new Error(t('general.messages.error.clientNotFound'));
+      }
+
+      if (clients.some(c => c.id === selectedClientId)) {
+        toast.error(t('general.messages.error.clientAlreadyAdded'));
+        setSelectedClientId(null);
+        return;
       }
 
       const newClient = {
@@ -190,7 +202,15 @@ const GeneralSettings = () => {
           </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">{t('general.clients.title')}</h3>
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">{t('general.clients.title')}</h3>
+            <p className="text-sm text-muted-foreground">{t('general.clients.help')}</p>
+          </div>
+          {defaultClient && (
+            <p className="text-sm">
+              {t('general.clients.currentDefault', { name: defaultClient.name })}
+            </p>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -203,8 +223,11 @@ const GeneralSettings = () => {
               {clients.map((client) => (
                 <TableRow key={client.id}>
                   <TableCell>
-                    <label htmlFor={`default-client-radio-${client.id}`} className="cursor-pointer">
+                    <label htmlFor={`default-client-radio-${client.id}`} className="cursor-pointer inline-flex items-center gap-2">
                       {client.name}
+                      {client.isDefault && (
+                        <Badge variant="success" size="sm">{t('general.clients.yourCompanyBadge')}</Badge>
+                      )}
                     </label>
                   </TableCell>
                   <TableCell>
@@ -213,7 +236,7 @@ const GeneralSettings = () => {
                       name="default-client"
                       id={`default-client-radio-${client.id}`}
                       checked={client.isDefault}
-                      onChange={() => handleSetDefaultClient(client.id)}
+                      onChange={() => setPendingDefaultClient({ id: client.id, name: client.name })}
                       className="h-4 w-4 border-gray-300 text-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 focus-visible:outline-none focus:outline-none cursor-pointer"
                       style={{
                         accentColor: 'rgb(var(--color-primary-500))',
@@ -238,7 +261,7 @@ const GeneralSettings = () => {
           <div className="space-y-4">
             <ClientPicker
               id="tenant-client-picker"
-              clients={allClients}
+              clients={selectableClients}
               onSelect={setSelectedClientId}
               selectedClientId={selectedClientId}
               filterState={filterState}
@@ -258,6 +281,28 @@ const GeneralSettings = () => {
             </Button>
           </div>
         </div>
+
+        <ConfirmationDialog
+          id="change-default-client-dialog"
+          isOpen={pendingDefaultClient !== null}
+          onClose={() => setPendingDefaultClient(null)}
+          onConfirm={async () => {
+            if (!pendingDefaultClient) return;
+            await handleSetDefaultClient(pendingDefaultClient.id);
+            setPendingDefaultClient(null);
+          }}
+          title={t('general.clients.confirmDialog.title')}
+          message={defaultClient
+            ? t('general.clients.confirmDialog.message', {
+                current: defaultClient.name,
+                next: pendingDefaultClient?.name ?? ''
+              })
+            : t('general.clients.confirmDialog.messageInitial', {
+                next: pendingDefaultClient?.name ?? ''
+              })}
+          confirmLabel={t('general.clients.confirmDialog.confirm')}
+          cancelLabel={t('general.clients.confirmDialog.cancel')}
+        />
       </CardContent>
     </Card>
   );

@@ -767,7 +767,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .modify((q) => scopedDb.tenantJoin(q, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id', { type: 'left' }))
       .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false))
       .whereNotNull('c.owner_client_id')
-      .groupBy('c.contract_id', 'oc.client_name')
+      .groupBy('c.tenant', 'c.contract_id', 'oc.client_name')
       .select(
         'c.contract_id',
         'c.contract_name',
@@ -1607,7 +1607,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     if (options.includeServices) {
       query = query
         .modify((q) => tenantDb(knex, context.tenant).tenantJoin(q, 'contract_line_service_configuration as psc', 'cl.contract_line_id', 'psc.contract_line_id', { type: 'left' }))
-        .groupBy('cl.contract_line_id')
+        .groupBy('cl.tenant', 'cl.contract_line_id')
         .select(knex.raw('COUNT(DISTINCT psc.service_id) as total_services'));
     }
 

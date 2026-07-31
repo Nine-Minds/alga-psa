@@ -11,6 +11,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { normalizeGtin } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
@@ -88,6 +89,9 @@ function serviceActionErrorFrom(error: unknown): ServiceActionError | null {
     return actionError('The selected service, category, tax rate, or service type is no longer available. Please refresh and try again.');
   }
   if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('service_catalog_product_barcode_unique')) {
+      return actionError('A product with this barcode already exists. Use a different barcode or edit the existing product.');
+    }
     if (dbError.constraint?.includes('service_catalog_product_sku_unique')) {
       return actionError('A product with this SKU already exists. Use a different SKU or edit the existing product.');
     }
@@ -390,6 +394,7 @@ export const getServices = withAuth(async (
               'sc.item_kind',
               'sc.is_active',
               'sc.sku',
+              'sc.barcode',
               trx.raw('CAST(sc.cost AS FLOAT) as cost'),
               'sc.cost_currency',
               'sc.vendor',
@@ -474,6 +479,16 @@ function normalizeCreateServiceError(serviceData: CreateServiceInput, error: unk
     if (
         typedError?.code === '23505' &&
         serviceData.item_kind === 'product' &&
+        serviceData.barcode?.trim() &&
+        typedError.constraint?.includes('service_catalog_product_barcode_unique')
+    ) {
+        const normalizedBarcode = normalizeGtin(serviceData.barcode);
+        return actionError(`A product with barcode "${normalizedBarcode}" already exists. Use a different barcode or edit the existing product.`);
+    }
+
+    if (
+        typedError?.code === '23505' &&
+        serviceData.item_kind === 'product' &&
         serviceData.sku?.trim() &&
         typedError.constraint?.includes('service_catalog_product_sku_unique')
     ) {
@@ -539,6 +554,9 @@ export const createService = withAuth(async (
                 : serviceData.default_rate,
             // Explicitly handle tax_rate_id to ensure it's null rather than undefined
             tax_rate_id: serviceData.tax_rate_id || null,
+            barcode: serviceData.item_kind === 'product'
+                ? normalizeGtin(serviceData.barcode ?? '') || null
+                : null,
         };
 
             // 4. Create the service using the model
@@ -567,7 +585,7 @@ export const updateService = withAuth(async (
     { tenant },
     serviceId: string,
     serviceData: Partial<IService>
-): Promise<IService | ActionPermissionError> => {
+): Promise<IService | ServiceActionError> => {
     const canUpdate = await hasPermission(user, 'service', 'update');
     if (!canUpdate) {
       return permissionError('Permission denied: Cannot update services/products');
@@ -576,7 +594,13 @@ export const updateService = withAuth(async (
     const { knex: db } = await createTenantKnex();
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
-            const updatedService = await Service.update(trx, serviceId, serviceData);
+            const normalizedServiceData = {
+                ...serviceData,
+                ...(serviceData.barcode !== undefined
+                    ? { barcode: normalizeGtin(serviceData.barcode ?? '') || null }
+                    : {}),
+            };
+            const updatedService = await Service.update(trx, serviceId, normalizedServiceData);
             safeRevalidate('/msp/billing'); // Revalidate the billing page
 
             if (updatedService === null) {
@@ -586,14 +610,16 @@ export const updateService = withAuth(async (
             await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, serviceId, {
                 userId: user.user_id,
                 itemKind: updatedService.item_kind,
-                changedFields: Object.keys(serviceData),
+                changedFields: Object.keys(normalizedServiceData),
             });
 
             return updatedService as IService;
         });
     } catch (error) {
         console.error(`Error updating service with id ${serviceId}:`, error);
-        throw error; // Re-throw the error to be handled by the caller
+        const expected = serviceActionErrorFrom(error);
+        if (expected) return expected;
+        throw error; // Re-throw unexpected errors to be handled by the caller
     }
 });
 

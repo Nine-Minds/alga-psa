@@ -25,7 +25,6 @@ const hoisted = vi.hoisted(() => {
     hasPermissionMock: vi.fn(async () => true),
     assertAddOnAccessMock: vi.fn(async () => undefined),
     assertTierAccessMock: vi.fn(async (_feature: string) => undefined),
-    isEnabledMock: vi.fn(async () => true),
   };
 });
 
@@ -35,10 +34,6 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hoisted.hasPermissionMock,
-}));
-
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: { isEnabled: hoisted.isEnabledMock },
 }));
 
 vi.mock('server/src/lib/tier-gating/assertAddOnAccess', () => ({
@@ -51,7 +46,7 @@ vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   assertTierAccess: hoisted.assertTierAccessMock,
 }));
 
-import { requireEntraUiFlagEnabled } from '@ee/app/api/integrations/entra/_guards';
+import { requireEntraAccess } from '@ee/app/api/integrations/entra/_guards';
 import { TIER_FEATURES, TIER_FEATURE_MAP, tierHasFeature } from '@alga-psa/types';
 
 describe('Entra tier guard (T103)', () => {
@@ -65,7 +60,6 @@ describe('Entra tier guard (T103)', () => {
     hoisted.hasPermissionMock.mockResolvedValue(true);
     hoisted.assertAddOnAccessMock.mockResolvedValue(undefined);
     hoisted.assertTierAccessMock.mockResolvedValue(undefined);
-    hoisted.isEnabledMock.mockResolvedValue(true);
   });
 
   it('T103: returns 403 when the tenant tier does not include Entra Sync', async () => {
@@ -75,7 +69,7 @@ describe('Entra tier guard (T103)', () => {
       }
     });
 
-    const result = await requireEntraUiFlagEnabled('read');
+    const result = await requireEntraAccess('read');
 
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).status).toBe(403);
@@ -86,9 +80,17 @@ describe('Entra tier guard (T103)', () => {
   });
 
   it('T103: passes for a Pro tenant with no add-ons and returns tenant/user context', async () => {
-    const result = await requireEntraUiFlagEnabled('read');
+    const result = await requireEntraAccess('read');
 
-    expect(result).toEqual({ tenantId: 'tenant-1', userId: 'user-1' });
+    expect(result).toEqual({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      user: {
+        user_id: 'user-1',
+        tenant: 'tenant-1',
+        user_type: 'internal',
+      },
+    });
     expect(hoisted.assertTierAccessMock).toHaveBeenNthCalledWith(1, TIER_FEATURES.INTEGRATIONS);
     expect(hoisted.assertTierAccessMock).toHaveBeenNthCalledWith(2, TIER_FEATURES.ENTRA_SYNC);
     expect(hoisted.assertAddOnAccessMock).not.toHaveBeenCalled();
@@ -97,7 +99,7 @@ describe('Entra tier guard (T103)', () => {
   it('rethrows unexpected assertion failures instead of masking them as 403', async () => {
     hoisted.assertTierAccessMock.mockRejectedValue(new Error('database down'));
 
-    await expect(requireEntraUiFlagEnabled('read')).rejects.toThrow('database down');
+    await expect(requireEntraAccess('read')).rejects.toThrow('database down');
   });
 });
 

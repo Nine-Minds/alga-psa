@@ -8,6 +8,7 @@ import { determineDefaultContractLine } from '../lib/contractLineDisambiguation'
 // the dropped `client_contract_lines` table and caused a prod outage on
 // time-entry save. Don't recreate a local copy.
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '@alga-psa/shared/billingClients/bucketUsageService';
+import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
@@ -40,6 +41,7 @@ import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
+import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -499,7 +501,7 @@ export const saveTimeEntry = withAuth(async (
         // Fetch original entry before update to calculate delta
         const originalEntryForUpdate = await trxTenantDb.table('time_entries')
           .where({ entry_id })
-          .select('billable_duration')
+          .select('billable_duration', 'work_item_id', 'work_item_type')
           .first();
         // If original entry not found, maybe throw error or handle gracefully?
         // Throwing error for now as update shouldn't happen if original is gone.
@@ -538,29 +540,12 @@ export const saveTimeEntry = withAuth(async (
           }
         }
 
-        // If this is a project task, update the actual_hours in the project_tasks table
-        if (work_item_type === 'project_task') {
-          // Get all time entries for this task to calculate total actual hours
-          const timeEntries = await trxTenantDb.table('time_entries')
-            .where({
-              work_item_id,
-              work_item_type: 'project_task'
-            })
-            .select('billable_duration');
-
-          // Calculate total minutes from all time entries
-          const totalMinutes = timeEntries.reduce((total: number, entry: any) => total + entry.billable_duration, 0);
-
-          // Store actual_hours as minutes in the database (integer)
-          await trxTenantDb.table('project_tasks')
-            .where({
-              task_id: work_item_id
-            })
-            .update({
-              actual_hours: totalMinutes,
-              updated_at: new Date()
-            });
-        }
+        await recalculateProjectTaskActualHoursForEntryChange(
+          trx,
+          tenant,
+          originalEntryForUpdate,
+          updated,
+        );
       } else {
         // Insert new entry
         const [inserted] = await trxTenantDb.table('time_entries')
@@ -579,30 +564,9 @@ export const saveTimeEntry = withAuth(async (
         resultingEntry = inserted;
         console.log('Inserted entry:', resultingEntry);
 
-        // Add user to ticket_resources or task_resources when a new time entry is created
-        // Also update actual_hours for project tasks
+        // Add user to ticket_resources or task_resources when a new time entry is created.
         if (work_item_type === 'project_task') {
-          // Update actual_hours in project_tasks table
-          // Get all time entries for this task to calculate total actual hours
-          const timeEntries = await trxTenantDb.table('time_entries')
-            .where({
-              work_item_id,
-              work_item_type: 'project_task'
-            })
-            .select('billable_duration');
-
-          // Calculate total minutes from all time entries
-          const totalMinutes = timeEntries.reduce((total: number, entry: any) => total + entry.billable_duration, 0);
-
-          // Store actual_hours as minutes in the database (integer)
-          await trxTenantDb.table('project_tasks')
-            .where({
-              task_id: work_item_id
-            })
-            .update({
-              actual_hours: totalMinutes,
-              updated_at: new Date()
-            });
+          await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, null, inserted);
 
           // Get current task to check if it already has an assignee
           const task = await trxTenantDb.table('project_tasks')
@@ -741,7 +705,12 @@ export const saveTimeEntry = withAuth(async (
                 console.log(`Successfully updated bucket usage for entry ${resultingEntry.entry_id}`);
               } catch (bucketError) {
                 console.error(`Error updating bucket usage for time entry ${resultingEntry.entry_id}:`, bucketError);
-                // Re-throwing ensures data consistency.
+                // Re-throwing ensures data consistency. Keep the typed failure
+                // intact — the action guard maps its code to a message the user
+                // can actually act on.
+                if (isBucketUsageError(bucketError)) {
+                  throw bucketError;
+                }
                 throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
               }
             } else {
@@ -1100,7 +1069,10 @@ export const deleteTimeEntry = withAuth(async (
                 console.log(`Successfully decremented bucket usage for deleted entry ${entryId}`);
               } catch (bucketError) {
                 console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
-                // Re-throwing ensures data consistency.
+                // Re-throwing ensures data consistency; preserve the typed code.
+                if (isBucketUsageError(bucketError)) {
+                  throw bucketError;
+                }
                 throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
               }
             }
@@ -1132,30 +1104,7 @@ export const deleteTimeEntry = withAuth(async (
          }, user.user_id);
       }
 
-      // If this was a project task, update the actual_hours in the project_tasks table
-      if (timeEntry.work_item_type === 'project_task') {
-        // Get all remaining time entries for this task to calculate total actual hours
-        const timeEntries = await trxTenantDb.table('time_entries')
-          .where({
-            work_item_id: timeEntry.work_item_id,
-            work_item_type: 'project_task'
-          })
-          .select('billable_duration');
-
-        // Calculate total minutes from all time entries
-        const totalMinutes = timeEntries.reduce((total: number, entry: any) => total + entry.billable_duration, 0);
-
-        // Store actual_hours as minutes in the database (integer)
-        await trxTenantDb.table('project_tasks')
-          .where({
-            task_id: timeEntry.work_item_id
-          })
-          .update({
-            actual_hours: totalMinutes,
-            updated_at: new Date()
-          });
-         console.log(`Updated actual_hours for project task ${timeEntry.work_item_id}`);
-      }
+      await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, timeEntry, null);
 
       return timeEntry as ITimeEntry;
     });

@@ -130,6 +130,9 @@ vi.mock("../features/ticketDetail/components/DocumentsSection", () => ({
 vi.mock("../features/ticketDetail/components/MaterialsSection", () => ({
   MaterialsSection: (props: Record<string, unknown>) => React.createElement("MockMaterialsSection", props),
 }));
+vi.mock("../features/ticketDetail/components/AssetsSection", () => ({
+  AssetsSection: (props: Record<string, unknown>) => React.createElement("MockAssetsSection", props),
+}));
 
 vi.mock("../features/ticketRichText/TicketRichTextEditor", () => ({
   TicketRichTextEditor: (props: Record<string, unknown>) =>

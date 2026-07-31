@@ -15,7 +15,7 @@
  */
 
 import type { Knex } from "knex";
-import { createTenantKnex, withTransaction } from "@alga-psa/db";
+import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
 import {
   scheduleEntryToActivity,
   ScheduleActivity,
@@ -76,8 +76,8 @@ async function assertCanModifyAdHoc(
   entryId: string,
   user: IUserWithRoles
 ): Promise<void> {
-  const isAssignee = await trx("schedule_entry_assignees")
-    .where({ tenant, entry_id: entryId, user_id: user.user_id })
+  const isAssignee = await tenantDb(trx, tenant).table("schedule_entry_assignees")
+    .where({ entry_id: entryId, user_id: user.user_id })
     .first();
   if (!isAssignee) {
     const [canUpdate, canReadAll] = await Promise.all([
@@ -122,7 +122,8 @@ export async function createAdHocActivityForApi(
   }
 
   const created = await withTransaction(knex, async (trx) => {
-    const [entry] = await trx("schedule_entries")
+    const scopedDb = tenantDb(trx, tenant);
+    const [entry] = await scopedDb.table("schedule_entries")
       .insert({
         tenant,
         title,
@@ -138,7 +139,7 @@ export async function createAdHocActivityForApi(
       })
       .returning("*");
 
-    await trx("schedule_entry_assignees").insert({
+    await scopedDb.table("schedule_entry_assignees").insert({
       tenant,
       entry_id: entry.entry_id,
       user_id: user.user_id,
@@ -165,15 +166,16 @@ export async function getAdHocActivityForApi(
   }
 
   const { knex } = await createTenantKnex(tenant);
-  const entry = await knex("schedule_entries")
-    .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+  const scopedDb = tenantDb(knex, tenant);
+  const entry = await scopedDb.table("schedule_entries")
+    .where({ entry_id: entryId, work_item_type: "ad_hoc" })
     .first();
   if (!entry) {
     throw new Error("Ad-hoc item not found");
   }
 
-  const assignees: string[] = await knex("schedule_entry_assignees")
-    .where({ tenant, entry_id: entryId })
+  const assignees: string[] = await scopedDb.table("schedule_entry_assignees")
+    .where({ entry_id: entryId })
     .pluck("user_id");
 
   return {
@@ -203,15 +205,16 @@ export async function getAdHocActivityAsActivityForApi(
   }
 
   const { knex } = await createTenantKnex(tenant);
-  const entry = await knex("schedule_entries")
-    .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+  const scopedDb = tenantDb(knex, tenant);
+  const entry = await scopedDb.table("schedule_entries")
+    .where({ entry_id: entryId, work_item_type: "ad_hoc" })
     .first();
   if (!entry) {
     throw new Error("Ad-hoc item not found");
   }
 
-  const assigned_user_ids: string[] = await knex("schedule_entry_assignees")
-    .where({ tenant, entry_id: entryId })
+  const assigned_user_ids: string[] = await scopedDb.table("schedule_entry_assignees")
+    .where({ entry_id: entryId })
     .pluck("user_id");
 
   return scheduleEntryToActivity({ ...entry, assigned_user_ids }) as ScheduleActivity;
@@ -240,8 +243,9 @@ export async function updateAdHocActivityForApi(
 
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, async (trx) => {
-    const entry = await trx("schedule_entries")
-      .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+    const scopedDb = tenantDb(trx, tenant);
+    const entry = await scopedDb.table("schedule_entries")
+      .where({ entry_id: entryId, work_item_type: "ad_hoc" })
       .first();
     if (!entry) {
       throw new Error("Ad-hoc item not found");
@@ -267,7 +271,7 @@ export async function updateAdHocActivityForApi(
       patch.scheduled_end = end;
     }
 
-    await trx("schedule_entries").where({ tenant, entry_id: entryId }).update(patch);
+    await scopedDb.table("schedule_entries").where({ entry_id: entryId }).update(patch);
   });
 }
 
@@ -288,8 +292,9 @@ export async function setAdHocActivityDoneForApi(
 
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, async (trx) => {
-    const entry = await trx("schedule_entries")
-      .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+    const scopedDb = tenantDb(trx, tenant);
+    const entry = await scopedDb.table("schedule_entries")
+      .where({ entry_id: entryId, work_item_type: "ad_hoc" })
       .first();
     if (!entry) {
       throw new Error("Ad-hoc item not found");
@@ -297,8 +302,8 @@ export async function setAdHocActivityDoneForApi(
 
     await assertCanModifyAdHoc(trx, tenant, entryId, user);
 
-    await trx("schedule_entries")
-      .where({ tenant, entry_id: entryId })
+    await scopedDb.table("schedule_entries")
+      .where({ entry_id: entryId })
       .update({ status: done ? "closed" : "scheduled", updated_at: trx.fn.now() });
   });
 }
@@ -318,8 +323,9 @@ export async function deleteAdHocActivityForApi(
 
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, async (trx) => {
-    const entry = await trx("schedule_entries")
-      .where({ tenant, entry_id: entryId, work_item_type: "ad_hoc" })
+    const scopedDb = tenantDb(trx, tenant);
+    const entry = await scopedDb.table("schedule_entries")
+      .where({ entry_id: entryId, work_item_type: "ad_hoc" })
       .first();
     if (!entry) {
       throw new Error("Ad-hoc item not found");
@@ -327,7 +333,7 @@ export async function deleteAdHocActivityForApi(
 
     await assertCanModifyAdHoc(trx, tenant, entryId, user);
 
-    await trx("schedule_entry_assignees").where({ tenant, entry_id: entryId }).delete();
-    await trx("schedule_entries").where({ tenant, entry_id: entryId }).delete();
+    await scopedDb.table("schedule_entry_assignees").where({ entry_id: entryId }).delete();
+    await scopedDb.table("schedule_entries").where({ entry_id: entryId }).delete();
   });
 }

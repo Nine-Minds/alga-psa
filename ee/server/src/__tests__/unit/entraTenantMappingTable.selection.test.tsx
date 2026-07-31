@@ -7,22 +7,21 @@ import { EntraTenantMappingTable } from '@ee/components/settings/integrations/En
 const {
   getEntraMappingPreviewMock,
   confirmEntraMappingsMock,
-  skipEntraTenantMappingMock,
-  importEntraTenantAsClientMock,
   getAllClientsMock,
 } = vi.hoisted(() => ({
   getEntraMappingPreviewMock: vi.fn(),
   confirmEntraMappingsMock: vi.fn(),
-  skipEntraTenantMappingMock: vi.fn(),
-  importEntraTenantAsClientMock: vi.fn(),
   getAllClientsMock: vi.fn(),
 }));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('../utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/integrations');
+});
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraMappingPreview: getEntraMappingPreviewMock,
   confirmEntraMappings: confirmEntraMappingsMock,
-  skipEntraTenantMapping: skipEntraTenantMappingMock,
-  importEntraTenantAsClient: importEntraTenantAsClientMock,
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -77,11 +76,6 @@ describe('EntraTenantMappingTable client selection', () => {
       success: true,
       data: { confirmedMappings: 1 },
     });
-    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
-    importEntraTenantAsClientMock.mockResolvedValue({
-      success: true,
-      data: { clientId: 'client-import-default', managedTenantId: 'managed-import-default' },
-    });
   });
 
   it('T059: supports selecting candidate clients for fuzzy and unmatched rows', async () => {
@@ -132,14 +126,17 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(fuzzyRow).toBeTruthy();
     expect(unmatchedRow).toBeTruthy();
 
-    const fuzzySelect = within(fuzzyRow as HTMLElement).getByRole('combobox') as HTMLSelectElement;
-    const unmatchedSelect = within(unmatchedRow as HTMLElement).getByRole('combobox') as HTMLSelectElement;
+    // Re-query between the two changes: the table re-renders on the first
+    // selection, so a node captured beforehand can be detached by the second.
+    const pickerIn = (label: string) =>
+      within(screen.getByText(label).closest('tr') as HTMLElement)
+        .getByRole('combobox') as HTMLSelectElement;
 
-    fireEvent.change(fuzzySelect, { target: { value: 'client-alpha' } });
-    fireEvent.change(unmatchedSelect, { target: { value: 'client-beta' } });
+    fireEvent.change(pickerIn('Fuzzy Tenant'), { target: { value: 'client-alpha' } });
+    fireEvent.change(pickerIn('Unmatched Tenant'), { target: { value: 'client-beta' } });
 
-    expect(fuzzySelect.value).toBe('client-alpha');
-    expect(unmatchedSelect.value).toBe('client-beta');
+    expect(pickerIn('Fuzzy Tenant').value).toBe('client-alpha');
+    expect(pickerIn('Unmatched Tenant').value).toBe('client-beta');
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(
@@ -206,7 +203,7 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(selectTwo.value).toBe('client-two');
   });
 
-  it('T130: importing an unmapped tenant updates status badge to Imported rather than Auto-matched', async () => {
+  it('T144: create-new is provisional until the reviewed decisions are confirmed', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
       data: {
         autoMatched: [],
@@ -222,16 +219,9 @@ describe('EntraTenantMappingTable client selection', () => {
         ],
       },
     });
-    getAllClientsMock
-      .mockResolvedValueOnce([{ client_id: 'client-existing', client_name: 'Existing Client' }])
-      .mockResolvedValueOnce([
-        { client_id: 'client-existing', client_name: 'Existing Client' },
-        { client_id: 'client-imported-130', client_name: 'Unmapped Import Tenant' },
-      ]);
-    importEntraTenantAsClientMock.mockResolvedValue({
-      success: true,
-      data: { managedTenantId: 'managed-unmapped-130', clientId: 'client-imported-130' },
-    });
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-existing', client_name: 'Existing Client' },
+    ]);
 
     render(<EntraTenantMappingTable />);
 
@@ -241,18 +231,22 @@ describe('EntraTenantMappingTable client selection', () => {
 
     fireEvent.click(within(initialRow).getByRole('button', { name: 'Import as new client' }));
 
-    await waitFor(() => {
-      expect(importEntraTenantAsClientMock).toHaveBeenCalledWith({
-        managedTenantId: 'managed-unmapped-130',
-      });
-    });
+    const reviewedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
+    expect(within(reviewedRow).getAllByText('Import as new client').length).toBeGreaterThan(0);
+    expect(confirmEntraMappingsMock).not.toHaveBeenCalled();
+    expect(getAllClientsMock).toHaveBeenCalledTimes(1);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Selected Mappings' }));
     await waitFor(() => {
-      const updatedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
-      expect(within(updatedRow).getByText('Imported')).toBeTruthy();
-      expect(within(updatedRow).queryByText('Auto-matched')).toBeNull();
-      const updatedSelect = within(updatedRow).getByRole('combobox') as HTMLSelectElement;
-      expect(updatedSelect.value).toBe('client-imported-130');
+      expect(confirmEntraMappingsMock).toHaveBeenCalledWith({
+        mappings: [
+          expect.objectContaining({
+            managedTenantId: 'managed-unmapped-130',
+            clientId: null,
+            mappingState: 'create_new',
+          }),
+        ],
+      });
     });
   });
 
@@ -362,7 +356,8 @@ describe('EntraTenantMappingTable client selection', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    const reviewRow = screen.getByText('Review 65').closest('tr') as HTMLElement;
+    fireEvent.click(within(reviewRow).getByRole('button', { name: 'Skip' }));
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(

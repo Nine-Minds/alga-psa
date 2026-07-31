@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { withTenantScope } from '../utils/tenantScopedBuilderDouble';
 
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn();
@@ -37,12 +38,12 @@ describe('queueAmbiguousEntraMatch', () => {
           throw new Error(`Unexpected table ${table}`);
         }
 
-        return {
+        return withTenantScope({
           where: vi.fn(() => ({
             first: firstMock,
           })),
           insert: insertMock,
-        };
+        });
       }),
       {
         fn: {

@@ -2,7 +2,7 @@ import { Job } from 'pg-boss';
 import logger from '@alga-psa/core/logger';
 import { JobHandlerRegistry } from './jobHandlerRegistry';
 import { BaseJobData } from './interfaces';
-import { StorageService } from '../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobService } from '../../services/job.service';
 
 // Import all job handlers
@@ -22,10 +22,6 @@ import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuote
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
 import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
-import {
-  creditReconciliationHandler,
-  CreditReconciliationJobData,
-} from '@alga-psa/jobs/handlers/creditReconciliationHandler';
 import { InvoiceZipJobHandler, InvoiceZipJobData } from './handlers/invoiceZipHandler';
 import { InvoiceEmailHandler, InvoiceEmailJobData } from './handlers/invoiceEmailHandler';
 import {
@@ -288,17 +284,6 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
-  // Credit reconciliation handler
-  JobHandlerRegistry.register<CreditReconciliationJobData & BaseJobData>(
-    {
-      name: 'credit-reconciliation',
-      handler: async (_jobId, data) => {
-        await creditReconciliationHandler(data);
-      },
-      retry: { maxAttempts: 3 },
-    },
-    registerOpts
-  );
 
   // ============================================================================
   // ASSET & IMPORT HANDLERS
@@ -698,7 +683,6 @@ export function getAvailableJobHandlers(): string[] {
     // Credits
     'expired-credits',
     'expiring-credits-notification',
-    'credit-reconciliation',
     'opportunity-discipline',
     'opportunity-weekly-digest',
     'opportunity-generators',

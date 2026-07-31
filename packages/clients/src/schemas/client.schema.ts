@@ -46,7 +46,8 @@ export const ClientSchema = z.object({
   client_id: z.string(),
   client_name: z.string(),
   phone_no: z.string(),
-  credit_balance: z.number().default(0),
+  // Derived from credit_tracking at read time; not a stored column.
+  credit_balance: z.number().optional(),
   email: z.string().email(),
   url: z.string().url(),
   address: z.string(),

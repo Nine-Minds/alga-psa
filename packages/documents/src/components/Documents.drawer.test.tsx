@@ -35,7 +35,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/users/hooks', () => ({
+vi.mock('@alga-psa/user-composition/hooks', () => ({
   useUserPreference: () => ({ value: 'grid', setValue: vi.fn() }),
 }));
 
@@ -59,6 +59,7 @@ vi.mock('../actions/documentActions', () => ({
   removeDocumentAssociations: vi.fn(),
   toggleDocumentVisibility: vi.fn(),
   updateDocument: vi.fn(),
+  ensureEntityFolders: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 vi.mock('../actions/documentBlockContentActions', () => ({
@@ -197,7 +198,9 @@ describe('Documents drawer', () => {
     });
   });
 
-  it('renders FolderTreeView sidebar in entity mode', async () => {
+  // The folder sidebar is folder-mode only (main Documents page); entity
+  // drawers (contract/ticket/asset documents) render the flat document list.
+  it('does not render the folder sidebar in entity mode', async () => {
     render(
       <Documents
         id="documents"
@@ -221,10 +224,9 @@ describe('Documents drawer', () => {
       />
     );
 
-    expect(screen.getByTestId('folder-tree-view')).toBeInTheDocument();
-    expect(screen.getByTestId('folder-tree-view')).toHaveAttribute('data-entity-id', 'entity-1');
-    expect(screen.getByTestId('folder-tree-view')).toHaveAttribute('data-entity-type', 'asset');
-    expect(mockFolderTreeView).toHaveBeenCalled();
+    expect(screen.getByTestId('doc-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('folder-tree-view')).not.toBeInTheDocument();
+    expect(mockFolderTreeView).not.toHaveBeenCalled();
   });
 
   it('opens CollaborativeEditor when editing an in-app document', async () => {
@@ -295,7 +297,7 @@ describe('Documents drawer', () => {
     });
   });
 
-  it('triggers a snapshot when closing the drawer', async () => {
+  it('does not snapshot when closing the drawer', async () => {
     render(
       <Documents
         id="documents"
@@ -327,9 +329,14 @@ describe('Documents drawer', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
+    // Closing must NOT snapshot: the close unmounts CollaborativeEditor and
+    // disconnects from Hocuspocus, so a server-side snapshot would race the
+    // disconnect, read an empty room, and overwrite saved content. Content is
+    // persisted explicitly via Save (covered above).
     await waitFor(() => {
-      expect(syncCollabSnapshot).toHaveBeenCalledWith('doc-1');
+      expect(screen.queryByTestId('collab-editor')).not.toBeInTheDocument();
     });
+    expect(syncCollabSnapshot).not.toHaveBeenCalled();
   });
 
   it('falls back to the single-user editor when collab is unreachable', async () => {
@@ -544,7 +551,7 @@ describe('Documents drawer', () => {
 
     fireEvent.click(screen.getByTestId('doc-card'));
 
-    const nameInput = await screen.findByPlaceholderText('Document Name *');
+    const nameInput = await screen.findByPlaceholderText('Untitled Document');
     fireEvent.change(nameInput, { target: { value: 'Updated Name' } });
 
     expect(nameInput).toHaveValue('Updated Name');

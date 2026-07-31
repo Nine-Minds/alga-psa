@@ -4,6 +4,9 @@
  * @param {import('knex').Knex} knex
  * @returns {Promise<void>}
  */
+
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('project_phase_rate_overrides', (table) => {
     table.uuid('tenant').notNullable();
@@ -37,6 +40,8 @@ exports.up = async function up(knex) {
       COALESCE(service_id, '00000000-0000-0000-0000-000000000000'::uuid)
     )
   `);
+
+  await ensureTenantDistribution(knex, 'project_phase_rate_overrides');
 };
 
 /**
@@ -47,3 +52,6 @@ exports.down = async function down(knex) {
   await knex.raw('DROP INDEX IF EXISTS project_phase_rate_overrides_tenant_phase_service_unique');
   await knex.schema.dropTableIfExists('project_phase_rate_overrides');
 };
+
+// create_distributed_table cannot run inside a transaction on Citus.
+exports.config = { transaction: false };

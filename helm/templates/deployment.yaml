@@ -583,6 +583,9 @@ spec:
           {{- $publicAppUrl := hasPrefix "http" $rawAppUrl | ternary $rawAppUrl (printf "https://%s" $rawAppUrl) }}
           - name: NEXTAUTH_URL
             value: "{{ $publicAppUrl }}"
+          # Runtime-only public URL for server-side jobs and outbound links
+          - name: APPLICATION_URL
+            value: "{{ $publicAppUrl }}"
           # Public base URL for links in emails and client-side code
           - name: NEXT_PUBLIC_BASE_URL
             value: "{{ $publicAppUrl }}"

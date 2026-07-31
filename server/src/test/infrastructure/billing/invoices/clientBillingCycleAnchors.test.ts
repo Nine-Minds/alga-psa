@@ -8,6 +8,7 @@ import { TestContext } from 'server/test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { assignContractLineToClient } from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from 'server/src/lib/db';
 
@@ -121,14 +122,10 @@ describe('Client Billing Cycle Anchors', () => {
     }, 'contract_line_id');
 
     const clientContractLineId = uuidv4();
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: clientContractLineId,
-      client_id: context.clientId,
-      contract_line_id: contractLineId,
-      start_date: options?.startDate ?? '2025-01-01T00:00:00Z',
-      end_date: options?.endDate ?? null,
-      is_active: true,
-      tenant: context.tenantId,
+    await assignContractLineToClient(context, contractLineId, {
+      startDate: options?.startDate ?? '2025-01-01T00:00:00Z',
+      endDate: options?.endDate ?? null,
+      clientContractLineId: clientContractLineId
     });
 
     return { contractLineId, clientContractLineId };

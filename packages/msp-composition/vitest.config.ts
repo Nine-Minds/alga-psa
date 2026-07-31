@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
+  // Match Next's automatic JSX runtime so components can render without importing React.
+  esbuild: { jsx: 'automatic' },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
@@ -14,6 +16,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },
       { find: /^@alga-psa\/scheduling$/, replacement: path.resolve(__dirname, '../scheduling/src/index.ts') },
       { find: /^@alga-psa\/scheduling\/(.*)$/, replacement: path.resolve(__dirname, '../scheduling/src/$1') },
+      { find: /^@alga-psa\/reporting$/, replacement: path.resolve(__dirname, '../reporting/src/index.ts') },
+      { find: /^@alga-psa\/reporting\/(.*)$/, replacement: path.resolve(__dirname, '../reporting/src/$1') },
     ],
   },
 });

@@ -51,8 +51,42 @@ export interface ProjectBilledBarProps {
   currency: string | null;
 }
 
+export interface SeparateProjectProductInvoiceReviewRow {
+  project_material_id: string;
+  service_id: string;
+  service_name: string;
+  description: string | null;
+  quantity: number;
+  rate: number;
+  currency_code: string;
+  total: number;
+}
+
+export interface SeparateProjectProductInvoiceReview {
+  project_id: string;
+  client_id: string;
+  rows: SeparateProjectProductInvoiceReviewRow[];
+}
+
+export type SeparateProjectProductInvoiceReviewResult =
+  | SeparateProjectProductInvoiceReview
+  | ActionMessageErrorShape
+  | ActionPermissionErrorShape;
+
+export type CreateSeparateProjectProductInvoicesResult =
+  | { invoices: Array<{ invoice_id: string; currency_code: string; product_count: number }> }
+  | ActionMessageErrorShape
+  | ActionPermissionErrorShape;
+
 export interface ProjectBillingIntegrationContextType {
   fetchOverview: (projectId: string) => Promise<ProjectBillingOverviewResult>;
+  getSeparateProjectProductInvoiceReview: (
+    projectId: string,
+  ) => Promise<SeparateProjectProductInvoiceReviewResult>;
+  createSeparateProjectProductInvoices: (
+    projectId: string,
+    selectedMaterialIds: string[],
+  ) => Promise<CreateSeparateProjectProductInvoicesResult>;
   BillingView: React.ComponentType<ProjectBillingViewProps>;
   PaymentWarningBanner: React.ComponentType<ProjectPaymentWarningBannerProps>;
   BilledBar: React.ComponentType<ProjectBilledBarProps>;

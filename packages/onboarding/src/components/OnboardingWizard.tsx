@@ -107,7 +107,7 @@ export function OnboardingWizard({
     serviceName: '',
     serviceDescription: '',
     servicePrice: '',
-    serviceBillingMode: 'usage',
+    serviceBillingMode: 'hourly',
     contractLineName: 'hourly',
     currencyCode: 'USD',
 
@@ -143,7 +143,7 @@ export function OnboardingWizard({
 
   const translatedStepLabelsByOriginalIndex = [
     t(isAlgaDesk ? 'onboardingWizard.steps.algadeskWorkspace' : 'onboardingWizard.steps.clientInfo', {
-      defaultValue: isAlgaDesk ? 'Workspace' : 'Client Info'
+      defaultValue: isAlgaDesk ? 'Workspace' : 'Your Company'
     }),
     t('onboardingWizard.steps.teamMembers', {
       defaultValue: 'Team Members'
@@ -556,12 +556,6 @@ export function OnboardingWizard({
         currentStep={currentStep}
         completedSteps={completedSteps}
         onStepClick={handleStepClick}
-        canNavigateToStep={(stepIndex) =>
-          stepIndex === 0 ||
-          stepIndex === currentStep ||  // Current step is always navigable
-          completedSteps.has(stepIndex) ||
-          (stepIndex > 0 && completedSteps.has(stepIndex - 1))
-        }
       />
 
       <div className="mt-8 mb-4">

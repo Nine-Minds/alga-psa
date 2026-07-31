@@ -10,12 +10,13 @@ import logger from '@alga-psa/core/logger';
 interface SendPortalInvitationEmailParams {
   email: string;
   contactName: string;
-  clientName: string;
+  clientName: string;      // Recipient's own client company
+  tenantName?: string;     // MSP sending the invitation
   portalLink: string;
   expirationTime: string;
   tenant: string;
-  clientLocationEmail?: string;
-  clientLocationPhone?: string;
+  supportEmail?: string;   // MSP support contact shown to the recipient
+  supportPhone?: string;
   fromName?: string;
   recipientUserId?: string;
   clientId?: string;  // Client ID (from contact.company_id) for locale resolution when user doesn't exist yet
@@ -25,11 +26,12 @@ export async function sendPortalInvitationEmail({
   email,
   contactName,
   clientName,
+  tenantName,
   portalLink,
   expirationTime,
   tenant,
-  clientLocationEmail,
-  clientLocationPhone,
+  supportEmail,
+  supportPhone,
   fromName: _fromName,
   recipientUserId,
   clientId
@@ -64,15 +66,22 @@ export async function sendPortalInvitationEmail({
         clientId: recipientInfo.clientId
       });
 
-      // Prepare template data
+      // Prepare template data. clientLocationEmail/clientLocationPhone are kept
+      // as aliases of the support contact so template rows that predate the
+      // supportEmail/supportPhone rename still render the right values.
+      const resolvedSupportEmail = supportEmail || 'Not provided';
+      const resolvedSupportPhone = supportPhone || 'Not provided';
       const templateData = {
         contactName,
         clientName,
+        tenantName: tenantName || clientName,
         portalLink,
         expirationTime,
         currentYear: new Date().getFullYear(),
-        clientLocationEmail: clientLocationEmail || 'Not provided',
-        clientLocationPhone: clientLocationPhone || 'Not provided'
+        supportEmail: resolvedSupportEmail,
+        supportPhone: resolvedSupportPhone,
+        clientLocationEmail: resolvedSupportEmail,
+        clientLocationPhone: resolvedSupportPhone
       };
 
       // Create database template processor with locale support
@@ -84,7 +93,7 @@ export async function sendPortalInvitationEmail({
         templateProcessor,
         templateData,
         locale: recipientLocale,
-        replyTo: clientLocationEmail // Client email as reply-to
+        replyTo: supportEmail // MSP support email as reply-to
       };
 
       let result = await tenantEmailService.sendEmail({

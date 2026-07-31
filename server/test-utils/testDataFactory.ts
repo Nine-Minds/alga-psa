@@ -64,7 +64,6 @@ export async function createClient(
     created_at: now,
     updated_at: now,
     is_inactive: options.is_inactive ?? false,
-    credit_balance: options.credit_balance ?? 0,
     client_type: options.client_type,
     tax_id_number: options.tax_id_number,
     notes: options.notes,

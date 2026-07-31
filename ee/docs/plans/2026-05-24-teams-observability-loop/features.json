@@ -398,7 +398,7 @@
   },
   {
     "id": "F050",
-    "description": "Mirror migrations into ee/server/migrations/citus/ ONLY if there is Citus-specific divergence (e.g., distribution must happen outside a transaction). Otherwise keep single CE-compatible migration.",
+    "description": "Guard Citus-specific divergence (e.g., distribution must happen outside a transaction) inline in the single CE-compatible migration; ee/server/migrations/citus/ never executed anything and has been removed.",
     "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"

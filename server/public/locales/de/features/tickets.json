@@ -1139,7 +1139,9 @@
     "clientRequired": "Diesem Ticket muss ein Kunde zugewiesen sein, bevor Materialien hinzugefügt werden können.",
     "serialUnit": "Seriennummer / MAC (serialisiertes Produkt)",
     "selectUnit": "Einheit zum Liefern auswählen...",
-    "onHandByLocation": "Bestand nach Standort"
+    "onHandByLocation": "Bestand nach Standort",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Beobachtungsliste",
@@ -1489,7 +1491,6 @@
       "pausedHint": "Die Uhr ist pausiert, während das Ticket in einem pausierten Status wartet."
     },
     "tiles": {
-      "request": "Anfrage",
       "openedBy": "Geöffnet von {{name}}",
       "showMore": "Mehr anzeigen",
       "showLess": "Weniger anzeigen",

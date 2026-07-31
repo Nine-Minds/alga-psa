@@ -40,13 +40,6 @@ vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => (
   generateInvoiceNumber: vi.fn(async () => 'INV-001'),
 }));
 
-vi.mock('../../../../../packages/billing/src/actions/creditReconciliationActions', () => ({
-  validateCreditBalanceWithoutCorrection: vi.fn(async () => ({
-    isValid: true,
-    actualBalance: 0,
-  })),
-}));
-
 vi.mock('../../../../../packages/billing/src/models/clientContractLine', () => ({
   default: {},
 }));

@@ -213,12 +213,12 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">
           {t('clientInfoStep.header.title', {
-            defaultValue: 'Client Information'
+            defaultValue: 'Your Company & Admin Account'
           })}
         </h2>
         <p className="text-sm text-gray-600">
           {t('clientInfoStep.header.description', {
-            defaultValue: 'Let\'s start by setting up your client profile.'
+            defaultValue: 'Let\'s start with your MSP\'s own company details and your admin login — not a client you support.'
           })}
         </p>
       </div>

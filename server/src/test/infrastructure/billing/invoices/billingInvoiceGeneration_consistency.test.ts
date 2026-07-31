@@ -4,10 +4,17 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { v4 as uuidv4 } from 'uuid';
 import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
-import { generateManualInvoice } from '@alga-psa/billing/actions';
-import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, ensureClientPlanBundlesTable } from '../../../../../test-utils/billingTestHelpers';
+import { generateManualInvoice as generateManualInvoiceRaw } from '@alga-psa/billing/actions';
+import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, ensureClientPlanBundlesTable,
+  unwrapManualInvoice
+} from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import type { IBillingResult, IBillingCharge } from 'server/src/interfaces/billing.interfaces';
+
+// generateManualInvoice returns {success, invoice}; unwrap so call sites keep
+// receiving the invoice itself.
+const generateManualInvoice = async (request: any): Promise<any> =>
+  unwrapManualInvoice(await generateManualInvoiceRaw(request));
 
 
 vi.mock('@alga-psa/auth', async () => {

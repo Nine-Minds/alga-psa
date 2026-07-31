@@ -2597,7 +2597,6 @@ export class ChatCompletionsService {
             if (client.billing_cycle) lines.push(`  billing_cycle: ${client.billing_cycle}`);
             if (client.tax_region) lines.push(`  tax_region: ${client.tax_region}`);
             if (client.is_tax_exempt) lines.push(`  tax_exempt: true`);
-            if (client.credit_balance) lines.push(`  credit_balance: ${client.credit_balance}`);
             if (client.notes) lines.push(`  notes: ${client.notes.slice(0, 300)}`);
             if (client.tags?.length) {
               lines.push(`  tags: ${client.tags.map((tag: any) => tag.tag_text || tag.tag_name || tag).join(', ')}`);

@@ -124,7 +124,9 @@
       "agent": "Agent",
       "client": "Klient",
       "location": "Lokalizacja",
-      "actions": "Działania"
+      "actions": "Działania",
+      "patching": "Poprawki",
+      "coverage": "Zakres"
     },
     "metrics": {
       "totalAssets": {
@@ -428,7 +430,7 @@
       "maintenance": "Konserwacja",
       "relatedAssets": "Powiązane zasoby",
       "documentsPasswords": "Dokumenty i hasła",
-      "auditLog": "Dziennik audytu"
+      "timeline": "Oś czasu"
     }
   },
   "assetDetailView": {
@@ -1130,17 +1132,6 @@
     "title": "Pasek wykorzystania",
     "description": "Udostępniony komponent paska postępu do pomiaru wykorzystania i procentowych wskaźników zasobów"
   },
-  "auditLogTab": {
-    "title": "Dziennik audytu",
-    "description": "Karta historii audytu zasobów zawierająca zdarzenia na osi czasu i zmiany rekordów",
-    "changedBy": "Zmienione przez {{name}}",
-    "userFallback": "użytkownik {{id}}",
-    "empty": "Brak dostępnej historii audytów.",
-    "changeTypes": {
-      "created": "Utworzono",
-      "updated": "Zaktualizowano"
-    }
-  },
   "createMaintenanceScheduleDialog": {
     "title": "Utwórz harmonogram konserwacji",
     "description": "Okno umożliwiające definiowanie harmonogramów konserwacji i reguł powtarzania dla zasobu",
@@ -1397,6 +1388,135 @@
     "values": {
       "yes": "Tak",
       "no": "Nie"
+    }
+  },
+  "assetBento": {
+    "health": "Kondycja",
+    "security": "Bezpieczeństwo",
+    "openTickets": "Otwarte zgłoszenia",
+    "warranty": "Gwarancja",
+    "identity": "Identyfikacja",
+    "tag": "Etykieta",
+    "serial": "Numer seryjny",
+    "status": "Status",
+    "location": "Lokalizacja",
+    "purchased": "Zakupiono",
+    "warrantyEnds": "Gwarancja kończy się",
+    "hardware": "Sprzęt",
+    "os": "System operacyjny",
+    "cpu": "Procesor",
+    "cores": "Rdzenie",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "Nie zapisano szczegółów sprzętu.",
+    "notes": "Notatki",
+    "liveVitals": "Parametry na żywo",
+    "checkedIn": "Ostatni kontakt",
+    "neverCheckedIn": "Nigdy się nie zgłosił",
+    "memory": "Pamięć",
+    "disk": "Dysk",
+    "uptime": "Czas działania",
+    "signedIn": "Zalogowany",
+    "securityTitle": "Bezpieczeństwo",
+    "antivirus": "Antywirus",
+    "pendingPatches": "Oczekujące poprawki",
+    "failedPatches": "Nieudane poprawki",
+    "lastScan": "Ostatnie skanowanie",
+    "agentVersion": "Agent",
+    "noRelated": "Niepowiązany z żadnym innym zasobem.",
+    "manage": "Zarządzaj",
+    "reportedFacts": "Zgłoszone dane",
+    "more": "Pozostałe",
+    "views": "Widoki zasobu",
+    "editAsset": "Edytuj zasób",
+    "viewAll": "Zobacz wszystko",
+    "open": "Otwórz",
+    "close": "Zamknij",
+    "packagesReported": "Zgłoszono {{count}} pakietów",
+    "noSoftware": "Nie zgłoszono inwentaryzacji oprogramowania.",
+    "noService": "Żadne zgłoszenie nie odwołuje się do tego zasobu.",
+    "activeSchedules": "Aktywne harmonogramy",
+    "compliance": "Zgodność",
+    "lastDone": "Ostatnio wykonano",
+    "noMaintenance": "Nic nie zaplanowano.",
+    "docsHint": "Załączniki i poświadczenia tego zasobu."
+  },
+  "assetTimeline": {
+    "title": "Oś czasu",
+    "empty": "Nie zarejestrowano jeszcze nic dla tego zasobu.",
+    "emptyLane": "Nie zarejestrowano zdarzeń typu {{lane}}.",
+    "moreEvents": "Wyświetlono {{shown}} z {{total}} zdarzeń.",
+    "lanes": {
+      "all": "Wszystko",
+      "service": "Serwis",
+      "changes": "Zmiany",
+      "maintenance": "Konserwacja",
+      "system": "System"
+    },
+    "events": {
+      "maintenancePerformed": "Wykonano konserwację",
+      "lastReboot": "Ostatni restart",
+      "patchScan": "Skanowanie poprawek",
+      "patchScanDetail": "{{pending}} oczekujących, {{failed}} nieudanych",
+      "purchased": "Zakupiono"
+    },
+    "changeTypes": {
+      "created": "Utworzono",
+      "updated": "Zaktualizowano",
+      "status_change": "Zmieniono status",
+      "location_change": "Zmieniono lokalizację",
+      "rmm_linked": "Powiązano RMM",
+      "hardware_upgrade": "Zmodernizowano sprzęt",
+      "warranty_updated": "Zaktualizowano gwarancję"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "pozostało {{count}} dni",
+      "expiresToday": "wygasa dzisiaj",
+      "expiredAgo": "wygasła {{count}} dni temu"
+    },
+    "duration": {
+      "dayHour": "{{days}} d {{hours}} godz.",
+      "hourMinute": "{{hours}} godz. {{minutes}} min",
+      "minute": "{{minutes}} min"
+    },
+    "age": {
+      "justNow": "przed chwilą",
+      "minutesAgo": "{{count}} min temu",
+      "hoursAgo": "{{count}} godz. temu",
+      "daysAgo": "{{count}} dni temu"
+    },
+    "patching": {
+      "failed": "{{count}} nieudanych",
+      "pending": "{{count}} oczekujących",
+      "upToDate": "aktualne"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "niezarządzany",
+      "noAgent": "brak agenta RMM",
+      "seen": "widziany {{age}}",
+      "neverSeen": "nigdy nie widziany"
+    },
+    "agentStatus": {
+      "online": "online",
+      "offline": "offline",
+      "overdue": "zaległy",
+      "unknown": "nieznany"
+    },
+    "patching": {
+      "scanned": "skanowano {{age}}",
+      "neverScanned": "nigdy nie skanowano"
+    },
+    "coverage": {
+      "noWarrantyDate": "brak daty gwarancji"
+    },
+    "status": {
+      "active": "aktywny",
+      "inactive": "nieaktywny",
+      "maintenance": "konserwacja"
     }
   }
 }

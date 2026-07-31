@@ -40,6 +40,10 @@ export * from './lib/workDate';
 // Tenant Slug utilities
 export { getTenantIdBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
 
+// Tenant suspension (reversible gate on background activity)
+export { isTenantSuspended, suspendTenant, resumeTenant } from './lib/tenantSuspension';
+export type { TenantSuspensionReason } from './lib/tenantSuspension';
+
 // User with Roles utilities (session-independent)
 export { getUserWithRoles, getUserWithRolesByEmail } from './lib/getUserWithRoles';
 
@@ -49,6 +53,7 @@ export * from './models/index';
 // Service infrastructure
 export * from './services/BaseService';
 export * from './services/SystemContext';
+export * from './services/projectTaskActualHours';
 
 // Connection Management
 export { getConnection as getDbConnection, cleanupConnections } from './lib/connection';

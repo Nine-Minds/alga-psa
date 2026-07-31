@@ -615,7 +615,28 @@ export const getClientInvoiceLineItems = withAuth(async (user, { tenant }, invoi
  * Get invoice templates
  */
 export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<IInvoiceTemplate[]>> => {
+  const knex = await getConnection(tenant);
+
   try {
+    // Same client-context + billing read gate as the other client billing actions
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access invoice data');
+      }
+
+      return null;
+    });
+
+    if (accessError) {
+      return accessError;
+    }
+
     // Get all templates (both standard and tenant-specific)
     const templates = await getInvoiceTemplates();
     if (isClientBillingActionError(templates)) {
@@ -834,8 +855,32 @@ async function pollJobUntilComplete(
  * Get job status for polling - used to check if PDF generation is complete
  */
 export const getClientJobStatus = withAuth(async (user, { tenant }, jobId: string): Promise<ClientBillingActionResult<ClientJobStatus>> => {
+  const knex = await getConnection(tenant);
+
   try {
-    return await getJobStatus(jobId, tenant);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        return permissionError('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        return permissionError('Unauthorized to access invoice data');
+      }
+
+      // Jobs carry no client context — restrict access to jobs the caller
+      // created so a portal user cannot read other users' generated artifact
+      // fileIds. Report foreign/missing jobs identically to avoid an oracle.
+      const job = await tenantDb(trx, tenant).table('jobs')
+        .where({ job_id: jobId })
+        .first('user_id');
+      if (!job || job.user_id !== user.user_id) {
+        return actionError('Job not found');
+      }
+
+      return await getJobStatus(jobId, tenant);
+    });
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {

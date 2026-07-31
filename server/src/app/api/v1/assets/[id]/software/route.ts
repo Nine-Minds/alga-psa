@@ -19,6 +19,7 @@ import {
   getAssetSoftwareSummary,
 } from '@alga-psa/assets/actions/softwareActions';
 import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import type { SoftwareCategory, SoftwareType } from '@alga-psa/types';
 
 const SOFTWARE_CATEGORIES = new Set<string>([
@@ -126,8 +127,9 @@ export async function GET(
     const search = url.searchParams.get('search') || undefined;
     const include_uninstalled = includeUninstalledParam.value;
 
-    // Fetch software list and summary in parallel
-    const [softwareResult, summary] = await Promise.all([
+    // Fetch software list and summary in parallel (API-key callers resolve the
+    // withAuth identity via the key; session callers pass through).
+    const [softwareResult, summary] = await runWithApiKeyOrSession(request, () => Promise.all([
       getAssetSoftware({
         asset_id: id,
         page,
@@ -138,7 +140,7 @@ export async function GET(
         include_uninstalled,
       }),
       getAssetSoftwareSummary(id),
-    ]);
+    ]));
 
     const softwareError = assetActionErrorResponse(softwareResult);
     if (softwareError) {

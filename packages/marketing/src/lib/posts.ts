@@ -1,6 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type {
+  MarketingExpireStaleTargetsSummary,
+  MarketingFlipDuePostsSummary,
+} from './marketingJobContract';
+import type {
   ISocialPost,
   ISocialPostQueueItem,
   ISocialPostTarget,
@@ -133,7 +137,7 @@ export async function flipDuePostsInternal(
   knex: Knex,
   tenant: string,
   now: Date = new Date(),
-): Promise<{ flipped: number }> {
+): Promise<MarketingFlipDuePostsSummary> {
   return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
     const dueTargets = await db.table('social_post_targets as t')
@@ -166,7 +170,7 @@ export async function expireStaleTargetsInternal(
   tenant: string,
   graceHours: number,
   now: Date = new Date(),
-): Promise<{ expired: number }> {
+): Promise<MarketingExpireStaleTargetsSummary> {
   const cutoff = new Date(now.getTime() - graceHours * 3_600_000).toISOString();
   return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);

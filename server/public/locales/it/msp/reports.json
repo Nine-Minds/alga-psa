@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Nessun ticket aperto in questo intervallo.",
       "noDate": "Nessuna data",
       "notAvailable": "n/d",
-      "noEmailChannels": "Nessun canale email configurato."
+      "noEmailChannels": "Nessun canale email configurato.",
+      "noCapacity": "n/d — nessuna capacità impostata"
     },
     "fallbackTitle": "Report",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Extra pacchetto",
       "openAssigned": "Aperti assegnati",
       "activeAssignees": "Assegnatari attivi",
-      "avgResolutionTime": "Tempo medio risoluzione"
+      "avgResolutionTime": "Tempo medio risoluzione",
+      "workedHours": "Ore lavorate",
+      "capacityHours": "Ore di capacità",
+      "utilization": "Utilizzo",
+      "usersWithoutCapacity": "Capacità mancante",
+      "activeUsers": "Utenti attivi"
     },
     "sections": {
       "openByStatus": "Aperti per stato",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Rinnovi imminenti",
       "bucketUsage": "Uso pacchetto",
       "performanceByAssignee": "Prestazioni per assegnatario",
-      "closedByAssignee": "Chiusi per assegnatario"
+      "closedByAssignee": "Chiusi per assegnatario",
+      "utilizationByUser": "Utilizzo per utente"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Prestazioni del team",
         "description": "Volume del team, responsabilità della risposta, spazi di lavoro multiutente."
+      },
+      "employeeUtilization": {
+        "title": "Utilizzo dei dipendenti",
+        "description": "Ore lavorate rispetto alla capacità settimanale di ciascun membro del team."
       },
       "contractReports": {
         "title": "Report contratti",
@@ -158,7 +169,11 @@
       "entries": "Voci",
       "ticket": "Ticket",
       "entered": "Inserito",
-      "age": "Eta"
+      "age": "Eta",
+      "workedHours": "Ore lavorate",
+      "capacityHours": "Ore di capacità",
+      "utilization": "Utilizzo",
+      "capacityEstimated": "Stimato dalla capacità settimanale; nessun orario di lavoro impostato."
     },
     "statusValues": {
       "connected": "Connesso",
@@ -258,7 +273,9 @@
         "hourlyRate": "{{value}}/h",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} h fatturabili",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (senza costo)",
+        "unassignedLine": "{{line}} (non assegnato)"
       },
       "errors": {
         "load": "Impossibile caricare i dati di redditività",
@@ -308,7 +325,8 @@
         "costRates": "Le tariffe di costo non sono configurate. Le ore di lavoro risultano senza costo finché non esiste una tariffa predefinita del tenant o una tariffa utente.",
         "clients": "Nessun dato di redditività per cliente disponibile in questo intervallo.",
         "lines": "Nessun dettaglio a livello di riga per questa voce.",
-        "tickets": "Nessun dato di redditività dei ticket disponibile per questa selezione."
+        "tickets": "Nessun dato di redditività dei ticket disponibile per questa selezione.",
+        "agreements": "Nessun dato di redditività per contratto disponibile per questa selezione."
       },
       "warnings": {
         "title": "Avvisi del report",
@@ -340,6 +358,14 @@
       },
       "fallbacks": {
         "untitledTicket": "Ticket senza titolo"
+      },
+      "print": {
+        "dateRange": "Dal {{start}} al {{end}}",
+        "client": "Cliente",
+        "allClients": "Tutti i clienti",
+        "agreement": "Contratto",
+        "allAgreements": "Tutti i contratti",
+        "currency": "Valuta"
       }
     }
   },

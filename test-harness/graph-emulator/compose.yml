@@ -3,5 +3,11 @@ services:
     build: .
     environment:
       PORT: 4010
+      # Registered as an OAuth client at boot, so Alga's Direct connect works
+      # against the emulator with the same pair in its own environment.
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-alga-dev}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-alga-dev-secret}
+      # entra-msp (default) seeds three managed tenants; none starts empty.
+      GRAPH_EMULATOR_SEED: ${GRAPH_EMULATOR_SEED:-entra-msp}
     ports:
       - "4010:4010"

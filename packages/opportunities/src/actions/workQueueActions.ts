@@ -8,6 +8,7 @@ import type {
   IQueueSuggestionItem,
   IWorkQueue,
   OpportunityGeneratorKey,
+  TranslatableText,
 } from '@alga-psa/types';
 import { composeWhy, type WhyFacts } from '../lib/whyComposer';
 import {
@@ -58,7 +59,7 @@ function suggestionCopy(
   evidence: Record<string, unknown>,
   today: Temporal.PlainDate,
   timezone: string,
-): { facts: WhyFacts; how: string } {
+): { facts: WhyFacts; how: TranslatableText; title: TranslatableText } {
   switch (generator) {
     case 'renewal': {
       let daysToRenewal = numericEvidence(evidence, 'daysToRenewal', 'days_to_renewal');
@@ -69,7 +70,16 @@ function suggestionCopy(
       const days = requireEvidence(daysToRenewal, generator, 'daysToRenewal or renewalDate');
       return {
         facts: { kind: 'suggestion_renewal', clientName, daysToRenewal: days },
-        how: `Start ${clientName}'s renewal conversation before the deadline.`,
+        title: {
+          key: 'opportunities.suggestionTitles.renewal',
+          params: {
+            contractName: stringEvidence(evidence, 'contractName', 'contract_name') ?? clientName,
+          },
+        },
+        how: {
+          key: 'opportunities.suggestionHow.renewal',
+          params: { clientName },
+        },
       };
     }
     case 'tm_conversion': {
@@ -78,7 +88,11 @@ function suggestionCopy(
       const count = numericEvidence(evidence, 'clientCount', 'client_count') ?? names.length;
       return {
         facts: { kind: 'suggestion_tm_conversion', clientCount: count, clientNames: names },
-        how: 'Compare trailing T&M spend with a recurring agreement.',
+        title: {
+          key: 'opportunities.suggestionTitles.tmConversion',
+          params: { clientName },
+        },
+        how: { key: 'opportunities.suggestionHow.tmConversion' },
       };
     }
     case 'whitespace': {
@@ -89,7 +103,14 @@ function suggestionCopy(
       );
       return {
         facts: { kind: 'suggestion_whitespace', clientName, missingServiceName: service },
-        how: `Show ${clientName} the missing ${service} coverage.`,
+        title: {
+          key: 'opportunities.suggestionTitles.whitespace',
+          params: { clientName, serviceName: service },
+        },
+        how: {
+          key: 'opportunities.suggestionHow.whitespace',
+          params: { clientName, serviceName: service },
+        },
       };
     }
     case 'asset_aging': {
@@ -103,14 +124,25 @@ function suggestionCopy(
       const assetCount = requireEvidence(count, generator, 'assetCount');
       return {
         facts: { kind: 'suggestion_asset_aging', clientName, assetCount, oldestYears: years },
-        how: `Scope a refresh for ${assetCount} aging asset${assetCount === 1 ? '' : 's'}.`,
+        title: {
+          key: 'opportunities.suggestionTitles.assetAging',
+          params: { clientName },
+        },
+        how: {
+          key: 'opportunities.suggestionHow.assetAging',
+          params: { count: assetCount },
+        },
       };
     }
     case 'inbound-lead': {
       const formName = stringEvidence(evidence, 'formName', 'form_name') ?? 'a capture form';
       return {
         facts: { kind: 'suggestion_inbound_lead', clientName, formName },
-        how: 'Follow up while the interest is warm.',
+        title: {
+          key: 'opportunities.suggestionTitles.inboundLead',
+          params: { clientName },
+        },
+        how: { key: 'opportunities.suggestionHow.inboundLead' },
       };
     }
   }
@@ -187,7 +219,7 @@ export async function assembleWorkQueue(
       kind: 'suggestion',
       suggestion_id: String(row.suggestion_id),
       generator_key: generator,
-      title: String(row.title),
+      title: copy.title,
       client_name: row.client_name,
       mrr_cents: Number(row.mrr_cents ?? 0),
       nrr_cents: Number(row.nrr_cents ?? 0),
@@ -217,13 +249,13 @@ export async function assembleWorkQueue(
     ? {
         insight_key: 'assessment_conversion',
         why: composeWhy(selectedLesson),
-        action_label: 'View assessment deals',
+        action_label: { key: 'opportunities.queue.lesson.viewAssessmentDeals' },
         action_href: '/msp/opportunities?tab=pipeline&stage=assessment',
       }
     : {
         insight_key: 'quote_velocity',
         why: composeWhy(selectedLesson),
-        action_label: 'Review the pipeline',
+        action_label: { key: 'opportunities.queue.lesson.reviewPipeline' },
         action_href: '/msp/opportunities?tab=pipeline',
       };
 

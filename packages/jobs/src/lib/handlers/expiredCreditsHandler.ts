@@ -110,18 +110,12 @@ async function processExpiredCredit(
       return;
     }
 
-    // Get the current client credit balance
-    const [client] = await tenantScopedTable(trx, 'clients', tenant)
-      .where({ client_id: credit.client_id })
-      .select('credit_balance');
-
-    if (!client) {
-      throw new Error(`Client ${credit.client_id} not found`);
-    }
-
-    // Calculate the new balance after expiration
     const expirationAmount = -Number(credit.remaining_amount);
-    const newBalance = Number(client.credit_balance) + expirationAmount;
+    const lastTransaction = await tenantScopedTable(trx, 'transactions', tenant)
+      .where({ client_id: credit.client_id })
+      .orderBy('created_at', 'desc')
+      .first();
+    const newBalance = Number(lastTransaction?.balance_after ?? 0) + expirationAmount;
 
     // Create the credit expiration transaction
     const expirationTxId = uuidv4();
@@ -146,14 +140,6 @@ async function processExpiredCredit(
       .update({
         is_expired: true,
         remaining_amount: 0,
-        updated_at: now
-      });
-
-    // Update the client's credit balance
-    await tenantScopedTable(trx, 'clients', tenant)
-      .where({ client_id: credit.client_id })
-      .update({
-        credit_balance: newBalance,
         updated_at: now
       });
 

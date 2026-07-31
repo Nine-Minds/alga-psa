@@ -57,6 +57,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/notifications": "*",
+    "@alga-psa/opportunities": "*",
     "@alga-psa/reference-data": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/shared": "*",

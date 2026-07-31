@@ -7,9 +7,12 @@ import { ScheduleScreen } from "../screens/ScheduleScreen";
 import { TimeEntriesScreen } from "../screens/TimeEntriesScreen";
 import { ClientsListScreen } from "../screens/ClientsListScreen";
 import { ContactsListScreen } from "../screens/ContactsListScreen";
+import { InventoryScreen } from "../screens/InventoryScreen";
+import { OpportunitiesScreen } from "../screens/OpportunitiesScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -22,6 +25,9 @@ export function DrawerNavigator() {
   const { t: tClients } = useTranslation("clients");
   const { t: tContacts } = useTranslation("contacts");
   const { t: tSettings } = useTranslation("settings");
+  const { t: tInventory } = useTranslation("inventory");
+  const { t: tOpportunities } = useTranslation("opportunities");
+  const { features } = useCapabilities();
   return (
     <Drawer.Navigator
       screenOptions={{
@@ -104,6 +110,30 @@ export function DrawerNavigator() {
           ),
         }}
       />
+      {features.inventory ? (
+        <Drawer.Screen
+          name="InventoryTab"
+          component={InventoryScreen}
+          options={{
+            title: tInventory("title", "Inventory"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="barcode-scan" size={size} color={color} />
+            ),
+          }}
+        />
+      ) : null}
+      {features.opportunities ? (
+        <Drawer.Screen
+          name="OpportunitiesTab"
+          component={OpportunitiesScreen}
+          options={{
+            title: tOpportunities("title", "Opportunities"),
+            drawerIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="handshake-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      ) : null}
       <Drawer.Screen
         name="SettingsTab"
         component={SettingsScreen}

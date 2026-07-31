@@ -1,11 +1,21 @@
 import axios from 'axios';
 import { NextRequest, NextResponse } from 'next/server';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
-import { saveEntraDirectTokenSet } from '@ee/lib/integrations/entra/auth/tokenStore';
+import {
+  getEntraDirectTokenSet,
+  saveEntraDirectTokenSet,
+  clearEntraDirectTokenSet,
+} from '@ee/lib/integrations/entra/auth/tokenStore';
+import { clearEntraCippCredentials } from '@ee/lib/integrations/entra/providers/cipp/cippSecretStore';
 import { ENTRA_DIRECT_SCOPE_STRING } from '@ee/lib/integrations/entra/auth/directScopes';
+import {
+  isFailedEntraDirectProbe,
+  probeEntraDirectAccess,
+} from '@ee/lib/integrations/entra/providers/direct/directProbe';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,10 +42,16 @@ function decodeState(state: string): EntraDirectConnectState | null {
   }
 }
 
+// The Entra surface has its own route; the callback lands the operator back on
+// the screen they left rather than on the integrations index.
+const ENTRA_SETTINGS_PATH = '/msp/settings/integrations/entra';
+
+function entraSettingsUrl(): URL {
+  return new URL(ENTRA_SETTINGS_PATH, process.env.NEXTAUTH_URL || 'http://localhost:3000');
+}
+
 function failureRedirect(errorCode: string, message?: string): NextResponse {
-  const url = new URL('/msp/settings', process.env.NEXTAUTH_URL || 'http://localhost:3000');
-  url.searchParams.set('tab', 'integrations');
-  url.searchParams.set('category', 'identity');
+  const url = entraSettingsUrl();
   url.searchParams.set('entra_status', 'failure');
   url.searchParams.set('error', errorCode);
   if (message) {
@@ -45,9 +61,7 @@ function failureRedirect(errorCode: string, message?: string): NextResponse {
 }
 
 function successRedirect(): NextResponse {
-  const url = new URL('/msp/settings', process.env.NEXTAUTH_URL || 'http://localhost:3000');
-  url.searchParams.set('tab', 'integrations');
-  url.searchParams.set('category', 'identity');
+  const url = entraSettingsUrl();
   url.searchParams.set('entra_status', 'success');
   return NextResponse.redirect(url);
 }
@@ -108,7 +122,7 @@ export async function GET(request: NextRequest) {
     });
 
     const tokenResponse = await axios.post(
-      'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      getMicrosoftTokenUrl('common'),
       tokenParams.toString(),
       {
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -124,6 +138,30 @@ export async function GET(request: NextRequest) {
       return failureRedirect('token_exchange_failed', 'Token exchange response missing required fields.');
     }
 
+    // Validate before persisting anything, and validate without side effects.
+    // A successful token exchange only proves the operator signed in; it says
+    // nothing about whether the consented permissions can read the managed
+    // tenant list every later sync depends on. Persisting first would leave a
+    // row claiming 'connected' with a last_validated_at stamp on a connection
+    // that can never work — and would have already replaced whatever
+    // connection the tenant had. The probe takes the candidate token as an
+    // argument and records nothing, so a rejected token leaves no trace at
+    // all: no stored token set, no disconnected predecessor, no new row.
+    const probe = await probeEntraDirectAccess(accessToken);
+    if (isFailedEntraDirectProbe(probe)) {
+      console.error('[Entra OAuth] Direct connection rejected before persisting', {
+        code: probe.code,
+        status: probe.status,
+      });
+      return failureRedirect(probe.code, probe.error);
+    }
+
+    // The new row's token_secret_ref has to resolve to something, so the token
+    // set is written first — but there is one slot per tenant, so writing it
+    // overwrites whatever Direct connection the tenant already had. Hold the
+    // predecessor: if the swap below fails, it goes back.
+    const previousTokenSet = await getEntraDirectTokenSet(state.tenant).catch(() => null);
+
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
     await saveEntraDirectTokenSet(state.tenant, {
       accessToken,
@@ -132,35 +170,56 @@ export async function GET(request: NextRequest) {
       scope: scope || null,
     });
 
-    await runWithTenant(state.tenant, async () => {
-      const { knex } = await createTenantKnex();
-      const now = knex.fn.now();
-      const db = tenantDb(knex, state.tenant);
+    // Retiring the old connection and recording the new one is one swap, not
+    // two writes: a failure between them would leave the tenant disconnected
+    // from a connection that still works.
+    try {
+      await runWithTenant(state.tenant, async () => {
+        const { knex } = await createTenantKnex();
+        await withTransaction(knex, async (trx) => {
+          const now = trx.fn.now();
+          const db = tenantDb(trx, state.tenant);
 
-      await db.table('entra_partner_connections')
-        .where({ is_active: true })
-        .update({
-          is_active: false,
-          status: 'disconnected',
-          disconnected_at: now,
-          updated_at: now,
+          await db.table('entra_partner_connections')
+            .where({ is_active: true })
+            .update({
+              is_active: false,
+              status: 'disconnected',
+              disconnected_at: now,
+              updated_at: now,
+            });
+
+          await db.table('entra_partner_connections').insert({
+            tenant: state.tenant,
+            connection_type: 'direct',
+            status: 'connected',
+            is_active: true,
+            token_secret_ref: 'entra_direct',
+            connected_at: now,
+            disconnected_at: null,
+            last_validated_at: now,
+            last_validation_error: trx.raw(`'{}'::jsonb`),
+            created_by: state.userId,
+            updated_by: state.userId,
+            created_at: now,
+            updated_at: now,
+          });
         });
-
-      await db.table('entra_partner_connections').insert({
-        tenant: state.tenant,
-        connection_type: 'direct',
-        status: 'connected',
-        is_active: true,
-        token_secret_ref: 'entra_direct',
-        connected_at: now,
-        disconnected_at: null,
-        last_validated_at: now,
-        last_validation_error: knex.raw(`'{}'::jsonb`),
-        created_by: state.userId,
-        updated_by: state.userId,
-        created_at: now,
-        updated_at: now,
       });
+    } catch (swapError: unknown) {
+      if (previousTokenSet) {
+        await saveEntraDirectTokenSet(state.tenant, previousTokenSet).catch(() => undefined);
+      } else {
+        await clearEntraDirectTokenSet(state.tenant).catch(() => undefined);
+      }
+      throw swapError;
+    }
+
+    // Only now is the CIPP credential stale. Until the swap committed, it was
+    // still backing the tenant's active connection, and a cancelled consent or
+    // a rejected probe had to leave it working.
+    await clearEntraCippCredentials(state.tenant).catch((error: unknown) => {
+      console.error('[Entra OAuth] Failed to clear superseded CIPP credentials', error);
     });
 
     return successRedirect();

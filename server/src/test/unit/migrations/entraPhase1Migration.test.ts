@@ -45,7 +45,6 @@ describe('Entra Phase 1 migration', () => {
 
   it('T015: creates entra_sync_settings with default cadence and sync toggle fields', () => {
     expect(migration).toContain("createTable('entra_sync_settings'");
-    expect(migration).toContain("table.boolean('sync_enabled').notNullable().defaultTo(true)");
     expect(migration).toContain("table.integer('sync_interval_minutes').notNullable().defaultTo(1440)");
     expect(migration).toContain("table.jsonb('field_sync_config').notNullable().defaultTo(knex.raw(`'{}'::jsonb`))");
     expect(migration).toContain("table.jsonb('user_filter_config').notNullable().defaultTo(knex.raw(`'{}'::jsonb`))");
@@ -147,5 +146,19 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain(
       "await ensureColumn(knex, 'contacts', 'entra_sync_status_reason', (table) => {\n    table.text('entra_sync_status_reason');\n  });"
     );
+  });
+
+  it('T140: automatic sync defaults to off, and existing tenants are migrated to off', () => {
+    const defaultOff = readRepoFile(
+      'ee/server/migrations/20260725130000_entra_sync_enabled_default_off.cjs'
+    );
+
+    // Connecting Entra must not silently acquire a recurring sync: enabling it
+    // is a decision the tenant makes on the console after a pilot.
+    expect(defaultOff).toContain("table.boolean('sync_enabled').notNullable().defaultTo(false).alter()");
+    expect(defaultOff).toContain('update({ sync_enabled: false');
+    // The cadence is what to use once enabled, not a claim that sync is on, so
+    // the migration must leave it alone.
+    expect(defaultOff).not.toContain("table.integer('sync_interval_minutes')");
   });
 });

@@ -77,7 +77,7 @@ test('T242: Documents tab shows regular attachment, embedded image, and original
         clientName: tenant.client_name || 'Test Client',
       },
     };
-    await setupAuthSession(page, tenantData, baseUrl);
+    await setupAuthSession(page, tenantData, baseUrl, db);
 
     ticketId = uuidv4();
     await tenantScoped.table('tickets').insert({

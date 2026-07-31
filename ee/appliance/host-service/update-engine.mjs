@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, resolveChannelMetadata, validateSetupInputs } from './setup-engine.mjs';
+import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, installStorage, resolveChannelMetadata, validateSetupInputs } from './setup-engine.mjs';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
 const DEFAULT_STATE_FILE = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
@@ -203,6 +203,30 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
       scope: 'application-only'
     }
   }, stateFile);
+
+  // Channel updates are also the delivery path for appliance control-plane
+  // fixes. Reconcile the storage prerequisite first so an appliance affected by
+  // the historical duplicate local-path controllers can recover before Helm is
+  // asked to converge PostgreSQL, Redis, and the application deployment.
+  const storageResult = installStorage({ ...options, stateFile });
+  if (!storageResult.ok) {
+    writeInstallState({
+      status: 'update-blocked',
+      phase: storageResult.phase,
+      lastAction: storageResult.message,
+      failure: storageResult,
+      updatedAt: nowIso(),
+      update: { requestedChannel: validated.channel, scope: 'application-only' }
+    }, stateFile);
+    appendUpdateHistory({
+      at: nowIso(),
+      channel: validated.channel,
+      ok: false,
+      phase: storageResult.phase,
+      message: storageResult.message
+    }, updateHistoryFile);
+    return storageResult;
+  }
 
   const releaseSelection = await resolveChannelMetadata(validated, options);
   if (!releaseSelection.ok) {

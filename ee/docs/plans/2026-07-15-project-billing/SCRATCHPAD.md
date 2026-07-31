@@ -30,7 +30,7 @@
 - Test conventions: colocated `*.contract.test.ts` next to actions (see `packages/projects/src/actions/`); Playwright + integration suites have dedicated skills (`integration-testing`, `playwright-testing`).
 - `docs/billing/billing.md` is the billing vocabulary doc — contracts → contract lines → client contract lines. Vocabulary shifted away from "billing plans"; don't reintroduce.
 - Existing notification precedent: `milestoneCompleted` email template family under `server/migrations/utils/templates/email/projects/`.
-- ~835 migrations in `server/migrations/*.cjs`; EE citus parity migrations live in `ee/server/migrations/citus/`.
+- ~835 migrations in `server/migrations/*.cjs`; Citus distribution is guarded inline in the CE creation migration itself (`docs/architecture/citus-migration-best-practices.md`) — there is no separate `ee/server/migrations/citus/` folder (removed 2026-07-24; it was never executed by anything).
 
 ## Gotchas
 
@@ -61,14 +61,14 @@
 - `server/migrations/20260715090003_create_project_billing_cap_usage.cjs`
 - `server/migrations/20260715090004_add_completed_at_to_project_phases.cjs`
 - `server/migrations/20260715090005_add_project_id_to_invoices.cjs`
-- `ee/server/migrations/citus/20260715090006_distribute_project_billing_tables.cjs`
+- (Removed 2026-07-24, never executed) `ee/server/migrations/citus/20260715090006_distribute_project_billing_tables.cjs` — folder deleted; distribution is now inline in the four `create_project_billing_*` migrations above.
 - `packages/types/src/interfaces/projectBilling.interfaces.ts`
 - `packages/billing/src/schemas/projectBillingSchemas.ts`
 
 ### Convention discoveries
 
 - Tenant tables use composite `(tenant, entity_id)` primary keys and tenant-inclusive foreign keys. No new RLS policies are added by current migrations; tenant enforcement for application queries comes from `packages/db/src/lib/tenantTableMetadata.ts`.
-- Citus parity migrations under `ee/server/migrations/citus/` are non-transactional, guard non-Citus/read-replica environments, colocate on `tenant`, and tolerate already-distributed tables. The project billing parity migration temporarily removes the two new child-to-config FKs while all four tables enter the colocation group, then restores them.
+- Correction (2026-07-24): the `ee/server/migrations/citus/` folder described below was never executed by anything (nothing runs migrations from it) and has been deleted. Distribution for the four project billing tables is instead guarded inline in each CE creation migration, non-transactional, colocated on `tenant`. Because distribution now happens at creation time in dependency order, no FK drop/restore dance is needed — that was only required by the abandoned late-distribution approach.
 - Billing Zod schemas are colocated in `packages/billing/src/schemas/` and exported through that package's `./schemas` entry point; `packages/validation` currently contains only shared primitives rather than billing entity schemas.
 - Billing tables use `display_order` for ordered line-like records. Nullable service-scope uniqueness is represented by a `COALESCE` expression index so the one all-services override (`service_id IS NULL`) is also unique.
 - Current billing charge tax fields use nullable `tax_region` text values rather than a direct FK; the project config follows that persisted charge/quote convention.

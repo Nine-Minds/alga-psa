@@ -51,6 +51,7 @@ export type UpdateUserErrorCode =
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
   | 'REPORTS_TO_CYCLE'
+  | 'SCIM_MANAGED_INACTIVE'
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
@@ -133,6 +134,63 @@ async function findExistingUserByEmailGlobally(
 
     return await query.first('user_id');
   });
+}
+
+/**
+ * Client-portal callers may only manage client users of their own company
+ * (mirrors assertCanManageClientUser in
+ * packages/client-portal/src/actions/client-portal-actions/clientUserActions.ts).
+ * `hasPermission(user, 'user', ...)` alone is not sufficient: the client
+ * portal 'Admin' role holds client-flagged user management permissions, and
+ * the MSP middleware user_type gate does not apply to server actions.
+ * Internal callers are unaffected (RBAC-gated by the callers). Throws on
+ * denial.
+ */
+async function assertPortalUserManagementScope(
+  currentUser: IUser,
+  tenant: string,
+  knexOrTrx: Knex | Knex.Transaction,
+  targetUserId: string
+): Promise<void> {
+  if (currentUser.user_type !== 'client') {
+    return;
+  }
+
+  if (!currentUser.contact_id) {
+    throw new Error('Permission denied: Client portal admin access is required');
+  }
+
+  const scopedDb = tenantDb(knexOrTrx, tenant);
+
+  const targetUser = await scopedDb.table('users')
+    .where({ user_id: targetUserId, user_type: 'client' })
+    .select('contact_id')
+    .first();
+
+  if (!targetUser) {
+    throw new Error('User not found');
+  }
+
+  const [actorContact, targetContact] = await Promise.all([
+    scopedDb.table('contacts')
+      .where({ contact_name_id: currentUser.contact_id })
+      .select('client_id', 'is_client_admin')
+      .first(),
+    targetUser.contact_id
+      ? scopedDb.table('contacts')
+          .where({ contact_name_id: targetUser.contact_id })
+          .select('client_id')
+          .first()
+      : Promise.resolve(undefined),
+  ]);
+
+  if (!actorContact?.is_client_admin || !actorContact.client_id) {
+    throw new Error('Permission denied: Client portal admin access is required');
+  }
+
+  if (!targetContact?.client_id || targetContact.client_id !== actorContact.client_id) {
+    throw new Error('Permission denied: Cannot manage users for another client');
+  }
 }
 
 /**
@@ -406,6 +464,10 @@ export const deleteUser = withAuth(async (
         throwPermissionError('delete user');
       }
 
+      // Client-portal callers may only delete client users of their own
+      // company; internal callers are gated by the RBAC check above.
+      await assertPortalUserManagementScope(user, tenant, trx, userId);
+
       return await tenantDb(trx, tenant).table('clients')
         .where({ account_manager_id: userId })
         .first();
@@ -556,6 +618,14 @@ export const deleteUser = withAuth(async (
       // import_jobs uses created_by, not user_id
       await tenantScopedTable('import_jobs').where({ created_by: userId }).del();
 
+      // Pending invites created by this user live only in metadata JSONB
+      // (no FK), so drop them explicitly — otherwise a departed admin's
+      // outstanding invitations stay acceptable for up to 24h.
+      await tenantScopedTable('user_invitations')
+        .whereRaw("metadata->>'created_by' = ?", [userId])
+        .whereNull('used_at')
+        .del();
+
       // Activity group items must precede groups (items.group_id → groups).
       await tenantScopedTable('user_activity_group_items')
         .whereIn(
@@ -667,6 +737,15 @@ export const updateUser = withAuth(async (
         throwPermissionError('update user');
       }
 
+      // Client-portal callers may only manage client users of their own
+      // company (self-profile updates above are unaffected). Email changes by
+      // portal callers are allowed for in-scope users, matching the
+      // sanctioned portal admin flow (updateClientUser). Internal callers are
+      // gated by the RBAC check above.
+      if (!isOwnProfile) {
+        await assertPortalUserManagementScope(currentUser, tenant, trx, userId);
+      }
+
       // Defense-in-depth against mass-assignment: this generic profile-update
       // path must never set privileged identity/credential columns. Dedicated
       // flows exist for password, 2FA, and role/type/tenant changes. Without
@@ -678,6 +757,24 @@ export const updateUser = withAuth(async (
       for (const field of PROTECTED_USER_FIELDS) {
         if (field in userData) {
           delete (userData as Record<string, unknown>)[field as string];
+        }
+      }
+
+      if (
+        userData.is_inactive === false
+        && isEnterprise
+        && await trx.schema.hasTable('scim_user_links')
+      ) {
+        const upstreamInactiveLink = await tenantDb(trx, tenant).table('scim_user_links')
+          .where({ user_id: userId, upstream_active: false })
+          .whereNot('link_state', 'unlinked')
+          .first();
+        if (upstreamInactiveLink) {
+          return {
+            success: false,
+            code: 'SCIM_MANAGED_INACTIVE',
+            error: 'This user is inactive in the connected directory. Reactivate them upstream or unlink SCIM management first.',
+          };
         }
       }
 
@@ -1135,6 +1232,15 @@ export const adminChangeUserPassword = withAuth(async (
     // Verify users are in the same tenant
     if (targetUser.tenant !== currentUser.tenant) {
       return { success: false, error: 'Unauthorized: Cannot modify user from different tenant' };
+    }
+
+    // This flow is for MSP staff only. The 'Admin' role-name check below is
+    // also satisfied by the client portal 'Admin' role, so gating on it alone
+    // would let portal admins reset MSP staff passwords. Portal admins must
+    // use the portal's own flow (resetClientUserPassword), which enforces
+    // same-company scoping.
+    if (currentUser.user_type !== 'internal') {
+      return { success: false, error: 'Unauthorized: Internal staff privileges required' };
     }
 
     const currentUserRoles = await getUserRoles(currentUser.user_id);

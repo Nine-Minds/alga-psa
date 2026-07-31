@@ -39,6 +39,8 @@ test('T001 host bootstrap dry-run plans minimal k3s, image import, storage/contr
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const output = result.stdout;
   const expectedInOrder = [
+    'Substrate: reserving local-path storage for the appliance provisioner',
+    'persist --disable local-storage in the k3s service and configuration',
     'Substrate: ensuring k3s is installed and running',
     'ensure k3s service is enabled and running with minimal local substrate options',
     'Substrate: waiting for Kubernetes API',

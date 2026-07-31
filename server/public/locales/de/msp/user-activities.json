@@ -143,7 +143,21 @@
       "title": "Ad-hoc-Element",
       "toggleDoneError": "Element konnte nicht aktualisiert werden."
     },
-    "enterpriseOnly": "Workflow-Aufgaben sind eine Enterprise-Funktion."
+    "enterpriseOnly": "Workflow-Aufgaben sind eine Enterprise-Funktion.",
+    "nextAction": "Nächste Aktion",
+    "overdueSince": "Überfällig seit {{date}}",
+    "dueOn": "Fällig am {{date}}",
+    "stage": "Phase",
+    "confidence": "Konfidenz",
+    "owner": "Inhaber",
+    "expectedClose": "Voraussichtlicher Abschluss",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "contact": "Kontakt",
+    "linkedQuotes": "Verknüpfte Angebote",
+    "openOpportunity": "Opportunity öffnen",
+    "opportunityNotFound": "Opportunity nicht gefunden."
   },
   "groupedView": {
     "addGroup": "Gruppe hinzufügen",

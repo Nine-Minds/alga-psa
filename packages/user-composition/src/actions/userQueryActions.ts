@@ -26,6 +26,20 @@ function isExpectedUserQueryError(error: unknown): boolean {
   return isPermissionDeniedError(error) || isInvalidUserQueryReference(error);
 }
 
+/**
+ * These query actions return full `users` rows (select '*', including
+ * hashed_password/two_factor_secret). Client-portal roles hold a
+ * client-flagged `user:read` permission, so the RBAC check alone does not
+ * keep portal callers out. No client-portal surface legitimately calls these
+ * actions (the portal uses dedicated actions like getClientUserById /
+ * getClientUsersForClient), so they are restricted to non-client callers.
+ */
+function assertNotClientPortalCaller(currentUser: { user_type?: string }, action: string): void {
+  if (currentUser.user_type === 'client') {
+    throw new Error(`Permission denied: Cannot ${action}`);
+  }
+}
+
 export const findUserById = withAuth(async (
   currentUser,
   _ctx,
@@ -38,6 +52,7 @@ export const findUserById = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read user');
       }
+      assertNotClientPortalCaller(currentUser, 'read user');
 
       const user = await User.getUserWithRoles(trx, id);
       return user || null;
@@ -68,6 +83,7 @@ export const getAllUsersBasic = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
+      assertNotClientPortalCaller(currentUser, 'read users');
 
       const users = await User.getAll(trx, includeInactive);
 
@@ -99,6 +115,7 @@ export const getAllUsers = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
+      assertNotClientPortalCaller(currentUser, 'read users');
 
       const users = await User.getAll(trx, includeInactive);
 
@@ -140,6 +157,7 @@ export const getReportsToSubordinates = withAuth(async (
       if (targetManagerId !== currentUser.user_id && !canReadUsers) {
         throw new Error('Permission denied: Cannot read other users reporting chains');
       }
+      assertNotClientPortalCaller(currentUser, 'read user reporting chains');
 
       const subordinateIds = await User.getReportsToSubordinateIds(trx, targetManagerId);
       if (subordinateIds.length === 0) {
@@ -332,6 +350,7 @@ export const getUserWithRoles = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read user with roles');
       }
+      assertNotClientPortalCaller(currentUser, 'read user with roles');
 
       const user = await User.getUserWithRoles(trx, userId);
       return user || null;
@@ -357,6 +376,7 @@ export const getMultipleUsersWithRoles = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read multiple users with roles');
       }
+      assertNotClientPortalCaller(currentUser, 'read multiple users with roles');
 
       const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
       return users.filter((user): user is IUserWithRoles => user !== undefined);
@@ -554,12 +574,45 @@ export const getClientUsersForClient = withAuth(async (
       const usersQuery = db.table<IUser>('users');
       db.tenantJoin(usersQuery, 'contacts', 'users.contact_id', 'contacts.contact_name_id');
 
-      const users = await usersQuery
+      let query = usersQuery
         .where('contacts.client_id', clientId)
-        .where('users.user_type', 'client')
-        .select<IUser[]>('users.*');
+        .where('users.user_type', 'client');
 
-      return users;
+      if (currentUser.user_type === 'client') {
+        // Client-portal callers (the portal user-management screen) may only
+        // list users of their own company, and must never receive credential
+        // columns — the base query would otherwise return `users.*`,
+        // including hashed_password and two_factor_secret.
+        if (!currentUser.contact_id) {
+          throw new Error('Permission denied: Cannot read client users for client');
+        }
+        const actorContact = await db.table('contacts')
+          .where({ contact_name_id: currentUser.contact_id })
+          .select('client_id')
+          .first();
+        if (!actorContact?.client_id || actorContact.client_id !== clientId) {
+          throw new Error('Permission denied: Cannot read client users for another client');
+        }
+        query = query.select<IUser[]>(
+          'users.user_id',
+          'users.tenant',
+          'users.username',
+          'users.email',
+          'users.first_name',
+          'users.last_name',
+          'users.contact_id',
+          'users.user_type',
+          'users.is_inactive',
+          'users.last_login_at',
+          'users.last_login_method',
+          'users.created_at',
+          'users.updated_at'
+        );
+      } else {
+        query = query.select<IUser[]>('users.*');
+      }
+
+      return await query;
     });
   } catch (error) {
     logger.error('Error getting client users:', error);

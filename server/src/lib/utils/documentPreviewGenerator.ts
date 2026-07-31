@@ -28,7 +28,7 @@ async function loadSharp() {
 }
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
-import { StorageService } from '../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex } from '../db';
 import { IDocument } from '../../interfaces/document.interface';
 import { v4 as uuidv4 } from 'uuid';
@@ -266,6 +266,7 @@ async function generateImagePreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -304,6 +305,7 @@ async function generateImagePreviews(
           {
             mime_type: 'image/jpeg',
             uploaded_by_id: document.created_by,
+            isDerivedArtifact: true,
             metadata: {
               context: 'document_preview',
               source_document_id: document.document_id,
@@ -405,6 +407,7 @@ async function generatePdfPreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -436,6 +439,7 @@ async function generatePdfPreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_preview',
             source_document_id: document.document_id,
@@ -591,6 +595,7 @@ async function generateVideoPreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_thumbnail',
             source_document_id: document.document_id,
@@ -623,6 +628,7 @@ async function generateVideoPreviews(
         {
           mime_type: 'image/jpeg',
           uploaded_by_id: document.created_by,
+          isDerivedArtifact: true,
           metadata: {
             context: 'document_preview',
             source_document_id: document.document_id,

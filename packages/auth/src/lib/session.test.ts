@@ -11,7 +11,13 @@ import {
 const envSnapshot = { ...process.env };
 
 afterEach(() => {
-  process.env = { ...envSnapshot };
+  // Restore IN PLACE: modules that captured `process.env` by reference
+  // (e.g. `import { env } from 'node:process'`) would keep reading the
+  // old object if this reassigned process.env.
+  for (const key of Object.keys(process.env)) {
+    if (!(key in envSnapshot)) delete process.env[key];
+  }
+  Object.assign(process.env, envSnapshot);
 });
 
 describe('session utilities', () => {

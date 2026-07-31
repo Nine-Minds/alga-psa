@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@alga-psa/ui/components/Card';
 import type { ProjectBillingEconomics } from '@alga-psa/types';
 import type { ProjectBillingModel } from '@alga-psa/types';
-import { formatCents } from './billingViewHelpers';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface DeliveryEconomicsCardProps {
   economics: ProjectBillingEconomics;
@@ -19,6 +19,7 @@ interface DeliveryEconomicsCardProps {
  */
 export default function DeliveryEconomicsCard({ economics, currency, billingModel }: DeliveryEconomicsCardProps) {
   const { t } = useTranslation('features/projects');
+  const { money } = useCurrencyFormat();
   const totalCost = economics.labor_cost + economics.materials_cost;
   const marginPct = economics.projected_margin_pct;
   const marginPositive = marginPct != null && marginPct >= 0;
@@ -44,7 +45,7 @@ export default function DeliveryEconomicsCard({ economics, currency, billingMode
         <div className="flex items-center justify-between border-b border-dashed border-[rgb(var(--color-border-100))] py-1.5 text-[13px]">
           <dt className="text-[rgb(var(--color-text-500))]">{t('billing.economics.cost', 'Labor + materials cost')}</dt>
           <dd className="font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-            {formatCents(totalCost, economics.cost_currency)}
+            {money(totalCost, economics.cost_currency)}
           </dd>
         </div>
         <div className="flex items-center justify-between py-1.5 text-[13px]">

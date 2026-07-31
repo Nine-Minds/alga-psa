@@ -144,6 +144,7 @@
     },
     "badges": {
       "disabled": "11111",
+      "paused": "11111",
       "connected": "11111",
       "disconnected": "11111",
       "error": "11111",
@@ -167,8 +168,16 @@
       "reconnectOauth": "11111",
       "resyncing": "11111",
       "resyncMailbox": "11111",
+      "pause": "11111",
+      "resume": "11111",
       "delete": "11111"
     },
+    "feedback": {
+      "paused": "11111",
+      "resumed": "11111",
+      "pauseError": "11111"
+    },
+    "pausedHelp": "11111",
     "fields": {
       "status": "11111",
       "lastSync": "11111",

@@ -11,7 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { CURRENCY_OPTIONS, getCurrencySymbol, currencyFractionDigits } from '@alga-psa/core';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   Calendar,
@@ -82,8 +82,8 @@ export function ContractBasicsStep({
 
   const currencyMeta = useMemo(() => {
     const currencyCode = data.currency_code || 'USD';
-    const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
+    // Fraction digits are a property of the currency, not the locale.
+    const fractionDigits = currencyFractionDigits(currencyCode);
     return { currencyCode, fractionDigits, minorUnitFactor: Math.pow(10, fractionDigits) };
   }, [data.currency_code]);
   const currencySymbol = getCurrencySymbol(data.currency_code);

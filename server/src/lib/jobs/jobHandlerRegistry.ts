@@ -1,4 +1,7 @@
+// LEVERAGE: pattern job-handler-registry-dup — byte-for-byte copy of
+// packages/jobs/src/lib/jobs/jobHandlerRegistry.ts; changes must land in both.
 import logger from '@alga-psa/core/logger';
+import { getAdminConnection, isTenantSuspended } from '@alga-psa/db';
 import { JobHandlerConfig, BaseJobData } from './interfaces';
 
 /**
@@ -123,6 +126,18 @@ export class JobHandlerRegistry {
       throw new Error(`No handler registered for job type: ${name}`);
     }
 
+    // Tenant-scoped jobs are gated for suspended tenants (e.g. cancelled,
+    // pending deletion). The job completes as a logged skip — no retry, no
+    // DLQ — and jobs without a tenantId (system scope) are unaffected.
+    if (data?.tenantId && await this.isTenantGated(data.tenantId)) {
+      logger.info(`Skipping job handler for suspended tenant: ${name}`, {
+        jobId,
+        tenantId: data.tenantId,
+        event: 'job_skipped_tenant_suspended',
+      });
+      return;
+    }
+
     const startTime = Date.now();
     logger.debug(`Executing job handler: ${name}`, { jobId, tenantId: data.tenantId });
 
@@ -139,6 +154,23 @@ export class JobHandlerRegistry {
         durationMs: Date.now() - startTime,
       });
       throw error;
+    }
+  }
+
+  /**
+   * Fail-open suspension probe: an infra error here must degrade to "run the
+   * job", never to halting every tenant's background work.
+   */
+  private static async isTenantGated(tenantId: string): Promise<boolean> {
+    try {
+      const knex = await getAdminConnection();
+      return await isTenantSuspended(knex, tenantId);
+    } catch (error) {
+      logger.warn('Tenant suspension probe failed; running job anyway', {
+        tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
     }
   }
 

@@ -46,6 +46,21 @@ describe('project invoice lifecycle contracts', () => {
     expect(schedulePersistence).toContain('trx,');
   });
 
+  it('marks only the exact material rows represented by generated product charges', () => {
+    const materialPersistence = section(
+      invoiceGeneration,
+      '// Mark ticket/project materials in this billing window as billed by this invoice.',
+      'for (const discount of billingResult.discounts)',
+    );
+
+    expect(materialPersistence).toContain("charge.material_source_type === 'project'");
+    expect(materialPersistence).toContain("charge.material_source_type === 'ticket'");
+    expect(materialPersistence).toContain(".whereIn('project_material_id', uniqueProjectMaterialIds)");
+    expect(materialPersistence).toContain(".whereIn('ticket_material_id', uniqueTicketMaterialIds)");
+    expect(materialPersistence).toContain('updatedCount !== uniqueProjectMaterialIds.length');
+    expect(materialPersistence).not.toContain(".andWhere('currency_code'");
+  });
+
   it('T019: finalization issues project-earmarked deposit credit and application prefers the matching project', () => {
     const issueCredit = section(invoiceModification, 'async function issueProjectDepositCreditsForInvoice', 'async function rollbackProjectDepositCreditsForInvoice');
     const finalize = section(invoiceModification, 'export const finalizeInvoice', 'export const unfinalizeInvoice');

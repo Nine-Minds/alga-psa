@@ -27,6 +27,7 @@ import {
   timestampPayload,
 } from '../lib';
 import { kitActionErrorFrom } from '../lib/kitActionErrors';
+import { assertProcurableSo } from '../lib/salesOrderState';
 import { explodeKitOntoSalesOrder } from './kitActions';
 import { resolveKitPriceInTransaction } from '../lib/kitPricing';
 
@@ -117,6 +118,8 @@ function salesOrderActionErrorFrom(error: unknown): SalesOrderActionError | null
         return actionError('This sales order has fulfilled lines and cannot be cancelled.');
       case 'Cannot cancel a sales order with invoiced lines':
         return actionError('This sales order has invoiced lines and cannot be cancelled.');
+      case 'Only draft sales orders can be deleted':
+        return actionError('Only draft sales orders can be deleted. Cancel confirmed orders instead.');
       default:
         if (
           error.message.startsWith('Invalid invoice_mode:') ||
@@ -127,7 +130,8 @@ function salesOrderActionErrorFrom(error: unknown): SalesOrderActionError | null
           error.message.startsWith('Cannot edit a line on a ') ||
           error.message.startsWith('Cannot remove a line from a ') ||
           error.message.startsWith('Only draft sales orders can be confirmed') ||
-          error.message.startsWith('Only confirmed sales orders can be reopened')
+          error.message.startsWith('Only confirmed sales orders can be reopened') ||
+          error.message.startsWith('Cannot create purchase orders for a ')
         ) {
           return actionError(error.message);
         }
@@ -640,7 +644,7 @@ export const addSoLine = withAuth(
       if (!(Number(input.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
       const { knex: db } = await createTenantKnex();
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const so = await getSoOrThrow(trx, tenant, soId);
+        const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
         if (so.status !== 'draft') throw new Error(`Cannot add a line to a ${so.status} sales order; release it first`);
 
         const lineCurrency = (input.currency_code ?? so.currency_code).trim();
@@ -709,10 +713,21 @@ export const updateSoLine = withAuth(
       }
       const { knex: db } = await createTenantKnex();
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const line = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).first();
-        if (!line) throw new Error('Sales order line not found');
-        const so = await getSoOrThrow(trx, tenant, line.so_id);
+        // Unlocked probe only to reach the parent; the header is the transition mutex, so
+        // it is locked first (canonical order) and the line re-read under it — a remove
+        // that commits while we wait would otherwise leave this updating nothing.
+        const lineProbe = await trx('sales_order_lines')
+          .where({ tenant, so_line_id: soLineId })
+          .select('so_id')
+          .first();
+        if (!lineProbe) throw new Error('Sales order line not found');
+        const so = await getSoOrThrow(trx, tenant, lineProbe.so_id, { forUpdate: true });
         if (so.status !== 'draft') throw new Error(`Cannot edit a line on a ${so.status} sales order; release it first`);
+        const line = await trx('sales_order_lines')
+          .where({ tenant, so_line_id: soLineId })
+          .forUpdate()
+          .first();
+        if (!line) throw new Error('Sales order line not found');
         if (patch.quantity_ordered !== undefined && !(Number(patch.quantity_ordered) > 0)) {
           throw new Error('quantity_ordered must be greater than 0');
         }
@@ -743,9 +758,12 @@ export const removeSoLine = withAuth(
       await requireSoPerm(user, 'update');
       const { knex: db } = await createTenantKnex();
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const line = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).first();
-        if (!line) throw new Error('Sales order line not found');
-        const so = await getSoOrThrow(trx, tenant, line.so_id);
+        const lineProbe = await trx('sales_order_lines')
+          .where({ tenant, so_line_id: soLineId })
+          .select('so_id')
+          .first();
+        if (!lineProbe) throw new Error('Sales order line not found');
+        const so = await getSoOrThrow(trx, tenant, lineProbe.so_id, { forUpdate: true });
         if (so.status !== 'draft') throw new Error(`Cannot remove a line from a ${so.status} sales order; release it first`);
         // Remove kit child lines along with the parent.
         await trx('sales_order_lines').where({ tenant, parent_so_line_id: soLineId }).del();
@@ -761,6 +779,26 @@ export const removeSoLine = withAuth(
       }));
 
       return { removed: result.removed };
+    });
+  },
+);
+
+export const deleteSalesOrder = withAuth(
+  async (user, { tenant }, soId: string): Promise<{ deleted: boolean } | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'delete');
+      const { knex: db } = await createTenantKnex();
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        const salesOrder = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
+        if (salesOrder.status !== 'draft') throw new Error('Only draft sales orders can be deleted');
+        await trx('sales_orders').where({ tenant, so_id: soId }).del();
+      });
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_DELETED', timestampPayload({
+        tenant,
+        so_id: soId,
+        user_id: user.user_id,
+      }));
+      return { deleted: true };
     });
   },
 );
@@ -1026,7 +1064,10 @@ export const suggestPoFromBackorder = withAuth(
       }
       const { knex: db } = await createTenantKnex();
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const so = await getSoOrThrow(trx, tenant, soId);
+        const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
+        // Despite the name this writes real vendor commitments, so a cancelled or closed
+        // order must not raise demand.
+        assertProcurableSo(so.status);
         const lines = await loadLines(trx, tenant, soId);
 
         // Group shortfall lines by preferred vendor.

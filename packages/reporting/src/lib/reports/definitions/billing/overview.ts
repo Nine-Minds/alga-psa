@@ -149,15 +149,16 @@ export const billingOverviewReport: ReportDefinition = {
     {
       id: 'total_credit_balance',
       name: 'Total Credit Balance',
-      description: 'Sum of all client credit balances',
+      description: 'Sum of remaining, non-expired client credits',
       type: 'sum',
       query: {
-        table: 'clients',
-        fields: ['credit_balance'],
+        table: 'credit_tracking',
+        fields: ['remaining_amount'],
         aggregation: 'sum',
         filters: [
           { field: 'tenant', operator: 'eq', value: '{{tenant}}' },
-          { field: 'credit_balance', operator: 'gt', value: 0 }
+          { field: 'is_expired', operator: 'eq', value: false },
+          { field: 'remaining_amount', operator: 'gt', value: 0 }
         ]
       },
       formatting: {

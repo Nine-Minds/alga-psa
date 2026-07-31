@@ -112,6 +112,67 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+/**
+ * Client-portal callers may only assign/remove client-flagged roles on client
+ * users of their own company. The role.msp/user_type compatibility checks
+ * alone are not sufficient: the client portal 'Admin' role holds
+ * client-flagged 'user:update'/'client:update' permissions, and without a
+ * caller-type + same-company check a portal admin could re-role MSP staff or
+ * users of other companies. Internal callers are unaffected (RBAC-gated by
+ * the callers). Returns an error to propagate, or null when in scope.
+ */
+async function checkClientPortalRoleScope(
+  currentUser: IUserWithRoles,
+  tenant: string,
+  trx: Knex.Transaction,
+  targetUser: { user_type?: string; contact_id?: string | null } | undefined,
+  role: IRole | undefined
+): Promise<AuthActionError | null> {
+  if (currentUser.user_type !== 'client') {
+    return null;
+  }
+
+  if (!targetUser || !role) {
+    return null; // existence errors are reported by the caller
+  }
+
+  if (!role.client) {
+    return permissionError('Permission denied: Client portal admins may only manage client portal roles.');
+  }
+
+  if (targetUser.user_type !== 'client') {
+    return permissionError('Permission denied: Client portal admins may only manage client portal users.');
+  }
+
+  if (!currentUser.contact_id) {
+    return permissionError('Permission denied: Client portal admin access is required.');
+  }
+
+  const scopedDb = tenantDb(trx, tenant);
+  const [actorContact, targetContact] = await Promise.all([
+    scopedDb.table('contacts')
+      .where({ contact_name_id: currentUser.contact_id })
+      .select('client_id', 'is_client_admin')
+      .first(),
+    targetUser.contact_id
+      ? scopedDb.table('contacts')
+          .where({ contact_name_id: targetUser.contact_id })
+          .select('client_id')
+          .first()
+      : Promise.resolve(undefined),
+  ]);
+
+  if (!actorContact?.is_client_admin || !actorContact.client_id) {
+    return permissionError('Permission denied: Client portal admin access is required.');
+  }
+
+  if (!targetContact?.client_id || targetContact.client_id !== actorContact.client_id) {
+    return permissionError('Permission denied: Cannot manage users for another client.');
+  }
+
+  return null;
+}
+
 // Role actions
 export const createRole = withAuth(async (user, { tenant }, roleName: string, description: string, msp: boolean = true, client: boolean = false): Promise<IRole | AuthActionError> => {
   try {
@@ -323,6 +384,13 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
             return actionError('Role not found. Refresh the role list and try again.');
         }
 
+        // Client-portal callers: only client-flagged roles on client users of
+        // their own company. Internal callers are unaffected.
+        const clientScopeError = await checkClientPortalRoleScope(currentUser, tenant, trx, user, role);
+        if (clientScopeError) {
+            return clientScopeError;
+        }
+
         // Validate role compatibility based on user type
         if (user.user_type === 'internal' && !role.msp) {
             return actionError('Cannot assign a client portal role to an MSP user.');
@@ -362,6 +430,16 @@ export const removeRoleFromUser = withAuth(async (currentUser, { tenant }, userI
 
         if (!role) {
             return actionError('Role not found. Refresh the role list and try again.');
+        }
+
+        // Client-portal callers: only client-flagged roles on client users of
+        // their own company. Internal callers are unaffected.
+        const targetUser = currentUser.user_type === 'client'
+            ? await tenantScopedTable(trx, 'users', tenant).where({ user_id: userId }).first()
+            : undefined;
+        const clientScopeError = await checkClientPortalRoleScope(currentUser, tenant, trx, targetUser, role);
+        if (clientScopeError) {
+            return clientScopeError;
         }
 
         await tenantScopedTable(trx, 'user_roles', tenant).where({ user_id: userId, role_id: roleId }).del();

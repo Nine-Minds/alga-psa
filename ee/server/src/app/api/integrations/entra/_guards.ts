@@ -2,14 +2,13 @@ import { NextResponse } from 'next/server';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 import { TierAccessError, assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 type EntraGuardPermission = 'read' | 'update';
 
-export async function requireEntraUiFlagEnabled(
+export async function requireEntraAccess(
   requiredPermission: EntraGuardPermission = 'read'
-): Promise<Response | { tenantId: string; userId: string }> {
+): Promise<Response | { tenantId: string; userId: string; user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>> }> {
   const user = await getCurrentUser();
 
   if (!user || !user.user_id || !user.tenant) {
@@ -59,20 +58,5 @@ export async function requireEntraUiFlagEnabled(
     throw error;
   }
 
-  const enabled = await featureFlags.isEnabled('entra-integration-ui', {
-    userId: user.user_id,
-    tenantId: user.tenant,
-  });
-
-  if (!enabled) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Microsoft Entra integration is disabled for this tenant.',
-      },
-      { status: 404 }
-    );
-  }
-
-  return { tenantId: user.tenant, userId: user.user_id };
+  return { tenantId: user.tenant, userId: user.user_id, user };
 }

@@ -10,6 +10,7 @@ import styles from './ProjectDetail.module.css';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectPhasesProps {
+  viewMode: 'kanban' | 'list' | 'billing';
   phases: IProjectPhase[];
   projectId: string;
   selectedPhase: IProjectPhase | null;
@@ -55,6 +56,7 @@ interface ProjectPhasesProps {
 }
 
 export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
+  viewMode,
   phases,
   projectId,
   selectedPhase,
@@ -178,14 +180,16 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
           >
             {isAddingTask ? t('projectPhases.adding', 'Adding...') : t('projectPhases.addTask', '+ Add Task')}
           </Button>
-          <Button
-            id="add-phase-button"
-            onClick={onAddPhase}
-            size="sm"
-          >
-            {t('projectPhases.addPhase', '+ Add Phase')}
-          </Button>
-          {onImport && (
+          {viewMode !== 'billing' && (
+            <Button
+              id="add-phase-button"
+              onClick={onAddPhase}
+              size="sm"
+            >
+              {t('projectPhases.addPhase', '+ Add Phase')}
+            </Button>
+          )}
+          {viewMode !== 'billing' && onImport && (
             <Button
               id="import-phases-tasks-button"
               onClick={onImport}
@@ -246,6 +250,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               />
             )}
             <PhaseListItem
+              viewMode={viewMode}
               phase={phase}
               projectId={projectId}
               phases={phases}

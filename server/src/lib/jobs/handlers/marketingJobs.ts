@@ -6,33 +6,42 @@ import {
   expireStaleTargetsInternal,
   sendDueSequenceStepsInternal,
 } from '@alga-psa/marketing/lib';
+import {
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  type MarketingJobData,
+} from '@alga-psa/marketing/lib/marketingJobContract';
 import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
 import { getMarketingSigningSecret } from 'server/src/lib/marketing/signingSecret';
 
-export const MARKETING_FLIP_DUE_POSTS_JOB = 'marketing:flip-due-posts';
-export const MARKETING_EXPIRE_STALE_TARGETS_JOB = 'marketing:expire-stale-targets';
-export const MARKETING_SEND_SEQUENCE_STEPS_JOB = 'marketing:send-sequence-steps';
-
-export interface MarketingJobData extends Record<string, unknown> {
-  tenantId: string;
-}
+export {
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+};
+export type { MarketingJobData };
 
 /** Grace period before an awaiting-manual-publish target auto-expires (F027). */
 const STALE_TARGET_GRACE_HOURS = 48;
 
 /**
  * Canonical public base URL for absolute links in outbound marketing email
- * (unsubscribe link, tracking pixel, click redirect). NEXTAUTH_URL is the
- * repo's canonical public-base-url env var — notificationLinkResolver and
- * auth both build absolute URLs from it. NEXT_PUBLIC_APP_URL is accepted as
- * a fallback for deployments that only set the public var.
+ * (unsubscribe link, tracking pixel, click redirect). These server-only
+ * variables are resolved when the job runs, unlike NEXT_PUBLIC_* variables
+ * that Next.js can freeze into the image during compilation.
  */
 function getPublicBaseUrl(): string {
   const raw =
-    process.env.NEXTAUTH_URL
-    || process.env.NEXT_PUBLIC_APP_URL
-    || 'http://localhost:3000';
+    process.env.APPLICATION_URL
+    || process.env.NEXTAUTH_URL
+    || '';
+  if (!raw) {
+    throw new Error(
+      'No runtime public marketing base URL available (APPLICATION_URL or NEXTAUTH_URL); refusing to send sequence steps',
+    );
+  }
   return raw.endsWith('/') ? raw.slice(0, -1) : raw;
 }
 

@@ -1,5 +1,5 @@
 import { createLogger, format, transports } from 'winston';
-import { tenantDb } from '@alga-psa/db';
+import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import {
@@ -199,6 +199,32 @@ export async function executeJobHandler(input: {
       availableHandlers: Array.from(jobHandlers.keys()),
     });
     return { success: false, error };
+  }
+
+  // Suspended tenants (cancelled, pending deletion) get a successful logged
+  // skip — no retry, no failure row. Fail-open: a flag-read error must run
+  // the job rather than halt active tenants' work.
+  if (tenantId && tenantId !== SYSTEM_TENANT_ID) {
+    let suspended = false;
+    try {
+      suspended = await isTenantSuspended(await getAdminConnection(), tenantId);
+    } catch (probeError) {
+      logger.warn('Tenant suspension probe failed; running job anyway', {
+        jobId,
+        jobName,
+        tenantId,
+        error: probeError instanceof Error ? probeError.message : String(probeError),
+      });
+    }
+    if (suspended) {
+      logger.info('Skipping job handler for suspended tenant', {
+        jobId,
+        jobName,
+        tenantId,
+        event: 'job_skipped_tenant_suspended',
+      });
+      return { success: true, result: { skipped: true, reason: 'tenant_suspended' } };
+    }
   }
 
   try {

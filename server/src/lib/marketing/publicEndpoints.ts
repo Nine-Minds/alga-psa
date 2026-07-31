@@ -29,8 +29,16 @@ export async function resolvePublicMarketingTenant(
   try {
     const knex = await getConnection(tenantParam);
     const db = tenantDb(knex, tenantParam);
-    const tenant = await db.table('tenants').first('tenant');
+    const tenant = await db.table('tenants').first('tenant', 'suspended_at');
     if (!tenant) return null;
+    // Suspended tenants (cancelled, pending deletion) answer with the same
+    // generic 404 as unknown tenants — no rows created, nothing leaked.
+    if (tenant.suspended_at) {
+      logger.info('[marketing-public] Rejecting request for suspended tenant', {
+        tenantId: tenantParam,
+      });
+      return null;
+    }
     if (!await isFeatureFlagEnabled(MARKETING_MODULE_FLAG, { tenantId: tenantParam })) {
       return null;
     }

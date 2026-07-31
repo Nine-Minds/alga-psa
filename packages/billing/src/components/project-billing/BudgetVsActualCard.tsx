@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@alga-psa/ui/components/Card';
 import type { IProjectBillingCapUsage, IProjectBillingConfig } from '@alga-psa/types';
 import type { ProjectBillingRollup } from '@alga-psa/types';
-import { formatCents } from './billingViewHelpers';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface BudgetVsActualCardProps {
   config: IProjectBillingConfig;
@@ -32,6 +32,7 @@ function pct(part: number, whole: number): number {
  */
 export default function BudgetVsActualCard({ config, rollup, capUsage }: BudgetVsActualCardProps) {
   const { t } = useTranslation('features/projects');
+  const { money } = useCurrencyFormat();
   const currency = config.currency;
   const isFixed = config.billing_model === 'fixed_price';
 
@@ -53,7 +54,7 @@ export default function BudgetVsActualCard({ config, rollup, capUsage }: BudgetV
         <h3 className="text-sm font-bold text-[rgb(var(--color-text-900))]">{t('billing.budget.title', 'Budget vs actual')}</h3>
         <p className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
           {t('billing.budget.fixedHint', '{{total}} fixed fee · {{mode}} invoices', {
-            total: formatCents(total, currency),
+            total: money(total, currency ?? undefined),
             mode: config.invoice_mode === 'standalone'
               ? t('billing.mode.standalone', 'standalone')
               : t('billing.mode.recurring', 'recurring'),
@@ -72,7 +73,7 @@ export default function BudgetVsActualCard({ config, rollup, capUsage }: BudgetV
               <span className={`h-2 w-2 rounded-sm ${s.swatchClass}`} />
               <dt className="text-[rgb(var(--color-text-600))]">{s.label}</dt>
               <dd className="ml-auto font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-                {formatCents(s.cents, currency)} · {pct(s.cents, total).toFixed(0)}%
+                {money(s.cents, currency ?? undefined)} · {pct(s.cents, total).toFixed(0)}%
               </dd>
             </div>
           ))}
@@ -94,8 +95,8 @@ export default function BudgetVsActualCard({ config, rollup, capUsage }: BudgetV
         {cap == null
           ? t('billing.budget.tmNoCapHint', 'Time & materials · no budget cap')
           : config.cap_behavior === 'hard_cap'
-            ? t('billing.budget.tmHardHint', '{{cap}} hard cap — billing stops at the cap', { cap: formatCents(cap, currency) })
-            : t('billing.budget.tmNotifyHint', '{{cap}} budget cap — notify only', { cap: formatCents(cap, currency) })}
+            ? t('billing.budget.tmHardHint', '{{cap}} hard cap — billing stops at the cap', { cap: money(cap, currency ?? undefined) })
+            : t('billing.budget.tmNotifyHint', '{{cap}} budget cap — notify only', { cap: money(cap, currency ?? undefined) })}
       </p>
 
       {cap != null && cap > 0 ? (
@@ -119,14 +120,14 @@ export default function BudgetVsActualCard({ config, rollup, capUsage }: BudgetV
               <span className="h-2 w-2 rounded-sm bg-purple-500" />
               <dt className="text-[rgb(var(--color-text-600))]">{t('billing.budget.billed', 'Billed to date')}</dt>
               <dd className="ml-auto font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-                {formatCents(billed, currency)} · {pct(billed, cap).toFixed(0)}%
+                {money(billed, currency ?? undefined)} · {pct(billed, cap).toFixed(0)}%
               </dd>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-sm bg-[rgb(var(--color-border-300))]" />
               <dt className="text-[rgb(var(--color-text-600))]">{t('billing.budget.capRemaining', 'Cap remaining')}</dt>
               <dd className="ml-auto font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-                {formatCents(Math.max(0, cap - billed), currency)}
+                {money(Math.max(0, cap - billed), currency ?? undefined)}
               </dd>
             </div>
           </dl>
@@ -135,14 +136,14 @@ export default function BudgetVsActualCard({ config, rollup, capUsage }: BudgetV
         <dl className="mt-3 text-[13px]">
           <div className="flex items-center justify-between">
             <dt className="text-[rgb(var(--color-text-600))]">{t('billing.budget.billed', 'Billed to date')}</dt>
-            <dd className="font-semibold tabular-nums text-[rgb(var(--color-text-900))]">{formatCents(billed, currency)}</dd>
+            <dd className="font-semibold tabular-nums text-[rgb(var(--color-text-900))]">{money(billed, currency ?? undefined)}</dd>
           </div>
         </dl>
       )}
 
       {writtenDown > 0 && (
         <p className="mt-2 text-xs text-red-600 dark:text-red-400">
-          {t('billing.budget.writtenDown', 'Written down past cap: {{amount}}', { amount: formatCents(writtenDown, currency) })}
+          {t('billing.budget.writtenDown', 'Written down past cap: {{amount}}', { amount: money(writtenDown, currency ?? undefined) })}
         </p>
       )}
     </Card>

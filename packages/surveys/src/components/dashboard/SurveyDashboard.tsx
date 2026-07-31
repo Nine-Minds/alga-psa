@@ -9,7 +9,9 @@ import TopIssuesPanel from './TopIssuesPanel';
 import ResponsesList from './ResponsesList';
 import ChartSkeleton from '@alga-psa/ui/components/skeletons/ChartSkeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import SurveyPrintReport from '../SurveyPrintReport';
 
 type SurveyDashboardProps = {
   filters?: SurveyDashboardFilters;
@@ -21,6 +23,10 @@ export default async function SurveyDashboard({ filters }: SurveyDashboardProps)
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-end">
+        <PrintButton id="survey-dashboard-print" size="sm" variant="outline" />
+      </div>
+
       <section className="animate-in fade-in-50 duration-500">
         <ResponseMetrics metrics={data.metrics} />
       </section>
@@ -49,6 +55,12 @@ export default async function SurveyDashboard({ filters }: SurveyDashboardProps)
       <section className="animate-in fade-in-50 duration-1000">
         <ResponsesList responses={data.recentResponses} />
       </section>
+
+      <SurveyPrintReport
+        data={data}
+        title={t('dashboard.printTitle', { defaultValue: 'Survey Dashboard' })}
+        sections={['trend', 'distribution', 'topIssues', 'recentResponses']}
+      />
     </div>
   );
 }

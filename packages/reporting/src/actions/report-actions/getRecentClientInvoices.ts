@@ -6,6 +6,8 @@ import type { IInvoice } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { tenantDb } from '@alga-psa/db';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 // Removed safe-action import as it's not the standard pattern here
 // Define the schema for the input parameters
@@ -28,7 +30,7 @@ export type RecentInvoice = Pick<IInvoice, 'invoice_id' | 'invoice_number' | 'in
  * @returns A promise that resolves to an array of recent invoices or throws an error.
  */
 export const getRecentClientInvoices = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: { clientId: string; limit?: number }
 ): Promise<RecentInvoice[] | ReportingActionError> => {
@@ -40,6 +42,25 @@ export const getRecentClientInvoices = withAuth(async (
   const { clientId, limit } = validationResult.data;
 
   const { knex } = await createTenantKnex();
+
+  // Client portal users may only see their own client's invoices: the
+  // caller-supplied clientId is never trusted — resolve the client from the
+  // session contact and require it to match.
+  if (user.user_type === 'client') {
+    let portalClientId = typeof user.clientId === 'string' && user.clientId.length > 0
+      ? user.clientId
+      : null;
+    if (!portalClientId && user.contact_id) {
+      const contact = await tenantDb(knex, tenant).table('contacts')
+        .where({ contact_name_id: user.contact_id })
+        .select('client_id')
+        .first<{ client_id: string | null }>();
+      portalClientId = contact?.client_id ?? null;
+    }
+    if (!portalClientId || portalClientId !== clientId) {
+      return permissionError('Permission denied: cannot access invoices for another client');
+    }
+  }
 
   console.log(`Fetching recent invoices for client ${clientId} in tenant ${tenant}, limit ${limit}`);
 

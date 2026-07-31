@@ -98,6 +98,7 @@ export function normalizeProjectBillingScheduleEntry(
     ...row,
     amount: nullableNumberFromDatabase(row.amount),
     percentage: nullableNumberFromDatabase(row.percentage),
+    frozen_amount: nullableNumberFromDatabase(row.frozen_amount),
     trigger_date: dateOnlyFromDatabase(row.trigger_date),
     requires_payment_before_work: row.requires_payment_before_work === true,
     display_order: numberFromDatabase(row.display_order)

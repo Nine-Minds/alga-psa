@@ -17,6 +17,7 @@ const config: Config = {
     // explicitly rather than enabling a broad `**/*.ts` glob.
     "../packages/scheduling/src/components/technician-dispatch/utils.ts",
     "../packages/tickets/src/actions/optimizedTicketActions.ts",
+    "../packages/core/src/lib/projectBillingStatus.ts",
   ],
   theme: {
     extend: {

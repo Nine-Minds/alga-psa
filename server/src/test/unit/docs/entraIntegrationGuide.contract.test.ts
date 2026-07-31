@@ -34,13 +34,19 @@ describe('Entra integration guide contracts', () => {
     expect(guide).toContain('field_sync_config');
   });
 
-  it('T138: docs include feature-flag rollout order for pilot tenants', () => {
+  it('T138: docs include the rollout order for pilot tenants', () => {
     expect(guide).toContain('## Rollout Order (Recommended)');
-    expect(guide).toContain('entra-integration-ui');
     expect(guide).toContain('entra-integration-cipp');
-    expect(guide).toContain('entra-integration-field-sync');
-    expect(guide).toContain('entra-integration-ambiguous-queue');
     expect(guide).toContain('entra-integration-client-sync-action');
-    expect(guide).toContain('Enable tenant targeting');
+  });
+
+  it('T139: docs describe the retired flags rather than telling operators to enable them', () => {
+    // The master flag and the two panel flags are gone; a guide that still says
+    // "enable entra-integration-field-sync" sends operators looking for a
+    // switch that does not exist.
+    expect(guide).toContain('Retired flags');
+    expect(guide).toContain('assertTierAccess(TIER_FEATURES.ENTRA_SYNC)');
+    expect(guide).not.toContain('Enable `entra-integration-field-sync`');
+    expect(guide).not.toContain('Enable `entra-integration-ui`');
   });
 });

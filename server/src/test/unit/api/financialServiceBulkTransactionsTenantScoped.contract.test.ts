@@ -21,9 +21,11 @@ describe('financial service bulk transactions tenant-scoped query contract', () 
 
     expect(bulkTransactionSection).toContain('tenantDb(');
     expect(bulkTransactionSection).toContain(".table('transactions')");
-    expect(bulkTransactionSection).toContain(".table('clients')");
+    // Available credit is derived from credit_tracking, so reversing a ledger
+    // transaction must not write the removed clients.credit_balance cache.
+    expect(bulkTransactionSection).not.toContain(".table('clients')");
 
-    expect(bulkTransactionSection).not.toMatch(/trx\('(?:transactions|clients)'\)\s*\.(?:where|first|update|delete)/);
+    expect(bulkTransactionSection).not.toMatch(/trx\('transactions'\)\s*\.(?:where|first|update|delete)/);
     expect(bulkTransactionSection).not.toMatch(/where\(\{\s*[^}]*tenant\s*[,}]/);
   });
 });

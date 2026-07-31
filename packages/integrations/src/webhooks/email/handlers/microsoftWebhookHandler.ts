@@ -109,6 +109,7 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
     const knex = await getAdminConnection();
     const processedNotifications: string[] = [];
     let unifiedQueuedCount = 0;
+    let gatedNotificationCount = 0;
     const enqueueFailures: Array<{
       subscriptionId: string;
       messageId: string;
@@ -138,6 +139,8 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
           const row: any = await providerQuery
             .where('mc.webhook_subscription_id', providerId)
             .andWhere('ep.provider_type', 'microsoft')
+            .andWhere('ep.is_active', true)
+            .whereNull('ep.inbound_paused_at')
             // Serialize accepted-delivery stamping with the silence detector's
             // conditional counter/mode updates. Without this lock, a handler
             // could validate the old subscription, pause, and reset the counter
@@ -158,10 +161,32 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
             );
 
         if (!row) {
-          console.warn('[MicrosoftWebhook] Ignoring notification for unknown subscription', {
-            subscriptionId: providerId,
-            event: 'microsoft_email_unknown_subscription',
+          gatedNotificationCount += 1;
+          // Distinguish a deliberately gated provider (paused/inactive) from a
+          // subscription we have no record of — the latter stays a warning so
+          // leaked or rogue subscriptions remain visible in production logs.
+          const ungatedProbe = discoveryDb.unscoped(
+            'microsoft_email_provider_config as mc',
+            'tenant discovery from Microsoft email webhook subscription'
+          );
+          discoveryDb.tenantJoin(ungatedProbe, 'email_providers as ep', 'mc.email_provider_id', 'ep.id', {
+            rootTenantColumn: 'mc.tenant',
           });
+          const gatedProvider = await ungatedProbe
+            .where('mc.webhook_subscription_id', providerId)
+            .andWhere('ep.provider_type', 'microsoft')
+            .first('ep.id');
+          if (gatedProvider) {
+            console.debug('[MicrosoftWebhook] Acknowledging notification for a gated provider', {
+              subscriptionId: providerId,
+              event: 'microsoft_email_provider_gated',
+            });
+          } else {
+            console.warn('[MicrosoftWebhook] Ignoring notification for unknown subscription', {
+              subscriptionId: providerId,
+              event: 'microsoft_email_unknown_subscription',
+            });
+          }
           return;
         }
 
@@ -282,14 +307,17 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      queued: unifiedQueuedCount > 0,
-      handoff: 'unified_pointer_queue',
-      unifiedQueuedCount,
-      processedCount: processedNotifications.length,
-      messageIds: processedNotifications,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        queued: unifiedQueuedCount > 0,
+        handoff: 'unified_pointer_queue',
+        unifiedQueuedCount,
+        processedCount: processedNotifications.length,
+        messageIds: processedNotifications,
+      },
+      { status: gatedNotificationCount > 0 && unifiedQueuedCount === 0 ? 202 : 200 }
+    );
 
   } catch (error: any) {
     console.error('Microsoft webhook handler error:', error);

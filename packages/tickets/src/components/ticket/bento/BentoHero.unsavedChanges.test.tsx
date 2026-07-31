@@ -10,6 +10,8 @@ const getTicketStatusesMock = vi.fn();
 const getTicketCategoriesByBoardMock = vi.fn();
 const useRegisterUnsavedChangesMock = vi.fn();
 const usePageSaveShortcutMock = vi.fn();
+const requestDiscardMock = vi.fn();
+const resetDraftTrackingMock = vi.fn();
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
@@ -106,6 +108,55 @@ vi.mock('@alga-psa/ui/components/Tooltip', () => ({
 
 vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
   BentoTile: ({ children, id }: { children: React.ReactNode; id: string }) => <section id={id}>{children}</section>,
+  BentoTileEmpty: ({ children, id }: { children: React.ReactNode; id: string }) => <p id={id}>{children}</p>,
+}));
+
+vi.mock('@alga-psa/ui/editor', () => ({
+  RichTextViewer: ({ id, content }: { id?: string; content: unknown }) => (
+    <div data-testid={id ?? 'rich-text-viewer'}>{JSON.stringify(content)}</div>
+  ),
+  TextEditor: ({
+    id,
+    initialContent,
+    onContentChange,
+  }: {
+    id: string;
+    initialContent: unknown;
+    onContentChange: (content: unknown) => void;
+  }) => (
+    <textarea
+      data-testid={id}
+      defaultValue={JSON.stringify(initialContent)}
+      onChange={(event) => onContentChange(JSON.parse(event.target.value))}
+    />
+  ),
+}));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  searchUsersForMentions: vi.fn(),
+}));
+
+vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
+  useDocumentsCrossFeature: () => ({ deleteDocument: vi.fn() }),
+}));
+
+// Stand-in for the clipboard-upload session: discarding routes straight to the
+// component's onDiscard (no pasted images tracked in these tests).
+vi.mock('../useTicketRichTextUploadSession', () => ({
+  useTicketRichTextUploadSession: (options: { onDiscard: () => void }) => ({
+    draftClipboardImages: [],
+    isDeletingDraftImages: false,
+    keepDraftClipboardImages: vi.fn(),
+    requestDiscard: () => {
+      requestDiscardMock();
+      options.onDiscard();
+    },
+    resetDraftTracking: resetDraftTrackingMock,
+    showDraftCancelDialog: false,
+    setShowDraftCancelDialog: vi.fn(),
+    uploadFile: vi.fn(),
+    deleteTrackedDraftClipboardImages: vi.fn(),
+  }),
 }));
 
 vi.mock('@alga-psa/ui/components/Alert', () => ({
@@ -163,10 +214,24 @@ vi.mock('../TicketNotificationSuppressionControl', () => ({
   ),
 }));
 
+const descriptionBlocks = (text: string) => [
+  {
+    type: 'paragraph',
+    props: { textAlignment: 'left', backgroundColor: 'default', textColor: 'default' },
+    content: [{ type: 'text', text, styles: {} }],
+  },
+];
+
+const watchList = [{ type: 'contact', id: 'contact-1', email: 'watcher@example.com' }];
+
 const baseTicket = {
   ticket_id: 'ticket-1',
   tenant: 'tenant-1',
   title: 'Printer offline',
+  attributes: {
+    description: JSON.stringify(descriptionBlocks('Printer will not come online')),
+    watch_list: watchList,
+  },
   status_id: 'status-a',
   priority_id: 'priority-high',
   board_id: 'board-a',
@@ -325,13 +390,15 @@ describe('BentoHero unsaved change model', () => {
     // Returning to the saved board restores status/category/priority, so the
     // pending diff self-cleans: no save bar, no warning, no {status_id: null}.
     // Generous timeout: under Nx parallel load the board-a refetch chain that
-    // self-cleans the diff can outlast waitFor's 1s default.
+    // self-cleans the diff can outlast waitFor's 1s default — and on a wide
+    // affected set (many projects at --parallel=3 on a 4-vCPU runner) fork
+    // starvation has blown through 5s too.
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
-    }, { timeout: 5_000 });
+    }, { timeout: 15_000 });
     await waitFor(() => {
       expect(onLiveDirtyFieldsChange).toHaveBeenLastCalledWith([]);
-    }, { timeout: 5_000 });
+    }, { timeout: 15_000 });
     expect(screen.queryByText('Select a status for the new board before saving.')).not.toBeInTheDocument();
     expect(screen.getByTestId('bento-hero-status-select')).toHaveValue('status-a');
   });
@@ -386,6 +453,118 @@ describe('BentoHero unsaved change model', () => {
       expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
       expect(screen.getByTestId('bento-hero-priority-select')).toHaveValue('priority-high');
     });
+  });
+
+  it('renders the ticket description inline with the opened-by caption', () => {
+    renderHero({
+      createdByUser: { first_name: 'Ada', last_name: 'Lovelace' } as any,
+      ticket: { ...baseTicket, source: 'email' } as any,
+    });
+
+    expect(screen.getByTestId('bento-hero-description-view')).toHaveTextContent(
+      'Printer will not come online',
+    );
+    // The caption replaces what the old Request tile carried.
+    expect(screen.getByText(/Opened by/)).toBeInTheDocument();
+  });
+
+  it('flags the description edit as unsaved and flushes it inside the hero batch', async () => {
+    const onBatchSelectChange = vi.fn().mockResolvedValue(true);
+    renderHero({ onBatchSelectChange });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+    fireEvent.change(screen.getByTestId('bento-hero-description-editor'), {
+      target: { value: JSON.stringify(descriptionBlocks('Toner cartridge replaced')) },
+    });
+
+    expect(useRegisterUnsavedChangesMock).toHaveBeenLastCalledWith('ticket-bento-hero-bento-hero', true);
+    expect(
+      screen.getByText('You have unsaved changes. Click "Save Changes" to apply them.'),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('bento-hero-priority-select'), {
+      target: { value: 'priority-low' },
+    });
+    fireEvent.click(screen.getByLabelText("Don't notify the customer"));
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+    await waitFor(() => {
+      // ONE batch: the pending field plus the merged attributes, and the
+      // pre-existing watch list must survive the description write.
+      expect(onBatchSelectChange).toHaveBeenCalledWith(
+        {
+          priority_id: 'priority-low',
+          attributes: {
+            watch_list: watchList,
+            description: JSON.stringify(descriptionBlocks('Toner cartridge replaced')),
+          },
+        },
+        { suppressContactNotifications: true, suppressInternalNotifications: false },
+      );
+    });
+    expect(onBatchSelectChange).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('bento-hero-description-editor')).not.toBeInTheDocument();
+    expect(resetDraftTrackingMock).toHaveBeenCalled();
+  });
+
+  it('falls back to onUpdateDescription when no batch handler is wired', async () => {
+    const onUpdateDescription = vi.fn().mockResolvedValue(true);
+    renderHero({ onBatchSelectChange: undefined, onUpdateDescription });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+    fireEvent.change(screen.getByTestId('bento-hero-description-editor'), {
+      target: { value: JSON.stringify(descriptionBlocks('Escalated to vendor')) },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+    await waitFor(() => {
+      expect(onUpdateDescription).toHaveBeenCalledWith(
+        JSON.stringify(descriptionBlocks('Escalated to vendor')),
+      );
+    });
+  });
+
+  it('opening the description editor offers a cancel exit with Save still gated', async () => {
+    renderHero();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+
+    expect(screen.getByRole('button', { name: /Save Changes/i })).toBeDisabled();
+    expect(
+      screen.queryByText('You have unsaved changes. Click "Save Changes" to apply them.'),
+    ).not.toBeInTheDocument();
+
+    // No pending diff, so Cancel closes the editor without a confirmation.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('bento-hero-description-editor')).not.toBeInTheDocument();
+    });
+  });
+
+  it('cancel discards the description draft through the upload session', async () => {
+    renderHero();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+    fireEvent.change(screen.getByTestId('bento-hero-description-editor'), {
+      target: { value: JSON.stringify(descriptionBlocks('Draft never saved')) },
+    });
+
+    expect(screen.getByRole('button', { name: /Save Changes/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Discard Changes' }));
+
+    await waitFor(() => {
+      expect(requestDiscardMock).toHaveBeenCalled();
+      expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('bento-hero-description-view')).toHaveTextContent(
+      'Printer will not come online',
+    );
   });
 
   it('T067: taking a remote board conflict clears coupled pending fields', async () => {

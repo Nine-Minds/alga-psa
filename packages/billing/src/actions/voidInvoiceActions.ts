@@ -6,6 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 
 // Exported for testing
@@ -37,10 +38,8 @@ export async function reverseCreditApplicationsForInvoice(
     }
 
     if (totalRestored > 0) {
-      // Restore client credit balance
-      await tenantDb(trx, tenant).table('clients')
-        .where({ client_id: txn.client_id })
-        .increment('credit_balance', totalRestored);
+      // The restored remaining_amounts above put the credit back in the
+      // derived balance; only the reversing transaction is left to write.
 
       // Write reversing transaction
       await tenantDb(trx, tenant).table('transactions').insert({
@@ -80,6 +79,15 @@ export const voidInvoice = withAuth(async (
   invoiceId: string,
   reason: string
 ): Promise<VoidInvoiceResult> => {
+  // Voiding reverses credits and pushes voids to accounting integrations —
+  // internal MSP users with invoice update permission only.
+  if (user.user_type === 'client') {
+    return { success: false, error: 'Permission denied: operation not available in client portal' };
+  }
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    return { success: false, error: 'Permission denied: invoice update required' };
+  }
+
   const trimmedReason = reason?.trim();
   if (!trimmedReason) {
     return { success: false, error: 'A reason is required to void an invoice.' };
@@ -171,12 +179,7 @@ export const voidInvoice = withAuth(async (
         if (creditRow && Number(creditRow.remaining_amount) > 0) {
           const clawedBack = Number(creditRow.remaining_amount);
 
-          // Decrement client.credit_balance by remaining amount
-          await tenantDb(trx, tenant).table('clients')
-            .where({ client_id: txn.client_id })
-            .decrement('credit_balance', clawedBack);
-
-          // Zero out the credit tracking entry
+          // Zero out the credit tracking entry (removes it from the derived balance)
           await tenantDb(trx, tenant).table('credit_tracking')
             .where({ credit_id: creditRow.credit_id })
             .update({ remaining_amount: 0, updated_at: now });

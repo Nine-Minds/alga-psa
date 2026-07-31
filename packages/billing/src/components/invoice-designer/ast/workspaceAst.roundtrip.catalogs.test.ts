@@ -31,7 +31,15 @@ describe('workspaceAst roundtrip metadata/style/binding catalogs', () => {
     );
 
     const roundTripped = roundTripAst(ast);
-    expect(roundTripped.metadata).toEqual(ast.metadata);
+    // Export resolves print settings into template metadata (print-settings
+    // foundation, 7db88ccda8) — authored metadata must survive alongside them.
+    expect(roundTripped.metadata).toEqual({
+      ...ast.metadata,
+      printSettings: expect.objectContaining({
+        paperPreset: expect.any(String),
+        marginMm: expect.any(Number),
+      }),
+    });
     expect(roundTripped.styles).toEqual(ast.styles);
     expect(getDocumentNode(roundTripped).id).toBe('template-root');
   });

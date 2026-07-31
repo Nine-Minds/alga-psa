@@ -277,6 +277,7 @@
   },
   "dashboard": {
     "loadingInsights": "Ładowanie analizy ankiet...",
+    "printTitle": "Panel ankiet",
     "responseMetrics": {
       "cards": {
         "sent": "Wysłane zaproszenia",
@@ -422,6 +423,43 @@
     },
     "fallbacks": {
       "none": "-"
+    }
+  },
+  "print": {
+    "emptyValue": "—",
+    "columns": {
+      "date": "Data",
+      "averageRating": "Średnia ocena",
+      "responses": "Odpowiedzi",
+      "rating": "Ocena",
+      "share": "Udział",
+      "ticket": "Zgłoszenie",
+      "client": "Klient",
+      "contact": "Kontakt",
+      "agent": "Agent",
+      "technician": "Technik",
+      "submitted": "Przesłano",
+      "comment": "Komentarz"
+    },
+    "metrics": {
+      "averageRating": "Średnia ocena",
+      "invitations": "Zaproszenia",
+      "outstanding": "Oczekujące",
+      "recentNegative": "Ostatnie negatywne",
+      "responseRate": "Wskaźnik odpowiedzi",
+      "responses": "Odpowiedzi"
+    },
+    "sections": {
+      "trend": "Trend odpowiedzi",
+      "distribution": "Rozkład satysfakcji",
+      "topIssues": "Najczęstsze problemy",
+      "recentResponses": "Najnowsze odpowiedzi"
+    },
+    "empty": {
+      "trend": "Brak odpowiedzi w tym okresie.",
+      "distribution": "Brak ocenionych odpowiedzi w tym okresie.",
+      "topIssues": "Brak negatywnych odpowiedzi w tym okresie.",
+      "recentResponses": "Brak odpowiedzi w tym okresie."
     }
   }
 }

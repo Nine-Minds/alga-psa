@@ -1147,7 +1147,9 @@
     "clientRequired": "55555",
     "serialUnit": "55555",
     "selectUnit": "55555",
-    "onHandByLocation": "55555"
+    "onHandByLocation": "55555",
+    "catalogUnitCost": "55555",
+    "costNotConfigured": "55555"
   },
   "watchList": {
     "title": "55555",
@@ -1497,7 +1499,6 @@
       "pausedHint": "55555"
     },
     "tiles": {
-      "request": "55555",
       "openedBy": "55555 {{name}} 55555",
       "showMore": "55555",
       "showLess": "55555",

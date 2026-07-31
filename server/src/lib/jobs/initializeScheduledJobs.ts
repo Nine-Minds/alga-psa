@@ -1,9 +1,10 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
+import { scheduleMarketingJobsForTenant } from './marketingScheduleCutover';
 
 const isEnterpriseWorkflowEdition = (): boolean =>
   process.env.EDITION === 'enterprise'
@@ -24,6 +25,7 @@ export async function initializeScheduledJobs(): Promise<void> {
     const knex = await getConnection(null);
     const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
       .unscoped('tenants', 'scheduler enumerates all tenants to register recurring jobs')
+      .whereNull('suspended_at')
       .select('tenant');
     logger.info(`Preparing to schedule jobs for ${tenants.length} tenants`);
     
@@ -107,44 +109,19 @@ export async function initializeScheduledJobs(): Promise<void> {
         logger.error(`Failed to schedule opportunity weekly digest job for tenant ${tenantId}`, error);
       }
 
-      // Marketing module jobs (flag-gated no-ops when the module is off)
-      try {
-        const flipJobId = await scheduleMarketingFlipDuePostsJob(tenantId, '*/5 * * * *');
-        logger.info('Marketing flip-due-posts schedule converged', { tenantId, flipJobId });
-      } catch (error) {
-        logger.error(`Failed to schedule marketing flip-due-posts job for tenant ${tenantId}`, error);
-      }
+      // CE keeps the existing per-tenant pg-boss jobs. In EE/appliance the
+      // Temporal worker's three global fan-out schedules are authoritative.
+      await scheduleMarketingJobsForTenant({
+        tenantId,
+        enterpriseWorkflowEdition: isEnterpriseWorkflowEdition(),
+        dependencies: {
+          logger,
+          scheduleFlipDuePosts: scheduleMarketingFlipDuePostsJob,
+          scheduleExpireStaleTargets: scheduleMarketingExpireStaleTargetsJob,
+          scheduleSendSequenceSteps: scheduleMarketingSendSequenceStepsJob,
+        },
+      });
 
-      try {
-        const expireJobId = await scheduleMarketingExpireStaleTargetsJob(tenantId, '11 * * * *');
-        logger.info('Marketing expire-stale-targets schedule converged', { tenantId, expireJobId });
-      } catch (error) {
-        logger.error(`Failed to schedule marketing expire-stale-targets job for tenant ${tenantId}`, error);
-      }
-
-      try {
-        const sendJobId = await scheduleMarketingSendSequenceStepsJob(tenantId, '*/5 * * * *');
-        logger.info('Marketing send-sequence-steps schedule converged', { tenantId, sendJobId });
-      } catch (error) {
-        logger.error(`Failed to schedule marketing send-sequence-steps job for tenant ${tenantId}`, error);
-      }
-
-      // Schedule daily job to run credit reconciliation (runs at 2:00 AM)
-      try {
-        const cron = '0 2 * * *';
-        const reconciliationJobId = await scheduleCreditReconciliationJob(tenantId, undefined, cron);
-        if (reconciliationJobId) {
-          logger.info(`Scheduled credit reconciliation job for tenant ${tenantId} with job ID ${reconciliationJobId}`);
-        } else {
-          logger.info('Credit reconciliation job already scheduled (singleton active)', {
-            tenantId,
-            cron,
-            returnedJobId: reconciliationJobId
-          });
-        }
-      } catch (error) {
-        logger.error(`Failed to schedule credit reconciliation job for tenant ${tenantId}`, error);
-      }
      
      // Schedule daily job to reconcile bucket usage (runs at 3:00 AM)
      try {

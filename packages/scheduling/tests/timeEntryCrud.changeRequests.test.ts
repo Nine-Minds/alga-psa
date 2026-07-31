@@ -22,6 +22,7 @@ vi.mock('@alga-psa/db', () => ({
   computeWorkDateFields: (...args: any[]) => computeWorkDateFieldsMock(...args),
   truncateToMinute: (value: string | Date) =>
     new Date(Math.floor(new Date(value).getTime() / 60000) * 60000),
+  recalculateProjectTaskActualHoursForEntryChange: vi.fn(async () => undefined),
   tenantDb: (conn: any, tenant: string) => ({
     tenant,
     table: (table: string) => conn(table),

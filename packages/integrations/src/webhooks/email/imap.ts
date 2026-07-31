@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const provider = await tenantDb(knex, PROVIDER_TENANT_DISCOVERY)
       .unscoped('email_providers', 'tenant discovery for IMAP email webhook provider lookup')
       .where({ id: providerId, provider_type: 'imap' })
-      .first('id', 'tenant', 'is_active', 'mailbox');
+      .first('id', 'tenant', 'is_active', 'inbound_paused_at', 'mailbox');
 
     if (!provider) {
       return NextResponse.json({ error: 'IMAP provider not found' }, { status: 404 });
@@ -93,6 +93,14 @@ export async function POST(request: NextRequest) {
         success: true,
         skipped: true,
         reason: 'Provider is inactive',
+      });
+    }
+
+    if (provider.inbound_paused_at) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: 'Provider inbound ingestion is paused',
       });
     }
 

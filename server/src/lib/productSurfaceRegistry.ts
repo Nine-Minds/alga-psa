@@ -140,6 +140,9 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/email/imap',
       '/api/v1/users',
       '/api/v1/teams',
+      '/api/v1/interactions',
+      '/api/v1/interaction-types',
+      '/api/v1/mobile/me/capabilities',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
     visibleInMetadataByProduct: { psa: true, algadesk: true },
@@ -179,6 +182,8 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/project',
       '/api/v1/integrations',
       '/api/v1/marketing',
+      '/api/v1/inventory',
+      '/api/v1/opportunities',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: true, algadesk: false },
@@ -190,6 +195,18 @@ export const API_RULES: readonly ApiRule[] = [
     group: 'api_marketing_public',
     staticPrefixes: [
       '/api/marketing',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
+    // SCIM 2.0 service provider for directory-driven user lifecycle. Entra
+    // authenticates with a tenant-scoped bearer token, so these endpoints are
+    // not v1 API surface and never appear in /api/v1/meta metadata. PSA-only,
+    // matching the Pro-tier SCIM_PROVISIONING feature.
+    group: 'api_scim_provisioning',
+    staticPrefixes: [
+      '/api/scim',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: false, algadesk: false },

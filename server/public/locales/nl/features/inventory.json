@@ -2,6 +2,7 @@
   "common": {
     "actions": "Acties",
     "active": "Actief",
+    "allTime": "Volledige periode",
     "cancel": "Annuleren",
     "clear": "Wissen",
     "close": "Sluiten",
@@ -14,6 +15,7 @@
     "inactive": "Inactief",
     "loading": "Laden…",
     "name": "Naam",
+    "period": "Periode",
     "quantity": "Aantal",
     "refresh": "Vernieuwen",
     "refreshing": "Vernieuwen…",
@@ -28,6 +30,7 @@
     "search": "Zoeken",
     "status": "Status",
     "to": "Naar",
+    "today": "Vandaag",
     "total": "Totaal",
     "unknown": "Onbekend"
   },
@@ -432,6 +435,7 @@
     "candidateCapNote": " (eerste {{cap}} weergegeven)",
     "candidateCount": "{{count}} ghost-kandidaat",
     "candidateCountPlural": "{{count}} ghost-kandidaten",
+    "candidatesTitle": "Ghost-kandidaten",
     "columns": {
       "aiVerdict": "AI-oordeel",
       "assignedTo": "Toegewezen aan",

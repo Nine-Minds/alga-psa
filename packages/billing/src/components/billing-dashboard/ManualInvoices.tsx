@@ -727,7 +727,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           clientId: selectedClient || '',
           // invoiceNumber: newInvoiceNumber, // Remove - ManualInvoiceRequest doesn't have this
           isPrepayment,
-          expirationDate: isPrepayment ? expirationDate : undefined,
+          expirationDate: isPrepayment && expirationDate ? expirationDate : undefined,
           items: itemsToSave
         });
 

@@ -148,9 +148,10 @@ exports.up = async function up(knex) {
   if (await knex.schema.hasColumn('contract_lines', 'tenant')) {
     // contract_lines carries an FK into contracts, and Citus requires the
     // referenced table to be distributed first (tenants first of all — it is
-    // the colocation anchor, matching ee/server/migrations/citus). Production
-    // already had these distributed before this migration shipped; fresh
-    // chains (new EE installs, the Citus smoke job) must do it here.
+    // the colocation anchor). Distribution lives inline in each table's
+    // creation migration, per docs/architecture/citus-migration-best-practices.md.
+    // Production already had these distributed before this migration shipped;
+    // fresh chains (new EE installs, the Citus smoke job) must do it here.
     await ensureDistributed(knex, 'tenants', 'tenant');
     await ensureDistributed(knex, 'contracts', 'tenant');
     await ensureDistributed(knex, 'contract_lines', 'tenant');

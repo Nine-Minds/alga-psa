@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import crypto from 'crypto';
-import { tenantDb } from '@alga-psa/db';
+import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
 
 interface ApiKey {
@@ -74,7 +74,13 @@ export class ApiKeyServiceForApi {
         console.log(`Invalid or expired API key attempt in tenant ${tenantId}; key=${maskKey(plaintextKey)}`);
         return null;
       }
-      
+
+      const gateReason = await this.getKeyGateReason(knex, tenantId, record.user_id);
+      if (gateReason) {
+        console.log(`API key rejected (${gateReason}) in tenant ${tenantId}`);
+        return null;
+      }
+
       if (record.usage_limit !== null && record.usage_limit !== undefined && record.usage_count >= record.usage_limit) {
         await tenantDb(knex, tenantId).table('api_keys')
           .where({
@@ -142,7 +148,13 @@ export class ApiKeyServiceForApi {
         console.log(`Invalid or expired API key attempt; key=${maskKey(plaintextKey)}`);
         return null;
       }
-      
+
+      const gateReason = await this.getKeyGateReason(knex, record.tenant, record.user_id);
+      if (gateReason) {
+        console.log(`API key rejected (${gateReason}) in tenant ${record.tenant}`);
+        return null;
+      }
+
       if (record.usage_limit !== null && record.usage_limit !== undefined && record.usage_count >= record.usage_limit) {
         await tenantDb(knex, record.tenant).table('api_keys')
           .where({
@@ -170,6 +182,26 @@ export class ApiKeyServiceForApi {
       console.error('Error validating API key:', error);
       return null;
     }
+  }
+
+  /**
+   * Why an otherwise-valid key must not authenticate: deactivated owning
+   * user (missing user counts as inactive) or suspended tenant (cancelled,
+   * pending deletion). Errors propagate to the callers' catch blocks, which
+   * fail closed.
+   */
+  private static async getKeyGateReason(
+    knex: Knex,
+    tenant: string,
+    userId: string
+  ): Promise<'user_inactive' | 'tenant_suspended' | null> {
+    const user = await tenantDb(knex, tenant)
+      .table('users')
+      .where({ user_id: userId })
+      .first('is_inactive');
+    if (!user || user.is_inactive) return 'user_inactive';
+    if (await isTenantSuspended(knex, tenant)) return 'tenant_suspended';
+    return null;
   }
 
   static async consumeApiKey(

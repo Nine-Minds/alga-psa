@@ -7,6 +7,14 @@ const billingEngineSource = readFileSync(
   new URL('../../../../../packages/billing/src/lib/billing/billingEngine.ts', import.meta.url),
   'utf8',
 );
+// Phase-override precedence math was extracted into the pure compute layer.
+const timeComputeSource = readFileSync(
+  new URL(
+    '../../../../../packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts',
+    import.meta.url,
+  ),
+  'utf8',
+);
 
 const PERIOD = {
   startDate: '2026-07-01',
@@ -45,14 +53,17 @@ function config(overrides: Record<string, unknown> = {}) {
 }
 
 function entry(overrides: Record<string, unknown> = {}) {
+  const status = String(overrides.status ?? 'approved');
+  const amount = Number(overrides.amount ?? 5_000);
   return {
     tenant: 'tenant-1',
     schedule_entry_id: 'entry-1',
     config_id: 'config-1',
     entry_type: 'milestone',
     description: 'Discovery complete',
-    amount: 5_000,
+    amount,
     percentage: null,
+    frozen_amount: status === 'approved' || status === 'invoiced' ? amount : null,
     trigger_type: 'manual',
     phase_id: null,
     trigger_date: null,
@@ -268,9 +279,9 @@ describe('project T&M cap and override integration', () => {
       'phase-2',
       'service-1',
     )).toBeNull();
-    expect(billingEngineSource).toContain('phaseOverride?.rate ?? (Number(resolvedRate) || 0)');
-    expect(billingEngineSource).toContain('phaseOverride?.override_service_id ?? entry.service_id');
-    expect(billingEngineSource).toContain('phaseOverride?.override_service_name ?? entry.service_name');
+    expect(timeComputeSource).toContain('phaseOverride?.rate ?? (Number(resolvedRate) || 0)');
+    expect(timeComputeSource).toContain('phaseOverride?.override_service_id ?? entry.service_id');
+    expect(timeComputeSource).toContain('phaseOverride?.override_service_name ?? entry.service_name');
   });
 
   it('T016: labor and materials share one hard cap and a later run bills zero', () => {
@@ -392,6 +403,7 @@ describe('project billing engine orchestration', () => {
   beforeEach(() => {
     engine = new BillingEngine();
     identityAdjustments(engine);
+    vi.spyOn(engine as any, 'getProjectMaterialCurrencyWarnings').mockResolvedValue([]);
   });
 
   it('T013: standalone T&M combines project contract time, unresolved time, materials, and milestones', async () => {
@@ -429,11 +441,13 @@ describe('project billing engine orchestration', () => {
     expect(result.totalAmount).toBe(11_000);
   });
 
-  it('T014: fixed-price standalone projects exclude contract, unresolved, and material activity', async () => {
+  it('T014: fixed-price standalone projects include materials but exclude labor activity', async () => {
     const projectConfig = config({ invoice_mode: 'standalone' });
     const billingContext = context([projectConfig], [entry({ amount: 10_000 })]);
     const calculateTime = vi.spyOn(engine as any, 'calculateTimeBasedCharges');
-    const calculateMaterials = vi.spyOn(engine as any, 'calculateMaterialCharges');
+    const material = { type: 'product', serviceName: 'Hardware', total: 3_000 };
+    const calculateMaterials = vi.spyOn(engine as any, 'calculateMaterialCharges')
+      .mockResolvedValue([material]);
     const calculateUnresolved = vi.spyOn(engine as any, 'calculateUnresolvedNonContractCharges');
 
     vi.spyOn(engine as any, 'getClientContractLinesForBillingPeriod').mockResolvedValue([
@@ -448,10 +462,39 @@ describe('project billing engine orchestration', () => {
       { projectTarget: { projectId: 'project-1' } },
     );
 
-    expect(result.charges).toEqual([expect.objectContaining({ type: 'project_milestone', total: 10_000 })]);
+    expect(result.charges).toEqual([
+      material,
+      expect.objectContaining({ type: 'project_milestone', total: 10_000 }),
+    ]);
+    expect(result.totalAmount).toBe(13_000);
     expect(calculateTime).not.toHaveBeenCalled();
-    expect(calculateMaterials).not.toHaveBeenCalled();
+    expect(calculateMaterials).toHaveBeenCalled();
     expect(calculateUnresolved).not.toHaveBeenCalled();
+  });
+
+  it('surfaces skipped project-material currencies without adding their charges', async () => {
+    const projectConfig = config({ invoice_mode: 'standalone' });
+    const billingContext = context([projectConfig], [entry({ amount: 10_000 })]);
+    vi.spyOn(engine as any, 'getClientContractLinesForBillingPeriod').mockResolvedValue([]);
+    vi.spyOn(engine as any, 'loadProjectBillingContext').mockResolvedValue(billingContext);
+    vi.spyOn(engine as any, 'calculateMaterialCharges').mockResolvedValue([]);
+    vi.mocked((engine as any).getProjectMaterialCurrencyWarnings).mockResolvedValue([
+      '2 materials in EUR were skipped — invoice currency is USD',
+    ]);
+
+    const result = await (engine as any).calculateBillingForPreparedPeriod(
+      'client-1',
+      PERIOD,
+      CLIENT,
+      { projectTarget: { projectId: 'project-1' } },
+    );
+
+    expect(result.warnings).toEqual([
+      '2 materials in EUR were skipped — invoice currency is USD',
+    ]);
+    expect(result.charges).toEqual([
+      expect.objectContaining({ type: 'project_milestone', total: 10_000 }),
+    ]);
   });
 
   it('T021: no-config golden scenario preserves legacy contract/time/material/bucket output byte-for-byte', async () => {

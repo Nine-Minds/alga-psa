@@ -8,7 +8,6 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 // outside the package use '@alga-psa/jobs/handlers/<name>'.
 import { expiredCreditsHandler } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler } from './handlers/expiringCreditsNotificationHandler';
-import { creditReconciliationHandler } from './handlers/creditReconciliationHandler';
 import { handleReconcileBucketUsage } from './handlers/reconcileBucketUsageHandler';
 import { processRenewalQueueHandler } from './handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler } from './handlers/autoCloseTicketsHandler';
@@ -35,7 +34,6 @@ type MaintenanceJobDef =
 const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'expired-credits': { scope: 'tenant', run: (tenantId) => expiredCreditsHandler({ tenantId }) },
   'expiring-credits-notification': { scope: 'tenant', run: (tenantId) => expiringCreditsNotificationHandler({ tenantId }) },
-  'credit-reconciliation': { scope: 'tenant', run: (tenantId) => creditReconciliationHandler({ tenantId }) },
   'reconcile-bucket-usage': { scope: 'tenant', run: (tenantId) => handleReconcileBucketUsage({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
   'process-renewal-queue': { scope: 'tenant', run: (tenantId) => processRenewalQueueHandler({ tenantId, horizonDays: RENEWAL_HORIZON_DAYS }) },
   'auto-close-tickets': { scope: 'tenant', run: (tenantId) => autoCloseTicketsHandler({ tenantId }) },
@@ -96,6 +94,7 @@ export async function runMaintenanceJob(
   const knex = await getAdminConnection();
   const tenants = await tenantDb(knex, '__maintenance_job_fanout_tenant_enumeration__')
     .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
+    .whereNull('suspended_at')
     .select('tenant');
   let succeeded = 0;
   let failed = 0;

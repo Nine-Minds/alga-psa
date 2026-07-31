@@ -3,7 +3,13 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import type { IProjectMaterial, IService, IServicePrice, IStockUnit } from '@alga-psa/types';
+import type {
+  IProjectMaterial,
+  IService,
+  IServicePrice,
+  IStockUnit,
+  ProjectMaterialBillingDestination,
+} from '@alga-psa/types';
 import type { Knex } from 'knex';
 import {
   addMaterial,
@@ -13,6 +19,7 @@ import {
   queryAvailableStockUnits,
   queryCatalogPickerItems,
   queryServicePrices,
+  updateProjectMaterialBilling,
 } from '@alga-psa/inventory/lib';
 import { InsufficientStockError } from '@alga-psa/inventory/lib/consume';
 import {
@@ -63,7 +70,48 @@ export type CatalogPickerItem = Pick<
   'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku'
 > & {
   default_rate: number;
+  cost: number | null;
+  cost_currency: string | null;
 } & import('@alga-psa/inventory/lib/integrationTypes').PickerStockFields;
+
+export interface ProjectMaterialBillingOption {
+  schedule_entry_id: string;
+  description: string;
+  phase_name: string | null;
+  status: string;
+}
+
+export const getProjectMaterialBillingOptions = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+): Promise<{ project_currency: string | null; entries: ProjectMaterialBillingOption[] } | ProjectMaterialActionError> => {
+  if (!await hasPermission(user, 'project', 'read')) {
+    return permissionError('Permission denied: project read required');
+  }
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx) => {
+    const config = await trx('project_billing_configs')
+      .where({ tenant, project_id: projectId })
+      .first('config_id', 'currency');
+    if (!config) return { project_currency: null, entries: [] };
+    const entries = await trx('project_billing_schedule_entries as entry')
+      .leftJoin('project_phases as phase', function joinPhase() {
+        this.on('phase.tenant', '=', 'entry.tenant')
+          .andOn('phase.phase_id', '=', 'entry.phase_id');
+      })
+      .where({ 'entry.tenant': tenant, 'entry.config_id': config.config_id })
+      .whereNot('entry.status', 'canceled')
+      .select(
+        'entry.schedule_entry_id',
+        'entry.description',
+        'entry.status',
+        'phase.phase_name',
+      )
+      .orderBy('entry.display_order', 'asc');
+    return { project_currency: config.currency ?? null, entries };
+  });
+});
 
 export const searchServiceCatalogForPicker = withAuth(async (
   _user,
@@ -120,6 +168,8 @@ export const addProjectMaterial = withAuth(async (
     currency_code: string;
     description?: string | null;
     unit_id?: string | null; // serialized: the picked stock unit to deliver
+    billing_destination?: ProjectMaterialBillingDestination;
+    billing_schedule_entry_id?: string | null;
   }
 ): Promise<IProjectMaterial | ProjectMaterialActionError> => {
   try {
@@ -138,6 +188,29 @@ export const addProjectMaterial = withAuth(async (
     if (expected) {
       return expected;
     }
+    throw error;
+  }
+});
+
+export const updateProjectMaterial = withAuth(async (
+  user,
+  { tenant },
+  projectMaterialId: string,
+  input: {
+    rate: number;
+    billing_destination: ProjectMaterialBillingDestination;
+    billing_schedule_entry_id?: string | null;
+  },
+): Promise<IProjectMaterial | ProjectMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'project', 'update')) {
+      return permissionError('Permission denied: project update required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return await updateProjectMaterialBilling(db, tenant, projectMaterialId, input) as IProjectMaterial;
+  } catch (error) {
+    const expected = projectMaterialActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });

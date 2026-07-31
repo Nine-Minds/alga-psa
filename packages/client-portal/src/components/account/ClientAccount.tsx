@@ -12,6 +12,7 @@ import { getErrorMessage, isActionMessageError, isActionPermissionError } from '
 import type { IClient } from '@alga-psa/types';
 import type { IClientContractLine } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 const isBillingActionError = (
   value: unknown
@@ -25,30 +26,22 @@ export default function ClientAccount() {
   const [isLoading, setIsLoading] = useState(true);
   const [client, setClient] = useState<IClient | null>(null);
   const [contractLine, setContractLine] = useState<IClientContractLine | null>(null);
+  const { money } = useCurrencyFormat();
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
-  // Note: Invoice amounts are stored in cents, so we divide by 100
-  const formatCurrency = useCallback((amountInCents: number | string | null | undefined, currencyCode: string = 'USD') => {
+  // Note: Invoice amounts are stored in cents; money() takes minor units and
+  // formats with the tenant's locale + currency from CurrencyFormatProvider.
+  const formatCurrency = useCallback((amountInCents: number | string | null | undefined, currencyCode?: string) => {
     try {
       const n = typeof amountInCents === 'string' ? Number(amountInCents) : (amountInCents ?? 0);
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format((n as number) / 100);
+      return money(n as number, currencyCode);
     } catch {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(0);
+      return money(0);
     }
-  }, []);
+  }, [money]);
 
   const formatDate = useCallback((date: any) => {
     if (!date) return 'N/A';
