@@ -550,6 +550,22 @@ const coerceCssLength = (value: unknown): string | undefined => {
   return undefined;
 };
 
+// CSS `flex` shorthand → longhand. Handles the common authored forms:
+// `flex: 1` / `flex: '1'` → 1 1 0%; `flex: '1 0 auto'` → explicit triple.
+const parseFlexShorthand = (
+  value: string | number
+): { grow?: number; shrink?: number; basis?: string } | null => {
+  const text = String(value).trim();
+  if (!text || text === 'none') return text === 'none' ? { grow: 0, shrink: 0, basis: 'auto' } : null;
+  if (text === 'auto') return { grow: 1, shrink: 1, basis: 'auto' };
+  const parts = text.split(/\s+/);
+  const grow = Number(parts[0]);
+  if (!Number.isFinite(grow)) return null;
+  const shrink = parts.length > 1 && Number.isFinite(Number(parts[1])) ? Number(parts[1]) : 1;
+  const basis = parts.length === 3 ? parts[2] : parts.length === 2 && !Number.isFinite(Number(parts[1])) ? parts[1] : '0%';
+  return { grow, shrink, basis };
+};
+
 const coerceNumber = (value: unknown): number | undefined => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -724,9 +740,15 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   if (maxWidth) style.maxWidth = maxWidth;
   if (maxHeight) style.maxHeight = maxHeight;
 
-  const flexGrow = coerceNumber(inline.flexGrow);
-  const flexShrink = coerceNumber(inline.flexShrink);
-  const flexBasis = coerceCssLength(inline.flexBasis);
+  // The designer speaks longhand only (flex-item controls were simplified in
+  // f53d6aa864), but templates saved before that carry the `flex` shorthand —
+  // decompose it so imports keep their stretch instead of silently dropping it.
+  const shorthand = typeof inline.flex === 'string' || typeof inline.flex === 'number'
+    ? parseFlexShorthand(inline.flex)
+    : null;
+  const flexGrow = coerceNumber(inline.flexGrow) ?? shorthand?.grow;
+  const flexShrink = coerceNumber(inline.flexShrink) ?? shorthand?.shrink;
+  const flexBasis = coerceCssLength(inline.flexBasis) ?? shorthand?.basis;
   if (typeof flexGrow === 'number') style.flexGrow = flexGrow;
   if (typeof flexShrink === 'number') style.flexShrink = flexShrink;
   if (flexBasis) style.flexBasis = flexBasis;

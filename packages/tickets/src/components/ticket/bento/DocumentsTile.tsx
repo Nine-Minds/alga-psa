@@ -7,7 +7,14 @@ import type { IDocument } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
-import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
+import {
+  BentoMicroBadge,
+  BentoRow,
+  BentoRowList,
+  BentoRowMeta,
+  BentoTile,
+  BentoTileEmpty,
+} from '@alga-psa/ui/components/bento';
 import TicketDocumentsSection from './../TicketDocumentsSection';
 
 const MAX_ROWS = 5;
@@ -69,7 +76,7 @@ function DocumentRow({
 }) {
   const size = formatFileSize(doc.file_size);
   return (
-    <li id={id} className="py-1.5 first:pt-0 last:pb-0">
+    <BentoRow id={id} stacked>
       <a
         href={documentViewUrl(doc, resolveDocumentViewUrl)}
         target="_blank"
@@ -77,9 +84,7 @@ function DocumentRow({
         className="group flex items-center gap-2 min-w-0 text-sm"
         title={doc.document_name}
       >
-        <span className="flex-shrink-0 rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-1 py-0.5 text-[9px] font-semibold tracking-wide text-[rgb(var(--color-text-500))]">
-          {documentExtension(doc)}
-        </span>
+        <BentoMicroBadge>{documentExtension(doc)}</BentoMicroBadge>
         <span className="min-w-0 truncate text-[rgb(var(--color-text-700))] group-hover:text-[rgb(var(--color-primary-600))] group-hover:underline">
           {doc.document_name}
         </span>
@@ -89,11 +94,9 @@ function DocumentRow({
             aria-label={t('bento.tiles.clientVisible', 'Client visible')}
           />
         ) : null}
-        {size ? (
-          <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">{size}</span>
-        ) : null}
+        {size ? <BentoRowMeta>{size}</BentoRowMeta> : null}
       </a>
-    </li>
+    </BentoRow>
   );
 }
 
@@ -153,7 +156,7 @@ export function DocumentsTile({
           </div>
         ) : (
           <div>
-            <ul className="divide-y divide-[rgb(var(--color-border-100))]">
+            <BentoRowList>
               {visible.map((doc) => (
                 <DocumentRow
                   key={doc.document_id}
@@ -163,7 +166,7 @@ export function DocumentsTile({
                   t={t}
                 />
               ))}
-            </ul>
+            </BentoRowList>
             {overflow > 0 ? (
               <button
                 id={`${id}-view-all`}

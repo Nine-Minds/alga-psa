@@ -120,6 +120,7 @@ function computeProjectScheduleAmountsForNotification(
 
 export type ProjectUpdateResult = IProject & {
     deposit_reconciliation_needed?: boolean;
+    products_moved_to_hold?: number;
 };
 
 const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
@@ -984,6 +985,7 @@ export const markPhaseComplete = withAuth(async (
         const phase = updatedPhase ?? await ProjectModel.getPhaseById(trx, tenant, phaseId);
         if (!phase) throw new Error('Project phase not found');
 
+        // LEVERAGE: friction phase-readiness-invariant — projects duplicates the billing readiness transition because feature packages cannot depend on each other; move this invariant behind a horizontal project-billing boundary when that layer exists.
         // projects cannot depend on @alga-psa/billing without introducing a
         // feature-package dependency cycle, so readiness is evaluated here
         // with the same optimistic pending predicate as the billing service.
@@ -1607,12 +1609,12 @@ async function closeProjectBillingSchedule(
     trx: Knex.Transaction,
     tenant: string,
     projectId: string
-): Promise<boolean> {
+): Promise<{ depositReconciliationNeeded: boolean; productsMovedToHold: number } | null> {
     const config = await tenantScopedTable(trx, 'project_billing_configs', tenant)
         .where({ project_id: projectId })
         .select('config_id', 'total_price')
         .first<{ config_id: string; total_price: string | number | null }>();
-    if (!config) return false;
+    if (!config) return null;
 
     const db = tenantDb(trx, tenant);
     const totalsQuery = tenantScopedTable(trx, 'project_billing_schedule_entries as entry', tenant);
@@ -1643,12 +1645,30 @@ async function closeProjectBillingSchedule(
         .first<{ invoiced_deposits: string | number; invoiced_milestones: string | number }>();
 
     const canceledAt = new Date().toISOString();
+    let productsMovedToHold = 0;
+    const entriesToCancel = await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+        .where({ config_id: config.config_id })
+        .whereIn('status', ['pending', 'ready', 'approved'])
+        .select('schedule_entry_id') as Array<{ schedule_entry_id: string }>;
+    if (entriesToCancel.length > 0) {
+        productsMovedToHold = await tenantScopedTable(trx, 'project_materials', tenant)
+            .where({ billing_destination: 'schedule_entry', is_billed: false })
+            .whereIn('billing_schedule_entry_id', entriesToCancel.map((entry) => entry.schedule_entry_id))
+            .update({
+                billing_destination: 'on_hold',
+                billing_schedule_entry_id: null,
+                updated_at: canceledAt,
+            });
+    }
     await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
         .where({ config_id: config.config_id })
         .whereIn('status', ['pending', 'ready', 'approved'])
         .update({ status: 'canceled', updated_at: canceledAt });
 
-    return Number(totals?.invoiced_deposits ?? 0) > Number(totals?.invoiced_milestones ?? 0);
+    return {
+        depositReconciliationNeeded: Number(totals?.invoiced_deposits ?? 0) > Number(totals?.invoiced_milestones ?? 0),
+        productsMovedToHold,
+    };
 }
 
 export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<ProjectUpdateResult | ProjectActionError> => {
@@ -1662,7 +1682,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         const denied = await checkPermission(user, 'project', 'update', knex);
         if (denied) return denied;
 
-        const { beforeProject, updatedProject, depositReconciliationNeeded } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const { beforeProject, updatedProject, billingCloseResult } = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
@@ -1678,10 +1698,10 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
                 }
             }
             const transitionedToClosed = beforeProject.is_closed !== true && project.is_closed === true;
-            const depositReconciliationNeeded = transitionedToClosed
+            const billingCloseResult = transitionedToClosed
                 ? await closeProjectBillingSchedule(trx, tenant, projectId)
                 : undefined;
-            return { beforeProject, updatedProject: project, depositReconciliationNeeded };
+            return { beforeProject, updatedProject: project, billingCloseResult };
         });
 
         // If assigned_to was updated, fetch the full user details and publish event
@@ -1753,13 +1773,16 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         });
 
         revalidatePath(`/msp/projects/${projectId}`);
-        if (depositReconciliationNeeded !== undefined) {
+        if (billingCloseResult !== undefined) {
             revalidatePath('/msp/billing');
         }
-        return depositReconciliationNeeded === undefined
+        const depositReconciliationNeeded = billingCloseResult?.depositReconciliationNeeded ?? false;
+        const productsMovedToHold = billingCloseResult?.productsMovedToHold ?? 0;
+        return billingCloseResult === undefined
             ? updatedProject
             : Object.assign(updatedProject, {
                 deposit_reconciliation_needed: depositReconciliationNeeded,
+                products_moved_to_hold: productsMovedToHold,
             });
     } catch (error) {
         console.error('Error updating project:', error);

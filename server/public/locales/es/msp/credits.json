@@ -113,9 +113,9 @@
     "invoice": "Factura",
     "transactions": "Transacciones relacionadas",
     "transactionType": "Tipo",
-    "noTransactions": "No se encontraron transacciones relacionadas.",
     "date": "Fecha",
-    "amount": "Importe"
+    "amount": "Importe",
+    "noTransactions": "No se encontraron transacciones relacionadas."
   },
   "expireDialog": {
     "title": "Vencer crédito",

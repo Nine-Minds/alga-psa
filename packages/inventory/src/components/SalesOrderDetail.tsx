@@ -18,6 +18,9 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ISalesOrder, IStockLocation, IVendor } from '@alga-psa/types';
+// Direct path, not the '../lib' barrel — that re-exports db-coupled modules and would pull
+// knex/fs into the browser bundle.
+import { FULFILLABLE_SO_STATUSES, PROCURABLE_SO_STATUSES } from '../lib/salesOrderState';
 import {
   getSalesOrder,
   computeBackorder,
@@ -498,7 +501,10 @@ export function SalesOrderDetail({
   // ---- Render --------------------------------------------------------------
 
   const statusVariant = so ? STATUS_VARIANTS[so.status] ?? ('secondary' as BadgeVariant) : null;
-  const canFulfill = so && (so.status === 'confirmed' || so.status === 'partially_fulfilled');
+  // Mirrors the server's allowed set. 'invoiced' belongs here: manual-mode orders bill the
+  // ordered quantity up front, so a prepaid order still has to ship.
+  const canFulfill = so !== null && FULFILLABLE_SO_STATUSES.includes(so.status);
+  const canProcure = so !== null && PROCURABLE_SO_STATUSES.includes(so.status);
   const hasBackorder = [...backorder.values()].some((b) => b.backordered);
   const hasUninvoiced = so?.lines.some((l) => Number(l.quantity_invoiced ?? 0) < Number(l.quantity_ordered)) ?? false;
 
@@ -649,7 +655,7 @@ export function SalesOrderDetail({
                         )}
                       </td>
                       <td className="py-2 pl-2 text-right">
-                        {line.fulfillment_type === 'drop_ship' && remaining > 0 && so.status !== 'cancelled' && so.status !== 'draft' && (
+                        {line.fulfillment_type === 'drop_ship' && remaining > 0 && (line.drop_ship_po_number ? canFulfill : canProcure) && (
                           line.drop_ship_po_number ? (
                             <div className="inline-flex flex-col items-end gap-0.5">
                               <Button

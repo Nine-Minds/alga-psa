@@ -2,7 +2,7 @@
 
 import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { FileText, User, Play, Pause, StopCircle, Clock, Users, Pencil } from 'lucide-react';
+import { User, Play, Pause, StopCircle, Clock, Users, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -12,7 +12,6 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
-import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import type {
@@ -25,7 +24,6 @@ import type {
   IUserWithRoles,
   ITeam,
 } from '@alga-psa/types';
-import { parseTicketRichTextContent } from '../../../lib/ticketRichText';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import TicketChecklistSection from './../TicketChecklistSection';
 import { DocumentsTile } from './DocumentsTile';
@@ -75,9 +73,11 @@ export interface TicketBentoLayoutProps {
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
   /** Coalesced multi-field hero save; forwarded to BentoHero. */
   onBatchSelectChange?: (
-    changes: Record<string, string | null>,
+    changes: Record<string, unknown>,
     options?: TicketNotificationSuppressionValue
   ) => Promise<boolean | void> | boolean | void;
+  /** Persists the hero description when no batch handler is wired. */
+  onUpdateDescription?: (content: string) => Promise<boolean>;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
   /** Hides the billing rollup tile (AlgaDesk has no billing surface). */
@@ -151,7 +151,7 @@ export interface TicketBentoLayoutProps {
    * React use() behind <Suspense> skeletons — zero fetch-on-mount requests.
    */
   bentoStreams?: NonNullable<TicketScreenBootstrap['streams']>;
-  // Request / contact
+  // Description caption / contact
   createdByUser?: IUser | null;
   contactInfo?: IContact | null;
   client?: IClient | null;
@@ -224,7 +224,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const { id, ticket } = props;
   const { t } = useTranslation('features/tickets');
   const ticketId = ticket.ticket_id ?? '';
-  const [requestExpanded, setRequestExpanded] = React.useState(false);
   // Guards against re-entrant add/remove churn on rapid multi-select changes.
   const isProcessingAgentsRef = useRef(false);
 
@@ -288,74 +287,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     setContactEditOpen(true);
   }, [props.contactInfo?.contact_name_id]);
 
-  const requestBodyRef = React.useRef<HTMLDivElement>(null);
-  const [requestOverflows, setRequestOverflows] = React.useState(false);
-
-  const descriptionBlocks = React.useMemo(
-    () => parseTicketRichTextContent(ticket.attributes?.description as string | object | undefined),
-    [ticket.attributes?.description],
-  );
-  const hasDescription = React.useMemo(
-    () =>
-      descriptionBlocks.some((block) =>
-        Array.isArray((block as { content?: unknown }).content)
-          ? ((block as { content: unknown[] }).content.length > 0)
-          : Boolean((block as { content?: unknown }).content),
-      ),
-    [descriptionBlocks],
-  );
-
-  React.useEffect(() => {
-    const el = requestBodyRef.current;
-    if (!el || requestExpanded) return;
-    setRequestOverflows(el.scrollHeight > el.clientHeight + 4);
-  }, [descriptionBlocks, requestExpanded, hasDescription]);
-
   const leftRail = (
     <div className="space-y-4 min-w-0">
-      <BentoTile
-        id={`${id}-request-tile`}
-        title={t('bento.tiles.request', 'Request')}
-        icon={<FileText className="h-4 w-4" />}
-        action={
-          <button
-            id={`${id}-request-edit`}
-            type="button"
-            aria-label={t('bento.tiles.editDescription', 'Edit description')}
-            className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))]"
-            onClick={props.onOpenAllFields}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        }
-      >
-        {hasDescription ? (
-          <>
-            <div ref={requestBodyRef} className={`text-sm ${requestExpanded ? '' : 'max-h-40 overflow-hidden'}`}>
-              <RichTextViewer id={`${id}-request-description`} content={descriptionBlocks} />
-            </div>
-            {requestOverflows || requestExpanded ? (
-              <button
-                id={`${id}-request-expand`}
-                type="button"
-                className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1 self-start"
-                onClick={() => setRequestExpanded((value) => !value)}
-              >
-                {requestExpanded ? t('bento.tiles.showLess', 'Show less') : t('bento.tiles.showMore', 'Show more')}
-              </button>
-            ) : null}
-          </>
-        ) : (
-          <BentoTileEmpty id={`${id}-request-empty`}>{t('bento.tiles.noDescriptionYet', 'No description yet')}</BentoTileEmpty>
-        )}
-        <p className="text-xs text-[rgb(var(--color-text-400))] mt-2">
-          {props.createdByUser
-            ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: `${props.createdByUser.first_name} ${props.createdByUser.last_name}` })
-            : t('bento.tiles.opened', 'Opened')}
-          {ticket.source ? ` · ${t('bento.tiles.viaSource', 'via {{source}}', { source: String(ticket.source).replace(/_/g, ' ') })}` : ''}
-        </p>
-      </BentoTile>
-
       <BentoTile
         id={`${id}-contact-tile`}
         title={t('bento.tiles.contact', 'Contact')}
@@ -587,8 +520,14 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         selectedClientId: effectiveClientId ?? null,
       })}
 
+      {props.surveySummaryCard ? props.surveySummaryCard : null}
+
       {props.associatedAssets ? (
         <div id={`${id}-assets-container`}>{props.associatedAssets}</div>
+      ) : null}
+
+      {!props.hideMaterials ? (
+        <TicketMaterialsCard id={`${id}-materials`} ticketId={ticketId} clientId={ticket.client_id} initialMaterials={props.bentoStreams?.materials} />
       ) : null}
 
       {!props.hideScheduling ? (
@@ -862,12 +801,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
       />
 
-      {!props.hideMaterials ? (
-        <TicketMaterialsCard id={`${id}-materials`} ticketId={ticketId} clientId={ticket.client_id} initialMaterials={props.bentoStreams?.materials} />
-      ) : null}
-
-      {props.surveySummaryCard ? props.surveySummaryCard : null}
-
       <DocumentsTile
         id={`${id}-documents-section`}
         ticketId={ticketId}
@@ -906,6 +839,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           onAgentClick={props.onAgentClick}
           onSelectChange={props.onSelectChange}
           onBatchSelectChange={props.onBatchSelectChange}
+          onUpdateDescription={props.onUpdateDescription}
           responseStateTrackingEnabled={props.responseStateTrackingEnabled}
           hideSlaStatus={props.hideSlaStatus}
           workflowLocked={props.workflowLocked}
@@ -923,6 +857,12 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           liveEditingUsers={props.liveEditingUsers}
           onLiveEditingFieldChange={props.onLiveEditingFieldChange}
           onLiveDirtyFieldsChange={props.onLiveDirtyFieldsChange}
+          createdByUser={props.createdByUser}
+          userId={props.userId}
+          onClipboardImageUploaded={props.onClipboardImageUploaded}
+          uploadTicketAttachmentAction={props.uploadTicketAttachmentAction}
+          deleteDraftTicketAttachmentImagesAction={props.deleteDraftTicketAttachmentImagesAction}
+          resolveTicketAttachmentViewUrl={props.resolveTicketAttachmentViewUrl}
         />
       </div>
       {/* Mobile: timeline first, then state tiles (SLA/checklist lead the right

@@ -16,6 +16,8 @@ interface CurrencyFormatContextValue {
 }
 
 export interface CurrencyFormat {
+  /** Currency supplied by the nearest provider, after fallback resolution. */
+  currencyCode: string;
   money: (minorUnits: number, currencyOverride?: string) => string;
   moneySigned: (minorUnits: number, currencyOverride?: string) => string;
   fractionDigits: (currencyOverride?: string) => number;
@@ -60,6 +62,7 @@ export function useCurrencyFormat(): CurrencyFormat {
       formatCurrencyFromMinorUnits(Number(minorUnits || 0), locale, resolveCurrency(currencyOverride));
 
     return {
+      currencyCode,
       money,
       moneySigned: (minorUnits: number, currencyOverride?: string) => {
         const amount = Number(minorUnits || 0);

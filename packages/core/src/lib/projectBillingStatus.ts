@@ -1,5 +1,6 @@
 import type { ProjectBillingScheduleStatus, ScheduleEntryView } from '@alga-psa/types';
-import { formatCurrencyFromMinorUnits } from './formatters';
+import { Temporal } from '@js-temporal/polyfill';
+import { toPlainDate } from './dateTimeUtils';
 
 /**
  * Shared project-billing status presentation + phase badge derivation.
@@ -8,15 +9,6 @@ import { formatCurrencyFromMinorUnits } from './formatters';
  * (phase badges) render these statuses, and vertical feature packages must not
  * import each other.
  */
-
-/**
- * Format an integer-cents amount using the config currency (falling back to USD).
- * The billing actions return every money value as integer minor units, so the UI
- * always formats through here and never hand-divides by 100.
- */
-export function formatCents(cents: number | null | undefined, currency: string | null | undefined): string {
-  return formatCurrencyFromMinorUnits(cents ?? 0, undefined, currency ?? 'USD');
-}
 
 /**
  * Visual weight of each schedule status, quiet-and-exact per DESIGN.md: green =
@@ -60,7 +52,7 @@ const STATUS_VISUALS: Record<ProjectBillingScheduleStatus, StatusVisual> = {
     labelKey: 'pending',
   },
   canceled: {
-    chip: 'bg-gray-100 text-gray-400 line-through dark:bg-gray-500/10 dark:text-gray-500',
+    chip: 'bg-gray-100 text-gray-400 line-through dark:bg-gray-500/10 dark:text-gray-400',
     dot: 'bg-gray-300',
     labelKey: 'canceled',
   },
@@ -85,6 +77,32 @@ export interface PhaseBillingBadge {
   /** Summed computed amount of the phase's non-canceled linked entries, in cents. */
   amountCents: number;
   currency: string | null;
+  /** A past-dated phase still has a pending phase-triggered billing entry. */
+  overdue: boolean;
+}
+
+function calendarDate(value: Date | string | null): Temporal.PlainDate | null {
+  if (!value) return null;
+  try {
+    return toPlainDate(value);
+  } catch {
+    return null;
+  }
+}
+
+export function isPhaseBillingOverdue(
+  entry: Pick<ScheduleEntryView, 'phase_end_date' | 'status' | 'trigger_type'>,
+  today: string | null,
+): boolean {
+  const endDate = calendarDate(entry.phase_end_date);
+  const currentDate = calendarDate(today);
+  return Boolean(
+    endDate
+    && currentDate
+    && entry.trigger_type === 'phase'
+    && entry.status === 'pending'
+    && Temporal.PlainDate.compare(endDate, currentDate) < 0,
+  );
 }
 
 /**
@@ -95,6 +113,7 @@ export interface PhaseBillingBadge {
 export function derivePhaseBillingBadges(
   entries: ScheduleEntryView[],
   currency: string | null,
+  today: string | null = null,
 ): Record<string, PhaseBillingBadge> {
   const badges: Record<string, PhaseBillingBadge> = {};
   for (const entry of entries) {
@@ -105,10 +124,12 @@ export function derivePhaseBillingBadges(
         status: entry.status,
         amountCents: entry.computed_amount,
         currency,
+        overdue: isPhaseBillingOverdue(entry, today),
       };
       continue;
     }
     existing.amountCents += entry.computed_amount;
+    existing.overdue ||= isPhaseBillingOverdue(entry, today);
     if (STATUS_RANK[entry.status] > STATUS_RANK[existing.status]) {
       existing.status = entry.status;
     }

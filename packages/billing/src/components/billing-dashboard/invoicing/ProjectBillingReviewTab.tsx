@@ -9,7 +9,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
@@ -22,6 +22,7 @@ import { CheckCircle, MoreVertical, PauseCircle, Receipt, XCircle } from 'lucide
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -54,7 +55,8 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
   refreshTrigger,
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatDate } = useFormatters();
+  const { money } = useCurrencyFormat();
 
   const [rows, setRows] = useState<ReadyQueueRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -113,6 +115,11 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     selectedIds: selected,
     onSelectedIdsChange: setSelected,
   });
+
+  const selectedRows = rows.filter((row) => selected.has(row.entry.schedule_entry_id));
+  const canBulkApproveSelection = selected.size > 0
+    && selectedRows.length === selected.size
+    && selectedRows.every((row) => row.invoice_mode === 'recurring');
 
   const handleSelectAll = (checked: boolean) => {
     setSelected(checked ? new Set(rows.map((row) => row.entry.schedule_entry_id)) : new Set());
@@ -182,7 +189,9 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
   };
 
   const handleBulkApprove = async () => {
-    const ids = Array.from(selected);
+    const ids = selectedRows
+      .filter((row) => row.invoice_mode === 'recurring')
+      .map((row) => row.entry.schedule_entry_id);
     if (ids.length === 0) return;
     setIsBusy(true);
     try {
@@ -352,9 +361,7 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     {
       title: t('projectBilling.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: ['entry', 'computed_amount'],
-      render: (_, record) => formatCurrency(record.entry.computed_amount / 100, record.currency ?? 'USD', {
-        minimumFractionDigits: 2,
-      }),
+      render: (_, record) => money(record.entry.computed_amount, record.currency ?? undefined),
     },
     {
       title: t('projectBilling.columns.trigger', { defaultValue: 'Trigger' }),
@@ -385,14 +392,16 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                id={`project-billing-approve-${record.entry.schedule_entry_id}`}
-                onClick={() => handleApprove(record.entry.schedule_entry_id)}
-                className="flex items-center gap-2"
-              >
-                <CheckCircle className="h-4 w-4" />
-                {t('projectBilling.actions.approve', { defaultValue: 'Approve' })}
-              </DropdownMenuItem>
+              {record.invoice_mode === 'recurring' && (
+                <DropdownMenuItem
+                  id={`project-billing-approve-${record.entry.schedule_entry_id}`}
+                  onClick={() => handleApprove(record.entry.schedule_entry_id)}
+                  className="flex items-center gap-2"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  {t('projectBilling.actions.approve', { defaultValue: 'Approve' })}
+                </DropdownMenuItem>
+              )}
               {record.invoice_mode === 'standalone' && (
                 <DropdownMenuItem
                   id={`project-billing-approve-invoice-${record.entry.schedule_entry_id}`}
@@ -424,7 +433,7 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
         </div>
       ),
     },
-  ], [formatCurrency, isBusy, rangeSelect, rows.length, selected.size, t, triggerLabel]);
+  ], [isBusy, money, rangeSelect, rows.length, selected.size, t, triggerLabel]);
 
   return (
     <div className="space-y-4">
@@ -450,14 +459,16 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id="project-billing-bulk-approve"
-              onClick={handleBulkApprove}
-              className="flex items-center gap-2"
-            >
-              <CheckCircle className="h-4 w-4" />
-              {t('projectBilling.actions.approveSelected', { defaultValue: 'Approve selected' })}
-            </DropdownMenuItem>
+            {canBulkApproveSelection && (
+              <DropdownMenuItem
+                id="project-billing-bulk-approve"
+                onClick={handleBulkApprove}
+                className="flex items-center gap-2"
+              >
+                <CheckCircle className="h-4 w-4" />
+                {t('projectBilling.actions.approveSelected', { defaultValue: 'Approve selected' })}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id="project-billing-bulk-hold"
               onClick={() => openHoldDialog(Array.from(selected))}
@@ -514,6 +525,25 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
               defaultValue: 'Hold {{count}} entries',
             })
           : t('projectBilling.holdDialog.title', { defaultValue: 'Hold entry' })}
+        footer={(
+          <>
+            <Button
+              id="project-billing-hold-cancel"
+              variant="ghost"
+              onClick={closeHoldDialog}
+              disabled={isConfirming}
+            >
+              {t('projectBilling.holdDialog.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="project-billing-hold-confirm"
+              onClick={handleHoldConfirm}
+              disabled={isConfirming || !holdReason.trim()}
+            >
+              {t('projectBilling.holdDialog.confirm', { defaultValue: 'Hold' })}
+            </Button>
+          </>
+        )}
       >
         <DialogContent>
           <div className="space-y-3">
@@ -532,23 +562,6 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
               rows={3}
             />
           </div>
-          <DialogFooter>
-            <Button
-              id="project-billing-hold-cancel"
-              variant="ghost"
-              onClick={closeHoldDialog}
-              disabled={isConfirming}
-            >
-              {t('projectBilling.holdDialog.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button
-              id="project-billing-hold-confirm"
-              onClick={handleHoldConfirm}
-              disabled={isConfirming || !holdReason.trim()}
-            >
-              {t('projectBilling.holdDialog.confirm', { defaultValue: 'Hold' })}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

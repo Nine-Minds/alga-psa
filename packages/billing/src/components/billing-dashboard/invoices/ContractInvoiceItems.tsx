@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import Link from 'next/link';
 import type { IInvoiceCharge } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -50,6 +51,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
   const { t } = useTranslation('msp/invoicing');
   const { t: tLocation } = useTranslation('features/billing');
   const { formatCurrency } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   const [cogsByItem, setCogsByItem] = useState<Map<string, InvoiceLineCogsRow>>(new Map());
 
@@ -144,7 +146,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
         <td className="text-right tabular-nums">
           {cogs && cogs.cogs_total != null ? (
             <span>
-              {formatCurrency(cogs.cogs_total / 100, 'USD')}
+              {formatCurrency(cogs.cogs_total / 100, tenantCurrency)}
               {marginPct ? <span className="ml-1 text-muted-foreground">· {marginPct}</span> : null}
             </span>
           ) : (
@@ -181,8 +183,8 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
         </div>
       </td>
       <td className="text-right">{item.quantity}</td>
-      <td className="text-right">{formatCurrency(item.unit_price / 100, 'USD')}</td>
-      <td className="text-right">{formatCurrency(item.total_price / 100, 'USD')}</td>
+      <td className="text-right">{formatCurrency(item.unit_price / 100, tenantCurrency)}</td>
+      <td className="text-right">{formatCurrency(item.total_price / 100, tenantCurrency)}</td>
       {renderCogsBodyCells(item)}
     </tr>
   );
@@ -247,7 +249,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">
                     {tLocation('invoices.locations.subtotal', { defaultValue: 'Location subtotal' })}
                   </div>
-                  <div className="mt-1 font-semibold">{formatCurrency(subtotal / 100, 'USD')}</div>
+                  <div className="mt-1 font-semibold">{formatCurrency(subtotal / 100, tenantCurrency)}</div>
                 </div>
               </div>
               <div className="overflow-x-auto p-4">
@@ -316,7 +318,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
                   <td colSpan={3} className="py-2 text-right">
                     {t('contractItems.labels.contractSubtotal', { defaultValue: 'Contract Subtotal:' })}
                   </td>
-                  <td className="text-right">{formatCurrency(contract.subtotal / 100, 'USD')}</td>
+                  <td className="text-right">{formatCurrency(contract.subtotal / 100, tenantCurrency)}</td>
                   {showCogs ? <><td /><td /></> : null}
                 </tr>
               </tbody>
@@ -355,7 +357,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
                   {t('contractItems.labels.otherItemsSubtotal', { defaultValue: 'Other Items Subtotal:' })}
                 </td>
                 <td className="text-right">
-                  {formatCurrency(nonContractItems.reduce((sum, item) => sum + item.total_price, 0) / 100, 'USD')}
+                  {formatCurrency(nonContractItems.reduce((sum, item) => sum + item.total_price, 0) / 100, tenantCurrency)}
                 </td>
                 {showCogs ? <><td /><td /></> : null}
               </tr>

@@ -40,7 +40,9 @@ vi.mock('react-hot-toast', () => ({
   default: { success: toastSuccessMock },
 }));
 
-vi.mock('@alga-psa/billing/actions', () => ({
+// The component imports the actions via this relative specifier — a distinct
+// module id from '@alga-psa/billing/actions', so the mock must match it.
+vi.mock('../../../actions/costRateActions', () => ({
   listCostRates: (...args: unknown[]) => listCostRatesMock(...args),
   upsertCostRate: (...args: unknown[]) => upsertCostRateMock(...args),
   deleteCostRate: (...args: unknown[]) => deleteCostRateMock(...args),

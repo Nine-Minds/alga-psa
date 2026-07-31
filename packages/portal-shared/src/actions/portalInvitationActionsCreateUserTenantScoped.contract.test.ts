@@ -19,12 +19,12 @@ describe('portal invitation create-user tenant-scoped query contract', () => {
   it('uses a transaction-local tenant-scoped root helper for tenant-known reads', () => {
     const section = sectionBetween('export const createClientPortalUser', 'export const sendPortalInvitation');
 
-    expect(section).toContain('const tenantScopedTable = (table: string) => tenantDb(trx, ');
-    expect(section).toContain("tenantScopedTable('contacts')");
-    expect(section).toContain("tenantScopedTable('users')");
-    expect(section).toContain("tenantScopedTable('roles')");
-    expect(section).toContain("const [created] = await trx('users')");
-    expect(section).toContain("await trx('user_roles').insert({");
+    expect(section).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(section).toContain("scopedDb.table('contacts')");
+    expect(section).toContain("scopedDb.table('users')");
+    expect(section).toContain("scopedDb.table('roles')");
+    expect(section).toContain("const [created] = await scopedDb.table('users')");
+    expect(section).toContain("await scopedDb.table('user_roles').insert({");
 
     expect(section).not.toMatch(/trx\('contacts'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant/);

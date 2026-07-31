@@ -180,6 +180,9 @@ const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, h
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
+  // Permit isolated dev/test servers to coexist with the normal worktree server.
+  // Production and ordinary development retain Next's default `.next` directory.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // Dev-only (ignored in production builds): Next blocks /_next/* asset, HMR,
   // and RSC requests from origins it does not recognize, which stalls
   // hydration when a phone/tablet loads the dev server by LAN IP.

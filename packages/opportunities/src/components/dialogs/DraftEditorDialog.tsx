@@ -35,7 +35,7 @@ export function DraftEditorDialog({
     messageId: string | null;
   }>;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [instructions, setInstructions] = useState('');

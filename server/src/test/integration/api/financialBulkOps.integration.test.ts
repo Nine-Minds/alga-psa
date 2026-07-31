@@ -86,12 +86,11 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(userColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  for (const [id, balance] of [[clientA, 30], [clientB, 0]] as Array<[string, number]>) {
+  for (const id of [clientA, clientB]) {
     await tenantTable(tenantId, 'clients').insert({
       tenant: tenantId,
       client_id: id,
       client_name: `Client ${id.slice(0, 8)}`,
-      credit_balance: balance,
       ...(hasColumn(clientColumns, 'billing_cycle') ? { billing_cycle: 'monthly' } : {}),
       ...(hasColumn(clientColumns, 'is_tax_exempt') ? { is_tax_exempt: false } : {}),
       ...(hasColumn(clientColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
@@ -214,11 +213,9 @@ describe('financial bulk operations integration', () => {
     expect(Number(reversal.balance_after)).toBe(0);
   }, HOOK_TIMEOUT);
 
-  it('expires a credit and reduces the client balance', async () => {
+  it('expires a credit and reduces the derived client balance', async () => {
     const f = await createFixture();
     const svc = newService(f.tenantId);
-    // clientB starts at 0; give it a credit of 50.
-    await tenantTable(f.tenantId, 'clients').where({ client_id: f.clientB }).update({ credit_balance: 50 });
     const creditId = await seedCredit(f.tenantId, f.clientB, 50);
 
     const res = await svc.bulkCreditOperation(
@@ -237,14 +234,16 @@ describe('financial bulk operations integration', () => {
     expect(expirationTxn).toBeDefined();
     expect(Number(expirationTxn.amount)).toBe(-50);
 
-    const client = await tenantTable(f.tenantId, 'clients').where({ client_id: f.clientB }).first();
-    expect(Number(client.credit_balance)).toBe(0);
+    const available = await tenantTable(f.tenantId, 'credit_tracking')
+      .where({ client_id: f.clientB, is_expired: false })
+      .sum('remaining_amount as total')
+      .first();
+    expect(Number(available?.total ?? 0)).toBe(0);
   }, HOOK_TIMEOUT);
 
   it('transfers a credit to another client', async () => {
     const f = await createFixture();
     const svc = newService(f.tenantId);
-    // clientA has credit_balance 30 from the fixture; back it with a credit.
     const creditId = await seedCredit(f.tenantId, f.clientA, 30);
 
     const res = await svc.bulkCreditOperation(
@@ -262,8 +261,11 @@ describe('financial bulk operations integration', () => {
     expect(targetCredit).toBeDefined();
     expect(Number(targetCredit.remaining_amount)).toBe(30);
 
-    const clientB = await tenantTable(f.tenantId, 'clients').where({ client_id: f.clientB }).first();
-    expect(Number(clientB.credit_balance)).toBe(30);
+    const targetAvailable = await tenantTable(f.tenantId, 'credit_tracking')
+      .where({ client_id: f.clientB, is_expired: false })
+      .sum('remaining_amount as total')
+      .first();
+    expect(Number(targetAvailable?.total ?? 0)).toBe(30);
   }, HOOK_TIMEOUT);
 
   it('reports per-id failures without aborting the batch', async () => {

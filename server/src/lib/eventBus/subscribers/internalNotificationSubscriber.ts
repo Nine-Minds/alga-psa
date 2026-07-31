@@ -1,3 +1,5 @@
+
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getEventBus } from '../index';
 import {
   EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent, ProjectBudgetExceededEvent
@@ -2181,10 +2183,14 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
   }
 }
 
-function formatInternalProjectBillingAmount(amountCents: number, currency: string | null): string {
+function formatInternalProjectBillingAmount(
+  amountCents: number,
+  currency: string | null,
+  locale: string,
+): string {
   const currencyCode = currency?.trim() || 'USD';
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode })
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: currencyCode })
       .format(amountCents / 100);
   } catch {
     return `${currencyCode} ${(amountCents / 100).toFixed(2)}`;
@@ -2195,6 +2201,7 @@ async function handleProjectBillingInternalNotification(
   event: ProjectMilestoneReadyEvent | ProjectBudgetThresholdReachedEvent | ProjectBudgetExceededEvent,
 ): Promise<void> {
   const { tenantId, projectId } = event.payload;
+  const notificationLocale = await getTenantDefaultLocale(tenantId, 'internal');
   const db = await getConnection(tenantId);
   const scopedDb = tenantDb(db, tenantId);
   const projectQuery = scopedDb.table('projects as p')
@@ -2239,7 +2246,7 @@ async function handleProjectBillingInternalNotification(
         data: {
           projectName: project.project_name,
           entryDescription: event.payload.description,
-          amount: formatInternalProjectBillingAmount(event.payload.computedAmount, project.currency),
+          amount: formatInternalProjectBillingAmount(event.payload.computedAmount, project.currency, notificationLocale),
         },
         metadata: {
           projectId,
@@ -2261,9 +2268,9 @@ async function handleProjectBillingInternalNotification(
         link: internalUrl,
         data: {
           projectName: project.project_name,
-          billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency),
-          cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency),
-          writtenDown: formatInternalProjectBillingAmount(event.payload.writtenDown, project.currency),
+          billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency, notificationLocale),
+          cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency, notificationLocale),
+          writtenDown: formatInternalProjectBillingAmount(event.payload.writtenDown, project.currency, notificationLocale),
         },
         metadata: {
           projectId,
@@ -2283,8 +2290,8 @@ async function handleProjectBillingInternalNotification(
       data: {
         projectName: project.project_name,
         threshold: `${event.payload.threshold}%`,
-        billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency),
-        cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency),
+        billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency, notificationLocale),
+        cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency, notificationLocale),
       },
       metadata: {
         projectId,

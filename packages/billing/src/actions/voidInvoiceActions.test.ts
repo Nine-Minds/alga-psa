@@ -3,11 +3,20 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // ── Module mocks ────────────────────────────────────────────────────────────
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
-  withTransaction: vi.fn(async (knex: any, fn: any) => fn(knex))
+  withTransaction: vi.fn(async (knex: any, fn: any) => fn(knex)),
+  // Facade passthrough: the fakes below dispatch by table name; tenant
+  // scoping is the real facade's concern, not this test's.
+  tenantDb: (conn: any, _tenant: string) => ({ table: (name: string) => conn(name) })
 }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: vi.fn((fn: any) => fn)
+}));
+
+// The action imports hasPermission from the /rbac subpath — a distinct module
+// id from '@alga-psa/auth', so it needs its own mock.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true)
 }));
 
 vi.mock('../services/accountingSync/syncProducers', () => ({
@@ -142,8 +151,9 @@ describe('reverseCreditApplicationsForInvoice', () => {
     const creditTrackingUpdates = callLog.filter((e) => e === 'credit_tracking.update');
     expect(creditTrackingUpdates).toHaveLength(2);
 
-    // client credit balance should have been incremented once (total restored)
-    expect(callLog).toContain('clients.increment');
+    // Balance derives from the ledger (a3ef7392a1): restoring
+    // remaining_amount IS the balance restore — no clients write.
+    expect(callLog).not.toContain('clients.increment');
 
     // A reversal transaction should have been inserted
     expect(callLog).toContain('transactions.insert');
@@ -263,7 +273,7 @@ describe('voidInvoice (credit note)', () => {
     vi.clearAllMocks();
   });
 
-  it('claws back unconsumed issued credit: balance decremented, tracking zeroed, adjustment written', async () => {
+  it('claws back unconsumed issued credit: tracking zeroed, adjustment written', async () => {
     const { knex, log } = makeVoidHarness();
     vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
 
@@ -275,12 +285,9 @@ describe('voidInvoice (credit note)', () => {
     );
     expect(result).toEqual({ success: true });
 
-    // Pool credit removed from the client balance…
-    expect(log).toContainEqual({
-      table: 'clients',
-      op: 'decrement',
-      args: { column: 'credit_balance', amount: 1800 }
-    });
+    // Balance derives from the ledger — the claw-back is expressed purely as
+    // tracking + transaction writes, never a clients write…
+    expect(log.some((e) => e.table === 'clients')).toBe(false);
     // …tracking row zeroed…
     expect(log.some((e) => e.table === 'credit_tracking' && e.op === 'update' && e.args.remaining_amount === 0)).toBe(true);
     // …auditable claw-back transaction written…

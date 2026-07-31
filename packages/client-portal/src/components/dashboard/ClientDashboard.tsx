@@ -205,7 +205,13 @@ function timeAgo(value: string | Date | null | undefined, t: TranslateFn, locale
 const DASHBOARD_PREVIEW_DEVICES = 4;
 const DASHBOARD_PREVIEW_APPOINTMENTS = 3;
 
-export function ClientDashboard({ productCode = 'psa' }: { productCode?: ProductCode } = {}) {
+export function ClientDashboard({
+  productCode = 'psa',
+  appointmentsEnabled = true,
+}: {
+  productCode?: ProductCode;
+  appointmentsEnabled?: boolean;
+} = {}) {
   const { t, i18n } = useTranslation('client-portal');
   const { branding } = useBranding();
   const portalHeroGradient = branding?.portalHeroGradient ?? 'primary-shades';
@@ -254,7 +260,9 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       const [user, metricsData, appointmentsResult, activityData, devicesData] = await Promise.all([
         getCurrentUser(),
         getDashboardMetrics(),
-        getMyAppointmentRequests({ status: 'approved' }),
+        appointmentsEnabled
+          ? getMyAppointmentRequests({ status: 'approved' })
+          : Promise.resolve({ success: true, data: [] }),
         getRecentActivity().catch(() => [] as RecentActivity[]),
         getClientAssets().catch(() => [] as Asset[]),
       ]);
@@ -281,7 +289,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       setErrorMessage(null);
       setError(true);
     }
-  }, [isAlgaDeskPortal]);
+  }, [appointmentsEnabled, isAlgaDeskPortal]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -391,25 +399,27 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
               'Structured requests you have submitted from the catalog.',
             ),
           },
-          {
-            id: 'upcoming-visits',
-            label: t('dashboard.metrics.upcomingVisits', 'Upcoming visits'),
-            value: upcomingAppointments.length,
-            icon: Calendar,
-            href: '/client-portal/appointments',
-            hint: nextAppointmentLabel
-              ? t('dashboard.metrics.nextLabel', { defaultValue: 'Next: {{when}}', when: nextAppointmentLabel })
-              : t('dashboard.metrics.noneScheduled', 'None scheduled'),
-            description: t(
-              'dashboard.metrics.upcomingVisitsDescription',
-              'Scheduled appointments with our technicians.',
-            ),
-            action: {
-              id: 'kpi-upcoming-visits-request',
-              label: t('dashboard.quickActions.requestAppointment', 'Request appointment'),
-              onClick: () => setIsAppointmentModalOpen(true),
-            },
-          },
+          ...(appointmentsEnabled
+            ? [{
+                id: 'upcoming-visits',
+                label: t('dashboard.metrics.upcomingVisits', 'Upcoming visits'),
+                value: upcomingAppointments.length,
+                icon: Calendar,
+                href: '/client-portal/appointments',
+                hint: nextAppointmentLabel
+                  ? t('dashboard.metrics.nextLabel', { defaultValue: 'Next: {{when}}', when: nextAppointmentLabel })
+                  : t('dashboard.metrics.noneScheduled', 'None scheduled'),
+                description: t(
+                  'dashboard.metrics.upcomingVisitsDescription',
+                  'Scheduled appointments with our technicians.',
+                ),
+                action: {
+                  id: 'kpi-upcoming-visits-request',
+                  label: t('dashboard.quickActions.requestAppointment', 'Request appointment'),
+                  onClick: () => setIsAppointmentModalOpen(true),
+                },
+              }]
+            : []),
           {
             id: 'active-devices',
             label: t('dashboard.metrics.activeDevices', 'Active devices'),
@@ -451,7 +461,13 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       </div>
 
       {/* KPI Cards */}
-      <div className={isAlgaDeskPortal ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'}>
+      <div className={
+        isAlgaDeskPortal
+          ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'
+          : appointmentsEnabled
+            ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+            : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'
+      }>
         {kpiCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -573,6 +589,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         {/* Side rail: Schedule + Devices stacked */}
         {!isAlgaDeskPortal && (
         <div className="lg:col-span-1 space-y-4">
+        {appointmentsEnabled && (
         <Card className="bg-[rgb(var(--color-card))]">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -644,6 +661,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Devices preview */}
         <Card className="bg-[rgb(var(--color-card))]">
@@ -715,7 +733,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         )}
       </div>
 
-      {!isAlgaDeskPortal && (
+      {!isAlgaDeskPortal && appointmentsEnabled && (
       <RequestAppointmentModal
         open={isAppointmentModalOpen}
         onOpenChange={setIsAppointmentModalOpen}

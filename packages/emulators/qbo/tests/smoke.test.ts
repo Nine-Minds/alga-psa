@@ -30,7 +30,9 @@ afterAll(async () => {
   await host.stop();
 });
 
-describe('qbo emulator', () => {
+// Tests narrate one protocol session (OAuth flow mints the token the later
+// entity tests reuse); opt out of the server suite's intra-file shuffle.
+describe('qbo emulator', { shuffle: false }, () => {
   let accessToken: string;
   let refreshToken: string;
   let authed: { authorization: string; 'content-type': string };

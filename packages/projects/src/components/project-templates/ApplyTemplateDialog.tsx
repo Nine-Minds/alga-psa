@@ -65,6 +65,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
     copyPhases: true,
     copyStatuses: true,
     copyTasks: true,
+    copyDependencies: true,
     copyChecklists: true,
     copyServices: true,
     assignmentOption: 'primary' as AssignmentOption
@@ -100,6 +101,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
         copyPhases: true,
         copyStatuses: true,
         copyTasks: true,
+        copyDependencies: true,
         copyChecklists: true,
         copyServices: true,
         assignmentOption: 'primary'
@@ -170,6 +172,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
           copyPhases: options.copyPhases,
           copyStatuses: options.copyStatuses,
           copyTasks: options.copyTasks,
+          copyDependencies: options.copyDependencies,
           copyChecklists: options.copyChecklists,
           copyServices: options.copyServices,
           assignmentOption: options.assignmentOption
@@ -368,11 +371,20 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
                       setOptions({
                         ...options,
                         copyTasks: e.target.checked,
-                        // Disable checklists and services if tasks are disabled
+                        // Disable dependencies, checklists, and services if tasks are disabled
+                        copyDependencies: e.target.checked ? options.copyDependencies : false,
                         copyChecklists: e.target.checked ? options.copyChecklists : false,
                         copyServices: e.target.checked ? options.copyServices : false
                       });
                     }}
+                    containerClassName="mb-2"
+                  />
+                  <Checkbox
+                    id="copy-dependencies-checkbox"
+                    label={t('templates.apply.copyDependencies', 'Copy Dependencies')}
+                    checked={options.copyDependencies}
+                    disabled={!options.copyTasks}
+                    onChange={(e) => setOptions({ ...options, copyDependencies: e.target.checked })}
                     containerClassName="mb-2"
                   />
                   <Checkbox

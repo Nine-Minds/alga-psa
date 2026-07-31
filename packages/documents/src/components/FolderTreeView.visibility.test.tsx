@@ -47,8 +47,9 @@ describe('FolderTreeView visibility indicators', () => {
     );
 
     expect(await screen.findByText('Contracts')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Visible to clients' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Hidden from clients' })).toBeDisabled();
+    // Indicators are interactive toggles now; state is exposed via aria-pressed.
+    expect(screen.getByRole('button', { name: 'Visible to clients' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Hidden from clients' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('hides visibility indicators when disabled', async () => {

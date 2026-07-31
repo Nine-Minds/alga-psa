@@ -277,6 +277,7 @@
   },
   "dashboard": {
     "loadingInsights": "11111",
+    "printTitle": "11111",
     "responseMetrics": {
       "cards": {
         "sent": "11111",
@@ -422,6 +423,43 @@
     },
     "fallbacks": {
       "none": "11111"
+    }
+  },
+  "print": {
+    "emptyValue": "11111",
+    "columns": {
+      "date": "11111",
+      "averageRating": "11111",
+      "responses": "11111",
+      "rating": "11111",
+      "share": "11111",
+      "ticket": "11111",
+      "client": "11111",
+      "contact": "11111",
+      "agent": "11111",
+      "technician": "11111",
+      "submitted": "11111",
+      "comment": "11111"
+    },
+    "metrics": {
+      "invitations": "11111",
+      "responses": "11111",
+      "responseRate": "11111",
+      "averageRating": "11111",
+      "outstanding": "11111",
+      "recentNegative": "11111"
+    },
+    "sections": {
+      "trend": "11111",
+      "distribution": "11111",
+      "topIssues": "11111",
+      "recentResponses": "11111"
+    },
+    "empty": {
+      "trend": "11111",
+      "distribution": "11111",
+      "topIssues": "11111",
+      "recentResponses": "11111"
     }
   }
 }

@@ -7,6 +7,34 @@ import { publishOpportunityEventAfterCommit } from './opportunityEvents';
 
 const checkpointStage: Record<OpportunityCheckpoint, OpportunityStage> = { qualified: 'qualified', assessment: 'assessment', proposed: 'proposed', verbal: 'verbal', won: 'won' };
 const stageRank: Record<OpportunityStage, number> = { identified: 0, qualified: 1, assessment: 2, proposed: 3, verbal: 4, won: 5, lost: 5 };
+export type ManuallyDeclaredOpportunityStage = Exclude<OpportunityStage, 'won' | 'lost'>;
+
+export function evidenceIdsAboveStage(
+  evidence: Array<Pick<IOpportunityEvidence, 'evidence_id' | 'checkpoint'>>,
+  stage: ManuallyDeclaredOpportunityStage,
+): string[] {
+  const targetRank = stageRank[stage];
+  return evidence
+    .filter((item) => stageRank[checkpointStage[item.checkpoint]] > targetRank)
+    .map((item) => item.evidence_id);
+}
+
+export function buildStageDeclarationPlan(
+  evidence: Array<Pick<IOpportunityEvidence, 'evidence_id' | 'checkpoint'>>,
+  stage: ManuallyDeclaredOpportunityStage,
+  detail?: string | null,
+) {
+  return {
+    correctionEvidenceIds: evidenceIdsAboveStage(evidence, stage),
+    evidence: stage === 'identified'
+      ? null
+      : {
+          checkpoint: stage,
+          source: 'user_declared' as const,
+          detail: detail?.trim() || `Stage manually set to ${stage}`,
+        },
+  };
+}
 
 export function deriveOpportunityStage(opportunity: Pick<IOpportunity, 'status'>, evidence: Array<Pick<IOpportunityEvidence, 'checkpoint' | 'corrected_at'>>): OpportunityStage {
   if (opportunity.status === 'won') return 'won';
@@ -43,13 +71,75 @@ export async function recordEvidence(trx: Knex.Transaction, tenant: string, inpu
   const opportunity = await db.table('opportunities').where({ opportunity_id: input.opportunityId }).forUpdate().first<IOpportunity>();
   if (!opportunity) throw new Error('Opportunity not found');
   const existingQuery = db.table('opportunity_evidence').where({ opportunity_id: input.opportunityId, checkpoint: input.checkpoint }).whereNull('corrected_at');
-  input.refType == null ? existingQuery.whereNull('ref_type') : existingQuery.where('ref_type', input.refType);
-  input.refId == null ? existingQuery.whereNull('ref_id') : existingQuery.where('ref_id', input.refId);
+  if (input.refType == null) existingQuery.whereNull('ref_type');
+  else existingQuery.where('ref_type', input.refType);
+  if (input.refId == null) existingQuery.whereNull('ref_id');
+  else existingQuery.where('ref_id', input.refId);
   const existing = await existingQuery.first<IOpportunityEvidence>();
   if (existing) return existing;
   const [created] = await db.table('opportunity_evidence').insert({ tenant, opportunity_id: input.opportunityId, checkpoint: input.checkpoint, source: input.source, ref_type: input.refType ?? null, ref_id: input.refId ?? null, detail: input.detail ?? null, recorded_by: input.recordedBy ?? null, recorded_at: new Date().toISOString() }).returning('*') as IOpportunityEvidence[];
   await updateDerivedStage(trx, tenant, opportunity, created.evidence_id);
   return created;
+}
+
+/**
+ * Records a user's explicit stage declaration. Moving backward corrects every
+ * active checkpoint above the requested stage before the new stage is derived.
+ */
+export async function declareStage(
+  trx: Knex.Transaction,
+  tenant: string,
+  opportunityId: string,
+  stage: ManuallyDeclaredOpportunityStage,
+  recordedBy: string,
+  detail?: string | null,
+): Promise<IOpportunity> {
+  const db = tenantDb(trx, tenant);
+  const opportunity = await db.table('opportunities')
+    .where({ opportunity_id: opportunityId })
+    .forUpdate()
+    .first<IOpportunity>();
+  if (!opportunity) throw new Error('Opportunity not found');
+  if (opportunity.status !== 'open') throw new Error('Only open opportunities can change stage');
+
+  const activeEvidence = await db.table('opportunity_evidence')
+    .where({ opportunity_id: opportunityId })
+    .whereNull('corrected_at') as IOpportunityEvidence[];
+  const correctionAt = new Date().toISOString();
+  const plan = buildStageDeclarationPlan(activeEvidence, stage, detail);
+
+  if (plan.correctionEvidenceIds.length > 0) {
+    await db.table('opportunity_evidence')
+      .whereIn('evidence_id', plan.correctionEvidenceIds)
+      .update({
+        correction_note: `Stage manually set to ${stage}`,
+        corrected_by: recordedBy,
+        corrected_at: correctionAt,
+      });
+  }
+
+  if (!plan.evidence) {
+    await updateDerivedStage(trx, tenant, opportunity, `user_declared:${recordedBy}:${correctionAt}`);
+  } else {
+    await recordEvidence(trx, tenant, {
+      opportunityId,
+      ...plan.evidence,
+      recordedBy,
+    });
+  }
+
+  const afterEvidence = await OpportunityModel.getById(trx, tenant, opportunityId);
+  if (!afterEvidence) throw new Error('Opportunity not found after stage declaration');
+  await updateDerivedStage(
+    trx,
+    tenant,
+    afterEvidence,
+    `user_declared:${recordedBy}:${correctionAt}`,
+  );
+
+  const updated = await OpportunityModel.getById(trx, tenant, opportunityId);
+  if (!updated) throw new Error('Opportunity not found after stage declaration');
+  return updated;
 }
 
 export async function correctEvidence(trx: Knex.Transaction, tenant: string, evidenceId: string, correctionNote: string, correctedBy: string): Promise<IOpportunityEvidence> {
@@ -64,4 +154,3 @@ export async function correctEvidence(trx: Knex.Transaction, tenant: string, evi
   await updateDerivedStage(trx, tenant, opportunity, corrected.evidence_id);
   return corrected;
 }
-

@@ -1229,5 +1229,62 @@
       "F020",
       "F021"
     ]
+  },
+  {
+    "id": "T141",
+    "description": "A successful non-dry-run tenant sync persists its filtered eligible-user total and observation timestamp, including when the total is zero, and confirmed mappings return that value instead of a stale discovery count.",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T142",
+    "description": "Confirmed mappings fall back to the discovery-sourced user count before the first successful sync, while failed and dry-run sync attempts leave the last successful sync count unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T143",
+    "description": "After a single-client sync is accepted, the Clients tab follows the Temporal run to terminal status and reloads mappings on completion so the Users cell renders the newly persisted count without discovery or a manual page reload.",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T144",
+    "description": "Selecting existing-client, create-new, and skip choices changes mapping-table review state without invoking client creation or per-row persistence; one confirmation submits all reviewed decisions.",
+    "implemented": true,
+    "featureIds": [
+      "F123",
+      "F124"
+    ]
+  },
+  {
+    "id": "T145",
+    "description": "DB-backed mapping confirmation stores `create_new` with a null client ID and `skip_for_now` without creating a client, while rejecting an invalid mapped decision that lacks a client ID.",
+    "implemented": true,
+    "featureIds": [
+      "F124"
+    ]
+  },
+  {
+    "id": "T146",
+    "description": "An explicit initial/manual sync provisions an approved create-new client, promotes its mapping, and syncs contacts; retrying after the provisioning boundary reuses the same client instead of creating a duplicate.",
+    "implemented": true,
+    "featureIds": [
+      "F125"
+    ]
+  },
+  {
+    "id": "T147",
+    "description": "A scheduled all-tenants sync excludes `create_new` mappings and performs no client-provisioning activity.",
+    "implemented": true,
+    "featureIds": [
+      "F126"
+    ]
   }
 ]

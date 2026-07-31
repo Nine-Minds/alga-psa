@@ -113,9 +113,9 @@
     "invoice": "Fattura",
     "transactions": "Transazioni correlate",
     "transactionType": "Tipo",
-    "noTransactions": "Nessuna transazione correlata trovata.",
     "date": "Data",
-    "amount": "Importo"
+    "amount": "Importo",
+    "noTransactions": "Nessuna transazione correlata trovata."
   },
   "expireDialog": {
     "title": "Scadi credito",

@@ -304,7 +304,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         </td>
         <td className="px-3 py-2">{item.quantity}</td>
         <td className="px-3 py-2">{formatCurrency(item.unit_price, invoice.currencyCode)}</td>
-        <td className="px-3 py-2">{formatCurrency(item.total_price, invoice.currencyCode)}</td>
+        <td className="px-3 py-2">{formatCurrency(item.net_amount ?? item.total_price, invoice.currencyCode)}</td>
       </tr>
     );
 
@@ -384,7 +384,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
               <div className="space-y-4 mt-2" id="client-invoice-items-by-location">
                 {locationGroups.map((group) => {
                   const subtotal = group.items.reduce(
-                    (sum, item) => sum + (Number(item.total_price) || 0),
+                    (sum, item) => sum + (Number(item.net_amount ?? item.total_price) || 0),
                     0,
                   );
                   return (

@@ -1139,7 +1139,9 @@
     "clientRequired": "Er moet een klant aan dit ticket zijn toegewezen voordat materialen kunnen worden toegevoegd.",
     "serialUnit": "Serienummer / MAC (geserialiseerd product)",
     "selectUnit": "Selecteer een eenheid om te leveren...",
-    "onHandByLocation": "Voorraad per locatie"
+    "onHandByLocation": "Voorraad per locatie",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Volglijst",
@@ -1489,7 +1491,6 @@
       "pausedHint": "De klok is gepauzeerd terwijl het ticket in een gepauzeerde status wacht."
     },
     "tiles": {
-      "request": "Verzoek",
       "openedBy": "Geopend door {{name}}",
       "showMore": "Meer weergeven",
       "showLess": "Minder weergeven",

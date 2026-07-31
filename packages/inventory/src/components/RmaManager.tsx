@@ -16,7 +16,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import type { ColumnDefinition, IRmaCase, IStockLocation, IVendor, RmaType } from '@alga-psa/types';
 import {
   listRmaCases,
@@ -56,8 +56,11 @@ const RMA_STATUS_FILTERS = new Set([
 
 const shortId = (id?: string | null): string => (id ? id.slice(0, 8) : '—');
 
-const money = (cents?: number | string | null, currency?: string | null): string =>
-  cents == null ? '—' : formatCurrencyFromMinorUnits(Number(cents), 'en-US', currency || 'USD');
+// Tenant locale + currency come from CurrencyFormatProvider via the hook;
+// components shadow this with a bound `money` (see below).
+const formatMoney = (fmt: (minorUnits: number, currencyOverride?: string) => string) =>
+  (cents?: number | string | null, currency?: string | null): string =>
+    cents == null ? '—' : fmt(Number(cents), currency || undefined);
 
 interface OpenFormState {
   rma_type: RmaType;
@@ -72,6 +75,8 @@ export function RmaManager({
   initialCases: IRmaCase[];
   initialDeadOwed: DeadUnitOwedRow[];
 }) {
+  const { money: fmtMinorUnits } = useCurrencyFormat();
+  const money = formatMoney(fmtMinorUnits);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation('features/inventory');

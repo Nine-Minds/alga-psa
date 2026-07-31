@@ -115,9 +115,9 @@
     "invoice": "Faktura",
     "transactions": "Powiązane transakcje",
     "transactionType": "Typ",
-    "noTransactions": "Nie znaleziono powiązanych transakcji.",
     "date": "Data",
-    "amount": "Kwota"
+    "amount": "Kwota",
+    "noTransactions": "Nie znaleziono powiązanych transakcji."
   },
   "expireDialog": {
     "title": "Wygasź kredyt",

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -23,7 +24,7 @@ import type {
 import { getProjectStatuses, getTemplates } from '@alga-psa/projects/actions';
 import {
   completeNextAction,
-  declareQualified,
+  declareOpportunityStage,
   deleteOpportunity,
   linkQuoteToOpportunity,
   listLinkableQuotesForOpportunity,
@@ -62,6 +63,7 @@ export function OpportunityDetailHost({
   drafting,
   autoOpenDraft = false,
   commitments,
+  returnTab,
 }: {
   detail: IOpportunityDetail;
   /** Injected by the host app only when the tenant's AI module allows drafting. */
@@ -70,8 +72,9 @@ export function OpportunityDetailHost({
   autoOpenDraft?: boolean;
   /** EE commitments ledger section, injected when the management tier allows it. */
   commitments?: ReactNode;
+  returnTab?: string;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
   const [completeOpen, setCompleteOpen] = useState(false);
   const [loseOpen, setLoseOpen] = useState(false);
@@ -100,6 +103,10 @@ export function OpportunityDetailHost({
   // Accepted linked quotes can be converted to a draft agreement as part of
   // marking the deal won (winOpportunity → prepareOpportunityWinConversions).
   const acceptedLinkedQuotes = detail.linked_quotes.filter((q) => q.status === 'accepted');
+
+  useEffect(() => {
+    setWinProjectName(detail.title);
+  }, [detail.opportunity_id, detail.title]);
 
   useEffect(() => {
     if (!winOpen) return;
@@ -138,6 +145,16 @@ export function OpportunityDetailHost({
 
   return (
     <>
+      <Button
+        id="opportunity-back-to-list"
+        size="sm"
+        variant="ghost"
+        className="mb-3"
+        onClick={() => router.push(`/msp/opportunities?tab=${encodeURIComponent(returnTab ?? 'queue')}`)}
+      >
+        <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden />
+        {t('opportunities.detail.backToList', 'Back to opportunities')}
+      </Button>
       <OpportunityDetailView
         detail={detail}
         timeline={
@@ -151,9 +168,17 @@ export function OpportunityDetailHost({
         onEditDetails={() => setEditOpen(true)}
         onDraftFollowUp={drafting ? () => setDraftOpen(true) : undefined}
         onCompleteAction={() => setCompleteOpen(true)}
-        onDeclareQualified={(id) =>
-          void run(() => declareQualified(id, undefined), t('opportunities.toast.qualified', 'Qualified checkpoint recorded'))
-        }
+        onStageSelect={(stage) => {
+          if (stage === 'won') {
+            setWinOpen(true);
+            return;
+          }
+          const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+          void run(
+            () => declareOpportunityStage(detail.opportunity_id, stage),
+            t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }),
+          );
+        }}
         onConfidenceChange={(id, confidence: OpportunityConfidence) =>
           void run(() => updateOpportunity(id, { confidence }), t('opportunities.toast.saved', 'Saved'))
         }
@@ -166,7 +191,9 @@ export function OpportunityDetailHost({
             quoteId: 'new',
             opportunityId: detail.opportunity_id,
             clientId: detail.client_id,
-            title: `Quote for ${detail.title}`,
+            title: t('opportunities.detail.quoteTitle', 'Quote for {{title}}', {
+              title: detail.title,
+            }),
           });
           if (detail.contact_id) params.set('contactId', detail.contact_id);
           router.push(`/msp/billing?${params.toString()}`);
@@ -283,6 +310,7 @@ export function OpportunityDetailHost({
             t('opportunities.toast.actionCompleted', 'Done. Next action scheduled.')
           )
         }
+        stage={detail.stage}
       />
       <LoseOpportunityDialog
         isOpen={loseOpen}

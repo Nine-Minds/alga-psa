@@ -93,6 +93,9 @@ vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
 
 vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
   withDataAutomationId: ({ id }: { id: string }) => ({ id, 'data-automation-id': id }),
+  // The list's composite cells render BentoTile, whose ReflectionContainer is
+  // built with this second export of the same module.
+  withUIReflectionId: (Component: unknown) => Component,
 }));
 
 vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({

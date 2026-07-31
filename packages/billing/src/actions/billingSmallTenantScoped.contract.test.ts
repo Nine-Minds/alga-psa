@@ -47,8 +47,12 @@ describe('low-risk billing tenant-scoped query contract', () => {
     expect(externalTaxImport).toContain("const query = facade.table('invoices as i')");
     expect(externalTaxImport).toContain("facade.tenantJoin(query, 'clients as c'");
 
-    expect(material).toContain("facade.table('ticket_materials as tm')");
-    expect(material).toContain("facade.tenantJoin(query, 'service_catalog as sc'");
+    // Material queries moved into @alga-psa/inventory/lib (324c607e57): the
+    // billing action delegates, and the lib scopes by tenant explicitly.
+    expect(material).toContain("import { addMaterial, deleteMaterial, listMaterials } from '@alga-psa/inventory/lib';");
+    const inventoryMaterials = readSource('packages/inventory/src/lib/materials.ts');
+    expect(inventoryMaterials).toContain("'m.tenant': tenant");
+    expect(inventoryMaterials).toContain("this.on('m.service_id', '=', 'sc.service_id').andOn('m.tenant', '=', 'sc.tenant');");
 
     expect(usage).toContain("facade.table('usage_tracking')");
     expect(usage).toContain("facade.tenantJoin(query, 'clients'");
@@ -57,8 +61,12 @@ describe('low-risk billing tenant-scoped query contract', () => {
     expect(taxSource).toContain("db.table('invoices')");
     expect(taxSource).toContain("db.table('invoice_charges')");
 
-    expect(invoiceJob).toContain("tenantDb(knex, tenant).table('tenants')");
+    // Sender-name lookup moved to the tenant_companies party adapter
+    // (179f5e1da0); the adapter carries the facade scoping.
+    expect(invoiceJob).toContain('const tenantParty = await fetchTenantParty(knex, tenant);');
     expect(invoiceJob).toContain("tenantDb(knex, tenant).table<IContact>('contacts')");
+    const tenantPartyAdapter = readSource('packages/billing/src/lib/adapters/tenantPartyAdapter.ts');
+    expect(tenantPartyAdapter).toContain("db.table('tenant_companies as tc')");
 
     const quoteDocumentTemplates = readSource('packages/billing/src/actions/quoteDocumentTemplates.ts');
     expect(quoteDocumentTemplates).toContain("tenantScopedTable(trx, tenant, 'quote_document_templates')");

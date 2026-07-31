@@ -20,6 +20,10 @@
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs"
     },
+    "./components/bento": {
+      "types": "./src/components/bento/index.ts",
+      "import": "./dist/components/bento/index.mjs"
+    },
     "./components/*": {
       "types": "./src/components/*.tsx",
       "import": "./dist/components/*.mjs"

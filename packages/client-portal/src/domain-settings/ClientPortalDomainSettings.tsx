@@ -33,13 +33,13 @@ const ClientPortalDomainSettings = () => {
     <Card>
       <CardHeader>
         <CardTitle>
-          <div className="flex items-center gap-2">
+          <span className="flex items-center gap-2">
             <AtSign className="h-5 w-5" />
             Custom Domain
             <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
               Enterprise
             </Badge>
-          </div>
+          </span>
         </CardTitle>
         <CardDescription>
           Enterprise tenants can host the portal on a custom domain. Your default hosted address is shown below.

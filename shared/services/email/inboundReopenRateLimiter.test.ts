@@ -37,7 +37,13 @@ describe('checkInboundReopenRateLimit', () => {
   });
 
   afterEach(() => {
-    process.env = { ...ORIGINAL };
+    // Restore IN PLACE: modules that captured `process.env` by reference
+  // (e.g. `import { env } from 'node:process'`) would keep reading the
+  // old object if this reassigned process.env.
+  for (const key of Object.keys(process.env)) {
+    if (!(key in ORIGINAL)) delete process.env[key];
+  }
+  Object.assign(process.env, ORIGINAL);
   });
 
   it('allows up to the configured limit then denies', async () => {

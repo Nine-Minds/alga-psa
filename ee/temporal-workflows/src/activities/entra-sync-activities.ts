@@ -1,10 +1,15 @@
 import logger from '@alga-psa/core/logger';
 import { randomUUID } from 'crypto';
+import type { Knex } from 'knex';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
 import { isTenantSuspended, retryOnTenantReadOnly, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildClientCreatedPayload } from '@alga-psa/workflow-streams';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
+import { provisionEntraClientForMapping } from '@ee/lib/integrations/entra/sync/clientProvisioningService';
+import { projectCompletedSyncUserCount } from '@ee/lib/integrations/entra/sync/completedSyncUserCountService';
 import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
 import { decideEntraRunNotifications } from '@ee/lib/integrations/entra/notifications/entraSyncNotificationRules';
 import {
@@ -21,12 +26,17 @@ import type {
   UpsertEntraSyncRunActivityOutput,
   FinalizeSyncRunActivityInput,
   RecordSyncTenantResultActivityInput,
+  ProvisionEntraClientActivityInput,
+  EntraManagedTenantRef,
 } from '../types/entra-sync';
 
 type MappingRow = {
   managed_tenant_id: string;
   entra_tenant_id: string;
   client_id: string | null;
+  mapping_state: 'mapped' | 'create_new';
+  display_name: string | null;
+  primary_domain: string | null;
 };
 
 async function getActiveConnectionType(tenantId: string): Promise<EntraConnectionType> {
@@ -70,15 +80,23 @@ export async function loadMappedTenantsActivity(
     const query = db.table('entra_client_tenant_mappings as m')
       .where({
         'm.is_active': true,
-        'm.mapping_state': 'mapped',
       })
       .select({
         managed_tenant_id: 'm.managed_tenant_id',
         client_id: 'm.client_id',
+        mapping_state: 'm.mapping_state',
         entra_tenant_id: 't.entra_tenant_id',
+        display_name: 't.display_name',
+        primary_domain: 't.primary_domain',
       })
       .orderBy('m.updated_at', 'asc');
     db.tenantJoin(query, 'entra_managed_tenants as t', 'm.managed_tenant_id', 't.managed_tenant_id');
+
+    if (input.includeCreateNew) {
+      query.whereIn('m.mapping_state', ['mapped', 'create_new']);
+    } else {
+      query.andWhere('m.mapping_state', 'mapped');
+    }
 
     if (input.managedTenantId) {
       query.andWhere('m.managed_tenant_id', input.managedTenantId);
@@ -92,7 +110,77 @@ export async function loadMappedTenantsActivity(
       managedTenantId: String(row.managed_tenant_id),
       entraTenantId: String(row.entra_tenant_id),
       clientId: row.client_id ? String(row.client_id) : null,
+      mappingState: row.mapping_state,
+      displayName: row.display_name ? String(row.display_name) : null,
+      primaryDomain: row.primary_domain ? String(row.primary_domain) : null,
     })),
+  };
+}
+
+/**
+ * Turn one operator-approved create-new decision into a real mapped client.
+ * The client insert, default billing rows and mapping promotion share one DB
+ * transaction. A Temporal retry therefore either repeats no committed work or
+ * observes the already-promoted mapping and reuses its client.
+ */
+export async function provisionEntraClientActivity(
+  input: ProvisionEntraClientActivityInput
+): Promise<EntraManagedTenantRef> {
+  if (input.mapping.mappingState !== 'create_new') {
+    if (!input.mapping.clientId) {
+      throw new Error(`Mapped Entra tenant ${input.mapping.managedTenantId} has no client ID.`);
+    }
+    return input.mapping;
+  }
+
+  const provisioned = await retryOnTenantReadOnly(
+    () => runWithTenant(input.tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      return provisionEntraClientForMapping(knex, {
+        tenantId: input.tenantId,
+        managedTenantId: input.mapping.managedTenantId,
+      });
+    }),
+    { logLabel: 'provisionEntraClientActivity' }
+  );
+
+  if (provisioned.created) {
+    const createdAt = provisioned.client.created_at
+      ? String(provisioned.client.created_at)
+      : new Date().toISOString();
+    try {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_CREATED',
+        payload: buildClientCreatedPayload({
+          clientId: String(provisioned.client.client_id),
+          clientName: String(provisioned.client.client_name),
+          createdByUserId: input.actorUserId,
+          createdAt,
+          status: 'active',
+        }),
+        ctx: {
+          tenantId: input.tenantId,
+          occurredAt: createdAt,
+          actor: input.actorUserId
+            ? { actorType: 'USER', actorUserId: input.actorUserId }
+            : undefined,
+        },
+        idempotencyKey: `client_created:${provisioned.client.client_id}`,
+      });
+    } catch (error) {
+      logger.warn('Provisioned Entra client but failed to publish CLIENT_CREATED event', {
+        tenantId: input.tenantId,
+        managedTenantId: input.mapping.managedTenantId,
+        clientId: provisioned.client.client_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return {
+    ...input.mapping,
+    clientId: String(provisioned.client.client_id),
+    mappingState: 'mapped',
   };
 }
 
@@ -160,6 +248,8 @@ export async function syncTenantUsersActivity(
     managedTenantId: input.mapping.managedTenantId,
     clientId: input.mapping.clientId,
     status: 'completed',
+    eligibleUserCount: filteredUsers.included.length,
+    isDryRun: Boolean(input.dryRun),
     created: syncResult.counters.created,
     linked: syncResult.counters.linked,
     updated: syncResult.counters.updated,
@@ -318,48 +408,67 @@ export async function recordSyncTenantResultActivity(
     () =>
       runWithTenant(input.tenantId, async () => {
         const { knex } = await createTenantKnex();
-        const now = knex.fn.now();
-        const db = tenantDb(knex, input.tenantId);
-
-        const existing = await db.table('entra_sync_run_tenants')
-          .where({
-            run_id: input.runId,
-            managed_tenant_id: input.result.managedTenantId,
-          })
-          .first(['run_tenant_id']);
-
-        const row = {
-          tenant: input.tenantId,
-          run_id: input.runId,
-          managed_tenant_id: input.result.managedTenantId,
-          client_id: input.result.clientId || null,
-          status: input.result.status,
-          created_count: input.result.created,
-          linked_count: input.result.linked,
-          updated_count: input.result.updated,
-          ambiguous_count: input.result.ambiguous,
-          inactivated_count: input.result.inactivated,
-          error_message: input.result.errorMessage || null,
-          started_at: now,
-          completed_at: now,
-          updated_at: now,
-        };
-
-        if (existing?.run_tenant_id) {
-          await db.table('entra_sync_run_tenants')
-            .where({
-              run_tenant_id: existing.run_tenant_id,
-            })
-            .update(row);
-          return;
-        }
-
-        await db.table('entra_sync_run_tenants').insert({
-          ...row,
-          run_tenant_id: randomUUID(),
-          created_at: now,
-        });
+        await knex.transaction((trx) => recordSyncTenantResultWithDb(trx, input));
       }),
     { logLabel: 'recordSyncTenantResultActivity' }
   );
+}
+
+/**
+ * Persist one tenant result and its completed-sync count projection together.
+ * Exported as a DB-injected boundary so the tenant-scoped behavior can be
+ * verified transactionally without mocking Knex or opening a second connection.
+ */
+export async function recordSyncTenantResultWithDb(
+  knex: Knex,
+  input: RecordSyncTenantResultActivityInput
+): Promise<void> {
+  const now = knex.fn.now();
+  const db = tenantDb(knex, input.tenantId);
+
+  const existing = await db.table('entra_sync_run_tenants')
+    .where({
+      run_id: input.runId,
+      managed_tenant_id: input.result.managedTenantId,
+    })
+    .first(['run_tenant_id']);
+
+  const row = {
+    tenant: input.tenantId,
+    run_id: input.runId,
+    managed_tenant_id: input.result.managedTenantId,
+    client_id: input.result.clientId || null,
+    status: input.result.status,
+    created_count: input.result.created,
+    linked_count: input.result.linked,
+    updated_count: input.result.updated,
+    ambiguous_count: input.result.ambiguous,
+    inactivated_count: input.result.inactivated,
+    error_message: input.result.errorMessage || null,
+    started_at: now,
+    completed_at: now,
+    updated_at: now,
+  };
+
+  if (existing?.run_tenant_id) {
+    await db.table('entra_sync_run_tenants')
+      .where({
+        run_tenant_id: existing.run_tenant_id,
+      })
+      .update(row);
+  } else {
+    await db.table('entra_sync_run_tenants').insert({
+      ...row,
+      run_tenant_id: randomUUID(),
+      created_at: now,
+    });
+  }
+
+  await projectCompletedSyncUserCount(knex, {
+    tenantId: input.tenantId,
+    managedTenantId: input.result.managedTenantId,
+    status: input.result.status,
+    isDryRun: input.result.isDryRun,
+    eligibleUserCount: input.result.eligibleUserCount,
+  });
 }

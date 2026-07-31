@@ -10,6 +10,7 @@ import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
+  assignContractLineToClient,
   createTestService,
   createFixedPlanAssignment,
   createBucketOverlayForPlan,
@@ -239,13 +240,8 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_contract_lines').insert({
-        client_contract_line_id: uuidv4(),
-        client_id: context.clientId,
-        contract_line_id: contractLineId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
+      await assignContractLineToClient(context, contractLineId, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
 
       // Create usage records
@@ -419,18 +415,10 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_contract_lines')
-        .where({
-          tenant: context.tenantId,
-          client_contract_line_id: clientContractLineId
-        })
-        .update({
-          client_id: context.clientId,
-          contract_line_id: contractLineId,
-          start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-          end_date: null,
-          is_active: true
-        });
+      await assignContractLineToClient(context, contractLineId, {
+        clientContractLineId,
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
 
       // Generate draft invoice
       let invoice = await generateInvoice(billingCycleId);

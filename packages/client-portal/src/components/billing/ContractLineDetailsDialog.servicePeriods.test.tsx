@@ -7,6 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 import ContractLineDetailsDialog from './ContractLineDetailsDialog';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  // useCurrencyFormat (used by the dialog) reads the optional i18n context.
+  useOptionalI18n: () => null,
   useTranslation: () => ({
     t: (_key: string, fallbackOrOptions?: string | Record<string, unknown>) => {
       if (typeof fallbackOrOptions === 'string') {

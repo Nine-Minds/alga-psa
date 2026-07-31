@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { repoPath } from '../test-utils/repoPaths';
 
-const repoFile = (relativePath: string) => path.resolve(process.cwd(), relativePath);
+const repoFile = repoPath;
 
 describe('legacy invoice compiler/executor removal', () => {
   it('removes PRD-listed compiler and executor modules from billing package', () => {

@@ -21,7 +21,7 @@ export function EditValuesDialog({
   initial: { mrr_cents: number; nrr_cents: number; hardware_cents: number };
   onSubmit: (values: { mrr_cents: number; nrr_cents: number; hardware_cents: number }) => Promise<void> | void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const factor = Math.pow(10, currencyFractionDigits(currencyCode));
   const [mrr, setMrr] = useState<number | undefined>(initial.mrr_cents / factor);
   const [nrr, setNrr] = useState<number | undefined>(initial.nrr_cents / factor);

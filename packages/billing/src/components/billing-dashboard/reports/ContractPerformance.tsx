@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -35,6 +36,7 @@ interface ContractMetrics {
 const ContractPerformance: React.FC = () => {
   const { t } = useTranslation('msp/reports');
   const { formatCurrency } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [contracts, setContracts] = useState<IContract[]>([]);
   const [contractMetrics, setContractMetrics] = useState<ContractMetrics[]>([]);
   const [selectedContract, setSelectedContract] = useState<string | null>(null);
@@ -77,7 +79,7 @@ const ContractPerformance: React.FC = () => {
     }
   };
 
-  const formatCents = (value: number) => formatCurrency(value / 100, 'USD');
+  const formatCents = (value: number) => formatCurrency(value / 100, tenantCurrency);
 
   const calculateContractMetrics = async (contract: IContract): Promise<ContractMetrics> => {
     try {

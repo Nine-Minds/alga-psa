@@ -711,7 +711,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     additionalAgents?: string[],
     localChecklistItems?: Array<{ id: string; item_name: string; description?: string; completed: boolean; order_number: number; isNew?: boolean }>,
     dependencyChanges?: {
-      added: Array<{ predecessorTaskId: string; dependencyType: DependencyType }>;
+      added: Array<{ relatedTaskId: string; dependencyType: DependencyType }>;
       removed: string[];
     }
   ) => {
@@ -787,12 +787,14 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           setDependencies((prev) => prev.filter((d) => d.template_dependency_id !== depId));
         }
 
-        // Add new dependencies (current task is the successor)
+        // Add new dependencies. Args follow the project-task convention:
+        // (current task, related task, type) — the action normalizes
+        // 'blocked_by' by swapping direction and storing 'blocks'.
         for (const dep of dependencyChanges.added) {
           const newDep = unwrapTemplateActionResult(await addTemplateDependency(
             template.template_id,
-            dep.predecessorTaskId,
             taskId,
+            dep.relatedTaskId,
             dep.dependencyType
           ));
           setDependencies((prev) => [...prev, newDep]);
@@ -1084,7 +1086,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           initialStatusMappingId={newTaskStatusMappingId}
           checklistItems={editingTask ? checklistItems.filter(c => c.template_task_id === editingTask.template_task_id) : []}
           allTasks={tasks}
-          dependencies={editingTask ? dependencies.filter(d => d.successor_task_id === editingTask.template_task_id) : []}
+          dependencies={editingTask ? dependencies.filter(d => d.successor_task_id === editingTask.template_task_id || d.predecessor_task_id === editingTask.template_task_id) : []}
           tenant={template.tenant}
         />
       )}

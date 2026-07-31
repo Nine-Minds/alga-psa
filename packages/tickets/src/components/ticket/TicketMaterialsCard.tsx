@@ -20,7 +20,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ContentCard } from '@alga-psa/ui/components';
 import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import type { ITicketMaterial, IServicePrice, IStockUnit } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -70,6 +70,7 @@ export default function TicketMaterialsCard({
   initialMaterials,
 }: TicketMaterialsCardProps) {
   const { t } = useTranslation('features/tickets');
+  const { money, currencyCode } = useCurrencyFormat();
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(!initialMaterials);
   const [isAdding, setIsAdding] = useState(false);
@@ -81,6 +82,8 @@ export default function TicketMaterialsCard({
   const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
+  const [selectedCatalogCost, setSelectedCatalogCost] = useState<{ cost: number; currency: string } | null>(null);
+  const catalogCostByProductId = useRef(new Map<string, { cost: number; currency: string } | null>());
   const [quantity, setQuantity] = useState<number>(1);
   const [description, setDescription] = useState<string>('');
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
@@ -150,11 +153,16 @@ export default function TicketMaterialsCard({
         is_active: true,
       });
 
-      const options: SelectOption[] = result.items.map((item) => ({
-        value: item.service_id,
-        label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
-        badge: onHandBadge(item),
-      }));
+      const options: SelectOption[] = result.items.map((item) => {
+        catalogCostByProductId.current.set(item.service_id, item.cost == null || !item.cost_currency
+          ? null
+          : { cost: item.cost, currency: item.cost_currency });
+        return {
+          value: item.service_id,
+          label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+          badge: onHandBadge(item),
+        };
+      });
 
       return { options, total: result.totalCount };
     },
@@ -279,6 +287,7 @@ export default function TicketMaterialsCard({
       toast.success(t('materials.addSuccess', 'Material added'));
       setShowAddForm(false);
       setSelectedProductId('');
+      setSelectedCatalogCost(null);
       setSelectedProductLabel('');
       setProductPrices([]);
       setSelectedCurrency('');
@@ -326,7 +335,7 @@ export default function TicketMaterialsCard({
   const unbilledByCurrency = materials
     .filter(m => !m.is_billed)
     .reduce((acc, m) => {
-      const curr = m.currency_code || 'USD';
+      const curr = m.currency_code || currencyCode;
       if (!acc[curr]) acc[curr] = 0;
       acc[curr] += calculateTotal(m);
       return acc;
@@ -334,7 +343,7 @@ export default function TicketMaterialsCard({
 
   const currencyOptions = productPrices.map(p => ({
     value: p.currency_code,
-    label: `${p.currency_code} - ${formatCurrencyFromMinorUnits(p.rate, 'en-US', p.currency_code)}`,
+    label: `${p.currency_code} - ${money(p.rate, p.currency_code)}`,
   }));
 
   return (
@@ -364,6 +373,7 @@ export default function TicketMaterialsCard({
                 onChange={(value, option) => {
                   setSelectedProductId(value);
                   setSelectedProductLabel(option?.label ?? '');
+                  setSelectedCatalogCost(catalogCostByProductId.current.get(value) ?? null);
                   setSelectedCurrency('');
                   setAddError(null);
                 }}
@@ -394,7 +404,7 @@ export default function TicketMaterialsCard({
                   </div>
                 ) : productPrices.length === 1 ? (
                   <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
-                    {formatCurrencyFromMinorUnits(productPrices[0].rate, 'en-US', productPrices[0].currency_code)}
+                    {money(productPrices[0].rate, productPrices[0].currency_code)}
                   </div>
                 ) : (
                   <CustomSelect
@@ -405,6 +415,17 @@ export default function TicketMaterialsCard({
                     placeholder={t('materials.selectCurrency', 'Select currency...')}
                   />
                 )}
+              </div>
+            )}
+
+            {selectedProductId && (
+              <div className="space-y-2">
+                <Label>{t('materials.catalogUnitCost', 'Catalog unit cost')}</Label>
+                <div className="h-10 px-3 py-2 bg-gray-100 border rounded-md text-gray-700 flex items-center">
+                  {selectedCatalogCost
+                    ? money(selectedCatalogCost.cost, selectedCatalogCost.currency)
+                    : t('materials.costNotConfigured', 'Not configured')}
+                </div>
               </div>
             )}
 
@@ -424,7 +445,7 @@ export default function TicketMaterialsCard({
                 <Label>{t('materials.total', 'Total')}</Label>
                 <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
                   {selectedPrice
-                    ? formatCurrencyFromMinorUnits(selectedPrice.rate * quantity, 'en-US', selectedPrice.currency_code)
+                    ? money(selectedPrice.rate * quantity, selectedPrice.currency_code)
                     : '-'}
                 </div>
               </div>
@@ -485,6 +506,7 @@ export default function TicketMaterialsCard({
                 onClick={() => {
                   setShowAddForm(false);
                   setSelectedProductId('');
+                  setSelectedCatalogCost(null);
                   setSelectedProductLabel('');
                   setProductPrices([]);
                   setSelectedCurrency('');
@@ -556,10 +578,10 @@ export default function TicketMaterialsCard({
                       </td>
                       <td className="py-2 text-right">{material.quantity}</td>
                       <td className="py-2 text-right">
-                        {formatCurrencyFromMinorUnits(material.rate, 'en-US', material.currency_code)}
+                        {money(material.rate, material.currency_code)}
                       </td>
                       <td className="py-2 text-right font-medium">
-                        {formatCurrencyFromMinorUnits(calculateTotal(material), 'en-US', material.currency_code)}
+                        {money(calculateTotal(material), material.currency_code)}
                       </td>
                       <td className="py-2 text-center">
                         {material.is_billed ? (
@@ -602,7 +624,7 @@ export default function TicketMaterialsCard({
                         {t('materials.unbilled', 'Unbilled ({{currency}}):', { currency: curr })}{' '}
                       </span>
                       <span className="font-semibold">
-                        {formatCurrencyFromMinorUnits(total, 'en-US', curr)}
+                        {money(total, curr)}
                       </span>
                     </div>
                   ))}

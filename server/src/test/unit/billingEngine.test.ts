@@ -1047,11 +1047,19 @@ describe('BillingEngine', () => {
       });
 
       const calculateTaxSpy = vi
-        .spyOn(TaxService.prototype, 'calculateTax')
-        .mockResolvedValue({ taxRate: 8.25, taxAmount: 2000 });
-      vi.spyOn(billingEngine as any, 'getTaxInfoFromService').mockResolvedValue({
-        taxRegion: 'US-CA',
-        isTaxable: true
+        .fn()
+        .mockReturnValue({ taxRate: 8.25, taxAmount: 2000 });
+      vi.spyOn(
+        billingEngine as any,
+        'loadChargeComputeTaxContext'
+      ).mockResolvedValue({
+        getTaxInfoFromService: () => ({
+          taxRegion: 'US-CA',
+          isTaxable: true
+        }),
+        getLocationTaxRegionCode: () => null,
+        getClientDefaultTaxRegionCode: () => 'US-CA',
+        calculateTax: calculateTaxSpy
       });
 
       (billingEngine as any).knex = mockKnex;
@@ -1091,7 +1099,6 @@ describe('BillingEngine', () => {
         true,
         'USD'
       );
-      calculateTaxSpy.mockRestore();
     });
 
     it('T056: bucket recurring charges map overage to the explicit bucket usage service periods', async () => {
@@ -1178,11 +1185,17 @@ describe('BillingEngine', () => {
         return baseKnex(tableName);
       });
 
-      vi.spyOn(TaxService.prototype, 'calculateTax')
-        .mockResolvedValue({ taxRate: 8.25, taxAmount: 0 });
-      vi.spyOn(billingEngine as any, 'getTaxInfoFromService').mockResolvedValue({
-        taxRegion: 'US-CA',
-        isTaxable: true
+      vi.spyOn(
+        billingEngine as any,
+        'loadChargeComputeTaxContext'
+      ).mockResolvedValue({
+        getTaxInfoFromService: () => ({
+          taxRegion: 'US-CA',
+          isTaxable: true
+        }),
+        getLocationTaxRegionCode: () => null,
+        getClientDefaultTaxRegionCode: () => 'US-CA',
+        calculateTax: () => ({ taxRate: 8.25, taxAmount: 0 })
       });
 
       (billingEngine as any).knex = mockKnex;
@@ -1870,7 +1883,7 @@ describe('BillingEngine', () => {
 
   describe('Pricing Schedule Integration', () => {
     it('should query contract pricing schedules by contract id for the active service period overlap', () => {
-      expect(billingEngineSource).toContain('db.table("contract_pricing_schedules")');
+      expect(billingEngineSource).toContain('.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('contract_id: clientContractLine.contract_id');
       expect(billingEngineSource).toContain('.where("effective_date", "<", servicePeriodEndExclusive)');
       expect(billingEngineSource).toContain('.orWhere("end_date", ">", servicePeriodStartExclusive);');
@@ -1888,7 +1901,8 @@ describe('BillingEngine', () => {
     });
 
     it('should still continue fixed-charge calculation when no pricing schedule row exists', () => {
-      expect(billingEngineSource).toContain('const activePricingSchedule = await db.table("contract_pricing_schedules")');
+      expect(billingEngineSource).toContain('const activePricingSchedule = await db');
+      expect(billingEngineSource).toContain('.table("contract_pricing_schedules")');
       expect(billingEngineSource).toContain('.first();');
       expect(billingEngineSource).toContain('if (');
       expect(billingEngineSource).toContain('activePricingSchedule &&');
@@ -1903,6 +1917,43 @@ describe('BillingEngine', () => {
       expect(billingEngineSource).toContain('// [start, end) semantics: schedule starting exactly on service-period end does not apply.');
       expect(billingEngineSource).toContain('.where("effective_date", "<", servicePeriodEndExclusive)');
       expect(billingEngineSource).toContain('.orWhere("end_date", ">", servicePeriodStartExclusive);');
+    });
+  });
+
+  describe('project billing target lookup', () => {
+    it('derives project completion from the related status instead of the projects table', async () => {
+      const project = {
+        project_id: 'project-1',
+        client_id: mockClientId,
+        start_date: new Date('2023-01-01T00:00:00Z'),
+        created_at: new Date('2022-12-01T00:00:00Z'),
+        is_closed: true,
+      };
+      const projectBuilder = buildChainableQuery({ firstResult: project });
+      const knex = vi.fn((table: string) => {
+        if (table === 'projects as project') {
+          return projectBuilder;
+        }
+        return buildChainableQuery();
+      }) as any;
+      knex.raw = vi.fn().mockReturnValue('RAW');
+      (billingEngine as any).knex = knex;
+
+      const result = await (billingEngine as any).loadProjectBillingTarget('project-1');
+
+      expect(result).toEqual(project);
+      expect(projectBuilder.where).toHaveBeenCalledWith('project.project_id', 'project-1');
+      expect(projectBuilder.leftJoin).toHaveBeenCalledWith(
+        'statuses as project_status',
+        expect.any(Function),
+      );
+      expect(projectBuilder.first).toHaveBeenCalledWith(
+        'project.project_id',
+        'project.client_id',
+        'project.start_date',
+        'project.created_at',
+        'project_status.is_closed',
+      );
     });
   });
 

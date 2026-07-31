@@ -10,6 +10,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  getEntraSyncRunDetail,
   runEntraPreflight,
   startEntraSync,
   unmapEntraTenant,
@@ -21,6 +22,9 @@ import { ContactPreflightReport } from './ContactPreflightReport';
 
 /** Two hundred mapped clients is a real number; ten rows a page is the app default. */
 const CLIENTS_PAGE_SIZE = 10;
+const SYNC_STATUS_POLL_INTERVAL_MS = 2_000;
+const SYNC_STATUS_POLL_ATTEMPTS = 900;
+const TERMINAL_SYNC_STATUSES = new Set(['completed', 'partial', 'failed']);
 import { wasEntraSyncAccepted } from './syncStart';
 import {
   ENTRA_CLIENT_FILTERS,
@@ -44,6 +48,26 @@ interface EntraClientsTabProps {
 
 function clientLabel(mapping: EntraConfirmedMapping): string {
   return mapping.clientName || mapping.displayName || mapping.primaryDomain || mapping.entraTenantId;
+}
+
+async function waitForEntraSyncTerminal(runReference: string): Promise<string> {
+  for (let attempt = 0; attempt < SYNC_STATUS_POLL_ATTEMPTS; attempt += 1) {
+    const result = await getEntraSyncRunDetail(runReference);
+    if (!('error' in result)) {
+      const status = String(result.data?.run?.status || '').toLowerCase();
+      if (TERMINAL_SYNC_STATUSES.has(status)) {
+        return status;
+      }
+    } else if (!/not found/i.test(result.error || '')) {
+      throw new Error(result.error || 'Entra sync status could not be loaded.');
+    }
+
+    if (attempt < SYNC_STATUS_POLL_ATTEMPTS - 1) {
+      await new Promise((resolve) => setTimeout(resolve, SYNC_STATUS_POLL_INTERVAL_MS));
+    }
+  }
+
+  throw new Error('Timed out waiting for the Entra sync to finish.');
 }
 
 /**
@@ -163,7 +187,21 @@ export function EntraClientsTab({
         return rest;
       });
       setExpanded((current) => (current === mapping.managedTenantId ? null : current));
+      const runReference =
+        result.data && 'workflowId' in result.data
+          ? result.data.workflowId || result.data.runId
+          : result.data?.runId;
+      if (!runReference) {
+        throw new Error('The Entra sync started without a workflow reference.');
+      }
+
+      await waitForEntraSyncTerminal(runReference);
       await onChanged();
+      setMessage(
+        t('integrations.entra.console.clients.syncFinished', { client: clientLabel(mapping) })
+      );
+    } catch {
+      setError(t('integrations.entra.console.clients.syncTrackingFailed'));
     } finally {
       setBusyRow(null);
     }
@@ -218,10 +256,23 @@ export function EntraClientsTab({
     },
     {
       title: t('integrations.entra.console.clients.columns.users'),
-      dataIndex: 'sourceUserCount',
+      dataIndex: 'userCount',
       width: '96px',
       headerClassName: 'text-right',
       cellClassName: 'text-right tabular-nums',
+      render: (_value, mapping) => {
+        const syncing = busyRow?.id === mapping.managedTenantId && busyRow.action === 'sync';
+        return (
+          <div id={`entra-client-user-count-${mapping.managedTenantId}`}>
+            <span>{mapping.userCount}</span>
+            {syncing ? (
+              <span className="block text-xs font-normal text-muted-foreground">
+                {t('integrations.entra.console.clients.previousCount')}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       title: t('integrations.entra.console.clients.columns.lastSync'),
@@ -290,7 +341,7 @@ export function EntraClientsTab({
               disabled={busy}
             >
               {syncing
-                ? t('integrations.entra.pilot.actions.syncingOne')
+                ? t('integrations.entra.console.clients.syncing')
                 : t('integrations.entra.console.clients.sync')}
             </Button>
             <Button

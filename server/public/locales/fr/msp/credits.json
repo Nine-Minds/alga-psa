@@ -113,9 +113,9 @@
     "invoice": "Facture",
     "transactions": "Transactions associées",
     "transactionType": "Type",
-    "noTransactions": "Aucune transaction associée trouvée.",
     "date": "Date",
-    "amount": "Montant"
+    "amount": "Montant",
+    "noTransactions": "Aucune transaction associée trouvée."
   },
   "expireDialog": {
     "title": "Faire expirer le crédit",

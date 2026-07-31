@@ -10365,6 +10365,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "number",
           "minimum": 0
         },
+        "default_currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
         "preferred_payment_method": {
           "type": "string"
         },
@@ -11082,6 +11087,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "credit_limit": {
           "type": "number",
           "minimum": 0
+        },
+        "default_currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
         },
         "preferred_payment_method": {
           "type": "string"
@@ -18072,330 +18082,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_financial_reconciliation_run",
-    "method": "post",
-    "path": "/api/v1/financial/reconciliation/run",
-    "displayName": "Run financial reconciliation",
-    "summary": "Run financial reconciliation",
-    "description": "Triggers FinancialService.runCreditReconciliation(). Optional client_id query narrows reconciliation target.",
-    "tags": [
-      "Financial"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
-        }
-      },
-      {
-        "name": "search",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "created_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "created_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "updated_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "updated_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "client_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "invoice_id",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "type",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "status",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_min",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "amount_max",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "include_expired",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "expiring_soon",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_remaining",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "has_expiration",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "date_from",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "date_to",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "group_by",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "day",
-            "week",
-            "month"
-          ]
-        }
-      },
-      {
-        "name": "include_projections",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      {
-        "name": "as_of_date",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "data": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": {}
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          ]
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {}
-        }
-      },
-      "required": [
-        "data"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_v1_financial_reconciliation_id_resolve",
-    "method": "post",
-    "path": "/api/v1/financial/reconciliation/{id}/resolve",
-    "displayName": "Resolve reconciliation report",
-    "summary": "Resolve reconciliation report",
-    "description": "Resolves one reconciliation report by id with optional operator notes.",
-    "tags": [
-      "Financial"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath().",
-        "schema": {
-          "type": "string",
-          "format": "uuid",
-          "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "notes": {
-          "type": "string"
-        }
-      }
-    },
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -34029,10 +33715,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "types",
         "in": "query",
         "required": false,
-        "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
+        "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
         "schema": {
           "type": "string",
-          "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+          "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
         }
       },
       {
@@ -35841,6 +35527,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             }
           ]
         },
+        "barcode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "cost": {
           "anyOf": [
             {
@@ -36139,6 +35839,20 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 128
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "barcode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255
             },
             {
               "type": "null"
@@ -49436,6 +49150,309 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_id_agents",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/agents",
+    "displayName": "List ticket agents",
+    "summary": "List ticket agents",
+    "description": "Returns the ticket primary agent (tickets.assigned_to) and its additional agents (ticket_resources), each with user_id, name and email.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_id_agents",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/agents",
+    "displayName": "Add a ticket additional agent",
+    "summary": "Add a ticket additional agent",
+    "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "User to add as an additional agent."
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Resource role recorded on the assignment; defaults to support."
+        }
+      },
+      "required": [
+        "user_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_agents_userid",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/agents/{userId}",
+    "displayName": "Remove a ticket additional agent",
+    "summary": "Remove a ticket additional agent",
+    "description": "Removes the additional-agent assignment for the given user. The primary agent is changed through PUT /api/v1/tickets/{id}/assignment instead.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket UUID."
+        }
+      },
+      {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "description": "User UUID of the additional agent.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "User UUID of the additional agent."
+        }
+      }
+    ]
+  },
+  {
+    "id": "put-_api_v1_tickets_id_team",
+    "method": "put",
+    "path": "/api/v1/tickets/{id}/team",
+    "displayName": "Assign a team to a ticket",
+    "summary": "Assign a team to a ticket",
+    "description": "Sets assigned_team_id, resolves the primary agent (the existing assignee, else the team lead) and records the team's active members as team_member additional agents. Returns the updated ticket. A team without a lead is rejected with 400.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "team_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Team to assign to the ticket."
+        },
+        "suppressContactNotifications": {
+          "type": "boolean"
+        },
+        "suppressInternalNotifications": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "team_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_team",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/team",
+    "displayName": "Remove a ticket team assignment",
+    "summary": "Remove a ticket team assignment",
+    "description": "Clears assigned_team_id. mode=remove_all (default) drops the team_member additional agents, keep_all leaves them, and selective keeps only keep_user_ids. Returns the updated ticket.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "remove_all",
+            "keep_all",
+            "selective"
+          ],
+          "description": "What to do with the team_member additional agents; defaults to remove_all."
+        },
+        "keep_user_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Required with mode=selective: the team members to keep as additional agents."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_materials",
     "method": "get",
     "path": "/api/v1/tickets/{id}/materials",
@@ -51668,6 +51685,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_opportunities_workqueue",
+    "method": "get",
+    "path": "/api/v1/opportunities/work-queue",
+    "displayName": "Get the current user work queue",
+    "summary": "Get the current user work queue",
+    "description": "Returns the shared server-composed opportunity work queue for the authenticated API-key user.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_opportunities_id",
     "method": "get",
     "path": "/api/v1/opportunities/{id}",
@@ -51878,6 +51920,73 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ]
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_timeline",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/timeline",
+    "displayName": "List opportunity timeline",
+    "summary": "List opportunity timeline",
+    "description": "Lists interactions linked to the opportunity, newest first.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "interaction_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "interaction_date": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "user_name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "interaction_id",
+              "title",
+              "interaction_date",
+              "user_name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "post-_api_v1_opportunities_id_win",
@@ -52151,7 +52260,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "checkpoint": {
           "type": "string",
           "enum": [
-            "qualified"
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal"
           ]
         },
         "detail": {
@@ -53826,6 +53939,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "archived"
           ]
         },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
         "steps": {
           "type": "array",
           "items": {
@@ -53971,6 +54091,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "archived"
           ]
         },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
         "steps": {
           "type": "array",
           "items": {
@@ -54101,6 +54228,1752 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ]
+  },
+  {
+    "id": "get-_api_v1_interactions",
+    "method": "get",
+    "path": "/api/v1/interactions",
+    "displayName": "List interactions",
+    "summary": "List interactions",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "contact_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "opportunity_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "ticket_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "project_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "user_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "type_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "date_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "date_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      },
+      {
+        "name": "page_size",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tenant": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "interaction_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "icon": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "contact_name_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "contact_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "client_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "user_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ticket_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "project_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "opportunity_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "interaction_date": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "start_time": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "end_time": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "duration": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "status_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "status_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_status_closed": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "internal",
+                  "client_visible"
+                ]
+              }
+            },
+            "required": [
+              "tenant",
+              "interaction_id",
+              "type_id",
+              "type_name",
+              "icon",
+              "contact_name_id",
+              "contact_name",
+              "client_id",
+              "client_name",
+              "user_id",
+              "user_name",
+              "ticket_id",
+              "project_id",
+              "opportunity_id",
+              "title",
+              "notes",
+              "interaction_date",
+              "start_time",
+              "end_time",
+              "duration",
+              "status_id",
+              "status_name",
+              "is_status_closed",
+              "visibility"
+            ]
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "number"
+            },
+            "limit": {
+              "type": "number"
+            },
+            "total": {
+              "type": "number"
+            },
+            "totalPages": {
+              "type": "number"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_interactions",
+    "method": "post",
+    "path": "/api/v1/interactions",
+    "displayName": "Create an interaction",
+    "summary": "Create an interaction",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "type_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_name_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "ticket_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "project_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "opportunity_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "start_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "interaction_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "type_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "interaction_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "icon": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contact_name_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "contact_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ticket_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "project_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "opportunity_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "interaction_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "start_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "end_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "status_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_status_closed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "internal",
+                "client_visible"
+              ]
+            }
+          },
+          "required": [
+            "tenant",
+            "interaction_id",
+            "type_id",
+            "type_name",
+            "icon",
+            "contact_name_id",
+            "contact_name",
+            "client_id",
+            "client_name",
+            "user_id",
+            "user_name",
+            "ticket_id",
+            "project_id",
+            "opportunity_id",
+            "title",
+            "notes",
+            "interaction_date",
+            "start_time",
+            "end_time",
+            "duration",
+            "status_id",
+            "status_name",
+            "is_status_closed",
+            "visibility"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_interactions_id",
+    "method": "get",
+    "path": "/api/v1/interactions/{id}",
+    "displayName": "Get an interaction",
+    "summary": "Get an interaction",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "interaction_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "icon": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "contact_name_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "contact_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "client_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ticket_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "project_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "opportunity_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "interaction_date": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "start_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "end_time": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "status_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "status_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_status_closed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "internal",
+                "client_visible"
+              ]
+            }
+          },
+          "required": [
+            "tenant",
+            "interaction_id",
+            "type_id",
+            "type_name",
+            "icon",
+            "contact_name_id",
+            "contact_name",
+            "client_id",
+            "client_name",
+            "user_id",
+            "user_name",
+            "ticket_id",
+            "project_id",
+            "opportunity_id",
+            "title",
+            "notes",
+            "interaction_date",
+            "start_time",
+            "end_time",
+            "duration",
+            "status_id",
+            "status_name",
+            "is_status_closed",
+            "visibility"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_interactiontypes",
+    "method": "get",
+    "path": "/api/v1/interaction-types",
+    "displayName": "List interaction types",
+    "summary": "List interaction types",
+    "description": "Returns the union of system and tenant-defined interaction types.",
+    "tags": [
+      "Interactions v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type_name": {
+                "type": "string"
+              },
+              "icon": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "is_system": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type_id",
+              "type_name",
+              "icon",
+              "is_system"
+            ]
+          }
+        },
+        "meta": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_lookup",
+    "method": "get",
+    "path": "/api/v1/inventory/lookup",
+    "displayName": "Look up an inventory barcode or identifier",
+    "summary": "Look up an inventory barcode or identifier",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "code",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_stock",
+    "method": "get",
+    "path": "/api/v1/inventory/stock",
+    "displayName": "List stock levels",
+    "summary": "List stock levels",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_stocklocations",
+    "method": "get",
+    "path": "/api/v1/inventory/stock-locations",
+    "displayName": "List stock locations",
+    "summary": "List stock locations",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_units",
+    "method": "get",
+    "path": "/api/v1/inventory/units",
+    "displayName": "List serialized stock units",
+    "summary": "List serialized stock units",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_units_unitid",
+    "method": "get",
+    "path": "/api/v1/inventory/units/{unitId}",
+    "displayName": "Get a serialized stock unit",
+    "summary": "Get a serialized stock unit",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "unitId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_receipts",
+    "method": "post",
+    "path": "/api/v1/inventory/receipts",
+    "displayName": "Receive stock manually",
+    "summary": "Receive stock manually",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_adjustments",
+    "method": "post",
+    "path": "/api/v1/inventory/adjustments",
+    "displayName": "Adjust stock",
+    "summary": "Adjust stock",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_counts",
+    "method": "get",
+    "path": "/api/v1/inventory/counts",
+    "displayName": "List cycle count sessions",
+    "summary": "List cycle count sessions",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_counts",
+    "method": "post",
+    "path": "/api/v1/inventory/counts",
+    "displayName": "Start a cycle count session",
+    "summary": "Start a cycle count session",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_counts_sessionid",
+    "method": "get",
+    "path": "/api/v1/inventory/counts/{sessionId}",
+    "displayName": "Get a cycle count session",
+    "summary": "Get a cycle count session",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_counts_sessionid_records",
+    "method": "post",
+    "path": "/api/v1/inventory/counts/{sessionId}/records",
+    "displayName": "Record a cycle count quantity",
+    "summary": "Record a cycle count quantity",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_counts_sessionid_submit",
+    "method": "post",
+    "path": "/api/v1/inventory/counts/{sessionId}/submit",
+    "displayName": "Submit a cycle count session",
+    "summary": "Submit a cycle count session",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "sessionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_purchaseorders",
+    "method": "get",
+    "path": "/api/v1/inventory/purchase-orders",
+    "displayName": "List purchase orders",
+    "summary": "List purchase orders",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_purchaseorders_poid",
+    "method": "get",
+    "path": "/api/v1/inventory/purchase-orders/{poId}",
+    "displayName": "Get a purchase order",
+    "summary": "Get a purchase order",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "poId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_purchaseorders_poid_lines_lineid_receive",
+    "method": "post",
+    "path": "/api/v1/inventory/purchase-orders/{poId}/lines/{lineId}/receive",
+    "displayName": "Receive a purchase-order line",
+    "summary": "Receive a purchase-order line",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "poId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "lineId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {}
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_inventory_transfers",
+    "method": "get",
+    "path": "/api/v1/inventory/transfers",
+    "displayName": "List stock transfers",
+    "summary": "List stock transfers",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "service_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "low_stock",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "post-_api_v1_inventory_transfers_transferid_receive",
+    "method": "post",
+    "path": "/api/v1/inventory/transfers/{transferId}/receive",
+    "displayName": "Receive a stock transfer",
+    "summary": "Receive a stock transfer",
+    "tags": [
+      "Inventory v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "transferId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {}
+      }
+    }
+  },
+  {
+    "id": "get-_api_v1_mobile_me_capabilities",
+    "method": "get",
+    "path": "/api/v1/mobile/me/capabilities",
+    "displayName": "Get current mobile feature capabilities",
+    "summary": "Get current mobile feature capabilities",
+    "description": "Returns tenant-product and RBAC-derived mobile feature availability for the authenticated API-key user.",
+    "tags": [
+      "Mobile v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "features": {
+              "type": "object",
+              "properties": {
+                "inventory": {
+                  "type": "boolean"
+                },
+                "opportunities": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "inventory",
+                "opportunities"
+              ]
+            }
+          },
+          "required": [
+            "features"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "post-_api_v1_featureaccess",

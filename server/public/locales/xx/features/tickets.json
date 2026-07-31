@@ -1147,7 +1147,9 @@
     "clientRequired": "11111",
     "serialUnit": "11111",
     "selectUnit": "11111",
-    "onHandByLocation": "11111"
+    "onHandByLocation": "11111",
+    "catalogUnitCost": "11111",
+    "costNotConfigured": "11111"
   },
   "watchList": {
     "title": "11111",
@@ -1497,7 +1499,6 @@
       "pausedHint": "11111"
     },
     "tiles": {
-      "request": "11111",
       "openedBy": "11111 {{name}} 11111",
       "showMore": "11111",
       "showLess": "11111",

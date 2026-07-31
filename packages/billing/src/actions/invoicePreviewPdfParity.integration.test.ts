@@ -10,6 +10,15 @@ const getAllTemplatesMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
+  // These exercise the preview/render pipeline, not RBAC. Without this the
+  // real hasPermission runs, which needs a database — the action under test
+  // does not. The rbac subpath is a distinct module id, so it needs its own
+  // mock: actions import hasPermission from either specifier.
+  hasPermission: async () => true,
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async () => true,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -164,13 +173,13 @@ describe('preview/pdf AST parity integration', () => {
     ]);
 
     const previewResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
-      { id: 'test-user' },
+      { id: 'test-user', tenant: 'test-tenant' },
       { tenant: 'test-tenant' },
       { workspace, invoiceData }
     );
 
     const pdfRenderResult = await (renderTemplateOnServer as any)(
-      { id: 'test-user' },
+      { id: 'test-user', tenant: 'test-tenant' },
       { tenant: 'test-tenant' },
       'tpl-parity',
       invoiceData

@@ -30,3 +30,5 @@ export * from './context';
 // list). Import it directly from '@alga-psa/ui/editor'.
 export * from './services';
 export { DeleteEntityDialog } from './components/DeleteEntityDialog';
+
+export { type ClientDrawerOptions } from './context/ClientDrawerContext';

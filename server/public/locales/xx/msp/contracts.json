@@ -259,7 +259,8 @@
       "invoices": "11111",
       "lines": "11111",
       "overview": "11111",
-      "pricing": "11111"
+      "pricing": "11111",
+      "simulator": "11111"
     },
     "validation": {
       "billingFrequencyRequired": "11111",
@@ -1156,6 +1157,12 @@
         "active": "11111",
         "inactive": "11111"
       }
+    },
+    "simulation": {
+      "client": "11111",
+      "hypothetical": "11111",
+      "open": "11111",
+      "title": "11111"
     }
   },
   "quickStart": {
@@ -1321,6 +1328,10 @@
       "saveDraft": "11111",
       "saving": "11111",
       "completing": "11111"
+    },
+    "simulation": {
+      "description": "11111",
+      "title": "11111"
     }
   },
   "wizardBasics": {
@@ -2067,6 +2078,240 @@
         "contract": "11111",
         "client": "11111"
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "11111",
+      "hoursUnit": "11111",
+      "inputLabel": "11111 {{unit}} 11111 {{service}} 11111",
+      "loadReplay": "11111",
+      "periodLabel": "11111 {{number}} 11111",
+      "replayEnd": "11111",
+      "replayStart": "11111",
+      "replayTitle": "11111",
+      "rowLabel": "11111 {{service}} 11111 {{unit}} 11111",
+      "subtitle": "11111",
+      "title": "11111",
+      "useRecent": "11111",
+      "varyByPeriod": "11111",
+      "arrearsHint": "11111",
+      "advanceHint": "11111",
+      "invoicePeriodLabel": "11111 {{period}} 11111",
+      "overrideInputLabel": "11111 {{period}} 11111 {{unit}} 11111 {{service}} 11111",
+      "zeroActivity": "11111",
+      "averageLoaded": "11111 {{window}} 11111 {{count}} 11111",
+      "replayLoaded": "11111 {{window}} 11111 {{count}} 11111 {{changed}} 11111",
+      "replayRangeLoaded": "11111 {{count}} 11111 {{window}} 11111",
+      "prefillNextStep": "11111",
+      "prefillUnchanged": "11111 {{window}} 11111",
+      "loadingHistory": "11111",
+      "prefillChange": "11111 {{before}} 11111 {{after}} 11111 {{unit}} 11111",
+      "prefillOverrides": "11111 {{count}} 11111"
+    },
+    "compare": {
+      "added": "11111",
+      "changed": "11111",
+      "horizonImpact": "11111 {{count}} 11111",
+      "horizonImpactHint": "11111",
+      "noChange": "11111",
+      "removed": "11111"
+    },
+    "emptyScenario": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "diagnostics": {
+      "title": "11111"
+    },
+    "explanation": {
+      "amount": "11111",
+      "close": "11111",
+      "inputs": "11111",
+      "noBreakdown": "11111",
+      "steps": "11111",
+      "title": "11111"
+    },
+    "featureName": "11111",
+    "invoiceDetail": {
+      "columns": {
+        "amount": "11111",
+        "line": "11111",
+        "qty": "11111",
+        "rate": "11111"
+      },
+      "draftNote": "11111",
+      "billedInAdvance": "11111",
+      "billedInArrears": "11111",
+      "explainHint": "11111",
+      "renderedPreview": "11111",
+      "invoicePeriod": "11111 {{start}} 11111 {{end}} 11111",
+      "servicePeriod": "11111 {{start}} 11111 {{end}} 11111",
+      "subtotal": "11111",
+      "tax": "11111",
+      "title": "11111 {{period}} 11111",
+      "total": "11111"
+    },
+    "loadFailed": "11111",
+    "loadingSnapshot": "11111",
+    "preparingDraft": "11111",
+    "markers": {
+      "bucketOverage": "11111",
+      "cadenceCoincidence": "11111",
+      "contractEnd": "11111",
+      "oneTime": "11111",
+      "prorated": "11111"
+    },
+    "replay": {
+      "actualInvoice": "11111 {{number}} 11111",
+      "issued": "11111",
+      "previewIssued": "11111",
+      "projected": "11111",
+      "simulatedDelta": "11111"
+    },
+    "runBar": {
+      "compareToggle": "11111",
+      "horizonOption": "11111 {{count}} 11111",
+      "lastRun": "11111 {{count}} 11111",
+      "neverRun": "11111",
+      "simulate": "11111",
+      "simulating": "11111",
+      "stale": "11111",
+      "staleBanner": "11111",
+      "updateSimulation": "11111"
+    },
+    "scenario": {
+      "addAdjustment": "11111",
+      "advancedChanges": "11111",
+      "advancedSummary": "11111 {{schedules}} 11111 {{discounts}} 11111 {{adjustments}} 11111",
+      "addBucket": "11111",
+      "addCatalogService": "11111",
+      "addCatalogServiceOption": "11111",
+      "addDiscount": "11111",
+      "addIncludedHours": "11111",
+      "addIncludedUnits": "11111",
+      "addLine": "11111",
+      "addSchedule": "11111",
+      "addTier": "11111",
+      "adjustments": "11111",
+      "allocationRate": "11111",
+      "catalogRate": "11111",
+      "allLines": "11111",
+      "bucketIncluded": "11111 {{hours}} 11111",
+      "cadence": {
+        "client": "11111",
+        "contract": "11111"
+      },
+      "defaultRate": "11111",
+      "discountTypes": {
+        "fixed": "11111",
+        "percentage": "11111"
+      },
+      "discounts": "11111",
+      "fields": {
+        "adjustmentAmount": "11111",
+        "adjustmentDescription": "11111",
+        "adjustmentPeriod": "11111",
+        "billingFrequency": "11111",
+        "billingTiming": "11111",
+        "bucketQuantity": "11111",
+        "cadenceOwner": "11111",
+        "configurationType": "11111",
+        "discountLine": "11111",
+        "discountName": "11111",
+        "discountType": "11111",
+        "discountValue": "11111",
+        "lineName": "11111",
+        "lineType": "11111",
+        "minimumBillableMinutes": "11111",
+        "minimumUsage": "11111",
+        "includedHours": "11111",
+        "includedUnits": "11111",
+        "overtimeRate": "11111",
+        "overtimeThreshold": "11111",
+        "roundUpMinutes": "11111",
+        "scheduleEffectiveDate": "11111",
+        "scheduleEndDate": "11111",
+        "scheduleRate": "11111",
+        "serviceQuantity": "11111",
+        "tierMaximum": "11111",
+        "tierMinimum": "11111",
+        "tierRate": "11111",
+        "usageUnit": "11111"
+      },
+      "frequencies": {
+        "annually": "11111",
+        "monthly": "11111",
+        "quarterly": "11111",
+        "semi-annually": "11111"
+      },
+      "licenseSuffix": "11111",
+      "lineCount": "11111 {{count}} 11111",
+      "lineSummary": "11111 {{type}} 11111 {{frequency}} 11111 {{timing}} 11111 {{services}} 11111",
+      "oneService": "11111",
+      "serviceCount": "11111 {{count}} 11111",
+      "collapseDetailsFor": "11111 {{line}} 11111",
+      "editDetails": "11111",
+      "editDetailsFor": "11111 {{line}} 11111",
+      "modified": "11111",
+      "newAdjustmentName": "11111",
+      "newDiscountName": "11111",
+      "newLineName": "11111 {{number}} 11111",
+      "oneTime": "11111",
+      "overtime": "11111",
+      "placeholders": {
+        "minimum": "11111",
+        "minimumMinutes": "11111",
+        "overtimeRate": "11111",
+        "roundMinutes": "11111",
+        "thresholdHours": "11111"
+      },
+      "pricingSchedules": "11111",
+      "productUnitPrice": "11111",
+      "hourlyRate": "11111",
+      "usageRate": "11111",
+      "overageRate": "11111",
+      "serviceBaseRate": "11111",
+      "rateOverriddenByLine": "11111",
+      "fromServiceRates": "11111",
+      "proration": "11111",
+      "removeAdjustment": "11111",
+      "removeDiscount": "11111",
+      "removeLine": "11111",
+      "removeSchedule": "11111",
+      "removeTier": "11111",
+      "removeService": "11111",
+      "recurringLinePrice": "11111",
+      "resetAll": "11111",
+      "resetLine": "11111",
+      "rollover": "11111",
+      "tieredPricing": "11111",
+      "timing": {
+        "advance": "11111",
+        "arrears": "11111"
+      },
+      "types": {
+        "bucket": "11111",
+        "fixed": "11111",
+        "hourly": "11111",
+        "usage": "11111"
+      },
+      "title": "11111"
+    },
+    "timeline": {
+      "deltaDown": "11111 {{amount}} 11111",
+      "deltaUp": "11111 {{amount}} 11111",
+      "empty": "11111",
+      "noDelta": "11111",
+      "noPreviousDelta": "11111",
+      "invoicePeriod": "11111",
+      "periodAria": "11111 {{period}} 11111 {{total}} 11111",
+      "previousDelta": "11111 {{sign}} 11111 {{amount}} 11111 {{period}} 11111",
+      "title": "11111"
+    },
+    "unavailable": {
+      "description": "11111",
+      "title": "11111"
     }
   }
 }

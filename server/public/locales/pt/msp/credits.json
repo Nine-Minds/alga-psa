@@ -21,7 +21,7 @@
   },
   "filters": {
     "allClients": "Todos os clientes",
-    "allStatuses": "Todos os estados"
+    "allStatuses": "Todos os status"
   },
   "status": {
     "active": "Ativo",
@@ -113,9 +113,9 @@
     "invoice": "Fatura",
     "transactions": "Transações relacionadas",
     "transactionType": "Tipo",
-    "noTransactions": "Nenhuma transação relacionada encontrada.",
     "date": "Data",
-    "amount": "Valor"
+    "amount": "Valor",
+    "noTransactions": "Nenhuma transação relacionada encontrada."
   },
   "expireDialog": {
     "title": "Expirar crédito",

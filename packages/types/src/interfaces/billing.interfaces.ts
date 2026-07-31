@@ -140,6 +140,7 @@ export interface IClientContractLine extends TenantEntity {
   billing_frequency?: string;
   contract_name?: string; // Contract name (added dynamically for contract-associated contract lines)
   location_id?: string | null;
+  is_system_managed_default?: boolean;
 }
 
 export interface IClientContractLineCycle extends TenantEntity {
@@ -175,6 +176,8 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   rate: number;
   total: number;
   type: 'product';
+  material_source_type?: 'ticket' | 'project';
+  material_source_id?: string;
 }
 
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {
@@ -421,6 +424,8 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   quantity: number;
   rate: number;
   total: number;
+  material_source_type?: 'ticket' | 'project';
+  material_source_id?: string;
 }
 
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {
@@ -574,4 +579,3 @@ export interface IClientContractLineSettings extends TenantEntity {
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }
-

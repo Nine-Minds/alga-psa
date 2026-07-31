@@ -151,7 +151,7 @@ describe('EntraSetupWizard', () => {
     renderWizard(statusOf({ status: 'connected', connectionType: 'direct' }));
 
     const ladder = document.getElementById('entra-setup-ladder');
-    expect(ladder?.children).toHaveLength(4);
+    expect(ladder?.querySelectorAll('[data-step-state]')).toHaveLength(4);
     expect(document.getElementById('entra-setup-ladder-1')?.getAttribute('data-step-state'))
       .toBe('complete');
     expect(document.getElementById('entra-setup-ladder-2')?.getAttribute('data-step-state'))
@@ -351,7 +351,7 @@ describe('EntraSetupWizard', () => {
 
     expect(document.getElementById('entra-setup-step-4')).not.toBeNull();
     // Locked steps stay inert; completed ones are reachable.
-    expect(document.getElementById('entra-setup-ladder-revisit-4')).toBeNull();
+    expect(document.getElementById('entra-setup-ladder-revisit-4')).toBeDisabled();
 
     fireEvent.click(document.getElementById('entra-setup-ladder-revisit-3') as HTMLButtonElement);
     expect(document.getElementById('entra-setup-step-3')?.querySelector('#entra-mapping-table-stub'))
@@ -373,6 +373,22 @@ describe('EntraSetupWizard', () => {
     );
 
     // The first sync is a pilot on one client, not a big-bang across all of them.
+    const stepFour = document.getElementById('entra-setup-step-4');
+    expect(stepFour?.getAttribute('data-step-state')).toBe('current');
+    expect(stepFour?.querySelector('#entra-pilot-control-stub')).not.toBeNull();
+  });
+
+  it('T146: advances to explicit sync when only create-new decisions are confirmed', () => {
+    renderWizard(
+      statusOf({
+        status: 'connected',
+        connectionType: 'direct',
+        lastDiscoveryAt: '2026-07-25T00:00:00.000Z',
+        mappedTenantCount: 0,
+        pendingCreateTenantCount: 1,
+      })
+    );
+
     const stepFour = document.getElementById('entra-setup-step-4');
     expect(stepFour?.getAttribute('data-step-state')).toBe('current');
     expect(stepFour?.querySelector('#entra-pilot-control-stub')).not.toBeNull();

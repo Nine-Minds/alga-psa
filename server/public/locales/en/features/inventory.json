@@ -2,6 +2,7 @@
   "common": {
     "actions": "Actions",
     "active": "Active",
+    "allTime": "All time",
     "cancel": "Cancel",
     "clear": "Clear",
     "close": "Close",
@@ -14,6 +15,7 @@
     "inactive": "Inactive",
     "loading": "Loading…",
     "name": "Name",
+    "period": "Period",
     "quantity": "Quantity",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
@@ -28,6 +30,7 @@
     "search": "Search",
     "status": "Status",
     "to": "To",
+    "today": "Today",
     "total": "Total",
     "unknown": "Unknown"
   },
@@ -432,6 +435,7 @@
     "candidateCapNote": " (showing first {{cap}})",
     "candidateCount": "{{count}} ghost candidate",
     "candidateCountPlural": "{{count}} ghost candidates",
+    "candidatesTitle": "Ghost candidates",
     "columns": {
       "aiVerdict": "AI verdict",
       "assignedTo": "Assigned to",

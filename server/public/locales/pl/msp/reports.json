@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Brak otwartych zgłoszeń w tym zakresie.",
       "noDate": "Brak daty",
       "notAvailable": "brak",
-      "noEmailChannels": "Nie skonfigurowano kanalow e-mail."
+      "noEmailChannels": "Nie skonfigurowano kanalow e-mail.",
+      "noCapacity": "nd. — nie ustawiono wydajności"
     },
     "fallbackTitle": "Raport",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Przekroczenie pakietu",
       "openAssigned": "Otwarte przypisane",
       "activeAssignees": "Aktywni przypisani",
-      "avgResolutionTime": "Sredni czas rozwiazania"
+      "avgResolutionTime": "Sredni czas rozwiazania",
+      "workedHours": "Przepracowane godziny",
+      "capacityHours": "Godziny wydajności",
+      "utilization": "Wykorzystanie",
+      "usersWithoutCapacity": "Brak wydajności",
+      "activeUsers": "Aktywni użytkownicy"
     },
     "sections": {
       "openByStatus": "Otwarte według statusu",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Nadchodzace odnowienia",
       "bucketUsage": "Uzycie pakietu",
       "performanceByAssignee": "Wyniki wedlug przypisanego",
-      "closedByAssignee": "Zamkniete wedlug przypisanego"
+      "closedByAssignee": "Zamkniete wedlug przypisanego",
+      "utilizationByUser": "Wykorzystanie według użytkownika"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Wydajność zespołu",
         "description": "Przepustowość zespołu i odpowiedzialność za odpowiedź w obszarach wielu użytkowników."
+      },
+      "employeeUtilization": {
+        "title": "Wykorzystanie pracowników",
+        "description": "Przepracowane godziny w stosunku do tygodniowej wydajności każdego członka zespołu."
       },
       "contractReports": {
         "title": "Raporty kontraktów",
@@ -158,7 +169,11 @@
       "entries": "Wpisy",
       "ticket": "Zgloszenie",
       "entered": "Wprowadzono",
-      "age": "Wiek"
+      "age": "Wiek",
+      "workedHours": "Przepracowane godziny",
+      "capacityHours": "Godziny wydajności",
+      "utilization": "Wykorzystanie",
+      "capacityEstimated": "Oszacowano na podstawie tygodniowej dostępności; nie ustawiono godzin pracy."
     },
     "statusValues": {
       "connected": "Polaczony",
@@ -258,7 +273,9 @@
         "hourlyRate": "{{value}}/godz.",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} godz. rozliczalnych",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (bez wyceny)",
+        "unassignedLine": "{{line}} (nieprzydzielone)"
       },
       "errors": {
         "load": "Nie udało się załadować danych o rentowności",
@@ -308,7 +325,8 @@
         "costRates": "Stawki kosztów nie są skonfigurowane. Godziny pracy są wykazywane jako bez wyceny, dopóki nie istnieje stawka domyślna tenanta lub stawka użytkownika.",
         "clients": "Brak danych o rentowności klientów dla tego zakresu.",
         "lines": "Brak szczegółów na poziomie pozycji dla tego wiersza.",
-        "tickets": "Brak danych o rentowności zgłoszeń dla tego wyboru."
+        "tickets": "Brak danych o rentowności zgłoszeń dla tego wyboru.",
+        "agreements": "Brak danych o rentowności umów dla tego wyboru."
       },
       "warnings": {
         "title": "Ostrzeżenia raportu",
@@ -340,6 +358,14 @@
       },
       "fallbacks": {
         "untitledTicket": "Zgłoszenie bez tytułu"
+      },
+      "print": {
+        "dateRange": "{{start}} do {{end}}",
+        "client": "Klient",
+        "allClients": "Wszyscy klienci",
+        "agreement": "Umowa",
+        "allAgreements": "Wszystkie umowy",
+        "currency": "Waluta"
       }
     }
   },

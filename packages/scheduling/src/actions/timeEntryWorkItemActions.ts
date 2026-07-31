@@ -15,6 +15,7 @@ import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
+import { recalculateProjectTaskActualHours } from '@alga-psa/db';
 
 const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
 
@@ -238,6 +239,9 @@ export const deleteWorkItem = withAuth(async (
 
     await db.transaction(async (trx) => {
       const scopedDb = tenantDb(trx, tenant) as any;
+      const projectTaskEntries = await scopedDb.table('time_entries')
+        .where({ work_item_id: workItemId, work_item_type: 'project_task' })
+        .select('work_item_id');
       // First delete all time entries associated with this work item
       // Note: This only deletes time entries. It doesn't delete the work item itself
       // (e.g., the ticket or project task). Consider if the work item itself should be deleted.
@@ -246,6 +250,11 @@ export const deleteWorkItem = withAuth(async (
           work_item_id: workItemId
         })
         .delete();
+      await recalculateProjectTaskActualHours(
+        trx,
+        tenant,
+        projectTaskEntries.map((entry: { work_item_id: string }) => entry.work_item_id),
+      );
         console.log(`Deleted time entries associated with work item ${workItemId}`);
     });
   } catch (error) {

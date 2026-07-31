@@ -1139,7 +1139,9 @@
     "clientRequired": "Prima di poter aggiungere materiali, a questo ticket deve essere assegnato un cliente.",
     "serialUnit": "Seriale / MAC (prodotto serializzato)",
     "selectUnit": "Seleziona un'unità da consegnare...",
-    "onHandByLocation": "Disponibili per ubicazione"
+    "onHandByLocation": "Disponibili per ubicazione",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Elenco osservati",
@@ -1489,7 +1491,6 @@
       "pausedHint": "Il contatore è in pausa mentre il ticket resta in uno stato sospeso."
     },
     "tiles": {
-      "request": "Richiesta",
       "openedBy": "Aperto da {{name}}",
       "showMore": "Mostra altro",
       "showLess": "Mostra meno",

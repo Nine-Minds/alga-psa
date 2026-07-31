@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BillingEngine } from "@alga-psa/billing/services";
-import { TaxService } from "@alga-psa/billing/services/taxService";
 
 vi.mock("@alga-psa/billing/actions/billingAndTax", () => ({
   getNextBillingDate: vi.fn(
@@ -46,12 +45,23 @@ const installLicenseChargeMocks = (
   options: LicenseChargeMockOptions = {},
 ) => {
   (engine as any).tenant = "test_tenant";
-  vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue(
-    "US-NY",
+  const calculateTax = vi.fn(
+    (_clientId: string, amount: number) => ({
+      taxRate: 0.1,
+      taxAmount: Math.round(amount * 0.1),
+    }),
   );
-  vi.spyOn(engine as any, "getTaxInfoFromService").mockResolvedValue({
-    taxRegion: options.taxRegion,
-    isTaxable: options.isTaxable ?? false,
+  vi.spyOn(
+    engine as any,
+    "loadChargeComputeTaxContext",
+  ).mockResolvedValue({
+    getTaxInfoFromService: () => ({
+      taxRegion: options.taxRegion ?? null,
+      isTaxable: options.isTaxable ?? false,
+    }),
+    getLocationTaxRegionCode: () => null,
+    getClientDefaultTaxRegionCode: () => "US-NY",
+    calculateTax,
   });
 
   const licenseRows = options.licenseRows ?? [
@@ -84,6 +94,8 @@ const installLicenseChargeMocks = (
 
     return buildQuery(null);
   });
+
+  return { calculateTax };
 };
 
 afterEach(() => {
@@ -187,17 +199,10 @@ describe("BillingEngine recurring license timing", () => {
 
   it("T068: recurring license tax behavior remains unchanged after moving licenses to canonical service periods", async () => {
     const engine = new BillingEngine();
-    installLicenseChargeMocks(engine, {
+    const { calculateTax } = installLicenseChargeMocks(engine, {
       taxRegion: "US-NY",
       isTaxable: true,
     });
-
-    const calculateTaxSpy = vi
-      .spyOn(TaxService.prototype, "calculateTax")
-      .mockResolvedValue({
-        taxRate: 0.1,
-        taxAmount: 310,
-      } as any);
 
     const charges = await (engine as any).calculateLicenseCharges(
       "client-1",
@@ -218,7 +223,7 @@ describe("BillingEngine recurring license timing", () => {
       "monthly",
     );
 
-    expect(calculateTaxSpy).toHaveBeenCalledWith(
+    expect(calculateTax).toHaveBeenCalledWith(
       "client-1",
       3100,
       "2025-01-31",

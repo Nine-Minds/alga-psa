@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Paramètres généraux",
-    "description": "Gérez le nom de votre organisation et le client par défaut. Le client par défaut est utilisé à des fins de configuration et représente votre MSP.",
+    "description": "Gérez le nom de votre organisation et choisissez quelle fiche client représente votre propre entreprise. Les informations de ce client apparaissent sur les factures, les devis et les communications adressées aux clients.",
     "fields": {
       "organizationName": {
         "label": "Nom de l'organisation"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Enregistrer le fuseau horaire par défaut"
     },
     "clients": {
-      "title": "Clients",
+      "title": "Votre entreprise",
+      "help": "Le client marqué comme votre entreprise correspond à votre propre organisation. Son nom, son adresse et son logo apparaissent sur les factures, les devis et les communications adressées aux clients.",
+      "currentDefault": "Votre entreprise est actuellement {{name}}.",
+      "yourCompanyBadge": "Votre entreprise",
       "table": {
         "name": "Nom",
-        "default": "Par défaut",
+        "default": "Votre entreprise (par défaut)",
         "actions": "Actions"
       },
       "placeholder": "Sélectionnez un client à ajouter",
-      "addClient": "Ajouter un client"
+      "addClient": "Ajouter un client",
+      "confirmDialog": {
+        "title": "Changer votre entreprise ?",
+        "message": "Cela remplacera votre entreprise {{current}} par {{next}}. {{next}} représentera votre propre organisation sur les factures, les devis ainsi que dans les e-mails et invitations envoyés aux clients.",
+        "messageInitial": "Cela définira {{next}} comme votre entreprise. {{next}} représentera votre propre organisation sur les factures, les devis ainsi que dans les e-mails et invitations envoyés aux clients.",
+        "confirm": "Changer d'entreprise",
+        "cancel": "Annuler"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Échec de la mise à jour du fuseau horaire",
         "selectClient": "Veuillez sélectionner un client",
         "clientNotFound": "Client introuvable",
+        "clientAlreadyAdded": "Ce client figure déjà dans la liste",
         "addClient": "Échec de l'ajout du client",
         "removeClient": "Échec de la suppression du client",
         "setDefaultClient": "Échec de la définition du client par défaut",
@@ -282,6 +293,27 @@
         "label": "Supérieur hiérarchique",
         "placeholder": "Sélectionner un responsable"
       },
+      "workSchedule": {
+        "label": "Heures de travail",
+        "help": "Quand cette personne est en service. Utilisé dans les rapports d’utilisation. Il ne s’agit pas de la disponibilité de réservation client.",
+        "setHours": "Définir les heures de travail",
+        "clear": "Effacer",
+        "weeklyTotal": "{{hours}} h par semaine",
+        "days": {
+          "0": "Dimanche",
+          "1": "Lundi",
+          "2": "Mardi",
+          "3": "Mercredi",
+          "4": "Jeudi",
+          "5": "Vendredi",
+          "6": "Samedi"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Capacité hebdomadaire (heures)",
+        "placeholder": "p. ex. 40",
+        "help": "Utilisé uniquement à défaut d’heures de travail définies ci-dessus."
+      },
       "lastLogin": "Dernière connexion",
       "roles": "Rôles",
       "status": "Statut",
@@ -326,7 +358,9 @@
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
-        "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs."
+        "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs.",
+        "invalidCapacity": "La capacité hebdomadaire doit être un nombre positif.",
+        "invalidWorkSchedule": "Les heures de travail doivent former une plage valide se terminant après son début."
       }
     },
     "loading": "Chargement des détails de l'utilisateur..."
@@ -1056,6 +1090,15 @@
     "openMenu": "Ouvrir le menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Fonctionnalités du portail",
+      "description": "Choisissez les fonctionnalités en libre-service auxquelles les clients peuvent accéder.",
+      "appointmentsLabel": "Rendez-vous",
+      "appointmentsHelp": "Permettez aux clients de consulter et de demander des rendez-vous depuis le portail client.",
+      "appointmentsEnabled": "Les rendez-vous sont désormais disponibles dans le portail client",
+      "appointmentsDisabled": "Les rendez-vous sont désormais masqués dans le portail client",
+      "updateFailed": "Impossible de mettre à jour les fonctionnalités du portail client"
+    },
     "branding": {
       "title": "Image de marque et apparence",
       "description": "Personnalisez l'apparence de votre portail client avec l'image de marque de votre entreprise.",

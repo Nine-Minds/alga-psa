@@ -2,24 +2,35 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
 
-const getCurrentUser = vi.fn();
+// vi.hoisted: mock factories run while the test module's imports evaluate —
+// plain consts would still be in their temporal dead zone at that point.
+const { getCurrentUser, getCurrentTimePeriod, fetchOrCreateTimeSheet, saveTimeEntry, toastError } =
+  vi.hoisted(() => ({
+    getCurrentUser: vi.fn(),
+    getCurrentTimePeriod: vi.fn(),
+    fetchOrCreateTimeSheet: vi.fn(),
+    saveTimeEntry: vi.fn(),
+    toastError: vi.fn(),
+  }));
+
+// timeEntryLauncher imports getCurrentUser from user-composition; mock both
+// specifiers so the interception holds regardless of which config resolves it.
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser,
 }));
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser,
+}));
 
-const getCurrentTimePeriod = vi.fn();
 vi.mock('../src/actions/timePeriodsActions', () => ({
   getCurrentTimePeriod,
 }));
 
-const fetchOrCreateTimeSheet = vi.fn();
-const saveTimeEntry = vi.fn();
 vi.mock('../src/actions/timeEntryActions', () => ({
   fetchOrCreateTimeSheet,
   saveTimeEntry,
 }));
 
-const toastError = vi.fn();
 vi.mock('react-hot-toast', () => ({
   toast: { error: toastError },
 }));

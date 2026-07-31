@@ -9,7 +9,9 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { QboCustomerMappingPanel } from './QboCustomerMappingPanel';
+import { QboItemImportStep } from './QboItemImportStep';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getHistoricalInvoiceMatches,
@@ -22,10 +24,34 @@ import {
 
 // ─── Stepper ──────────────────────────────────────────────────────────────────
 
-const STEPS = ['Customers', 'History', 'Go-live'] as const;
-type Step = 0 | 1 | 2;
+// The Products & Services step is flag-gated ('qbo-item-import'); the step
+// list is computed per render so completed wizards are unaffected either way.
+type StepKey = 'customers' | 'history' | 'items' | 'golive';
 
-function StepIndicator({ step, current }: { step: number; current: Step }) {
+interface WizardStepDef {
+  key: StepKey;
+  label: string;
+}
+
+const BASE_STEPS: WizardStepDef[] = [
+  { key: 'customers', label: 'Customers' },
+  { key: 'history', label: 'History' },
+  { key: 'golive', label: 'Go-live' },
+];
+
+const ITEM_IMPORT_STEP: WizardStepDef = { key: 'items', label: 'Products & Services' };
+
+function useWizardSteps(): WizardStepDef[] {
+  const flag = useFeatureFlag('qbo-item-import');
+  const itemImportEnabled = typeof flag === 'boolean' ? flag : Boolean(flag?.enabled);
+  if (!itemImportEnabled) return BASE_STEPS;
+  // Between customer mapping / history and the go-live cutoff.
+  return [BASE_STEPS[0], BASE_STEPS[1], ITEM_IMPORT_STEP, BASE_STEPS[2]];
+}
+
+type Step = number;
+
+function StepIndicator({ step, current, label }: { step: number; current: Step; label: string }) {
   const isCompleted = step < current;
   const isCurrent = step === current;
   return (
@@ -46,7 +72,7 @@ function StepIndicator({ step, current }: { step: number; current: Step }) {
           isCurrent ? 'font-semibold text-foreground' : 'text-muted-foreground',
         ].join(' ')}
       >
-        {STEPS[step]}
+        {label}
       </span>
     </div>
   );
@@ -417,8 +443,14 @@ function WizardDone({ onRerun }: { onRerun: () => void }) {
 // ─── Main wizard ──────────────────────────────────────────────────────────────
 
 export function QboOnboardingWizard() {
+  const steps = useWizardSteps();
   const [step, setStep] = React.useState<Step>(0);
   const [done, setDone] = React.useState(false);
+
+  // If the flag flips mid-session and shrinks the list, stay in bounds.
+  const currentStep = Math.min(step, steps.length - 1);
+  const currentKey = steps[currentStep].key;
+  const lastStep = steps.length - 1;
 
   if (done) {
     return (
@@ -435,17 +467,17 @@ export function QboOnboardingWizard() {
       <CardHeader>
         <CardTitle>QuickBooks Reconciliation Wizard</CardTitle>
         <CardDescription>
-          Map customers, link historical invoices, and set your go-live cutoff in three steps.
+          Map customers, link historical invoices, and set your go-live cutoff.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
         {/* Stepper */}
         <div className="flex flex-wrap items-center gap-4 border-b pb-4">
-          {STEPS.map((_, i) => (
-            <React.Fragment key={i}>
-              <StepIndicator step={i} current={step} />
-              {i < STEPS.length - 1 && (
+          {steps.map((stepDef, i) => (
+            <React.Fragment key={stepDef.key}>
+              <StepIndicator step={i} current={currentStep} label={stepDef.label} />
+              {i < steps.length - 1 && (
                 <div className="hidden h-px flex-1 bg-border sm:block" />
               )}
             </React.Fragment>
@@ -453,9 +485,10 @@ export function QboOnboardingWizard() {
         </div>
 
         {/* Step content */}
-        {step === 0 && <StepCustomers />}
-        {step === 1 && <StepHistory />}
-        {step === 2 && <StepGoLive onDone={() => setDone(true)} />}
+        {currentKey === 'customers' && <StepCustomers />}
+        {currentKey === 'history' && <StepHistory />}
+        {currentKey === 'items' && <QboItemImportStep />}
+        {currentKey === 'golive' && <StepGoLive onDone={() => setDone(true)} />}
       </CardContent>
 
       <CardFooter className="flex items-center justify-between gap-3">
@@ -463,17 +496,17 @@ export function QboOnboardingWizard() {
           id="qbo-wizard-back"
           type="button"
           variant="outline"
-          disabled={step === 0}
-          onClick={() => setStep((s) => Math.max(0, s - 1) as Step)}
+          disabled={currentStep === 0}
+          onClick={() => setStep(Math.max(0, currentStep - 1))}
         >
           Back
         </Button>
 
-        {step < 2 ? (
+        {currentStep < lastStep ? (
           <Button
             id="qbo-wizard-next"
             type="button"
-            onClick={() => setStep((s) => Math.min(2, s + 1) as Step)}
+            onClick={() => setStep(Math.min(lastStep, currentStep + 1))}
           >
             Next
           </Button>

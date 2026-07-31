@@ -5,6 +5,8 @@ import type { TenantScopedQuery } from '@alga-psa/db';
 
 export interface CrudOptions {
   resource: string;
+  /** RBAC resource to check permissions against, when it differs from `resource`. */
+  permissionResource?: string;
   createSchema?: any;
   updateSchema?: any;
   querySchema?: any;

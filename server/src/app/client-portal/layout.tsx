@@ -7,6 +7,7 @@ import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import type { Metadata } from 'next';
+import { getClientPortalFeatureSettings } from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
 
 const CLIENT_SIDEBAR_COOKIE = 'client_portal_sidebar_collapsed';
 
@@ -57,12 +58,14 @@ export default async function Layout({
     cookieStore.get(CLIENT_SIDEBAR_COOKIE)?.value === 'true';
   const productCode = await getCurrentTenantProduct();
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
+  const portalFeatureSettings = await getClientPortalFeatureSettings();
 
   return (
     <ClientPortalLayoutClient
       session={session}
       branding={branding}
       productCode={productCode}
+      appointmentsEnabled={portalFeatureSettings.appointmentsEnabled}
       currencyCode={currencyCode}
       initialLocale={locale}
       initialSidebarCollapsed={initialSidebarCollapsed}

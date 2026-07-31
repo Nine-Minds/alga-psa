@@ -293,6 +293,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           EMAIL_ALREADY_EXISTS: 'profile.messages.error.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.error.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.error.reportsToCycle',
+          SCIM_MANAGED_INACTIVE: 'profile.messages.error.scimManagedInactive',
           PERMISSION_DENIED: 'profile.messages.error.permissionDenied',
           USER_UPDATE_FAILED: 'profile.messages.error.updateFailed',
         };

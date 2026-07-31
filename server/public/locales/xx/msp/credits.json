@@ -138,9 +138,9 @@
     "invoice": "11111",
     "transactions": "11111",
     "transactionType": "11111",
-    "noTransactions": "11111",
     "date": "11111",
-    "amount": "11111"
+    "amount": "11111",
+    "noTransactions": "11111"
   },
   "expireDialog": {
     "title": "11111",
