@@ -53,8 +53,11 @@ describe('invoiceService tenant-scoped query contract', () => {
     );
     expect(source).toContain('tenantDb(knexOrTrx, tenant).table(table)');
 
-    expect(linkageSection).toContain("tenantScopedTable(tx, tenant, 'invoices')");
-    expect(linkageSection).toContain("tenantScopedTable(tx, tenant, 'contract_line_service_configuration')");
+    // `invoices` and `contract_line_service_configuration` are no longer read in
+    // this section: recurring linkage resolves by the persisted service period
+    // record id the billing engine stamps onto each charge, so the invoice window
+    // and the config -> contract line lookup no longer need re-deriving. The
+    // negative assertions below still keep those tables from reappearing unscoped.
     expect(linkageSection).toContain("tenantScopedTable(tx, tenant, 'recurring_service_periods')");
     expect(linkageSection).toContain("tenantScopedTable(tx, tenant, 'time_entries')");
     expect(linkageSection).toContain("tenantScopedTable(tx, tenant, 'usage_tracking')");
