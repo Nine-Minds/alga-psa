@@ -30,6 +30,7 @@ export enum TIER_FEATURES {
 // remain source-compatible while edition-gated server code gets a distinct key.
 export namespace TIER_FEATURES {
   export const OPPORTUNITY_MANAGEMENT = 'OPPORTUNITY_MANAGEMENT' as TIER_FEATURES;
+  export const CONTRACT_SIMULATOR = 'CONTRACT_SIMULATOR' as TIER_FEATURES;
 }
 
 /**
@@ -55,6 +56,7 @@ export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.SCIM_PROVISIONING]: 'pro',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'premium',
   [TIER_FEATURES.OPPORTUNITY_MANAGEMENT]: 'premium',
+  [TIER_FEATURES.CONTRACT_SIMULATOR]: 'pro',
 } as const;
 
 const ADD_ON_ONLY_FEATURES = new Set<TIER_FEATURES>([

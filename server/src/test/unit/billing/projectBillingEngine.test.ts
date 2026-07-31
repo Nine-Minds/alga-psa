@@ -7,6 +7,14 @@ const billingEngineSource = readFileSync(
   new URL('../../../../../packages/billing/src/lib/billing/billingEngine.ts', import.meta.url),
   'utf8',
 );
+// Phase-override precedence math was extracted into the pure compute layer.
+const timeComputeSource = readFileSync(
+  new URL(
+    '../../../../../packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts',
+    import.meta.url,
+  ),
+  'utf8',
+);
 
 const PERIOD = {
   startDate: '2026-07-01',
@@ -271,9 +279,9 @@ describe('project T&M cap and override integration', () => {
       'phase-2',
       'service-1',
     )).toBeNull();
-    expect(billingEngineSource).toContain('phaseOverride?.rate ?? (Number(resolvedRate) || 0)');
-    expect(billingEngineSource).toContain('phaseOverride?.override_service_id ?? entry.service_id');
-    expect(billingEngineSource).toContain('phaseOverride?.override_service_name ?? entry.service_name');
+    expect(timeComputeSource).toContain('phaseOverride?.rate ?? (Number(resolvedRate) || 0)');
+    expect(timeComputeSource).toContain('phaseOverride?.override_service_id ?? entry.service_id');
+    expect(timeComputeSource).toContain('phaseOverride?.override_service_name ?? entry.service_name');
   });
 
   it('T016: labor and materials share one hard cap and a later run bills zero', () => {

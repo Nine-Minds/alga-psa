@@ -22,6 +22,14 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
   }, record);
 }
 
+// Source files mix quote styles (the prettier rewrite moved some components to
+// double quotes), so assert t() calls quote-agnostically.
+function expectTCall(source: string, key: string): void {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`t\\(\\s*['"]${escaped}['"]`);
+  expect(pattern.test(source), `expected a t() call for ${key}`).toBe(true);
+}
+
 describe('ContractWizard i18n wiring contract', () => {
   it('T031: wizard step labels are translated via msp/contracts keys', () => {
     const source = read('../../src/components/billing-dashboard/contracts/ContractWizard.tsx');
@@ -29,7 +37,7 @@ describe('ContractWizard i18n wiring contract', () => {
       '../../../../server/public/locales/en/msp/contracts.json'
     );
 
-    expect(source).toContain("const { t } = useTranslation('msp/contracts');");
+    expect(source).toMatch(/const \{ t \} = useTranslation\((['\"])msp\/contracts\1\);/);
 
     const keyChecks = [
       'wizard.steps.contractBasics',
@@ -43,7 +51,7 @@ describe('ContractWizard i18n wiring contract', () => {
     ];
 
     for (const key of keyChecks) {
-      expect(source).toContain(`t('${key}'`);
+      expectTCall(source, key);
       expect(getLeaf(en, key)).toBeDefined();
     }
   });
@@ -79,7 +87,7 @@ describe('ContractWizard i18n wiring contract', () => {
     ];
 
     for (const key of keyChecks) {
-      expect(source).toContain(`t('${key}'`);
+      expectTCall(source, key);
       expect(getLeaf(en, key)).toBeDefined();
     }
 

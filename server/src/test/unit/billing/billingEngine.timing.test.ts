@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { BillingEngine } from "@alga-psa/billing/services";
-import { TaxService } from "@alga-psa/billing/services/taxService";
 
 vi.mock("@alga-psa/billing/actions/billingAndTax", () => ({
   getNextBillingDate: vi.fn(
@@ -82,12 +81,14 @@ const installFixedChargeMocks = (
   vi.spyOn(engine as any, "hasExistingServicePeriodCharge").mockResolvedValue(
     false,
   );
-  vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue(
-    "US-NY",
-  );
-  vi.spyOn(engine as any, "getTaxInfoFromService").mockResolvedValue({
-    taxRegion: undefined,
-    isTaxable: false,
+  vi.spyOn(
+    engine as any,
+    "loadChargeComputeTaxContext",
+  ).mockResolvedValue({
+    getTaxInfoFromService: () => ({ taxRegion: null, isTaxable: false }),
+    getLocationTaxRegionCode: () => null,
+    getClientDefaultTaxRegionCode: () => "US-NY",
+    calculateTax: () => ({ taxRate: 0, taxAmount: 0 }),
   });
 
   (engine as any).knex = vi.fn().mockImplementation((tableName: string) => {
@@ -1352,21 +1353,21 @@ describe("BillingEngine billing timing", () => {
       enableProration: false,
     });
 
-    vi.spyOn(engine as any, "getTaxInfoFromService").mockImplementation(
-      async () => ({
+    vi.spyOn(
+      engine as any,
+      "loadChargeComputeTaxContext",
+    ).mockResolvedValue({
+      getTaxInfoFromService: () => ({
         taxRegion: "US-NY",
         isTaxable: true,
       }),
-    );
-    vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue(
-      "US-NY",
-    );
-    vi.spyOn(TaxService.prototype, "calculateTax").mockImplementation(
-      async (_clientId: string, amount: number) => ({
+      getLocationTaxRegionCode: () => null,
+      getClientDefaultTaxRegionCode: () => "US-NY",
+      calculateTax: (_clientId: string, amount: number) => ({
         taxRate: 10,
         taxAmount: Math.round(amount * 0.1),
       }),
-    );
+    });
 
     const charges = await (engine as any).calculateFixedPriceCharges(
       "client-1",
@@ -1401,29 +1402,29 @@ describe("BillingEngine billing timing", () => {
       enableProration: false,
     });
 
-    vi.spyOn(engine as any, "getTaxInfoFromService").mockImplementation(
-      async (service: any) => ({
+    const calculateTax = vi.fn(
+      (
+        _clientId: string,
+        amount: number,
+        _taxDate: string,
+        region: string,
+      ) => ({
+        taxRate: region === "US-NY" ? 10 : 5,
+        taxAmount: Math.round(amount * (region === "US-NY" ? 0.1 : 0.05)),
+      }),
+    );
+    vi.spyOn(
+      engine as any,
+      "loadChargeComputeTaxContext",
+    ).mockResolvedValue({
+      getTaxInfoFromService: (service: any) => ({
         taxRegion: service.service_id === "service-1" ? "US-NY" : undefined,
         isTaxable: true,
       }),
-    );
-    vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue(
-      "US-WA",
-    );
-
-    const calculateTaxSpy = vi
-      .spyOn(TaxService.prototype, "calculateTax")
-      .mockImplementation(
-        async (
-          _clientId: string,
-          amount: number,
-          _taxDate: string,
-          region: string,
-        ) => ({
-          taxRate: region === "US-NY" ? 10 : 5,
-          taxAmount: Math.round(amount * (region === "US-NY" ? 0.1 : 0.05)),
-        }),
-      );
+      getLocationTaxRegionCode: () => null,
+      getClientDefaultTaxRegionCode: () => "US-WA",
+      calculateTax,
+    });
 
     const charges = await (engine as any).calculateFixedPriceCharges(
       "client-1",
@@ -1447,7 +1448,7 @@ describe("BillingEngine billing timing", () => {
       "US-NY",
       "US-WA",
     ]);
-    expect(calculateTaxSpy).toHaveBeenCalledWith(
+    expect(calculateTax).toHaveBeenCalledWith(
       "client-1",
       2000,
       "2025-01-20",
@@ -1455,7 +1456,7 @@ describe("BillingEngine billing timing", () => {
       true,
       "USD",
     );
-    expect(calculateTaxSpy).toHaveBeenCalledWith(
+    expect(calculateTax).toHaveBeenCalledWith(
       "client-1",
       1100,
       "2025-01-20",

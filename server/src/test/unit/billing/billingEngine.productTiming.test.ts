@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BillingEngine } from "@alga-psa/billing/services";
-import { TaxService } from "@alga-psa/billing/services/taxService";
 
 vi.mock("@alga-psa/billing/actions/billingAndTax", () => ({
   getNextBillingDate: vi.fn(
@@ -46,12 +45,23 @@ const installProductChargeMocks = (
   options: ProductChargeMockOptions = {},
 ) => {
   (engine as any).tenant = "test_tenant";
-  vi.spyOn(engine as any, "getClientDefaultTaxRegionCode").mockResolvedValue(
-    "US-NY",
+  const calculateTax = vi.fn(
+    (_clientId: string, amount: number) => ({
+      taxRate: 0.1,
+      taxAmount: Math.round(amount * 0.1),
+    }),
   );
-  vi.spyOn(engine as any, "getTaxInfoFromService").mockResolvedValue({
-    taxRegion: options.taxRegion,
-    isTaxable: options.isTaxable ?? false,
+  vi.spyOn(
+    engine as any,
+    "loadChargeComputeTaxContext",
+  ).mockResolvedValue({
+    getTaxInfoFromService: () => ({
+      taxRegion: options.taxRegion ?? null,
+      isTaxable: options.isTaxable ?? false,
+    }),
+    getLocationTaxRegionCode: () => null,
+    getClientDefaultTaxRegionCode: () => "US-NY",
+    calculateTax,
   });
 
   const productRows = options.productRows ?? [
@@ -84,6 +94,8 @@ const installProductChargeMocks = (
 
     return buildQuery(null);
   });
+
+  return { calculateTax };
 };
 
 afterEach(() => {
@@ -183,17 +195,10 @@ describe("BillingEngine recurring product timing", () => {
 
   it("T064: recurring product tax evaluation follows the canonical due service period after timing cutover", async () => {
     const engine = new BillingEngine();
-    installProductChargeMocks(engine, {
+    const { calculateTax } = installProductChargeMocks(engine, {
       taxRegion: "US-NY",
       isTaxable: true,
     });
-
-    const calculateTaxSpy = vi
-      .spyOn(TaxService.prototype, "calculateTax")
-      .mockResolvedValue({
-        taxRate: 0.1,
-        taxAmount: 310,
-      } as any);
 
     const charges = await (engine as any).calculateProductCharges(
       "client-1",
@@ -214,7 +219,7 @@ describe("BillingEngine recurring product timing", () => {
       "monthly",
     );
 
-    expect(calculateTaxSpy).toHaveBeenCalledWith(
+    expect(calculateTax).toHaveBeenCalledWith(
       "client-1",
       3100,
       "2025-01-31",

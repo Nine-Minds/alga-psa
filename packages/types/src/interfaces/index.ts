@@ -23,6 +23,7 @@ export type {
   TPasswordCriteria,
 } from './auth.interfaces';
 export * from './billing.interfaces';
+export * from './billingCompute.interfaces';
 export * from './board.interface';
 export * from './cache.interfaces';
 export * from './calendar.interfaces';
@@ -33,6 +34,7 @@ export * from './commentThread.interface';
 export * from './contact.interfaces';
 export * from './contract.interfaces';
 export * from './contractLineServiceConfiguration.interfaces';
+export * from './contractSimulation.interfaces';
 export * from './contractTemplate.interfaces';
 export * from './dataTable.interfaces';
 export * from './document-association.interface';
