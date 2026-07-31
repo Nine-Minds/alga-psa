@@ -1034,6 +1034,7 @@
         "details": {
           "noResults": "Geen tenantresultaten geregistreerd.",
           "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
+          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
           "unknownTenant": "onbekend"
         },

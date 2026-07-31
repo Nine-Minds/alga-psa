@@ -1034,6 +1034,7 @@
         "details": {
           "noResults": "Nessun risultato di tenant registrato.",
           "stats": "creati {{created}}, collegati {{linked}}, aggiornati {{updated}}, ambigui {{ambiguous}}, disattivati {{inactivated}}",
+          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
           "unknownTenant": "sconosciuto"
         },

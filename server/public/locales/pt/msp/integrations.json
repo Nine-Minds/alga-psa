@@ -1034,6 +1034,7 @@
         "details": {
           "noResults": "Nenhum resultado de inquilino registrado.",
           "stats": "{{created}} criado, {{linked}} vinculado, {{updated}} atualizado, {{ambiguous}} ambíguo, {{inactivated}} inativado",
+          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
           "tenantHeader": "Inquilino {{tenant}} · {{status}}",
           "unknownTenant": "desconhecido"
         },

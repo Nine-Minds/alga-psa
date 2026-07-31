@@ -1034,6 +1034,7 @@
         "details": {
           "noResults": "Keine Tenant-Ergebnisse aufgezeichnet.",
           "stats": "erstellt {{created}}, verknüpft {{linked}}, aktualisiert {{updated}}, mehrdeutig {{ambiguous}}, deaktiviert {{inactivated}}",
+          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
           "unknownTenant": "unbekannt"
         },

@@ -1034,6 +1034,7 @@
         "details": {
           "noResults": "No tenant results recorded.",
           "stats": "created {{created}}, linked {{linked}}, updated {{updated}}, ambiguous {{ambiguous}}, inactivated {{inactivated}}",
+          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
           "unknownTenant": "unknown"
         },

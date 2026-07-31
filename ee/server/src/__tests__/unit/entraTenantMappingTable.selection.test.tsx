@@ -427,19 +427,24 @@ describe('EntraTenantMappingTable client selection', () => {
       target: { value: 'client-22' },
     });
 
-    const groupSelect = (screen.getByText('Warning Tenant').closest('tr') as HTMLElement)
-      .querySelector('#entra-entitlement-group-managed-warning-22') as HTMLSelectElement | null;
-    expect(groupSelect).toBeTruthy();
-    if (!groupSelect) {
-      throw new Error('entitlement group select not found');
-    }
-    fireEvent.focus(groupSelect);
+    // Re-query between steps: loading the groups re-renders the table, so a node
+    // captured beforehand is detached by the time the change would fire on it.
+    const groupSelect = () =>
+      document.querySelector(
+        '#entra-entitlement-group-managed-warning-22'
+      ) as HTMLSelectElement;
+    expect(groupSelect()).toBeTruthy();
+
+    fireEvent.focus(groupSelect());
     await waitFor(() => {
       expect(listEntraMappingGroupsMock).toHaveBeenCalledWith({
         managedTenantId: 'managed-warning-22',
       });
     });
-    fireEvent.change(groupSelect, { target: { value: 'group-all-users' } });
+    await waitFor(() => {
+      expect(groupSelect().querySelector('option[value="group-all-users"]')).toBeTruthy();
+    });
+    fireEvent.change(groupSelect(), { target: { value: 'group-all-users' } });
 
     await waitFor(() => {
       expect(

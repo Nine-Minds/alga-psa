@@ -10,10 +10,20 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
   runWithTenant: runWithTenantMock,
   getTenantSlugForTenant: vi.fn(),
+  // The action reaches tables through tenantDb; the harness below still models
+  // the raw knex surface, so scope resolution is a pass-through here.
+  tenantDb: (conn: any) => ({
+    table: (tableName: string) => conn(tableName),
+    unscoped: (tableName: string) => conn(tableName),
+  }),
   UserPreferences: {
     upsert: vi.fn(),
   },
 }));
+
+vi.mock('@alga-psa/tenancy/server', () => ({
+  getPortalDomainStatusForTenant: vi.fn(async () => ({ status: 'inactive', domain: null })),
+}), { virtual: true });
 
 vi.mock('../../../../../packages/portal-shared/src/services/PortalInvitationService', () => ({
   PortalInvitationService: {

@@ -1034,6 +1034,7 @@
         "details": {
           "noResults": "55555",
           "stats": "55555 {{created}} 55555 {{linked}} 55555 {{updated}} 55555 {{ambiguous}} 55555 {{inactivated}} 55555",
+          "summarySkipped": "55555 {{count}} 55555",
           "tenantHeader": "55555 {{tenant}} 55555 {{status}} 55555",
           "unknownTenant": "55555"
         },
