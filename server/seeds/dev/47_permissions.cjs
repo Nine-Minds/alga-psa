@@ -257,6 +257,12 @@ exports.seed = async function(knex) {
         // Job monitoring
         { resource: 'job', action: 'delete', msp: true, client: false, description: 'Clear job monitoring history' },
 
+        // RMM permissions (MSP-only; only the MSP Admin role receives it, because the
+        // Admin grant below is "every msp permission". Mirrors migration
+        // 20260623090000_add_rmm_execute_command_permission. Without it the Tactical RMM
+        // run_command workflow action is denied for every dev-seeded user, including Admin.)
+        { resource: 'rmm', action: 'execute_command', msp: true, client: false, description: 'Execute raw RMM remote commands' },
+
         // Inventory module permissions (MSP-only; the MSP Admin role receives all
         // msp permissions below. Mirrors migration 20260626100600_add_inventory_permissions.
         // Without these the Add Sales Order / stock-location / inventory server actions
