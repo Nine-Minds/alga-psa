@@ -1,47 +1,75 @@
-'use client';
+"use client";
 
-import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Dialog } from '@alga-psa/ui/components/Dialog';
-import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
-import { WizardNavigation } from '@alga-psa/ui/components/onboarding/WizardNavigation';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { ContractBasicsStep } from './wizard-steps/ContractBasicsStep';
-import { FixedFeeServicesStep } from './wizard-steps/FixedFeeServicesStep';
-import { ProductsStep } from './wizard-steps/ProductsStep';
-import { HourlyServicesStep } from './wizard-steps/HourlyServicesStep';
-import { UsageBasedServicesStep } from './wizard-steps/UsageBasedServicesStep';
-import { ReviewContractStep } from './wizard-steps/ReviewContractStep';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import dynamic from "next/dynamic";
+import type { ContractDraftSimulationInput } from "@alga-psa/types";
+import { Dialog } from "@alga-psa/ui/components/Dialog";
+import { WizardProgress } from "@alga-psa/ui/components/onboarding/WizardProgress";
+import { WizardNavigation } from "@alga-psa/ui/components/onboarding/WizardNavigation";
+import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import { ContractBasicsStep } from "./wizard-steps/ContractBasicsStep";
+import { FixedFeeServicesStep } from "./wizard-steps/FixedFeeServicesStep";
+import { ProductsStep } from "./wizard-steps/ProductsStep";
+import { HourlyServicesStep } from "./wizard-steps/HourlyServicesStep";
+import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
+import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
 import {
   createClientContractFromWizard,
   listContractTemplatesForWizard,
   getContractTemplateSnapshotForClientWizard,
   ClientContractWizardSubmission,
   ClientTemplateSnapshot,
-} from '@alga-psa/billing/actions/contractWizardActions';
-import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
-import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+} from "@alga-psa/billing/actions/contractWizardActions";
+import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
+import { getClientByIdForBilling } from "@alga-psa/billing/actions/billingClientsActions";
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from "@alga-psa/ui/lib/errorHandling";
 import {
   getUnsupportedRecurringAuthoringCombination,
   getUnsupportedRecurringAuthoringCombinationMessage,
-} from '@shared/billingClients/recurringAuthoringValidation';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+} from "@shared/billingClients/recurringAuthoringValidation";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 const REQUIRED_STEPS = [0, 5];
 const MIN_NOTICE_PERIOD_DAYS = 0;
 const MAX_NOTICE_PERIOD_DAYS = 3650;
-const HARD_DEFAULT_RENEWAL_MODE: NonNullable<ContractWizardData['renewal_mode']> = 'manual';
+const HARD_DEFAULT_RENEWAL_MODE: NonNullable<
+  ContractWizardData["renewal_mode"]
+> = "manual";
 const HARD_DEFAULT_NOTICE_PERIOD_DAYS = 30;
 const RECURRING_LINE_TYPE_KEYS = {
-  Fixed: 'fixed',
-  Product: 'product',
-  Hourly: 'hourly',
-  Usage: 'usage',
+  Fixed: "fixed",
+  Product: "product",
+  Hourly: "hourly",
+  Usage: "usage",
 } as const;
+
+const ContractDraftSimulator = dynamic(
+  async () => {
+    const product = (await import("@product/billing/entry")) as unknown as {
+      ContractDraftSimulator: React.ComponentType<{
+        draft: ContractDraftSimulationInput;
+      }>;
+    };
+    return product.ContractDraftSimulator;
+  },
+  { ssr: false },
+);
 
 function isEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
-  if (a === null || b === null || a === undefined || b === undefined) return a === b;
+  if (a === null || b === null || a === undefined || b === undefined)
+    return a === b;
   if (typeof a !== typeof b) return false;
 
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -52,7 +80,7 @@ function isEqual(a: unknown, b: unknown): boolean {
     return true;
   }
 
-  if (typeof a === 'object' && typeof b === 'object') {
+  if (typeof a === "object" && typeof b === "object") {
     const objA = a as Record<string, unknown>;
     const objB = b as Record<string, unknown>;
     const keysA = Object.keys(objA);
@@ -71,7 +99,7 @@ function isEqual(a: unknown, b: unknown): boolean {
 function deepClone<T>(value: T): T {
   if (value === null || value === undefined) return value;
   if (Array.isArray(value)) return value.map((item) => deepClone(item)) as T;
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
     const cloned: Record<string, unknown> = {};
     for (const key of Object.keys(obj)) {
@@ -86,7 +114,7 @@ export interface BucketOverlayInput {
   total_minutes?: number;
   overage_rate?: number;
   allow_rollover?: boolean;
-  billing_period?: 'monthly' | 'weekly';
+  billing_period?: "monthly" | "weekly";
 }
 
 export interface ContractWizardData {
@@ -94,13 +122,13 @@ export interface ContractWizardData {
   contract_name: string;
   start_date: string;
   end_date?: string;
-  renewal_mode?: 'none' | 'manual' | 'auto';
+  renewal_mode?: "none" | "manual" | "auto";
   notice_period_days?: number;
   renewal_term_months?: number;
   use_tenant_renewal_defaults?: boolean;
   description?: string;
-  cadence_owner?: 'client' | 'contract';
-  billing_timing?: 'arrears' | 'advance';
+  cadence_owner?: "client" | "contract";
+  billing_timing?: "arrears" | "advance";
   billing_frequency: string;
   currency_code: string;
   po_number?: string;
@@ -145,19 +173,19 @@ export interface ContractWizardData {
 }
 
 export const createDefaultContractWizardData = (): ContractWizardData => ({
-  client_id: '',
-  contract_name: '',
-  start_date: '',
+  client_id: "",
+  contract_name: "",
+  start_date: "",
   end_date: undefined,
-  renewal_mode: 'manual',
+  renewal_mode: "manual",
   notice_period_days: 30,
   renewal_term_months: undefined,
   use_tenant_renewal_defaults: true,
-  description: '',
-  cadence_owner: 'client',
-  billing_timing: 'arrears',
-  billing_frequency: 'monthly',
-  currency_code: 'USD',
+  description: "",
+  cadence_owner: "client",
+  billing_timing: "arrears",
+  billing_frequency: "monthly",
+  currency_code: "USD",
   fixed_services: [],
   product_services: [],
   fixed_base_rate: undefined,
@@ -169,14 +197,19 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   template_id: undefined,
 });
 
-const normalizeRenewalMode = (value: unknown): ContractWizardData['renewal_mode'] | undefined => {
-  return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
+const normalizeRenewalMode = (
+  value: unknown,
+): ContractWizardData["renewal_mode"] | undefined => {
+  return value === "none" || value === "manual" || value === "auto"
+    ? value
+    : undefined;
 };
 
 const normalizeNonNegativeInteger = (value: unknown): number | undefined => {
   if (value === null || value === undefined) return undefined;
-  const numeric = typeof value === 'string' ? Number(value) : value;
-  if (typeof numeric !== 'number' || !Number.isFinite(numeric)) return undefined;
+  const numeric = typeof value === "string" ? Number(value) : value;
+  if (typeof numeric !== "number" || !Number.isFinite(numeric))
+    return undefined;
   return Math.max(0, Math.trunc(numeric));
 };
 
@@ -186,7 +219,7 @@ const normalizePositiveInteger = (value: unknown): number | undefined => {
 };
 
 export const buildInitialContractWizardData = (
-  editingContract: ContractWizardData | null = null
+  editingContract: ContractWizardData | null = null,
 ): ContractWizardData => {
   const initial: ContractWizardData = {
     ...createDefaultContractWizardData(),
@@ -194,8 +227,12 @@ export const buildInitialContractWizardData = (
   };
 
   const renewalMode = normalizeRenewalMode(editingContract?.renewal_mode);
-  const noticePeriodDays = normalizeNonNegativeInteger(editingContract?.notice_period_days);
-  const renewalTermMonths = normalizePositiveInteger(editingContract?.renewal_term_months);
+  const noticePeriodDays = normalizeNonNegativeInteger(
+    editingContract?.notice_period_days,
+  );
+  const renewalTermMonths = normalizePositiveInteger(
+    editingContract?.renewal_term_months,
+  );
 
   if (renewalMode !== undefined) {
     initial.renewal_mode = renewalMode;
@@ -206,8 +243,9 @@ export const buildInitialContractWizardData = (
   if (renewalTermMonths !== undefined) {
     initial.renewal_term_months = renewalTermMonths;
   }
-  if (typeof editingContract?.use_tenant_renewal_defaults === 'boolean') {
-    initial.use_tenant_renewal_defaults = editingContract.use_tenant_renewal_defaults;
+  if (typeof editingContract?.use_tenant_renewal_defaults === "boolean") {
+    initial.use_tenant_renewal_defaults =
+      editingContract.use_tenant_renewal_defaults;
   }
 
   return initial;
@@ -235,17 +273,20 @@ export function ContractWizard({
   editingContract = null,
   initialClientId,
 }: ContractWizardProps) {
-  const { t } = useTranslation('msp/contracts');
+  const { t } = useTranslation("msp/contracts");
   const initialWizardDataRef = useRef<ContractWizardData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] =
+    useState(false);
 
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    null,
+  );
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [isTemplateLoading, startTemplateTransition] = useTransition();
 
@@ -253,20 +294,25 @@ export function ContractWizard({
     ...buildInitialContractWizardData(editingContract),
   }));
   const formatList = useMemo(
-    () => new Intl.ListFormat(undefined, { style: 'long', type: 'conjunction' }),
-    []
+    () =>
+      new Intl.ListFormat(undefined, { style: "long", type: "conjunction" }),
+    [],
   );
 
   const stepLabels = useMemo(
-    () => ([
-      t('wizard.steps.contractBasics', { defaultValue: 'Contract Basics' }),
-      t('wizard.steps.fixedFeeServices', { defaultValue: 'Fixed Fee Services' }),
-      t('wizard.steps.products', { defaultValue: 'Products' }),
-      t('wizard.steps.hourlyServices', { defaultValue: 'Hourly Services' }),
-      t('wizard.steps.usageBasedServices', { defaultValue: 'Usage-Based Services' }),
-      t('wizard.steps.reviewCreate', { defaultValue: 'Review & Create' }),
-    ]),
-    [t]
+    () => [
+      t("wizard.steps.contractBasics", { defaultValue: "Contract Basics" }),
+      t("wizard.steps.fixedFeeServices", {
+        defaultValue: "Fixed Fee Services",
+      }),
+      t("wizard.steps.products", { defaultValue: "Products" }),
+      t("wizard.steps.hourlyServices", { defaultValue: "Hourly Services" }),
+      t("wizard.steps.usageBasedServices", {
+        defaultValue: "Usage-Based Services",
+      }),
+      t("wizard.steps.reviewCreate", { defaultValue: "Review & Create" }),
+    ],
+    [t],
   );
 
   useEffect(() => {
@@ -307,9 +353,11 @@ export function ContractWizard({
         setTemplates(options);
       })
       .catch((error) => {
-        console.error('Failed to load contract templates', error);
+        console.error("Failed to load contract templates", error);
         setTemplateError(
-          t('wizard.errors.failedToLoadTemplates', { defaultValue: 'Failed to load templates' })
+          t("wizard.errors.failedToLoadTemplates", {
+            defaultValue: "Failed to load templates",
+          }),
         );
       })
       .finally(() => {
@@ -327,10 +375,10 @@ export function ContractWizard({
           if (isActionMessageError(client) || isActionPermissionError(client)) {
             return;
           }
-          let currency = client?.default_currency_code || '';
+          let currency = client?.default_currency_code || "";
           if (!currency) {
             const settings = await getDefaultBillingSettings();
-            currency = settings.defaultCurrencyCode || 'USD';
+            currency = settings.defaultCurrencyCode || "USD";
           }
           setWizardData((prev) => ({ ...prev, currency_code: currency }));
         })
@@ -364,7 +412,10 @@ export function ContractWizard({
     onOpenChange(false);
   };
 
-  const applyTemplateSnapshot = (snapshot: ClientTemplateSnapshot, templateId: string) => {
+  const applyTemplateSnapshot = (
+    snapshot: ClientTemplateSnapshot,
+    templateId: string,
+  ) => {
     setWizardData((prev) => ({
       ...prev,
       template_id: templateId,
@@ -380,8 +431,10 @@ export function ContractWizard({
       enable_proration: snapshot.enable_proration ?? prev.enable_proration,
       hourly_services: snapshot.hourly_services ?? [],
       usage_services: snapshot.usage_services ?? [],
-      minimum_billable_time: snapshot.minimum_billable_time ?? prev.minimum_billable_time,
-      round_up_to_nearest: snapshot.round_up_to_nearest ?? prev.round_up_to_nearest,
+      minimum_billable_time:
+        snapshot.minimum_billable_time ?? prev.minimum_billable_time,
+      round_up_to_nearest:
+        snapshot.round_up_to_nearest ?? prev.round_up_to_nearest,
     }));
   };
 
@@ -396,91 +449,109 @@ export function ContractWizard({
     setTemplateError(null);
     startTemplateTransition(async () => {
       try {
-        const snapshot = await getContractTemplateSnapshotForClientWizard(templateId);
-        if (isActionMessageError(snapshot) || isActionPermissionError(snapshot)) {
+        const snapshot =
+          await getContractTemplateSnapshotForClientWizard(templateId);
+        if (
+          isActionMessageError(snapshot) ||
+          isActionPermissionError(snapshot)
+        ) {
           setTemplateError(getErrorMessage(snapshot));
           return;
         }
         applyTemplateSnapshot(snapshot, templateId);
       } catch (error) {
-        console.error('Failed to load template snapshot', error);
+        console.error("Failed to load template snapshot", error);
         setTemplateError(
-          t('wizard.errors.failedToLoadTemplateDetails', { defaultValue: 'Failed to load template details' })
+          t("wizard.errors.failedToLoadTemplateDetails", {
+            defaultValue: "Failed to load template details",
+          }),
         );
       }
     });
   };
 
-  const buildSubmissionData = async (): Promise<ClientContractWizardSubmission> => {
-    const useTenantDefaults = wizardData.use_tenant_renewal_defaults ?? true;
+  const buildSubmissionData =
+    async (): Promise<ClientContractWizardSubmission> => {
+      const useTenantDefaults = wizardData.use_tenant_renewal_defaults ?? true;
 
-    let tenantDefaultRenewalMode: ContractWizardData['renewal_mode'] | undefined;
-    let tenantDefaultNoticePeriodDays: number | undefined;
+      let tenantDefaultRenewalMode:
+        | ContractWizardData["renewal_mode"]
+        | undefined;
+      let tenantDefaultNoticePeriodDays: number | undefined;
 
-    try {
-      const tenantDefaults = await getDefaultBillingSettings();
-      tenantDefaultRenewalMode = tenantDefaults.defaultRenewalMode;
-      tenantDefaultNoticePeriodDays = tenantDefaults.defaultNoticePeriodDays;
-    } catch (error) {
-      console.warn('Failed to load tenant renewal defaults for wizard submission', error);
-    }
+      try {
+        const tenantDefaults = await getDefaultBillingSettings();
+        tenantDefaultRenewalMode = tenantDefaults.defaultRenewalMode;
+        tenantDefaultNoticePeriodDays = tenantDefaults.defaultNoticePeriodDays;
+      } catch (error) {
+        console.warn(
+          "Failed to load tenant renewal defaults for wizard submission",
+          error,
+        );
+      }
 
-    const resolvedRenewalMode: NonNullable<ContractWizardData['renewal_mode']> = useTenantDefaults
-      ? tenantDefaultRenewalMode ?? HARD_DEFAULT_RENEWAL_MODE
-      : wizardData.renewal_mode ?? tenantDefaultRenewalMode ?? HARD_DEFAULT_RENEWAL_MODE;
+      const resolvedRenewalMode: NonNullable<
+        ContractWizardData["renewal_mode"]
+      > = useTenantDefaults
+        ? (tenantDefaultRenewalMode ?? HARD_DEFAULT_RENEWAL_MODE)
+        : (wizardData.renewal_mode ??
+          tenantDefaultRenewalMode ??
+          HARD_DEFAULT_RENEWAL_MODE);
 
-    const resolvedNoticePeriodDays = useTenantDefaults
-      ? tenantDefaultNoticePeriodDays ?? HARD_DEFAULT_NOTICE_PERIOD_DAYS
-      : wizardData.notice_period_days ??
-        tenantDefaultNoticePeriodDays ??
-        HARD_DEFAULT_NOTICE_PERIOD_DAYS;
+      const resolvedNoticePeriodDays = useTenantDefaults
+        ? (tenantDefaultNoticePeriodDays ?? HARD_DEFAULT_NOTICE_PERIOD_DAYS)
+        : (wizardData.notice_period_days ??
+          tenantDefaultNoticePeriodDays ??
+          HARD_DEFAULT_NOTICE_PERIOD_DAYS);
 
-    return {
-      contract_id: wizardData.contract_id,
-      contract_name: wizardData.contract_name.trim(),
-      description: wizardData.description?.trim() || undefined,
-      client_id: wizardData.client_id || '',
-      start_date: wizardData.start_date,
-      renewal_mode: resolvedRenewalMode,
-      notice_period_days: resolvedNoticePeriodDays,
-      renewal_term_months: wizardData.renewal_term_months,
-      use_tenant_renewal_defaults: useTenantDefaults,
-      cadence_owner: wizardData.cadence_owner ?? 'client',
-      billing_timing: wizardData.billing_timing ?? 'arrears',
-      end_date: wizardData.end_date,
-      po_required: wizardData.po_required,
-      po_number: wizardData.po_number,
-      po_amount: wizardData.po_amount,
-      fixed_base_rate: wizardData.fixed_base_rate,
-      fixed_billing_frequency: wizardData.fixed_billing_frequency,
-      enable_proration: wizardData.enable_proration,
-      hourly_services: wizardData.hourly_services ?? [],
-      hourly_billing_frequency: wizardData.hourly_billing_frequency,
-      fixed_services: wizardData.fixed_services ?? [],
-      product_services: wizardData.product_services ?? [],
-      usage_services: wizardData.usage_services ?? [],
-      usage_billing_frequency: wizardData.usage_billing_frequency,
-      minimum_billable_time: wizardData.minimum_billable_time,
-      round_up_to_nearest: wizardData.round_up_to_nearest,
-      billing_frequency: wizardData.billing_frequency,
-      currency_code: wizardData.currency_code,
-      template_id: wizardData.template_id,
+      return {
+        contract_id: wizardData.contract_id,
+        contract_name: wizardData.contract_name.trim(),
+        description: wizardData.description?.trim() || undefined,
+        client_id: wizardData.client_id || "",
+        start_date: wizardData.start_date,
+        renewal_mode: resolvedRenewalMode,
+        notice_period_days: resolvedNoticePeriodDays,
+        renewal_term_months: wizardData.renewal_term_months,
+        use_tenant_renewal_defaults: useTenantDefaults,
+        cadence_owner: wizardData.cadence_owner ?? "client",
+        billing_timing: wizardData.billing_timing ?? "arrears",
+        end_date: wizardData.end_date,
+        po_required: wizardData.po_required,
+        po_number: wizardData.po_number,
+        po_amount: wizardData.po_amount,
+        fixed_base_rate: wizardData.fixed_base_rate,
+        fixed_billing_frequency: wizardData.fixed_billing_frequency,
+        enable_proration: wizardData.enable_proration,
+        hourly_services: wizardData.hourly_services ?? [],
+        hourly_billing_frequency: wizardData.hourly_billing_frequency,
+        fixed_services: wizardData.fixed_services ?? [],
+        product_services: wizardData.product_services ?? [],
+        usage_services: wizardData.usage_services ?? [],
+        usage_billing_frequency: wizardData.usage_billing_frequency,
+        minimum_billable_time: wizardData.minimum_billable_time,
+        round_up_to_nearest: wizardData.round_up_to_nearest,
+        billing_frequency: wizardData.billing_frequency,
+        currency_code: wizardData.currency_code,
+        template_id: wizardData.template_id,
+      };
     };
-  };
 
   const getRecurringAuthoringValidationError = (): string | null => {
     const unsupportedCombination = [
       wizardData.fixed_services.length > 0
         ? getUnsupportedRecurringAuthoringCombination({
-            lineType: 'Fixed',
+            lineType: "Fixed",
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
-            billingFrequency: wizardData.fixed_billing_frequency ?? wizardData.billing_frequency,
+            billingFrequency:
+              wizardData.fixed_billing_frequency ??
+              wizardData.billing_frequency,
           })
         : null,
       wizardData.product_services.length > 0
         ? getUnsupportedRecurringAuthoringCombination({
-            lineType: 'Product',
+            lineType: "Product",
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
             billingFrequency: wizardData.billing_frequency,
@@ -488,18 +559,22 @@ export function ContractWizard({
         : null,
       wizardData.hourly_services.length > 0
         ? getUnsupportedRecurringAuthoringCombination({
-            lineType: 'Hourly',
+            lineType: "Hourly",
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
-            billingFrequency: wizardData.hourly_billing_frequency ?? wizardData.billing_frequency,
+            billingFrequency:
+              wizardData.hourly_billing_frequency ??
+              wizardData.billing_frequency,
           })
         : null,
       (wizardData.usage_services?.length ?? 0) > 0
         ? getUnsupportedRecurringAuthoringCombination({
-            lineType: 'Usage',
+            lineType: "Usage",
             cadenceOwner: wizardData.cadence_owner,
             billingTiming: wizardData.billing_timing,
-            billingFrequency: wizardData.usage_billing_frequency ?? wizardData.billing_frequency,
+            billingFrequency:
+              wizardData.usage_billing_frequency ??
+              wizardData.billing_frequency,
           })
         : null,
     ].find((combination) => Boolean(combination));
@@ -508,28 +583,32 @@ export function ContractWizard({
       return null;
     }
 
-    const supportedFrequencies = unsupportedCombination.supportedBillingFrequencies.map((value) =>
-      t(`wizard.validation.recurring.frequency.${value}`, { defaultValue: value })
-    );
+    const supportedFrequencies =
+      unsupportedCombination.supportedBillingFrequencies.map((value) =>
+        t(`wizard.validation.recurring.frequency.${value}`, {
+          defaultValue: value,
+        }),
+      );
     const recurringLineType = t(
       `wizard.validation.recurring.lineType.${RECURRING_LINE_TYPE_KEYS[unsupportedCombination.lineType]}`,
-      { defaultValue: unsupportedCombination.lineType }
+      { defaultValue: unsupportedCombination.lineType },
     );
     const unsupportedFrequency = t(
       `wizard.validation.recurring.frequency.${unsupportedCombination.billingFrequency}`,
-      { defaultValue: unsupportedCombination.billingFrequency }
+      { defaultValue: unsupportedCombination.billingFrequency },
     );
-    const defaultRecurringMessage = getUnsupportedRecurringAuthoringCombinationMessage({
-      lineType: unsupportedCombination.lineType,
-      cadenceOwner: 'contract',
-      billingTiming: wizardData.billing_timing,
-      billingFrequency: unsupportedCombination.billingFrequency,
-    });
+    const defaultRecurringMessage =
+      getUnsupportedRecurringAuthoringCombinationMessage({
+        lineType: unsupportedCombination.lineType,
+        cadenceOwner: "contract",
+        billingTiming: wizardData.billing_timing,
+        billingFrequency: unsupportedCombination.billingFrequency,
+      });
 
-    return t('wizard.validation.unsupportedRecurringAuthoringCombination', {
+    return t("wizard.validation.unsupportedRecurringAuthoringCombination", {
       defaultValue:
         defaultRecurringMessage ??
-        'Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.',
+        "Unsupported recurring authoring combination for {{lineType}} services: contract anniversary cadence currently supports {{supportedFrequencies}} billing frequencies. {{billingFrequency}} is not supported yet. Use one of the supported frequencies or invoice on the client billing schedule instead.",
       lineType: recurringLineType,
       supportedFrequencies: formatList.format(supportedFrequencies),
       billingFrequency: unsupportedFrequency,
@@ -537,64 +616,76 @@ export function ContractWizard({
   };
 
   const validateStep = (stepIndex: number): boolean => {
-    setErrors((prev) => ({ ...prev, [stepIndex]: '' }));
+    setErrors((prev) => ({ ...prev, [stepIndex]: "" }));
 
     switch (stepIndex) {
       case 0:
         if (!wizardData.client_id) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: t('wizard.validation.clientRequired', { defaultValue: 'Client is required' }),
+            [stepIndex]: t("wizard.validation.clientRequired", {
+              defaultValue: "Client is required",
+            }),
           }));
           return false;
         }
         if (!wizardData.contract_name?.trim()) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: t('wizard.validation.contractNameRequired', { defaultValue: 'Contract name is required' }),
+            [stepIndex]: t("wizard.validation.contractNameRequired", {
+              defaultValue: "Contract name is required",
+            }),
           }));
           return false;
         }
         if (!wizardData.billing_frequency) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: t('wizard.validation.billingFrequencyRequired', { defaultValue: 'Billing frequency is required' }),
+            [stepIndex]: t("wizard.validation.billingFrequencyRequired", {
+              defaultValue: "Billing frequency is required",
+            }),
           }));
           return false;
         }
         if (!wizardData.start_date) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: t('wizard.validation.startDateRequired', { defaultValue: 'Start date is required' }),
+            [stepIndex]: t("wizard.validation.startDateRequired", {
+              defaultValue: "Start date is required",
+            }),
           }));
           return false;
         }
         if (wizardData.end_date && !wizardData.renewal_mode) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: t('wizard.validation.renewalModeRequiredWithEndDate', {
-              defaultValue: 'Renewal mode is required when an end date is set',
+            [stepIndex]: t("wizard.validation.renewalModeRequiredWithEndDate", {
+              defaultValue: "Renewal mode is required when an end date is set",
             }),
           }));
           return false;
         }
-        if (wizardData.renewal_mode && wizardData.renewal_mode !== 'none') {
+        if (wizardData.renewal_mode && wizardData.renewal_mode !== "none") {
           if (!Number.isInteger(wizardData.notice_period_days)) {
             setErrors((prev) => ({
               ...prev,
-              [stepIndex]: t('wizard.validation.noticePeriodWholeNumber', {
-                defaultValue: 'Notice period must be a whole number of days',
+              [stepIndex]: t("wizard.validation.noticePeriodWholeNumber", {
+                defaultValue: "Notice period must be a whole number of days",
               }),
             }));
             return false;
           }
 
           const noticePeriod = wizardData.notice_period_days as number;
-          if (noticePeriod < MIN_NOTICE_PERIOD_DAYS || noticePeriod > MAX_NOTICE_PERIOD_DAYS) {
+          if (
+            noticePeriod < MIN_NOTICE_PERIOD_DAYS ||
+            noticePeriod > MAX_NOTICE_PERIOD_DAYS
+          ) {
             setErrors((prev) => ({
               ...prev,
-              [stepIndex]: t('wizard.validation.noticePeriodRange', {
-                defaultValue: 'Notice period must be between {{min}} and {{max}} days',
+              [stepIndex]: t("wizard.validation.noticePeriodRange", {
+                defaultValue:
+                  "Notice period must be between {{min}} and {{max}} days",
                 min: MIN_NOTICE_PERIOD_DAYS,
                 max: MAX_NOTICE_PERIOD_DAYS,
               }),
@@ -602,15 +693,19 @@ export function ContractWizard({
             return false;
           }
         }
-        if (wizardData.renewal_term_months !== undefined && wizardData.renewal_term_months !== null) {
+        if (
+          wizardData.renewal_term_months !== undefined &&
+          wizardData.renewal_term_months !== null
+        ) {
           if (
             !Number.isInteger(wizardData.renewal_term_months) ||
             wizardData.renewal_term_months <= 0
           ) {
             setErrors((prev) => ({
               ...prev,
-              [stepIndex]: t('wizard.validation.renewalTermPositiveWhole', {
-                defaultValue: 'Renewal term months must be a positive whole number',
+              [stepIndex]: t("wizard.validation.renewalTermPositiveWhole", {
+                defaultValue:
+                  "Renewal term months must be a positive whole number",
               }),
             }));
             return false;
@@ -618,23 +713,32 @@ export function ContractWizard({
         }
         return true;
       case 1:
-        if (wizardData.fixed_services.length > 0 && !wizardData.fixed_base_rate) {
+        if (
+          wizardData.fixed_services.length > 0 &&
+          !wizardData.fixed_base_rate
+        ) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: t('wizard.validation.baseRateRequiredWhenFixedServices', {
-              defaultValue: 'Base rate is required when fixed services are included',
-            }),
+            [stepIndex]: t(
+              "wizard.validation.baseRateRequiredWhenFixedServices",
+              {
+                defaultValue:
+                  "Base rate is required when fixed services are included",
+              },
+            ),
           }));
           return false;
         }
         return true;
       case 2: {
-        const hasMissingProduct = (wizardData.product_services ?? []).some((p) => !p?.service_id);
+        const hasMissingProduct = (wizardData.product_services ?? []).some(
+          (p) => !p?.service_id,
+        );
         if (hasMissingProduct) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: t('wizard.validation.selectProductForEachLine', {
-              defaultValue: 'Please select a product for each product line',
+            [stepIndex]: t("wizard.validation.selectProductForEachLine", {
+              defaultValue: "Please select a product for each product line",
             }),
           }));
           return false;
@@ -650,8 +754,9 @@ export function ContractWizard({
         if (!hasServices) {
           setErrors((prev) => ({
             ...prev,
-            [stepIndex]: t('wizard.validation.addAtLeastOneService', {
-              defaultValue: 'Add at least one service before creating the contract',
+            [stepIndex]: t("wizard.validation.addAtLeastOneService", {
+              defaultValue:
+                "Add at least one service before creating the contract",
             }),
           }));
           return false;
@@ -688,7 +793,10 @@ export function ContractWizard({
   };
 
   const handleSkip = () => {
-    if (currentStep < stepLabels.length - 1 && !REQUIRED_STEPS.includes(currentStep)) {
+    if (
+      currentStep < stepLabels.length - 1 &&
+      !REQUIRED_STEPS.includes(currentStep)
+    ) {
       setCurrentStep((prev) => prev + 1);
     }
   };
@@ -744,10 +852,12 @@ export function ContractWizard({
       onComplete?.(completedData);
       onOpenChange(false);
     } catch (error) {
-      console.error('Error creating contract', error);
+      console.error("Error creating contract", error);
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: t('wizard.errors.failedToCreateContract', { defaultValue: 'Failed to create contract' }),
+        [currentStep]: t("wizard.errors.failedToCreateContract", {
+          defaultValue: "Failed to create contract",
+        }),
       }));
     } finally {
       setIsLoading(false);
@@ -763,8 +873,8 @@ export function ContractWizard({
     if (!wizardData.client_id) {
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: t('wizard.validation.selectClientBeforeDraft', {
-          defaultValue: 'Select a client before saving as draft',
+        [currentStep]: t("wizard.validation.selectClientBeforeDraft", {
+          defaultValue: "Select a client before saving as draft",
         }),
       }));
       setCurrentStep(0);
@@ -783,7 +893,9 @@ export function ContractWizard({
     setIsLoading(true);
     try {
       const submission = await buildSubmissionData();
-      const result = await createClientContractFromWizard(submission, { isDraft: true });
+      const result = await createClientContractFromWizard(submission, {
+        isDraft: true,
+      });
 
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
@@ -800,7 +912,7 @@ export function ContractWizard({
       const draftData: ContractWizardData = {
         ...wizardData,
         contract_id: result.contract_id,
-        client_id: wizardData.client_id || '',
+        client_id: wizardData.client_id || "",
         is_draft: true,
       };
 
@@ -808,10 +920,12 @@ export function ContractWizard({
       onComplete?.(draftData);
       onOpenChange(false);
     } catch (error) {
-      console.error('Error saving contract draft', error);
+      console.error("Error saving contract draft", error);
       setErrors((prev) => ({
         ...prev,
-        [currentStep]: t('wizard.errors.failedToSaveDraft', { defaultValue: 'Failed to save draft' }),
+        [currentStep]: t("wizard.errors.failedToSaveDraft", {
+          defaultValue: "Failed to save draft",
+        }),
       }));
     } finally {
       setIsLoading(false);
@@ -834,15 +948,45 @@ export function ContractWizard({
           />
         );
       case 1:
-        return <FixedFeeServicesStep data={wizardData} updateData={updateData} />;
+        return (
+          <FixedFeeServicesStep data={wizardData} updateData={updateData} />
+        );
       case 2:
         return <ProductsStep data={wizardData} updateData={updateData} />;
       case 3:
         return <HourlyServicesStep data={wizardData} updateData={updateData} />;
       case 4:
-        return <UsageBasedServicesStep data={wizardData} updateData={updateData} />;
+        return (
+          <UsageBasedServicesStep data={wizardData} updateData={updateData} />
+        );
       case 5:
-        return <ReviewContractStep data={wizardData} />;
+        return (
+          <div className="space-y-6">
+            <ReviewContractStep data={wizardData} />
+            <section
+              aria-labelledby="draft-simulation-heading"
+              className="space-y-3 border-t pt-6"
+            >
+              <h3
+                id="draft-simulation-heading"
+                className="text-base font-semibold"
+              >
+                {t("wizard.simulation.title", {
+                  defaultValue: "Simulate before creating",
+                })}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t("wizard.simulation.description", {
+                  defaultValue:
+                    "Test this unsaved draft with assumed activity. Simulation does not save or issue anything.",
+                })}
+              </p>
+              <ContractDraftSimulator
+                draft={wizardData as ContractDraftSimulationInput}
+              />
+            </section>
+          </div>
+        );
       default:
         return null;
     }
@@ -861,13 +1005,17 @@ export function ContractWizard({
       isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
       isLoading={isLoading}
       showSaveDraft
-      backLabel={t('wizard.nav.back', { defaultValue: 'Back' })}
-      nextLabel={t('wizard.nav.next', { defaultValue: 'Next' })}
-      skipLabel={t('wizard.nav.skip', { defaultValue: 'Skip' })}
-      finishLabel={t('wizard.nav.finish', { defaultValue: 'Finish Setup' })}
-      saveDraftLabel={t('wizard.nav.saveDraft', { defaultValue: 'Save as Draft' })}
-      savingLabel={t('wizard.nav.saving', { defaultValue: 'Saving...' })}
-      completingLabel={t('wizard.nav.completing', { defaultValue: 'Completing...' })}
+      backLabel={t("wizard.nav.back", { defaultValue: "Back" })}
+      nextLabel={t("wizard.nav.next", { defaultValue: "Next" })}
+      skipLabel={t("wizard.nav.skip", { defaultValue: "Skip" })}
+      finishLabel={t("wizard.nav.finish", { defaultValue: "Finish Setup" })}
+      saveDraftLabel={t("wizard.nav.saveDraft", {
+        defaultValue: "Save as Draft",
+      })}
+      savingLabel={t("wizard.nav.saving", { defaultValue: "Saving..." })}
+      completingLabel={t("wizard.nav.completing", {
+        defaultValue: "Completing...",
+      })}
     />
   );
 
@@ -876,9 +1024,13 @@ export function ContractWizard({
       <Dialog
         isOpen={open}
         onClose={handleCloseRequest}
-        title={editingContract
-          ? t('wizard.title.editContract', { defaultValue: 'Edit Contract' })
-          : t('wizard.title.createNewContract', { defaultValue: 'Create New Contract' })}
+        title={
+          editingContract
+            ? t("wizard.title.editContract", { defaultValue: "Edit Contract" })
+            : t("wizard.title.createNewContract", {
+                defaultValue: "Create New Contract",
+              })
+        }
         className="max-w-4xl max-h-[90vh]"
         disableFocusTrap
         footer={wizardFooter}
@@ -898,7 +1050,9 @@ export function ContractWizard({
 
             {errors[currentStep] && (
               <div className="mb-4 p-3 bg-[rgb(var(--color-destructive)/0.1)] border border-[rgb(var(--color-destructive)/0.3)] rounded-md">
-                <p className="text-[rgb(var(--color-destructive))] text-sm">{errors[currentStep]}</p>
+                <p className="text-[rgb(var(--color-destructive))] text-sm">
+                  {errors[currentStep]}
+                </p>
               </div>
             )}
           </div>
@@ -913,12 +1067,19 @@ export function ContractWizard({
           setShowUnsavedChangesDialog(false);
           onOpenChange(false);
         }}
-        title={t('wizard.dialogs.unsavedChanges.title', { defaultValue: 'Discard changes?' })}
-        message={t('wizard.dialogs.unsavedChanges.message', {
-          defaultValue: 'You have unsaved changes. If you close this dialog now, your changes will be discarded.',
+        title={t("wizard.dialogs.unsavedChanges.title", {
+          defaultValue: "Discard changes?",
         })}
-        confirmLabel={t('wizard.dialogs.unsavedChanges.confirm', { defaultValue: 'Discard Changes' })}
-        cancelLabel={t('wizard.dialogs.unsavedChanges.cancel', { defaultValue: 'Stay' })}
+        message={t("wizard.dialogs.unsavedChanges.message", {
+          defaultValue:
+            "You have unsaved changes. If you close this dialog now, your changes will be discarded.",
+        })}
+        confirmLabel={t("wizard.dialogs.unsavedChanges.confirm", {
+          defaultValue: "Discard Changes",
+        })}
+        cancelLabel={t("wizard.dialogs.unsavedChanges.cancel", {
+          defaultValue: "Stay",
+        })}
       />
     </>
   );

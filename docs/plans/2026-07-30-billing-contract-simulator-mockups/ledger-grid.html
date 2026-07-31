@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contract simulator — ledger grid</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root{
+  --purple:#8A4DEA; --purple-light:#A36FF8; --purple-dark:#7C3AED; --purple-wash:#F3F0FF;
+  --purple-100:#E9E1FE; --purple-300:#BFA5FB; --purple-700:#6E33D1; --purple-900:#4A2490;
+  --charcoal:#312E38; --cyan:#40CFF9; --amber:#F59E0B;
+  --s50:#F8FAFC; --s100:#F1F5F9; --s200:#E2E8F0; --s300:#CBD5E1; --s400:#94A3B8;
+  --s500:#64748B; --s600:#475569; --s700:#334155; --s900:#0F172A;
+  --font-h:'Poppins',system-ui,sans-serif; --font:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --shadow-xs:0 1px 2px rgba(15,23,42,.06);
+  --shadow-sm:0 2px 6px -1px rgba(15,23,42,.08);
+  --shadow-lg:0 18px 48px -12px rgba(82,46,140,.28), 0 4px 12px -4px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{font-family:var(--font);font-size:15px;color:#262626;background:var(--s100);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--font-h);margin:0}
+button{font-family:inherit}
+.app{display:grid;grid-template-columns:196px 1fr;height:100vh}
+
+/* ---------- sidebar ---------- */
+.side{background:linear-gradient(180deg,#0C111D 0%,#1B1437 100%);color:#CBD5E1;display:flex;flex-direction:column;padding:14px 10px;border-right:1px solid rgba(255,255,255,.04)}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 8px 16px}
+.brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#A36FF8,#8A4DEA);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:var(--font-h)}
+.brand-name{font-weight:700;color:#fff;font-size:13.5px;letter-spacing:-.01em;line-height:1.2}
+.brand-sub{font-size:10.5px;color:#94A3B8}
+.nav{flex:1;display:flex;flex-direction:column;gap:2px}
+.nav a{all:unset;cursor:pointer;display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;font-size:13px;color:#CBD5E1;font-weight:500}
+.nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav a.on{color:#fff;font-weight:600;background:linear-gradient(90deg,rgba(138,77,234,.35),rgba(138,77,234,.12));box-shadow:inset 0 0 0 1px rgba(166,115,242,.35)}
+.nav i,.nav svg{width:15px;height:15px;stroke-width:1.75;flex-shrink:0}
+.side-foot{padding:10px 8px 2px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:9px}
+.av{width:26px;height:26px;border-radius:50%;background:#8A4DEA;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+
+/* ---------- main ---------- */
+.main{display:flex;flex-direction:column;min-width:0;background:var(--s50)}
+.topbar{height:50px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--s200);background:#fff;flex-shrink:0}
+.crumbs{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--s500)}
+.crumbs .last{color:var(--s900);font-weight:600}
+.search{margin-left:auto;position:relative;width:300px}
+.search input{width:100%;padding:6px 10px 6px 30px;border:1px solid var(--s200);border-radius:8px;font-size:12.5px;background:var(--s50);outline:none;font-family:inherit;color:var(--s700)}
+.search i,.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--s400)}
+.crumbs svg,.meta svg,.btn svg,.icon-btn svg{flex-shrink:0}
+.icon-btn{all:unset;cursor:pointer;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;color:var(--s700)}
+.icon-btn:hover{background:var(--s100)}
+
+.chead{background:#fff;border-bottom:1px solid var(--s200);padding:16px 24px 0;flex-shrink:0}
+.chead-top{display:flex;align-items:flex-start;gap:12px}
+.chead h1{font-size:21px;font-weight:700;color:var(--s900);letter-spacing:-.02em;line-height:1.2}
+.chead .client{font-size:13px;color:var(--s500);margin-top:3px}
+.chead .meta{font-size:12.5px;color:var(--s500);margin-top:8px;display:flex;align-items:center;gap:6px}
+.chead-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;font-size:11px;font-weight:500;border-radius:9999px;line-height:16px;white-space:nowrap;border:1px solid}
+.b-active{background:#F0FDF4;color:#14532D;border-color:#86EFAC}
+.b-brand{background:var(--purple-wash);color:var(--purple-900);border-color:var(--purple-300)}
+.b-info{background:#ECFCFE;color:#267C95;border-color:#8CECFA}
+.b-warn{background:#FFFBEB;color:#92400E;border-color:#FCD34D}
+
+.tabs{display:flex;gap:2px;margin-top:14px}
+.tab{all:unset;cursor:pointer;padding:9px 13px;font-size:13px;color:var(--s500);font-weight:500;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:7px}
+.tab:hover{color:var(--s700)}
+.tab.on{color:var(--purple-dark);font-weight:600;border-bottom-color:var(--purple)}
+.pill-ent{font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:9999px;background:var(--purple-wash);color:var(--purple-700);border:1px solid var(--purple-100)}
+
+.scroll{flex:1;overflow:auto;min-height:0;padding:18px 24px 40px}
+
+/* ---------- workspace header ---------- */
+.wshead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.wshead h2{font-size:16px;font-weight:600;color:var(--s900);letter-spacing:-.01em}
+.wshead .sub{font-size:12.5px;color:var(--s500);margin-top:2px}
+.spacer{flex:1}
+.btn{all:unset;cursor:pointer;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:var(--purple);color:#fff;box-shadow:0 6px 16px -6px rgba(138,77,234,.5)}
+.btn-primary:hover{background:var(--purple-dark)}
+.btn-ghost{border:1px solid var(--s200);color:var(--s700);background:#fff}
+.btn-ghost:hover{background:var(--s50)}
+.sel{padding:6px 10px;border:1px solid var(--s200);border-radius:8px;font-size:12.5px;background:#fff;color:var(--s700);font-family:inherit;outline:none;cursor:pointer}
+.legend{display:flex;align-items:center;gap:14px;padding:8px 14px;background:#fff;border:1px solid var(--s200);border-radius:10px;box-shadow:var(--shadow-xs);flex-wrap:wrap}
+.legend .lab{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--s400)}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--s600)}
+.dotsample{width:6px;height:6px;border-radius:50%}
+
+/* ---------- sparkbar ---------- */
+.card{background:#fff;border:1px solid var(--s200);border-radius:12px;box-shadow:var(--shadow-xs)}
+.sparkcard{padding:14px 18px 10px;margin-bottom:14px}
+.sparkhead{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.sparkhead .t{font-size:12px;font-weight:600;color:var(--s700)}
+.sparkhead .n{font-size:12px;color:var(--s500)}
+.sparkhead .n b{font-family:var(--mono);font-weight:600;color:var(--s900)}
+.bars{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:end;height:126px}
+.barwrap{display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:5px;position:relative}
+.barval{font-family:var(--mono);font-size:10.5px;font-weight:500;color:var(--s600);text-align:center;letter-spacing:-.02em}
+.bar{border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#A36FF8,#8A4DEA);transition:height .35s cubic-bezier(.2,.8,.2,1);min-height:3px}
+.bar.peak{background:linear-gradient(180deg,#8A4DEA,#6E33D1)}
+.barlab{font-size:10.5px;color:var(--s400);text-align:center;border-top:1px solid var(--s200);padding-top:5px}
+
+/* ---------- grid ---------- */
+.gridcard{overflow:auto;position:relative}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:1000px;table-layout:fixed}
+th,td{padding:0;text-align:left}
+thead th{position:sticky;top:0;z-index:3;background:var(--s50);border-bottom:1px solid var(--s200);padding:9px 12px;vertical-align:bottom}
+thead th.namecol{left:0;z-index:4;width:266px;min-width:266px}
+th .mon{font-size:12.5px;font-weight:600;color:var(--s900);font-family:var(--font-h)}
+th .rng{font-size:10.5px;color:var(--s400);font-weight:400;margin-top:1px}
+th .partial{font-size:10px;color:var(--purple-700);font-weight:500}
+thead th:not(.namecol){text-align:right;border-left:1px solid var(--s200)}
+.hcol{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--s400)}
+
+td.namecol{position:sticky;left:0;z-index:2;background:#fff;border-right:1px solid var(--s200);padding:8px 12px;width:266px;min-width:266px}
+tbody tr:hover td.namecol{background:#FCFCFD}
+.lname{font-size:13px;font-weight:500;color:var(--s900);line-height:1.3}
+.lmodel{font-size:11px;color:var(--s500);margin-top:2px;font-family:var(--mono);letter-spacing:-.02em}
+
+tr.grouprow td{background:var(--s50);border-top:1px solid var(--s200);border-bottom:1px solid var(--s200);padding:6px 12px;position:sticky;left:0}
+.gname{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--s500)}
+.gcount{font-size:10.5px;color:var(--s400);font-weight:400;letter-spacing:0;text-transform:none;margin-left:6px}
+
+td.cell{border-bottom:1px solid var(--s100);border-left:1px solid var(--s100);vertical-align:middle}
+tbody tr:hover td.cell{background:#FCFAFF}
+.amt{all:unset;box-sizing:border-box;cursor:pointer;display:block;width:100%;padding:9px 12px;text-align:right;font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--s900);position:relative;letter-spacing:-.02em;border-radius:4px}
+.amt:not(.void):hover{background:var(--purple-wash);box-shadow:inset 0 0 0 1px var(--purple-300)}
+.amt.void{cursor:default}
+.amt.sel{background:var(--purple-wash);box-shadow:inset 0 0 0 1.5px var(--purple)}
+.amt .dash{color:var(--s300);font-weight:400}
+.amt .cdot{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%}
+.cdot.prorate{background:var(--purple)}
+.cdot.quarter{background:var(--cyan)}
+.cdot.overage{background:var(--amber)}
+.tip{position:absolute;bottom:100%;right:6px;margin-bottom:4px;background:var(--charcoal);color:#fff;font-family:var(--font);font-size:11px;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transform:translateY(3px);transition:all .15s ease;z-index:6;box-shadow:var(--shadow-sm)}
+.amt:hover .tip{opacity:1;transform:translateY(0)}
+
+/* assumption sub-rows */
+tr.assume td{background:#FCFCFD;border-bottom:1px solid var(--s100)}
+tr.assume td.namecol{background:#FCFCFD;padding:5px 12px 7px}
+.alab{display:flex;align-items:center;gap:8px}
+.alab .txt{font-size:11px;color:var(--s500);font-style:italic}
+.setall{all:unset;cursor:pointer;font-size:10.5px;font-weight:500;color:var(--purple-dark);padding:1px 7px;border-radius:9999px;border:1px solid var(--purple-100);background:var(--purple-wash)}
+.setall:hover{background:var(--purple-100)}
+td.acell{border-left:1px solid var(--s100);padding:4px 8px 6px}
+.ainput{width:100%;padding:4px 7px;border:1px solid var(--s200);border-radius:6px;font-family:var(--mono);font-size:11.5px;text-align:right;color:var(--s600);background:#fff;outline:none;letter-spacing:-.02em}
+.ainput:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(138,77,234,.15);color:var(--s900)}
+.ainput.edited{background:var(--purple-wash);border-color:var(--purple-300);color:var(--purple-900);font-weight:600}
+td.cell.edited .amt{background:rgba(138,77,234,.07)}
+
+/* footer rows */
+tr.foot td{border-top:1px solid var(--s200);background:#fff}
+tr.foot td.namecol{background:#fff;font-size:12.5px;font-weight:600;color:var(--s700);padding:9px 12px}
+tr.foot .fval{padding:9px 12px;text-align:right;font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--s700);letter-spacing:-.02em}
+tr.total td{border-top:2px solid var(--purple-100);background:#FDFCFF}
+tr.total td.namecol{background:#FDFCFF;color:var(--purple-900);font-size:13px;font-weight:700}
+tr.total .fval{color:var(--purple-dark);font-weight:700;font-size:13.5px}
+tr.foot td:not(.namecol){border-left:1px solid var(--s100)}
+
+/* ---------- set-all popover ---------- */
+.pop{position:absolute;z-index:40;background:#fff;border:1px solid var(--s200);border-radius:10px;box-shadow:var(--shadow-lg);padding:10px;display:none;width:196px}
+.pop.open{display:block}
+.pop .pl{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--s400);margin-bottom:6px}
+.pop-row{display:flex;gap:6px}
+.pop input{flex:1;padding:5px 8px;border:1px solid var(--s200);border-radius:6px;font-family:var(--mono);font-size:12px;outline:none;width:100%}
+.pop input:focus{border-color:var(--purple)}
+
+/* ---------- side panel ---------- */
+.scrim{position:fixed;inset:0;background:rgba(15,23,42,.18);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:50}
+.scrim.open{opacity:1;pointer-events:auto}
+.panel{position:fixed;top:0;right:0;bottom:0;width:340px;background:#fff;border-left:1px solid var(--s200);box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .28s cubic-bezier(.16,1,.3,1);z-index:51;display:flex;flex-direction:column}
+.panel.open{transform:translateX(0)}
+.phead{padding:16px 18px 14px;border-bottom:1px solid var(--s200);display:flex;align-items:flex-start;gap:10px}
+.phead h3{font-size:15px;font-weight:600;color:var(--s900);letter-spacing:-.01em;line-height:1.3}
+.phead .psub{font-size:12px;color:var(--s500);margin-top:3px}
+.pbody{flex:1;overflow:auto;padding:16px 18px 24px}
+.psec{margin-bottom:18px}
+.psec-lab{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--s400);margin-bottom:8px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px dashed var(--s200);font-size:12.5px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--s500)}
+.kv .v{font-family:var(--mono);color:var(--s900);font-weight:500;text-align:right;letter-spacing:-.02em}
+.step{font-family:var(--mono);font-size:12px;color:var(--s700);padding:6px 10px;background:var(--s50);border-radius:6px;margin-bottom:5px;border-left:2px solid var(--s200);letter-spacing:-.02em;line-height:1.5}
+.step.last{border-left-color:var(--purple);background:var(--purple-wash);color:var(--purple-900);font-weight:500}
+.presult{display:flex;align-items:baseline;justify-content:space-between;padding:12px 14px;background:linear-gradient(135deg,#FBFAFF,#F3F0FF);border:1px solid var(--purple-100);border-radius:10px}
+.presult .rl{font-size:12px;font-weight:600;color:var(--purple-700)}
+.presult .rv{font-family:var(--mono);font-size:19px;font-weight:600;color:var(--purple-900);letter-spacing:-.03em}
+.pnote{font-size:11.5px;color:var(--s500);line-height:1.55;margin-top:10px}
+.pempty{padding:40px 20px;text-align:center;color:var(--s400);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div><div class="brand-name">Alga PSA</div><div class="brand-sub">acme-msp.ninem.io</div></div>
+    </div>
+    <nav class="nav">
+      <a><i data-lucide="layout-dashboard"></i>Dashboard</a>
+      <a><i data-lucide="ticket"></i>Tickets</a>
+      <a><i data-lucide="kanban-square"></i>Projects</a>
+      <a class="on"><i data-lucide="receipt"></i>Billing</a>
+      <a><i data-lucide="clock"></i>Time</a>
+      <a><i data-lucide="bar-chart-3"></i>Reports</a>
+      <a><i data-lucide="settings"></i>Settings</a>
+    </nav>
+    <div class="side-foot">
+      <div class="av">JP</div>
+      <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:500;color:#fff">Jordan Park</div><div style="font-size:10.5px;color:#94A3B8">Admin</div></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs"><span>Billing</span><i data-lucide="chevron-right" style="width:13px;height:13px"></i><span>Contracts</span><i data-lucide="chevron-right" style="width:13px;height:13px"></i><span class="last">Managed services agreement</span></div>
+      <div class="search"><i data-lucide="search"></i><input placeholder="Search contracts, invoices, clients…"></div>
+      <button class="icon-btn"><i data-lucide="bell" style="width:16px;height:16px"></i></button>
+    </div>
+
+    <div class="chead">
+      <div class="chead-top">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <h1>Managed services agreement</h1>
+            <span class="badge b-active"><span style="width:5px;height:5px;border-radius:50%;background:#10B981"></span>Active</span>
+          </div>
+          <div class="client">Acme Manufacturing</div>
+          <div class="meta"><i data-lucide="calendar" style="width:13px;height:13px"></i>Aug 10, 2026 – Aug 9, 2027 · Monthly billing</div>
+        </div>
+        <div class="chead-actions">
+          <button class="btn btn-ghost"><i data-lucide="pencil" style="width:14px;height:14px"></i>Edit contract</button>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab">Overview</button>
+        <button class="tab">Contract lines</button>
+        <button class="tab">Pricing schedules</button>
+        <button class="tab">Documents</button>
+        <button class="tab">Invoices</button>
+        <button class="tab on">Simulator <span class="pill-ent">Enterprise</span></button>
+      </div>
+    </div>
+
+    <div class="scroll">
+      <div class="wshead">
+        <div>
+          <h2>Forecast ledger</h2>
+          <div class="sub">Projected billing across the horizon. Edit an assumption to recompute its period.</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="legend">
+          <span class="lab">Markers</span>
+          <span class="legend-item"><span class="dotsample" style="background:#8A4DEA"></span>Prorated</span>
+          <span class="legend-item"><span class="dotsample" style="background:#40CFF9"></span>Quarterly</span>
+          <span class="legend-item"><span class="dotsample" style="background:#F59E0B"></span>Overage</span>
+        </div>
+        <select class="sel" id="horizon">
+          <option>Next 6 periods</option>
+          <option>Next 12 periods</option>
+          <option>Full contract term</option>
+        </select>
+        <button class="btn btn-primary" id="simulate"><i data-lucide="play" style="width:14px;height:14px"></i>Simulate</button>
+      </div>
+
+      <div class="card sparkcard">
+        <div class="sparkhead">
+          <span class="t">Total per period</span>
+          <span class="n">Horizon total <b id="horizonTotal">$0.00</b></span>
+        </div>
+        <div class="bars" id="bars"></div>
+      </div>
+
+      <div class="card gridcard">
+        <table>
+          <thead><tr id="headRow"></tr></thead>
+          <tbody id="body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pop" id="pop">
+  <div class="pl" id="popLabel">Set all periods</div>
+  <div class="pop-row"><input type="number" id="popInput" step="any"><button class="btn btn-primary" id="popApply" style="padding:5px 10px;font-size:12px">Apply</button></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel">
+  <div class="phead">
+    <div style="flex:1;min-width:0"><h3 id="pTitle">—</h3><div class="psub" id="pSub">—</div></div>
+    <button class="icon-btn" id="pClose"><i data-lucide="x" style="width:16px;height:16px"></i></button>
+  </div>
+  <div class="pbody" id="pBody"><div class="pempty">Select an amount in the ledger to see how it was calculated.</div></div>
+</aside>
+
+<script>
+const PERIODS = [
+  {month:'Aug 2026', range:'Aug 10 – 31', days:22, total:31, partial:true},
+  {month:'Sep 2026', range:'Sep 1 – 30', days:30, total:30},
+  {month:'Oct 2026', range:'Oct 1 – 31', days:31, total:31},
+  {month:'Nov 2026', range:'Nov 1 – 30', days:30, total:30},
+  {month:'Dec 2026', range:'Dec 1 – 31', days:31, total:31},
+  {month:'Jan 2027', range:'Jan 1 – 31', days:31, total:31},
+];
+const TAX = 0.0825;
+
+const LINES = [
+  {id:'ws', group:'recurring', name:'Managed workstations', model:'fixed · $2,400.00 / mo', type:'fixed', rate:2400},
+  {id:'qsr', group:'recurring', name:'Quarterly security review', model:'fixed · $1,200.00 / quarter', type:'quarterly', rate:1200, lands:[2,5]},
+  {id:'rs', group:'activity', name:'Remote support', model:'hourly · $150.00 / hr', type:'hourly', rate:150, unit:'hrs', aLabel:'assumed hrs', assume:20},
+  {id:'bk', group:'activity', name:'Backup storage', model:'usage · $0.12 / GB', type:'usage', rate:0.12, unit:'GB', aLabel:'assumed GB', assume:500},
+  {id:'ah', group:'activity', name:'After-hours support', model:'bucket · $450.00 incl. 10 hrs · $180.00 / hr over', type:'bucket', base:450, included:10, over:180, unit:'hrs', aLabel:'assumed hrs', assume:12},
+  {id:'ob', group:'onetime', name:'Onboarding fee', model:'one-time · $2,500.00', type:'onetime', rate:2500, at:0},
+];
+const GROUPS = [
+  {id:'recurring', label:'Recurring'},
+  {id:'activity', label:'Activity-driven'},
+  {id:'onetime', label:'One-time'},
+];
+
+// per-line, per-period assumption values + which have been hand-edited
+const state = {};
+LINES.filter(l=>l.assume!==undefined).forEach(l=>{
+  state[l.id] = {vals: PERIODS.map(()=>l.assume), edited: PERIODS.map(()=>false)};
+});
+
+const usd = n => '$' + n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = n => n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const qty = n => Number.isInteger(n) ? String(n) : n.toLocaleString('en-US',{maximumFractionDigits:2});
+const compact = n => n >= 1000 ? '$' + (n/1000).toFixed(1) + 'k' : '$' + n.toFixed(0);
+
+/* ---------- calculation engine ---------- */
+function compute(line, pi){
+  const p = PERIODS[pi];
+  switch(line.type){
+    case 'fixed': {
+      if(p.partial){
+        const f = p.days / p.total;
+        return {
+          amount: Math.round(line.rate*f*100)/100,
+          mark: {kind:'prorate', tip:`Prorated · ${p.days} of ${p.total} days`},
+          inputs: [['Monthly rate', usd(line.rate)],['Billable days', `${p.days} of ${p.total}`],['Proration factor', '×' + f.toFixed(4)]],
+          steps: [`${p.days} ÷ ${p.total} days → ×${f.toFixed(4)}`, `${usd(line.rate)} × ${f.toFixed(4)}`, `= ${usd(Math.round(line.rate*f*100)/100)}`],
+          note: 'The contract starts mid-month, so period 1 bills only the days covered. Every later period bills the full monthly rate.'
+        };
+      }
+      return {
+        amount: line.rate, mark:null,
+        inputs: [['Monthly rate', usd(line.rate)],['Coverage', 'Full period'],['Proration factor', '×1.0000']],
+        steps: [`${usd(line.rate)} × 1 full month`, `= ${usd(line.rate)}`],
+        note: 'Full calendar period — no proration applied.'
+      };
+    }
+    case 'quarterly': {
+      if(!line.lands.includes(pi)) return {amount:null};
+      return {
+        amount: line.rate,
+        mark: {kind:'quarter', tip:'Quarterly charge lands here'},
+        inputs: [['Quarterly rate', usd(line.rate)],['Cadence', 'Every 3 periods'],['Lands in', p.month]],
+        steps: [`${usd(line.rate)} charged once this period`, `= ${usd(line.rate)}`],
+        note: 'This line bills on a quarterly cadence, so it only appears in Oct 2026 and Jan 2027 inside this horizon.'
+      };
+    }
+    case 'hourly': {
+      const h = state[line.id].vals[pi];
+      const amt = Math.round(line.rate*h*100)/100;
+      return {
+        amount: amt, mark:null,
+        inputs: [['Rate', usd(line.rate) + ' / hr'],['Assumed hours', qty(h) + ' hrs']],
+        steps: [`${qty(h)} hrs × ${usd(line.rate)} / hr`, `= ${usd(amt)}`],
+        note: 'Hours are an assumption, not booked time. Edit the assumed hrs row to model a busier or quieter period.'
+      };
+    }
+    case 'usage': {
+      const g = state[line.id].vals[pi];
+      const amt = Math.round(line.rate*g*100)/100;
+      return {
+        amount: amt, mark:null,
+        inputs: [['Rate', usd(line.rate) + ' / GB'],['Assumed usage', qty(g) + ' GB']],
+        steps: [`${qty(g)} GB × ${usd(line.rate)} / GB`, `= ${usd(amt)}`],
+        note: 'Usage is metered in arrears. The assumption stands in for a metered reading that has not landed yet.'
+      };
+    }
+    case 'bucket': {
+      const h = state[line.id].vals[pi];
+      const over = Math.max(0, h - line.included);
+      const oAmt = Math.round(over*line.over*100)/100;
+      const amt = Math.round((line.base + oAmt)*100)/100;
+      const steps = [];
+      if(over > 0){
+        steps.push(`${qty(h)} hrs − ${line.included} included = ${qty(over)} hrs`);
+        steps.push(`${qty(over)} hrs × ${usd(line.over)} = ${usd(oAmt)}`);
+        steps.push(`${usd(line.base)} base + ${usd(oAmt)} overage`);
+      } else {
+        steps.push(`${qty(h)} hrs ≤ ${line.included} included → no overage`);
+        steps.push(`${usd(line.base)} base only`);
+      }
+      steps.push(`= ${usd(amt)}`);
+      return {
+        amount: amt,
+        mark: over > 0 ? {kind:'overage', tip:`Overage · ${qty(over)} hrs beyond bucket`} : null,
+        inputs: [['Bucket base', usd(line.base)],['Included hours', line.included + ' hrs'],['Assumed hours', qty(h) + ' hrs'],['Overage rate', usd(line.over) + ' / hr']],
+        steps,
+        note: over > 0
+          ? 'The bucket base bills regardless of consumption. Only hours beyond the included allowance carry the overage rate.'
+          : 'Consumption fits inside the included allowance, so only the bucket base bills this period.'
+      };
+    }
+    case 'onetime': {
+      if(pi !== line.at) return {amount:null};
+      return {
+        amount: line.rate, mark:null,
+        inputs: [['One-time charge', usd(line.rate)],['Bills in', p.month]],
+        steps: [`${usd(line.rate)} charged once at contract start`, `= ${usd(line.rate)}`],
+        note: 'One-time charges are never prorated and never repeat.'
+      };
+    }
+  }
+  return {amount:null};
+}
+
+function periodTotals(){
+  return PERIODS.map((_,pi)=>{
+    const sub = LINES.reduce((s,l)=> s + (compute(l,pi).amount || 0), 0);
+    const tax = Math.round(sub*TAX*100)/100;
+    return {sub: Math.round(sub*100)/100, tax, total: Math.round((sub+tax)*100)/100};
+  });
+}
+
+/* ---------- rendering ---------- */
+function renderHead(){
+  const cells = ['<th class="namecol"><span class="hcol">Contract line</span></th>'];
+  PERIODS.forEach(p=>{
+    cells.push(`<th><div class="mon">${p.month}</div><div class="rng">${p.range}</div>${p.partial?'<div class="partial">partial period</div>':''}</th>`);
+  });
+  document.getElementById('headRow').innerHTML = cells.join('');
+}
+
+function cellHTML(line, pi){
+  const r = compute(line, pi);
+  const edited = state[line.id] && state[line.id].edited[pi];
+  if(r.amount === null || r.amount === undefined){
+    return `<td class="cell"><span class="amt void"><span class="dash">—</span></span></td>`;
+  }
+  const dot = r.mark ? `<span class="cdot ${r.mark.kind}"></span><span class="tip">${r.mark.tip}</span>` : '';
+  return `<td class="cell${edited?' edited':''}"><button class="amt" data-line="${line.id}" data-pi="${pi}">${num(r.amount)}${dot}</button></td>`;
+}
+
+function renderBody(){
+  const rows = [];
+  GROUPS.forEach(g=>{
+    const lines = LINES.filter(l=>l.group===g.id);
+    rows.push(`<tr class="grouprow"><td colspan="7"><span class="gname">${g.label}<span class="gcount">${lines.length} line${lines.length>1?'s':''}</span></span></td></tr>`);
+    lines.forEach(line=>{
+      const cells = PERIODS.map((_,pi)=>cellHTML(line,pi)).join('');
+      rows.push(`<tr><td class="namecol"><div class="lname">${line.name}</div><div class="lmodel">${line.model}</div></td>${cells}</tr>`);
+      if(line.assume !== undefined){
+        const inputs = PERIODS.map((_,pi)=>{
+          const s = state[line.id];
+          return `<td class="acell"><input class="ainput${s.edited[pi]?' edited':''}" type="number" step="any" min="0" value="${s.vals[pi]}" data-aline="${line.id}" data-api="${pi}"></td>`;
+        }).join('');
+        rows.push(`<tr class="assume"><td class="namecol"><div class="alab"><span class="txt">${line.aLabel}</span><button class="setall" data-setall="${line.id}">Set all</button></div></td>${inputs}</tr>`);
+      }
+    });
+  });
+
+  const t = periodTotals();
+  rows.push(`<tr class="foot"><td class="namecol">Subtotal</td>${t.map(x=>`<td class="fval">${num(x.sub)}</td>`).join('')}</tr>`);
+  rows.push(`<tr class="foot"><td class="namecol">Tax 8.25%</td>${t.map(x=>`<td class="fval">${num(x.tax)}</td>`).join('')}</tr>`);
+  rows.push(`<tr class="foot total"><td class="namecol">Total</td>${t.map(x=>`<td class="fval">${num(x.total)}</td>`).join('')}</tr>`);
+
+  document.getElementById('body').innerHTML = rows.join('');
+}
+
+function renderBars(){
+  const t = periodTotals();
+  const max = Math.max(...t.map(x=>x.total));
+  const sum = t.reduce((s,x)=>s+x.total,0);
+  document.getElementById('horizonTotal').textContent = usd(Math.round(sum*100)/100);
+  document.getElementById('bars').innerHTML = PERIODS.map((p,i)=>{
+    const h = Math.max(4, Math.round((t[i].total/max)*94));
+    const peak = t[i].total >= max - 0.005;
+    return `<div class="barwrap">
+      <div class="barval">${compact(t[i].total)}</div>
+      <div class="bar${peak?' peak':''}" style="height:${h}px"></div>
+      <div class="barlab">${p.month.replace(' 20',' ’')}</div>
+    </div>`;
+  }).join('');
+}
+
+let selected = null;
+function render(){
+  renderBody();
+  renderBars();
+  if(selected){
+    const el = document.querySelector(`.amt[data-line="${selected.line}"][data-pi="${selected.pi}"]`);
+    if(el) el.classList.add('sel');
+  }
+  if(window.lucide) lucide.createIcons();
+}
+
+/* ---------- side panel ---------- */
+function openPanel(lineId, pi){
+  const line = LINES.find(l=>l.id===lineId);
+  const p = PERIODS[pi];
+  const r = compute(line, pi);
+  document.getElementById('pTitle').textContent = line.name;
+  document.getElementById('pSub').textContent = `${p.month} · ${p.range}${p.partial?', 2026 (partial)':''}`;
+  const inputs = r.inputs.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  const steps = r.steps.map((s,i)=>`<div class="step${i===r.steps.length-1?' last':''}">${s}</div>`).join('');
+  document.getElementById('pBody').innerHTML = `
+    <div class="psec"><div class="psec-lab">Inputs used</div>${inputs}</div>
+    <div class="psec"><div class="psec-lab">Calculation</div>${steps}</div>
+    <div class="presult"><span class="rl">Billed this period</span><span class="rv">${usd(r.amount)}</span></div>
+    <div class="pnote">${r.note}</div>`;
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('scrim').classList.add('open');
+  document.querySelectorAll('.amt.sel').forEach(e=>e.classList.remove('sel'));
+  const el = document.querySelector(`.amt[data-line="${lineId}"][data-pi="${pi}"]`);
+  if(el) el.classList.add('sel');
+  selected = {line:lineId, pi};
+  if(window.lucide) lucide.createIcons();
+}
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  document.getElementById('scrim').classList.remove('open');
+  document.querySelectorAll('.amt.sel').forEach(e=>e.classList.remove('sel'));
+  selected = null;
+}
+
+/* ---------- interactions ---------- */
+document.getElementById('body').addEventListener('click', e=>{
+  const amt = e.target.closest('.amt[data-line]');
+  if(amt){ openPanel(amt.dataset.line, +amt.dataset.pi); return; }
+  const sa = e.target.closest('[data-setall]');
+  if(sa){ openPop(sa); return; }
+});
+
+document.getElementById('body').addEventListener('input', e=>{
+  const inp = e.target.closest('.ainput');
+  if(!inp) return;
+  const id = inp.dataset.aline, pi = +inp.dataset.api;
+  const line = LINES.find(l=>l.id===id);
+  const v = inp.value === '' ? 0 : Math.max(0, parseFloat(inp.value));
+  state[id].vals[pi] = v;
+  state[id].edited[pi] = Math.abs(v - line.assume) > 1e-9;
+  const active = document.activeElement === inp ? {id, pi, pos: inp.selectionStart} : null;
+  render();
+  if(active){
+    const back = document.querySelector(`.ainput[data-aline="${active.id}"][data-api="${active.pi}"]`);
+    if(back){ back.focus(); try{ back.setSelectionRange(active.pos, active.pos); }catch(_){} }
+  }
+  if(selected) openPanel(selected.line, selected.pi);
+});
+
+/* set-all popover */
+const pop = document.getElementById('pop');
+let popTarget = null;
+function openPop(btn){
+  const line = LINES.find(l=>l.id===btn.dataset.setall);
+  popTarget = line.id;
+  const r = btn.getBoundingClientRect();
+  pop.style.top = (r.bottom + window.scrollY + 6) + 'px';
+  pop.style.left = (r.left + window.scrollX - 30) + 'px';
+  document.getElementById('popLabel').textContent = `Set ${line.aLabel} for all 6 periods`;
+  const inp = document.getElementById('popInput');
+  inp.value = state[line.id].vals[0];
+  pop.classList.add('open');
+  inp.focus(); inp.select();
+}
+function closePop(){ pop.classList.remove('open'); popTarget = null; }
+document.getElementById('popApply').addEventListener('click', ()=>{
+  if(!popTarget) return;
+  const line = LINES.find(l=>l.id===popTarget);
+  const v = Math.max(0, parseFloat(document.getElementById('popInput').value) || 0);
+  state[line.id].vals = PERIODS.map(()=>v);
+  state[line.id].edited = PERIODS.map(()=> Math.abs(v - line.assume) > 1e-9);
+  closePop(); render();
+  if(selected) openPanel(selected.line, selected.pi);
+});
+document.getElementById('popInput').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('popApply').click(); });
+document.addEventListener('mousedown', e=>{ if(!pop.contains(e.target) && !e.target.closest('[data-setall]')) closePop(); });
+
+document.getElementById('pClose').addEventListener('click', closePanel);
+document.getElementById('scrim').addEventListener('click', closePanel);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closePanel(); closePop(); } });
+
+document.getElementById('simulate').addEventListener('click', function(){
+  const b = this;
+  b.innerHTML = '<i data-lucide="loader-2" style="width:14px;height:14px"></i>Simulating…';
+  if(window.lucide) lucide.createIcons();
+  setTimeout(()=>{
+    render();
+    b.innerHTML = '<i data-lucide="check" style="width:14px;height:14px"></i>Up to date';
+    if(window.lucide) lucide.createIcons();
+    setTimeout(()=>{
+      b.innerHTML = '<i data-lucide="play" style="width:14px;height:14px"></i>Simulate';
+      if(window.lucide) lucide.createIcons();
+    }, 1600);
+  }, 500);
+});
+
+document.querySelectorAll('.tab:not(.on)').forEach(t=>t.addEventListener('click', e=>e.preventDefault()));
+
+renderHead();
+render();
+</script>
+</body>
+</html>

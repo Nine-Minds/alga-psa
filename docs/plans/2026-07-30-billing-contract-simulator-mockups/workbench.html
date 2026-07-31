@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contract simulator — Alga PSA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root{
+  --purple:#8A4DEA; --purple-light:#A36FF8; --purple-dark:#7C3AED; --purple-subtle:#F3F0FF;
+  --purple-100:#E9E1FE; --purple-200:#D4C3FD; --purple-300:#BFA5FB; --purple-700:#6E33D1; --purple-900:#4A2490;
+  --charcoal:#312E38;
+  --s50:#F8FAFC; --s100:#F1F5F9; --s200:#E2E8F0; --s300:#CBD5E1; --s400:#94A3B8;
+  --s500:#64748B; --s600:#475569; --s700:#334155; --s800:#1E293B; --s900:#0F172A;
+  --success:#10B981; --warning:#F59E0B; --danger:#EF4444;
+  --font-heading:'Poppins',system-ui,sans-serif; --font-sans:'Inter',system-ui,sans-serif; --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --grad:linear-gradient(135deg,#A36FF8 0%,#8A4DEA 100%);
+  --grad-hov:linear-gradient(135deg,#8A4DEA 0%,#7C3AED 100%);
+  --shadow-xs:0 1px 2px rgba(15,23,42,.06);
+  --shadow-sm:0 2px 6px -1px rgba(15,23,42,.08);
+  --shadow-md:0 8px 24px -8px rgba(82,46,140,.18),0 2px 6px -2px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{font-family:var(--font-sans);font-size:15px;line-height:1.5;color:#262626;background:var(--s100);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--font-heading);margin:0}
+button{font-family:inherit}
+input,select{font-family:inherit}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:196px 1fr;height:100vh}
+.side{background:linear-gradient(180deg,#0C111D 0%,#1B1437 100%);color:#CBD5E1;display:flex;flex-direction:column;padding:14px 10px;border-right:1px solid rgba(255,255,255,.04)}
+.side-brand{display:flex;align-items:center;gap:9px;padding:4px 8px 16px}
+.side-mark{width:28px;height:28px;border-radius:8px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:var(--font-heading)}
+.side-name{font-weight:700;color:#fff;font-size:13.5px;letter-spacing:-.01em}
+.side-host{font-size:10.5px;color:#94A3B8}
+.side-nav{flex:1;display:flex;flex-direction:column;gap:2px}
+.side-item{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;color:#CBD5E1;font-weight:500}
+.side-item:hover{background:rgba(255,255,255,.05)}
+.side-item.active{color:#fff;font-weight:600;background:linear-gradient(90deg,rgba(138,77,234,.38),rgba(138,77,234,.14));box-shadow:inset 0 0 0 1px rgba(166,115,242,.35)}
+.side-item i,.side-item svg{width:16px;height:16px;stroke-width:1.75}
+.side-foot{padding:10px 8px 2px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:9px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.main{display:flex;flex-direction:column;min-width:0;background:var(--s50)}
+.topbar{height:50px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid var(--s200);background:#fff;flex-shrink:0}
+.crumbs{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--s500)}
+.crumbs i,.crumbs svg{width:13px;height:13px}
+.crumbs .cur{color:var(--s900);font-weight:600}
+.topbar-search{margin-left:auto;position:relative;width:260px}
+.topbar-search i,.topbar-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--s400)}
+.topbar-search input{width:100%;padding:6px 10px 6px 30px;border:1px solid var(--s200);border-radius:8px;font-size:12.5px;background:var(--s50);outline:none}
+.icon-btn{all:unset;cursor:pointer;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;color:var(--s700)}
+.icon-btn:hover{background:var(--s100)}
+.icon-btn i,.icon-btn svg{width:16px;height:16px}
+.scroll{flex:1;overflow:auto;min-height:0}
+
+/* ---------- contract header ---------- */
+.chead{background:#fff;border-bottom:1px solid var(--s200);padding:16px 24px 0}
+.chead-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chead h1{font-size:20px;font-weight:600;color:var(--s900);letter-spacing:-.02em}
+.chead-client{font-size:13px;color:var(--s500)}
+.chead-meta{font-size:12.5px;color:var(--s500);margin-top:5px;display:flex;align-items:center;gap:6px}
+.chead-meta i,.chead-meta svg{width:13px;height:13px}
+.chead-actions{margin-left:auto;display:flex;gap:8px}
+.tabs{display:flex;gap:2px;margin-top:14px}
+.tab{all:unset;cursor:pointer;padding:9px 12px;font-size:13px;color:var(--s500);border-bottom:2px solid transparent;font-weight:500;display:inline-flex;align-items:center;gap:7px}
+.tab:hover{color:var(--s700)}
+.tab.active{color:var(--purple-dark);border-bottom-color:var(--purple);font-weight:600}
+
+/* ---------- generic bits ---------- */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;font-size:10.5px;font-weight:500;border-radius:9999px;background:var(--s100);color:var(--s700);border:1px solid var(--s200);line-height:16px;white-space:nowrap}
+.badge.success{background:#F0FDF4;color:#14532D;border-color:#86EFAC}
+.badge.brand{background:var(--purple-subtle);color:var(--purple-900);border-color:var(--purple-300)}
+.badge.warning{background:#FFFBEB;color:#92400E;border-color:#FCD34D}
+.badge.info{background:#ECFCFE;color:#267C95;border-color:#8CECFA}
+.pill-ent{font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:9999px;background:var(--purple-subtle);color:var(--purple-700);border:1px solid var(--purple-200);line-height:14px}
+.btn{all:unset;cursor:pointer;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn i,.btn svg{width:14px;height:14px}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 6px 16px -6px rgba(138,77,234,.55)}
+.btn-primary:hover{background:var(--grad-hov)}
+.btn-ghost{border:1px solid var(--s200);color:var(--s700);background:#fff}
+.btn-ghost:hover{background:var(--s50);border-color:var(--s300)}
+.btn-quiet{color:var(--s500);padding:4px 8px;font-size:12px}
+.btn-quiet:hover{color:var(--purple-dark);background:var(--purple-subtle)}
+.card{background:#fff;border:1px solid var(--s200);border-radius:12px;box-shadow:var(--shadow-xs)}
+.panel-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;color:var(--s500)}
+
+/* ---------- workbench ---------- */
+.workbench{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;padding:18px 24px 40px;align-items:start}
+.left-col{display:flex;flex-direction:column;gap:14px}
+.pan{background:#fff;border:1px solid var(--s200);border-radius:12px;box-shadow:var(--shadow-xs);overflow:hidden}
+.pan-head{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--s200)}
+.pan-head h3{font-size:13px;font-weight:600;color:var(--s900)}
+.pan-head .count{font-size:11px;color:var(--s400)}
+.pan-head .sp{margin-left:auto}
+.pan-body{padding:9px}
+
+/* line cards */
+.line{border:1px solid var(--s200);border-radius:9px;padding:9px 10px;margin-bottom:6px;background:#fff;transition:border-color .15s,box-shadow .15s}
+.line:last-child{margin-bottom:0}
+.line:hover{border-color:var(--purple-200);box-shadow:var(--shadow-sm)}
+.line.modified{border-color:var(--purple-200);background:#FBFAFF}
+.line-top{display:flex;align-items:center;gap:6px}
+.line-name{font-size:12.5px;font-weight:600;color:var(--s800);flex:1;min-width:0}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--purple);flex-shrink:0;display:none}
+.dot.on{display:block}
+.line-bottom{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+.tbadge{font-size:9.5px;font-weight:600;letter-spacing:.04em;padding:1px 6px;border-radius:4px;line-height:15px;text-transform:lowercase}
+.t-fixed{background:#EFF6FF;color:#1D4ED8}
+.t-hourly{background:#ECFCFE;color:#267C95}
+.t-usage{background:#FFF6E6;color:#B36D21}
+.t-bucket{background:var(--purple-subtle);color:var(--purple-700)}
+.t-onetime{background:var(--s100);color:var(--s600)}
+.rate{font-family:var(--font-mono);font-size:11.5px;color:var(--s800);cursor:text;padding:1px 4px;border-radius:4px;border:1px dashed transparent;margin-left:auto}
+.rate:hover{border-color:var(--purple-300);background:var(--purple-subtle)}
+.rate .u{color:var(--s400)}
+.rate-in{font-family:var(--font-mono);font-size:11.5px;width:74px;padding:1px 4px;border:1px solid var(--purple);border-radius:4px;outline:none;background:#fff;margin-left:auto;color:var(--s900)}
+.line-sub{font-size:10.5px;color:var(--s400);margin-top:5px;width:100%}
+.over-wrap{display:flex;align-items:center;gap:5px;width:100%;margin-top:5px;font-size:10.5px;color:var(--s500)}
+
+/* assumptions */
+.arow{border-bottom:1px solid var(--s100);padding:9px 4px}
+.arow:last-child{border-bottom:none}
+.ahead{display:flex;align-items:center;gap:8px}
+.ahead label{font-size:12.5px;color:var(--s700);flex:1}
+.num{width:74px;padding:4px 7px;border:1px solid var(--s200);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:right;outline:none;background:#fff;color:var(--s900)}
+.num:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(138,77,234,.12)}
+.num::-webkit-outer-spin-button,.num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.num{-moz-appearance:textfield}
+.vary{all:unset;cursor:pointer;font-size:11px;color:var(--s500);display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 4px;border-radius:5px}
+.vary:hover{color:var(--purple-dark);background:var(--purple-subtle)}
+.vary i,.vary svg{width:12px;height:12px;transition:transform .15s}
+.vary.open i,.vary.open svg{transform:rotate(90deg)}
+.vgrid{display:none;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:8px}
+.vgrid.open{display:grid}
+.vcell{display:flex;flex-direction:column;gap:2px}
+.vcell span{font-size:9.5px;color:var(--s400);letter-spacing:.02em}
+.vcell input{width:100%;padding:3px 5px;border:1px solid var(--s200);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:right;outline:none;background:#fff;color:var(--s600)}
+.vcell input:focus{border-color:var(--purple)}
+.vcell input.set{background:var(--purple-subtle);border-color:var(--purple-300);color:var(--purple-900);font-weight:500}
+
+/* right column */
+.runbar{display:flex;align-items:center;gap:10px;padding:11px 14px;background:#fff;border:1px solid var(--s200);border-radius:12px;box-shadow:var(--shadow-xs);flex-wrap:wrap}
+.sel{padding:6px 26px 6px 10px;border:1px solid var(--s200);border-radius:8px;font-size:12.5px;background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 8px center;appearance:none;color:var(--s700);outline:none;cursor:pointer}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--s600);cursor:pointer;user-select:none}
+.tr{width:32px;height:18px;flex-shrink:0;border-radius:9999px;background:var(--s300);position:relative;transition:background .18s}
+.tr::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .18s;box-shadow:var(--shadow-xs)}
+.toggle.on .tr{background:var(--purple)}
+.toggle.on .tr::after{transform:translateX(14px)}
+.runmeta{margin-left:auto;font-size:11.5px;color:var(--s400);display:flex;align-items:center;gap:5px}
+.runmeta i,.runmeta svg{width:12px;height:12px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:11px;margin-top:14px}
+.pcard{background:#fff;border:1px solid var(--s200);border-radius:12px;padding:12px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;box-shadow:var(--shadow-xs);text-align:left}
+.pcard:hover{border-color:var(--purple-300);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.pcard.sel{border-color:var(--purple);box-shadow:0 0 0 3px rgba(138,77,234,.13),var(--shadow-md)}
+.pcard .pname{font-size:13px;font-weight:600;color:var(--s900);font-family:var(--font-heading)}
+.pcard .pdates{font-size:11px;color:var(--s400);margin-top:2px}
+.pcard .ptotal{font-family:var(--font-mono);font-size:17px;font-weight:500;color:var(--s900);margin-top:10px;letter-spacing:-.02em}
+.pcard .pdelta{font-size:10.5px;color:var(--s500);margin-top:3px;font-family:var(--font-mono)}
+.pcard .pbadges{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;min-height:18px}
+.pcard.run{animation:pop .32s cubic-bezier(.16,1,.3,1) both}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* invoice detail */
+.detail{margin-top:14px;background:#fff;border:1px solid var(--s200);border-radius:12px;box-shadow:var(--shadow-md);overflow:hidden}
+.detail-head{padding:13px 16px;border-bottom:1px solid var(--s200);display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#FCFBFF,#fff)}
+.detail-head h4{font-size:14px;font-weight:600;color:var(--s900)}
+.detail-head .sub{font-size:11.5px;color:var(--s500)}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--s400);font-weight:600;text-align:left;padding:9px 16px;border-bottom:1px solid var(--s200);background:var(--s50)}
+th.r,td.r{text-align:right}
+td{padding:10px 16px;font-size:12.5px;color:var(--s700);border-bottom:1px solid var(--s100);vertical-align:top}
+td.amt{font-family:var(--font-mono);color:var(--s900);white-space:nowrap}
+.ln{font-weight:500;color:var(--s800)}
+.ln-note{font-size:11px;color:var(--s400);margin-top:2px}
+.why{all:unset;cursor:pointer;font-size:11px;color:var(--purple-dark);display:inline-flex;align-items:center;gap:3px;margin-top:5px}
+.why i,.why svg{width:11px;height:11px;transition:transform .15s}
+.why.open i,.why.open svg{transform:rotate(90deg)}
+.why-body{display:none;margin-top:7px;padding:9px 11px;background:var(--purple-subtle);border:1px solid var(--purple-200);border-radius:8px;font-size:11.5px;color:var(--purple-900);line-height:1.6;max-width:420px}
+.why-body.open{display:block}
+.why-body .mono{color:var(--purple-900)}
+tr.sum td{border-bottom:none;padding:7px 16px;font-size:12.5px;color:var(--s600)}
+tr.sum.first td{padding-top:13px}
+tr.total td{border-top:1px solid var(--s200);padding:12px 16px;font-size:14px;font-weight:600;color:var(--s900)}
+tr.total td.amt{font-size:16px}
+.empty{padding:26px 16px;text-align:center;color:var(--s400);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="side-brand">
+      <div class="side-mark">A</div>
+      <div><div class="side-name">Alga PSA</div><div class="side-host">acme-msp.ninem.io</div></div>
+    </div>
+    <nav class="side-nav">
+      <button class="side-item"><i data-lucide="layout-dashboard"></i>Dashboard</button>
+      <button class="side-item"><i data-lucide="ticket"></i>Tickets</button>
+      <button class="side-item"><i data-lucide="kanban-square"></i>Projects</button>
+      <button class="side-item active"><i data-lucide="receipt"></i>Billing</button>
+      <button class="side-item"><i data-lucide="clock"></i>Time</button>
+      <button class="side-item"><i data-lucide="bar-chart-3"></i>Reports</button>
+      <button class="side-item"><i data-lucide="settings"></i>Settings</button>
+    </nav>
+    <div class="side-foot">
+      <div class="avatar">JP</div>
+      <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:500;color:#fff">Jordan Park</div><div style="font-size:10.5px;color:#94A3B8">Admin</div></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs"><span>Billing</span><i data-lucide="chevron-right"></i><span>Contracts</span><i data-lucide="chevron-right"></i><span class="cur">Managed services agreement</span></div>
+      <div class="topbar-search"><i data-lucide="search"></i><input placeholder="Search contracts, clients, invoices…"></div>
+      <button class="icon-btn"><i data-lucide="bell"></i></button>
+      <button class="icon-btn"><i data-lucide="circle-help"></i></button>
+    </div>
+
+    <div class="scroll">
+      <div class="chead">
+        <div class="chead-row">
+          <h1>Managed services agreement</h1>
+          <span class="chead-client">Acme Manufacturing</span>
+          <span class="badge success"><i data-lucide="check" style="width:11px;height:11px"></i>Active</span>
+          <div class="chead-actions">
+            <button class="btn btn-ghost"><i data-lucide="pencil"></i>Edit contract</button>
+            <button class="btn btn-ghost"><i data-lucide="more-horizontal"></i></button>
+          </div>
+        </div>
+        <div class="chead-meta"><i data-lucide="calendar"></i>Aug 10, 2026 – Aug 9, 2027 · Monthly billing</div>
+        <div class="tabs">
+          <button class="tab">Overview</button>
+          <button class="tab">Contract lines</button>
+          <button class="tab">Pricing schedules</button>
+          <button class="tab">Documents</button>
+          <button class="tab">Invoices</button>
+          <button class="tab active">Simulator <span class="pill-ent">Enterprise</span></button>
+        </div>
+      </div>
+
+      <div class="workbench">
+        <div class="left-col">
+          <section class="pan">
+            <div class="pan-head">
+              <h3>Scenario</h3><span class="count" id="lineCount">6 lines</span>
+              <span class="sp"></span>
+              <button class="btn btn-quiet" id="resetAll">Reset all</button>
+            </div>
+            <div class="pan-body" id="lines"></div>
+            <div style="padding:0 9px 10px"><button class="btn btn-quiet" style="width:100%;justify-content:center;border:1px dashed var(--s200)"><i data-lucide="plus"></i>Add line</button></div>
+          </section>
+
+          <section class="pan">
+            <div class="pan-head"><h3>Assumptions</h3><span class="count">flat per period</span></div>
+            <div class="pan-body" id="assumps"></div>
+          </section>
+        </div>
+
+        <div class="right-col">
+          <div class="runbar">
+            <button class="btn btn-primary" id="simulate"><i data-lucide="play"></i>Simulate</button>
+            <select class="sel" id="horizon">
+              <option value="3">3 periods</option>
+              <option value="6" selected>6 periods</option>
+              <option value="12">12 periods</option>
+            </select>
+            <div class="toggle" id="compare"><span class="tr"></span>Compare to live contract</div>
+            <div class="runmeta" id="runmeta"><i data-lucide="check-circle-2"></i>Simulated just now</div>
+          </div>
+          <div class="grid" id="grid"></div>
+          <div id="detail"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const TAX=0.0825, INCLUDED=10, START={y:2026,m:7,day:10};
+
+const LINES=[
+  {id:'ws', name:'Managed workstations', type:'fixed', field:'ws', unit:'/mo'},
+  {id:'onb',name:'Onboarding fee', type:'one-time', field:'onb', unit:'', sub:'Period 1 only'},
+  {id:'rs', name:'Remote support', type:'hourly', field:'rs', unit:'/hr'},
+  {id:'bk', name:'Backup storage', type:'usage', field:'bk', unit:'/GB'},
+  {id:'ah', name:'After-hours support', type:'bucket', field:'ah', unit:' base', sub:'Includes 10 hrs'},
+  {id:'qsr',name:'Quarterly security review', type:'fixed', field:'qsr', unit:'/quarter', sub:'Every third period'},
+];
+const ASSUMPS=[
+  {key:'rs', label:'Remote support hrs', unit:'hrs'},
+  {key:'bk', label:'Backup storage GB', unit:'GB'},
+  {key:'ah', label:'After-hours hrs', unit:'hrs'},
+];
+const BASE_RATES={ws:2400, onb:2500, rs:150, bk:0.12, ah:450, ahOver:180, qsr:1200};
+const BASE_FLAT={rs:20, bk:500, ah:12};
+/* what the contract bills today, before any scenario edits */
+const LIVE={rates:{...BASE_RATES}, flat:{rs:18, bk:400, ah:10}};
+
+const state={
+  rates:{...BASE_RATES},
+  flat:{...BASE_FLAT},
+  overrides:{rs:Array(12).fill(null), bk:Array(12).fill(null), ah:Array(12).fill(null)},
+  varyOpen:{rs:false, bk:false, ah:false},
+  editing:null,
+  compare:false,
+  horizon:6,
+  selected:0,
+  whyOpen:false,
+};
+
+const PERIODS=(()=>{const out=[];for(let i=0;i<12;i++){const m=(START.m+i)%12,y=START.y+Math.floor((START.m+i)/12);const md=new Date(y,m+1,0).getDate();const partial=i===0;const days=partial?md-START.day+1:md;
+  out.push({i,name:`${MONTHS[m]} ${y}`,short:MONTHS[m],partial,days,monthDays:md,factor:partial?days/md:1,quarterly:i>=2&&(i-2)%3===0,
+    dates:partial?`${MONTHS[m]} ${START.day} – ${md}, ${y}`:`${MONTHS[m]} 1 – ${md}, ${y}`});}
+  return out;})();
+
+const r2=n=>Math.round(n*100)/100;
+const fmt=n=>'$'+r2(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const qty=(k,i)=>state.overrides[k][i]!=null?state.overrides[k][i]:state.flat[k];
+
+function compute(i,live){
+  const R=live?LIVE.rates:state.rates, p=PERIODS[i];
+  const q=k=>live?LIVE.flat[k]:qty(k,i);
+  const rows=[];
+  rows.push({name:'Managed workstations',qty:p.partial?`${p.days} / ${p.monthDays} days`:'1 month',rate:fmt(R.ws)+'/mo',
+    amount:r2(R.ws*p.factor),note:p.partial?'Prorated — contract starts Aug 10':null});
+  if(i===0) rows.push({name:'Onboarding fee',qty:'1',rate:fmt(R.onb),amount:r2(R.onb),note:'One-time charge, first period only'});
+  rows.push({name:'Remote support',qty:`${q('rs')} hrs`,rate:fmt(R.rs)+'/hr',amount:r2(R.rs*q('rs'))});
+  rows.push({name:'Backup storage',qty:`${q('bk')} GB`,rate:fmt(R.bk)+'/GB',amount:r2(R.bk*q('bk'))});
+  const h=q('ah'), over=Math.max(0,h-INCLUDED);
+  rows.push({name:'After-hours support',qty:`${h} hrs`,rate:`${fmt(R.ah)} base + ${fmt(R.ahOver)}/hr over ${INCLUDED}`,
+    amount:r2(R.ah+over*R.ahOver),bucket:true,over,hrs:h,overRate:R.ahOver,baseRate:R.ah});
+  if(p.quarterly) rows.push({name:'Quarterly security review',qty:'1 quarter',rate:fmt(R.qsr),amount:r2(R.qsr),note:'Billed every third period'});
+  const subtotal=r2(rows.reduce((s,x)=>s+x.amount,0)), tax=r2(subtotal*TAX);
+  return {rows,subtotal,tax,total:r2(subtotal+tax),over};
+}
+
+const rateModified=l=>state.rates[l.field]!==BASE_RATES[l.field]||(l.id==='ah'&&state.rates.ahOver!==BASE_RATES.ahOver);
+const anyModified=()=>LINES.some(rateModified)||ASSUMPS.some(a=>state.flat[a.key]!==BASE_FLAT[a.key]||state.overrides[a.key].some(v=>v!=null));
+
+/* ---------- render: scenario ---------- */
+function renderLines(){
+  document.getElementById('lines').innerHTML=LINES.map(l=>{
+    const mod=rateModified(l);
+    const rateCell=state.editing===l.field
+      ? `<input class="rate-in" data-rin="${l.field}" type="number" step="any" value="${state.rates[l.field]}">`
+      : `<span class="rate" data-redit="${l.field}">${fmt(state.rates[l.field])}<span class="u">${l.unit}</span></span>`;
+    const overCell=l.id==='ah'?(state.editing==='ahOver'
+      ? `<input class="rate-in" data-rin="ahOver" type="number" step="any" value="${state.rates.ahOver}" style="margin-left:0">`
+      : `<span class="rate" data-redit="ahOver" style="margin-left:0">${fmt(state.rates.ahOver)}<span class="u">/hr</span></span>`):'';
+    return `<div class="line ${mod?'modified':''}" data-line="${l.field}">
+      <div class="line-top"><span class="line-name">${l.name}</span><span class="dot ${mod?'on':''}"></span></div>
+      <div class="line-bottom">
+        <span class="tbadge t-${l.type==='one-time'?'onetime':l.type}">${l.type}</span>${rateCell}
+        ${overCell?`<div class="over-wrap">overage ${overCell}</div>`:''}
+        ${l.sub?`<div class="line-sub">${l.sub}</div>`:''}
+      </div>
+    </div>`;}).join('');
+  if(window.lucide) lucide.createIcons();
+  if(state.editing){const el=document.querySelector(`[data-rin="${state.editing}"]`);if(el){el.focus();el.select();}}
+}
+
+function renderAssumps(){
+  document.getElementById('assumps').innerHTML=ASSUMPS.map(a=>{
+    const open=state.varyOpen[a.key];
+    const cells=PERIODS.slice(0,state.horizon).map(p=>{
+      const v=state.overrides[a.key][p.i];
+      const set=v!=null&&v!==state.flat[a.key];
+      return `<div class="vcell"><span>${p.short}${p.i>=(12-START.m)?" '27":''}</span>
+        <input class="${set?'set':''}" data-vary="${a.key}" data-i="${p.i}" type="number" step="any" value="${v!=null?v:''}" placeholder="${state.flat[a.key]}"></div>`;
+    }).join('');
+    return `<div class="arow">
+      <div class="ahead"><label>${a.label}</label><input class="num" data-flat="${a.key}" type="number" step="any" value="${state.flat[a.key]}"><span style="font-size:11px;color:var(--s400);width:22px">${a.unit}</span></div>
+      <button class="vary ${open?'open':''}" data-varybtn="${a.key}"><i data-lucide="chevron-right"></i>vary by period</button>
+      <div class="vgrid ${open?'open':''}">${cells}</div>
+    </div>`;}).join('');
+  if(window.lucide) lucide.createIcons();
+}
+
+/* ---------- render: timeline ---------- */
+function renderTimeline(animate){
+  const ps=PERIODS.slice(0,state.horizon);
+  document.getElementById('grid').innerHTML=ps.map(p=>{
+    const c=compute(p.i,false);
+    const badges=[];
+    if(p.partial) badges.push('<span class="badge info">Prorated</span>');
+    if(p.quarterly) badges.push('<span class="badge brand">Quarterly charge</span>');
+    if(c.over>0) badges.push('<span class="badge warning">Bucket overage</span>');
+    let delta='';
+    if(state.compare){const d=r2(c.total-compute(p.i,true).total);
+      delta=`<div class="pdelta">${d===0?'no change vs live':(d>0?'+':'−')+fmt(Math.abs(d))+' vs live'}</div>`;}
+    return `<button class="pcard ${state.selected===p.i?'sel':''} ${animate?'run':''}" data-p="${p.i}" style="${animate?`animation-delay:${p.i*45}ms`:''}">
+      <div class="pname">${p.name}</div><div class="pdates">${p.dates}</div>
+      <div class="ptotal">${fmt(c.total)}</div>${delta}
+      <div class="pbadges">${badges.join('')}</div></button>`;}).join('');
+  renderDetail();
+  if(window.lucide) lucide.createIcons();
+}
+
+function renderDetail(){
+  const host=document.getElementById('detail');
+  if(state.selected==null||state.selected>=state.horizon){host.innerHTML='';return;}
+  const p=PERIODS[state.selected], c=compute(p.i,false);
+  const rows=c.rows.map(r=>{
+    let why='';
+    if(r.bucket){
+      const txt=r.over>0
+        ? `Bucket includes ${INCLUDED} hrs for the ${fmt(r.baseRate)} base. <span class="mono">${r.hrs} hrs − ${INCLUDED} included = ${r.over} hrs × ${fmt(r.overRate)} = ${fmt(r.over*r.overRate)}</span> overage on top of the base.`
+        : `Bucket includes ${INCLUDED} hrs for the ${fmt(r.baseRate)} base. <span class="mono">${r.hrs} hrs ≤ ${INCLUDED} included</span> — no overage this period.`;
+      why=`<button class="why ${state.whyOpen?'open':''}" data-why><i data-lucide="chevron-right"></i>Why this amount?</button>
+        <div class="why-body ${state.whyOpen?'open':''}">${txt}</div>`;
+    }
+    return `<tr><td><div class="ln">${r.name}</div>${r.note?`<div class="ln-note">${r.note}</div>`:''}${why}</td>
+      <td class="r mono" style="color:var(--s500);white-space:nowrap">${r.qty}</td>
+      <td class="r mono" style="color:var(--s500);white-space:nowrap">${r.rate}</td>
+      <td class="r amt">${fmt(r.amount)}</td></tr>`;}).join('');
+  const badges=[p.partial?'<span class="badge info">Prorated</span>':'',p.quarterly?'<span class="badge brand">Quarterly charge</span>':'',c.over>0?'<span class="badge warning">Bucket overage</span>':''].join('');
+  host.innerHTML=`<div class="detail">
+    <div class="detail-head">
+      <div><h4>Projected invoice — ${p.name}</h4><div class="sub">${p.dates} · draft, not issued</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center">${badges}</div>
+    </div>
+    <table>
+      <thead><tr><th>Line</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead>
+      <tbody>${rows}
+        <tr class="sum first"><td colspan="3" class="r">Subtotal</td><td class="r amt" style="font-weight:500">${fmt(c.subtotal)}</td></tr>
+        <tr class="sum"><td colspan="3" class="r">Tax (8.25%)</td><td class="r amt" style="font-weight:500">${fmt(c.tax)}</td></tr>
+        <tr class="total"><td colspan="3" class="r">Total</td><td class="r amt">${fmt(c.total)}</td></tr>
+      </tbody>
+    </table></div>`;
+  if(window.lucide) lucide.createIcons();
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const redit=e.target.closest('[data-redit]');
+  if(redit){state.editing=redit.dataset.redit;renderLines();return;}
+  const vb=e.target.closest('[data-varybtn]');
+  if(vb){const k=vb.dataset.varybtn;state.varyOpen[k]=!state.varyOpen[k];renderAssumps();return;}
+  const pc=e.target.closest('[data-p]');
+  if(pc){const i=+pc.dataset.p;state.selected=state.selected===i?null:i;renderTimeline(false);return;}
+  if(e.target.closest('[data-why]')){state.whyOpen=!state.whyOpen;renderDetail();return;}
+  const tg=e.target.closest('#compare');
+  if(tg){state.compare=!state.compare;tg.classList.toggle('on',state.compare);renderTimeline(false);return;}
+  if(e.target.closest('#resetAll')){
+    state.rates={...BASE_RATES};state.flat={...BASE_FLAT};
+    Object.keys(state.overrides).forEach(k=>state.overrides[k]=Array(12).fill(null));
+    state.editing=null;renderLines();renderAssumps();renderTimeline(true);return;}
+  if(e.target.closest('#simulate')){
+    const b=document.getElementById('simulate');
+    b.innerHTML='<i data-lucide="loader-2" style="animation:spin 1s linear infinite"></i>Simulating…';
+    if(window.lucide) lucide.createIcons();
+    setTimeout(()=>{b.innerHTML='<i data-lucide="play"></i>Simulate';renderTimeline(true);
+      document.getElementById('runmeta').innerHTML='<i data-lucide="check-circle-2"></i>Simulated just now · '+state.horizon+' periods';
+      if(window.lucide) lucide.createIcons();},480);
+  }
+});
+
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.rin!=null){
+    state.rates[t.dataset.rin]=parseFloat(t.value)||0;
+    const l=LINES.find(x=>x.field===t.dataset.rin)||LINES.find(x=>x.id==='ah');
+    const card=t.closest('.line');
+    if(card&&l){card.classList.toggle('modified',rateModified(l));card.querySelector('.dot').classList.toggle('on',rateModified(l));}
+    renderTimeline(false);markStale();return;}
+  if(t.dataset.flat!=null){
+    state.flat[t.dataset.flat]=parseFloat(t.value)||0;
+    t.closest('.arow').querySelectorAll('[data-vary]').forEach(c=>{
+      c.placeholder=state.flat[t.dataset.flat];
+      const v=state.overrides[t.dataset.flat][+c.dataset.i];
+      c.classList.toggle('set',v!=null&&v!==state.flat[t.dataset.flat]);});
+    renderTimeline(false);markStale();return;}
+  if(t.dataset.vary!=null){
+    const k=t.dataset.vary,i=+t.dataset.i;
+    state.overrides[k][i]=t.value===''?null:(parseFloat(t.value)||0);
+    t.classList.toggle('set',state.overrides[k][i]!=null&&state.overrides[k][i]!==state.flat[k]);
+    renderTimeline(false);markStale();}
+});
+
+document.addEventListener('change',e=>{
+  if(e.target.id==='horizon'){
+    state.horizon=+e.target.value;
+    if(state.selected!=null&&state.selected>=state.horizon) state.selected=0;
+    renderAssumps();renderTimeline(true);
+    document.getElementById('runmeta').innerHTML='<i data-lucide="check-circle-2"></i>Simulated just now · '+state.horizon+' periods';
+    if(window.lucide) lucide.createIcons();}
+});
+
+document.addEventListener('blur',e=>{
+  if(e.target.dataset&&e.target.dataset.rin!=null){state.editing=null;renderLines();}
+},true);
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.rin!=null){state.editing=null;renderLines();}
+  if(e.key==='Escape'&&state.editing){state.editing=null;renderLines();}
+});
+
+function markStale(){
+  document.getElementById('runmeta').innerHTML=anyModified()
+    ?'<i data-lucide="dot" style="color:var(--purple)"></i>Live preview — scenario edited'
+    :'<i data-lucide="check-circle-2"></i>Simulated just now · '+state.horizon+' periods';
+  if(window.lucide) lucide.createIcons();
+}
+
+const sty=document.createElement('style');
+sty.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(sty);
+
+renderLines();renderAssumps();renderTimeline(true);
+if(window.lucide) lucide.createIcons();
+</script>
+</body>
+</html>

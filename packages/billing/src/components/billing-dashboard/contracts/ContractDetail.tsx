@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -67,6 +68,37 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+
+interface ContractSimulatorProps {
+  contractId: string;
+  clientContractId: string | null;
+  clientId: string | null;
+}
+
+// Dynamic import for the contract simulator (EE/OSS modular pattern)
+// Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
+const ContractSimulator = dynamic(
+  () =>
+    import('@product/billing/entry').then(
+      (mod) =>
+        (mod as unknown as { ContractSimulator: React.ComponentType<ContractSimulatorProps> })
+          .ContractSimulator
+    ),
+  {
+    loading: () => (
+      <Card>
+        <CardContent className="py-8">
+          <LoadingIndicator
+            layout="stacked"
+            text="Loading simulator..."
+            spinnerProps={{ size: 'sm' }}
+          />
+        </CardContent>
+      </Card>
+    ),
+    ssr: false,
+  }
+);
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -155,7 +187,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'documents', 'invoices']), []);
+  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'documents', 'invoices', 'simulator']), []);
   const initialTab = useMemo(() => {
     const requested = searchParams?.get('contractView');
     return requested && validTabs.has(requested) ? requested : 'edit';
@@ -1347,6 +1379,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           </TabsTrigger>
           <TabsTrigger value="invoices">
             {t('contractDetail.tabs.invoices', { defaultValue: 'Invoices' })}
+          </TabsTrigger>
+          <TabsTrigger value="simulator">
+            {t('contractDetail.tabs.simulator', { defaultValue: 'Simulate' })}
           </TabsTrigger>
         </TabsList>
 
@@ -2602,6 +2637,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="simulator">
+          <ContractSimulator
+            contractId={contract.contract_id}
+            clientContractId={clientContractId}
+            clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+          />
         </TabsContent>
       </Tabs>
 

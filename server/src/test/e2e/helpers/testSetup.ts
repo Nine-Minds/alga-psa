@@ -207,13 +207,28 @@ export async function createTestTenant(
 export async function setupAuthSession(
   page: Page,
   tenantData: TenantTestData,
-  baseUrl: string
+  baseUrl: string,
+  db: Knex,
 ): Promise<void> {
   const secret = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
   // Align with app runtime cookie naming (includes dev port suffix).
   const cookieName = getSessionCookieName();
   const maxAge = 60 * 60 * 24; // 24 hours
   const now = Math.floor(Date.now() / 1000);
+  const sessionId = uuidv4();
+  const expiresAt = new Date((now + maxAge) * 1000);
+
+  await tenantTable(db, tenantData.tenant.tenantId, 'sessions').insert({
+    tenant: tenantData.tenant.tenantId,
+    session_id: sessionId,
+    user_id: tenantData.adminUser.userId,
+    token: '',
+    login_method: 'credentials',
+    last_activity_at: new Date(),
+    expires_at: expiresAt,
+    created_at: new Date(),
+    updated_at: new Date(),
+  });
 
   const payload = {
     sub: tenantData.adminUser.userId,
@@ -223,6 +238,8 @@ export async function setupAuthSession(
     user_type: 'internal',
     name: 'Test Admin',
     proToken: 'playwright-mock-token',
+    session_id: sessionId,
+    login_method: 'credentials',
     iat: now,
     exp: now + maxAge,
   };
@@ -280,7 +297,7 @@ export async function createTenantAndLogin(
   } = {}
 ): Promise<TenantTestData> {
   const tenantData = await createTestTenant(db, { companyName: options.companyName });
-  await setupAuthSession(page, tenantData, options.baseUrl || getBaseUrl());
+  await setupAuthSession(page, tenantData, options.baseUrl || getBaseUrl(), db);
   return tenantData;
 }
 

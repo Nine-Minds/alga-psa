@@ -259,7 +259,8 @@
       "invoices": "Facturen",
       "lines": "Contractlijnen",
       "overview": "Overzicht",
-      "pricing": "Prijsschema's"
+      "pricing": "Prijsschema's",
+      "simulator": "Simuleren"
     },
     "validation": {
       "billingFrequencyRequired": "Factureringsfrequentie is vereist.",
@@ -1156,6 +1157,12 @@
         "active": "Actief",
         "inactive": "Inactief"
       }
+    },
+    "simulation": {
+      "client": "Klantcontext",
+      "hypothetical": "Hypothetisch klantprofiel",
+      "open": "Simuleren",
+      "title": "Sjabloonsimulatie"
     }
   },
   "quickStart": {
@@ -1321,6 +1328,10 @@
       "saveDraft": "Opslaan als concept",
       "saving": "Opslaan...",
       "completing": "Voltooien..."
+    },
+    "simulation": {
+      "description": "Test dit niet-opgeslagen concept met verwachte activiteit. De simulatie slaat niets op en geeft niets uit.",
+      "title": "Simuleren vóór het aanmaken"
     }
   },
   "wizardBasics": {
@@ -2067,6 +2078,240 @@
         "contract": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in een verjaardagsgebaseerde voorvertoning verankerd op de 8e vóór de factuurgeneratie.",
         "client": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in de voorvertoning van het facturatieschema van de klant vóór de factuurgeneratie."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "advanceHint": "Elke factuur brengt de eigen huidige serviceperiode in rekening.",
+      "arrearsHint": "Elke factuur brengt de vorige serviceperiode in rekening.",
+      "averageLoaded": "Activiteitsgemiddelde geladen uit {{window}}. {{count}} verwachte waarden gewijzigd.",
+      "empty": "Scenario met alleen vaste prijzen — niets aan te nemen.",
+      "hoursUnit": "uur",
+      "inputLabel": "Verwachte {{unit}} per serviceperiode — {{service}}",
+      "invoicePeriodLabel": "Factuur {{period}}",
+      "loadReplay": "Activiteit en facturen laden",
+      "loadingHistory": "Historische activiteit laden…",
+      "overrideInputLabel": "Factuur {{period}} — {{unit}} uit de bijbehorende serviceperiode — {{service}}",
+      "periodLabel": "P{{number}}",
+      "prefillChange": "Geladen waarde: {{before}} → {{after}} {{unit}} per serviceperiode",
+      "prefillNextStep": "Bijgewerkte waarden zijn gemarkeerd. Werk de simulatie bij om de facturen opnieuw te berekenen.",
+      "prefillOverrides": "{{count}} periodewaarden geladen",
+      "prefillUnchanged": "Geladen waarden uit {{window}} komen overeen met de huidige verwachte activiteit.",
+      "replayEnd": "Tot en met",
+      "replayLoaded": "Historische activiteit geladen uit {{window}} met {{count}} uitgegeven facturen. {{changed}} verwachte waarden gewijzigd.",
+      "replayRangeLoaded": "Historische activiteit en {{count}} uitgegeven facturen geladen uit {{window}}. Verwachte activiteit is ongewijzigd.",
+      "replayStart": "Vanaf",
+      "replayTitle": "Vergelijken met eerdere facturen",
+      "rowLabel": "{{service}} — verwachte {{unit}} per serviceperiode",
+      "subtitle": "Voer verwacht werk of verbruik per serviceperiode in. Bij facturatie achteraf gebruikt elke factuur de vorige serviceperiode.",
+      "title": "Verwachte activiteit",
+      "useRecent": "Gemiddelde van de laatste 3 factureringsperioden gebruiken",
+      "varyByPeriod": "Activiteit per factuur instellen",
+      "zeroActivity": "Deze service draagt niets bij totdat de verwachte activiteit groter is dan nul."
+    },
+    "compare": {
+      "added": "Toegevoegd",
+      "changed": "Gewijzigd",
+      "horizonImpact": "Totale wijziging over {{count}} factureringsperioden",
+      "horizonImpactHint": "Vergeleken met het huidige contract",
+      "noChange": "Geen gesimuleerde wijziging",
+      "removed": "Verwijderd uit het huidige contract"
+    },
+    "diagnostics": {
+      "title": "Simulatienotities"
+    },
+    "emptyScenario": {
+      "description": "Dit contract heeft geen contractregels. Voeg eerst contractregels toe en kom dan terug om te simuleren.",
+      "title": "Nog niets te simuleren"
+    },
+    "explanation": {
+      "amount": "Bedrag",
+      "close": "Sluiten",
+      "inputs": "Invoer",
+      "noBreakdown": "Geen specificatie beschikbaar",
+      "steps": "Berekening",
+      "title": "Specificatie van het bedrag"
+    },
+    "featureName": "Contractsimulator",
+    "invoiceDetail": {
+      "billedInAdvance": "Vooraf gefactureerd",
+      "billedInArrears": "Achteraf gefactureerd",
+      "columns": {
+        "amount": "Bedrag",
+        "line": "Regel",
+        "qty": "Aantal",
+        "rate": "Tarief"
+      },
+      "draftNote": "concept, niet uitgegeven",
+      "explainHint": "Toon hoe dit bedrag is berekend",
+      "invoicePeriod": "Factuurperiode: {{start}} – {{end}}",
+      "renderedPreview": "Voorbeeld van de factuurlay-out",
+      "servicePeriod": "Serviceperiode: {{start}} – {{end}}",
+      "subtotal": "Subtotaal",
+      "tax": "Btw",
+      "title": "Gesimuleerde factuur {{period}}",
+      "total": "Totaal"
+    },
+    "loadFailed": "Het contractscenario kon niet worden geladen.",
+    "loadingSnapshot": "Scenario laden…",
+    "markers": {
+      "bucketOverage": "Bundeloverschrijding",
+      "cadenceCoincidence": "Overlappende cadans",
+      "contractEnd": "Einde contract",
+      "oneTime": "Eenmalig",
+      "prorated": "Naar rato"
+    },
+    "preparingDraft": "Simulatie voorbereiden…",
+    "replay": {
+      "actualInvoice": "Uitgegeven factuur {{number}}",
+      "issued": "uitgegeven",
+      "previewIssued": "Voorbeeld van de uitgegeven factuur",
+      "projected": "gesimuleerd",
+      "simulatedDelta": "gesimuleerd verschil"
+    },
+    "runBar": {
+      "compareToggle": "Wijzigingen ten opzichte van het huidige contract tonen",
+      "horizonOption": "{{count}} factureringsperioden",
+      "lastRun": "Simulatie actueel · {{count}} factureringsperioden",
+      "neverRun": "Nog niet gesimuleerd",
+      "simulate": "Simuleren",
+      "simulating": "Simuleren…",
+      "stale": "Wijzigingen niet gesimuleerd",
+      "staleBanner": "Deze bedragen komen uit de vorige simulatie. Werk de simulatie bij om uw laatste wijzigingen mee te nemen.",
+      "updateSimulation": "Simulatie bijwerken"
+    },
+    "scenario": {
+      "addAdjustment": "+ correctie toevoegen",
+      "addBucket": "Inbegrepen uren toevoegen",
+      "addCatalogService": "Catalogusservice toevoegen",
+      "addCatalogServiceOption": "+ Catalogusservice toevoegen…",
+      "addDiscount": "+ korting toevoegen",
+      "addIncludedHours": "Inbegrepen uren toevoegen",
+      "addIncludedUnits": "Inbegrepen eenheden toevoegen",
+      "addLine": "Lijn toevoegen",
+      "addSchedule": "+ schema toevoegen",
+      "addTier": "+ staffel toevoegen",
+      "adjustments": "Correcties",
+      "advancedChanges": "Geavanceerde contractwijzigingen",
+      "advancedSummary": "{{schedules}} schema's · {{discounts}} kortingen · {{adjustments}} correcties",
+      "allLines": "alle lijnen",
+      "allocationRate": "Toewijzingstarief",
+      "bucketIncluded": "Inclusief {{hours}} uur; het tarief hierboven is het meerverbruikstarief",
+      "cadence": {
+        "client": "Factureringsschema van de klant gebruiken",
+        "contract": "Schema van de contractlijn gebruiken"
+      },
+      "catalogRate": "Catalogustarief",
+      "collapseDetailsFor": "Details van {{line}} samenvouwen",
+      "defaultRate": "standaard",
+      "discountTypes": {
+        "fixed": "vast",
+        "percentage": "procent"
+      },
+      "discounts": "Kortingen",
+      "editDetails": "Regels bewerken",
+      "editDetailsFor": "Details van {{line}} bewerken",
+      "fields": {
+        "adjustmentAmount": "Correctiebedrag in dollars",
+        "adjustmentDescription": "Omschrijving van de correctie",
+        "adjustmentPeriod": "Correctieperiode",
+        "billingFrequency": "Factureringsfrequentie",
+        "billingTiming": "Factureringsmoment",
+        "bucketQuantity": "Inbegrepen bundelhoeveelheid",
+        "cadenceOwner": "Factureringsschema",
+        "configurationType": "Factureringsmethode van de service",
+        "discountLine": "Kortingslijn",
+        "discountName": "Naam van de korting",
+        "discountType": "Type korting",
+        "discountValue": "Kortingswaarde",
+        "includedHours": "Inbegrepen uren",
+        "includedUnits": "Inbegrepen eenheden",
+        "lineName": "Naam van de contractlijn",
+        "lineType": "Lijntype",
+        "minimumBillableMinutes": "Minimaal factureerbare minuten",
+        "minimumUsage": "Minimaal verbruik",
+        "overtimeRate": "Overurentarief ($/uur)",
+        "overtimeThreshold": "Overurendrempel (uren)",
+        "roundUpMinutes": "Afronden naar minuten",
+        "scheduleEffectiveDate": "Ingangsdatum van het schema",
+        "scheduleEndDate": "Einddatum van het schema",
+        "scheduleRate": "Schematarief in dollars",
+        "serviceQuantity": "Aantal licenties of producten",
+        "tierMaximum": "Staffelmaximum",
+        "tierMinimum": "Staffelminimum",
+        "tierRate": "Staffeltarief in dollars",
+        "usageUnit": "Verbruikseenheid"
+      },
+      "frequencies": {
+        "annually": "Jaarlijks",
+        "monthly": "Maandelijks",
+        "quarterly": "Per kwartaal",
+        "semi-annually": "Halfjaarlijks"
+      },
+      "fromServiceRates": "Op basis van servicetarieven",
+      "hourlyRate": "Uurtarief",
+      "licenseSuffix": " · licentie",
+      "lineCount": "{{count}} regels",
+      "lineSummary": "{{type}} · {{frequency}} · {{timing}} · {{services}}",
+      "modified": "Gewijzigd",
+      "newAdjustmentName": "Eenmalige correctie",
+      "newDiscountName": "Scenariokorting",
+      "newLineName": "Scenariolijn {{number}}",
+      "oneService": "1 service",
+      "oneTime": "eenmalig",
+      "overageRate": "Overschrijdingstarief",
+      "overtime": "overuren",
+      "placeholders": {
+        "minimum": "minimum",
+        "minimumMinutes": "minimale minuten",
+        "overtimeRate": "overuren $/uur",
+        "roundMinutes": "afronding in minuten",
+        "thresholdHours": "drempeluren"
+      },
+      "pricingSchedules": "Prijsschema's",
+      "productUnitPrice": "Stukprijs",
+      "proration": "verrekening naar rato",
+      "rateOverriddenByLine": "Tarief vervangen door de terugkerende lijnprijs",
+      "recurringLinePrice": "Terugkerende lijnprijs",
+      "removeAdjustment": "Correctie verwijderen",
+      "removeDiscount": "Korting verwijderen",
+      "removeLine": "Verwijderen",
+      "removeSchedule": "Prijsschema verwijderen",
+      "removeService": "verwijderen",
+      "removeTier": "Staffel verwijderen",
+      "resetAll": "Alles resetten",
+      "resetLine": "Herstellen",
+      "rollover": "overdracht",
+      "serviceBaseRate": "Basistarief van de service",
+      "serviceCount": "{{count}} services",
+      "tieredPricing": "staffelprijzen",
+      "timing": {
+        "advance": "Vooraf factureren",
+        "arrears": "Achteraf factureren"
+      },
+      "title": "Contractwijzigingen",
+      "types": {
+        "bucket": "Urenbundel",
+        "fixed": "Vast",
+        "hourly": "Per uur",
+        "usage": "Verbruik"
+      },
+      "usageRate": "Verbruikstarief"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} ten opzichte van het huidige contract",
+      "deltaUp": "+{{amount}} ten opzichte van het huidige contract",
+      "empty": "Simuleer om komende factureringsperioden te zien en elk bedrag te inspecteren.",
+      "invoicePeriod": "Factuurperiode",
+      "noDelta": "geen verschil t.o.v. live",
+      "noPreviousDelta": "geen wijziging t.o.v. vorige",
+      "periodAria": "{{period}}, {{total}}",
+      "previousDelta": "{{sign}}{{amount}} ten opzichte van factuur {{period}}",
+      "title": "Gesimuleerde factuurperioden"
+    },
+    "unavailable": {
+      "description": "De contractsimulator is beschikbaar in de Enterprise-editie van Alga PSA.",
+      "title": "Enterprise-functie"
     }
   }
 }
