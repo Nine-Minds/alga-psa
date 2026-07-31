@@ -335,6 +335,38 @@ const KNOWN_HARDCODED_CURRENCY_ARGS: Record<string, { count: number; why: string
     count: 1,
     why: 'deliberate: server log line (PO overage console.warn), not user-visible',
   },
+  // Contract-simulator compute engine (landed 2026-07-31): formatCents in
+  // each compute module renders calculation-trace/step strings. Correct
+  // currency comes from the contract; locale threading through the engine is
+  // deferred to the simulator workstream.
+  'ee/server/src/lib/billing/simulator/simulateContractScenario.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeBucketCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeDiscountsAndAdjustments.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeFixedCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeRecurringQuantityCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
+  'packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts': {
+    count: 1,
+    why: 'simulator compute trace strings; tenant-locale threading deferred to simulator work',
+  },
 };
 
 const ARG_CANDIDATE = /formatCurrency|Intl\s*\.\s*NumberFormat|toLocaleString/;
