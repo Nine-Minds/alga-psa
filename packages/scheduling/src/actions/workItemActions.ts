@@ -8,6 +8,7 @@ import { IUser } from '@alga-psa/types';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import User from '@alga-psa/db/models/user';
 import { parseWorkItemStatusNameFilterValue } from '@alga-psa/reference-data/actions/status-actions/workItemStatusFilter';
+import { workItemDescriptionText } from '../lib/workItemDescription';
 import {
   actionError,
   isActionMessageError,
@@ -295,7 +296,7 @@ export const searchDispatchWorkItems = withAuth(async (
         work_item_id: item.work_item_id,
         type: item.type,
         name: item.name,
-        description: item.description,
+        description: workItemDescriptionText(item.description),
         is_billable: true,
         ticket_number: item.ticket_number,
         title: item.title,
@@ -750,7 +751,7 @@ export const searchPickerWorkItems = withAuth(async (
         work_item_id: item.work_item_id,
         type: item.type,
         name: item.name,
-        description: item.description,
+        description: item.type === 'ticket' ? workItemDescriptionText(item.description) : item.description,
         is_billable: true,
         ticket_number: item.ticket_number,
         master_ticket_id: item.master_ticket_id,

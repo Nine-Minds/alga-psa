@@ -44,7 +44,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
         {title ? (
           <>
             <div className="font-bold truncate">{title}</div>
-            <div className="text-sm text-gray-600 truncate">{description}</div>
+            {description && <div className="text-sm text-gray-600 truncate">{description}</div>}
           </>
         ) : (
           <>
