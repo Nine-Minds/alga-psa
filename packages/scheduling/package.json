@@ -65,6 +65,7 @@
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/formatting": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
