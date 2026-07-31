@@ -148,10 +148,16 @@ const servicePeriodPostInventoryRefs = new Set([
   // excluded by name above.
   'packages/billing/src/lib/billing/compute/compute.test.ts',
   'packages/billing/src/lib/billing/compute/computeBucketCharges.ts',
+  'packages/billing/src/lib/billing/compute/computeDiscountsAndAdjustments.ts',
   'packages/billing/src/lib/billing/compute/computeFixedCharges.ts',
+  'packages/billing/src/lib/billing/compute/computeRecurringQuantityCharges.ts',
   'packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts',
   'packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts',
+  'packages/billing/src/lib/billing/compute/productionGolden.test.ts',
   'packages/billing/src/lib/billing/compute/types.ts',
+  // Contract-simulator scenario interfaces mirror service-period fields for
+  // simulated invoice lines; the simulator landed after the pass-0 snapshot.
+  'packages/types/src/interfaces/contractSimulation.interfaces.ts',
   'packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx',
   'packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx',
   'packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx',
@@ -356,13 +362,18 @@ describe('service-period-first billing plan artifacts', () => {
   });
 
   it('T061: recurring product timing sources remain source-backed after migration', () => {
+    // The extracted compute layer's tests exercise the product pricing markers;
+    // they landed after the pass-0 snapshot.
+    const productTimingPostInventoryRefs = new Set([
+      'packages/billing/src/lib/billing/compute/compute.test.ts',
+    ]);
     expect(inventory.timingControls.productLateStageProrationRefs.slice().sort()).toEqual(
       rgList(
         'calculateProductCharges\\(|Error calculating initial tax for product service|Missing pricing for product',
         'packages',
         'server',
         'shared'
-      )
+      ).filter((file) => !productTimingPostInventoryRefs.has(file))
     );
     expect(appendix).toContain('### Recurring product migration seam inventory');
     expect(appendix).toContain('now resolves due product periods through the shared recurring timing helper');

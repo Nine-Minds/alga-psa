@@ -2111,7 +2111,7 @@
       "title": "Zakładana aktywność",
       "useRecent": "Użyj średniej z ostatnich 3 okresów rozliczeniowych",
       "varyByPeriod": "Ustaw aktywność dla każdej faktury",
-      "zeroActivity": "Ta usługa daje 0 USD, dopóki zakładana aktywność nie będzie większa od zera."
+      "zeroActivity": "Ta usługa nic nie wnosi, dopóki zakładana aktywność nie będzie większa od zera."
     },
     "compare": {
       "added": "Dodano",

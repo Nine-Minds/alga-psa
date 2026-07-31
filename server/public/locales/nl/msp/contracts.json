@@ -2107,7 +2107,7 @@
       "title": "Verwachte activiteit",
       "useRecent": "Gemiddelde van de laatste 3 factureringsperioden gebruiken",
       "varyByPeriod": "Activiteit per factuur instellen",
-      "zeroActivity": "Deze service draagt $0 bij totdat de verwachte activiteit groter is dan nul."
+      "zeroActivity": "Deze service draagt niets bij totdat de verwachte activiteit groter is dan nul."
     },
     "compare": {
       "added": "Toegevoegd",

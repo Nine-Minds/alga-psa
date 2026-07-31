@@ -2107,7 +2107,7 @@
       "title": "Attività prevista",
       "useRecent": "Usa la media degli ultimi 3 periodi di fatturazione",
       "varyByPeriod": "Imposta l'attività per ogni fattura",
-      "zeroActivity": "Questo servizio contribuisce $0 finché l'attività prevista non è maggiore di zero."
+      "zeroActivity": "Questo servizio non contribuisce con nulla finché l'attività prevista non è maggiore di zero."
     },
     "compare": {
       "added": "Aggiunto",

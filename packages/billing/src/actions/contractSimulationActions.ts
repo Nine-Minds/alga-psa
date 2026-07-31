@@ -163,3 +163,25 @@ export const getContractSimulationReplayAssumptions = withAuth(
     );
   },
 );
+
+/**
+ * Lightweight client list for the template simulator's client-context picker.
+ * Lives in billing so the picker does not need a cross-feature import of
+ * @alga-psa/clients.
+ */
+export const listContractSimulationClients = withAuth(
+  async (
+    user,
+    { tenant },
+  ): Promise<Array<{ client_id: string; client_name: string }>> => {
+    if (!(await hasPermission(user, "billing", "read"))) {
+      throw new Error("Permission denied: Cannot read billing");
+    }
+
+    const { knex } = await createTenantKnex();
+    return knex("clients")
+      .where({ tenant, is_inactive: false })
+      .orderBy("client_name", "asc")
+      .select("client_id", "client_name");
+  },
+);

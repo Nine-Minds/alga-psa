@@ -305,7 +305,7 @@ const AssumptionsPanel: React.FC<AssumptionsPanelProps> = ({
                   <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">
                     {t("contractSimulator.assumptions.zeroActivity", {
                       defaultValue:
-                        "This service contributes $0 until assumed activity is greater than zero.",
+                        "This service contributes nothing until assumed activity is greater than zero.",
                     })}
                   </p>
                 )}

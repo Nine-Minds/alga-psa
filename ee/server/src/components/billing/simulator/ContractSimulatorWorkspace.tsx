@@ -30,7 +30,13 @@ import type {
   ScenarioLineService,
   SimulatedInvoiceLine,
 } from "@alga-psa/types";
-import { isContractSimulationUnavailable } from "@alga-psa/types";
+import {
+  FEATURE_MINIMUM_TIER,
+  TIER_FEATURES,
+  isContractSimulationUnavailable,
+} from "@alga-psa/types";
+import { FeatureUpgradeNotice } from "@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice";
+import { useTierFeature } from "server/src/context/TierContext";
 import {
   getContractScenarioSnapshot,
   getContractSimulationReplayAssumptions,
@@ -75,6 +81,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
 }) => {
   const { t } = useTranslation("msp/contracts");
   const { formatCurrency } = useFormatters();
+  const hasSimulatorAccess = useTierFeature(TIER_FEATURES.CONTRACT_SIMULATOR);
   const scenarioRevisionRef = useRef(0);
   const lastProjectedScenarioRef = useRef<string | null>(null);
 
@@ -127,6 +134,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     useState<SimulatedInvoiceLine | null>(null);
 
   useEffect(() => {
+    if (!hasSimulatorAccess) return;
     let cancelled = false;
 
     const loadSnapshot = async () => {
@@ -176,7 +184,14 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [contractId, clientContractId, clientId, forceProfile, initialScenario]);
+  }, [
+    contractId,
+    clientContractId,
+    clientId,
+    forceProfile,
+    initialScenario,
+    hasSimulatorAccess,
+  ]);
 
   const updateWorking = useCallback(
     (mutate: (draft: ContractScenario) => void) => {
@@ -510,6 +525,17 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         : null,
     [compareEnabled, baselineResult, result],
   );
+
+  if (!hasSimulatorAccess) {
+    return (
+      <FeatureUpgradeNotice
+        featureName={t("contractSimulator.featureName", {
+          defaultValue: "Contract Simulator",
+        })}
+        requiredTier={FEATURE_MINIMUM_TIER[TIER_FEATURES.CONTRACT_SIMULATOR]}
+      />
+    );
+  }
 
   if (isLoadingSnapshot) {
     return (

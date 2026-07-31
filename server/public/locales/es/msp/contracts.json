@@ -2107,7 +2107,7 @@
       "title": "Actividad prevista",
       "useRecent": "Usar el promedio de los últimos 3 períodos de facturación",
       "varyByPeriod": "Definir la actividad de cada factura",
-      "zeroActivity": "Este servicio aporta $0 hasta que la actividad prevista sea mayor que cero."
+      "zeroActivity": "Este servicio no aporta nada hasta que la actividad prevista sea mayor que cero."
     },
     "compare": {
       "added": "Agregado",

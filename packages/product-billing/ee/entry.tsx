@@ -10,9 +10,7 @@ import StripeConnectionSettingsComponent from '@ee/components/settings/integrati
 import PaymentSettingsConfigComponent from '@ee/components/settings/billing/PaymentSettingsConfig';
 import ContractSimulatorWorkspace from '@ee/components/billing/simulator/ContractSimulatorWorkspace';
 import ContractDraftSimulatorComponent from '@ee/components/billing/simulator/ContractDraftSimulator';
-import { TIER_FEATURES, type ContractDraftSimulationInput } from '@alga-psa/types';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { TierGate } from 'server/src/components/tier-gating/TierGate';
+import type { ContractDraftSimulationInput } from '@alga-psa/types';
 
 interface ContractSimulatorProps {
   contractId: string;
@@ -33,28 +31,15 @@ export {
 export const PaymentSettings = () => <PaymentSettingsComponent />;
 export const StripeConnectionSettings = () => <StripeConnectionSettingsComponent />;
 export const PaymentSettingsConfig = () => <PaymentSettingsConfigComponent />;
-export const ContractSimulator = (props: ContractSimulatorProps) => {
-  const { t } = useTranslation('msp/contracts');
-  return (
-    <TierGate
-      feature={TIER_FEATURES.CONTRACT_SIMULATOR}
-      featureName={t('contractSimulator.featureName', { defaultValue: 'Contract Simulator' })}
-    >
-      <ContractSimulatorWorkspace {...props} />
-    </TierGate>
-  );
-};
-export const ContractDraftSimulator = ({ draft }: { draft: ContractDraftSimulationInput }) => {
-  const { t } = useTranslation('msp/contracts');
-  return (
-    <TierGate
-      feature={TIER_FEATURES.CONTRACT_SIMULATOR}
-      featureName={t('contractSimulator.featureName', { defaultValue: 'Contract Simulator' })}
-    >
-      <ContractDraftSimulatorComponent draft={draft} />
-    </TierGate>
-  );
-};
+// Tier gating (CONTRACT_SIMULATOR) lives inside ContractSimulatorWorkspace —
+// importing server/src tier-gating here would create the
+// integrations -> @product/billing -> server dependency cycle.
+export const ContractSimulator = (props: ContractSimulatorProps) => (
+  <ContractSimulatorWorkspace {...props} />
+);
+export const ContractDraftSimulator = ({ draft }: { draft: ContractDraftSimulationInput }) => (
+  <ContractDraftSimulatorComponent draft={draft} />
+);
 
 // Default export
 export default {

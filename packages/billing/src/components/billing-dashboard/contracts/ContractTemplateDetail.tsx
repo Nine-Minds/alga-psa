@@ -61,7 +61,7 @@ import { useBillingFrequencyOptions } from "@alga-psa/billing/hooks/useBillingEn
 import { CURRENCY_OPTIONS } from "@alga-psa/core";
 import { formatCurrencyFromMinorUnits } from "@alga-psa/core";
 import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
-import { getAllClients } from "@alga-psa/clients/actions";
+import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
@@ -283,14 +283,9 @@ const ContractTemplateDetail: React.FC = () => {
 
   useEffect(() => {
     if (!showSimulator || simulationClients.length > 0) return;
-    void getAllClients(false).then((clients) => {
+    void listContractSimulationClients().then((clients) => {
       if (Array.isArray(clients)) {
-        setSimulationClients(
-          clients.map((client) => ({
-            client_id: client.client_id,
-            client_name: client.client_name,
-          })),
-        );
+        setSimulationClients(clients);
       }
     });
   }, [showSimulator, simulationClients.length]);

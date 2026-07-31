@@ -2107,7 +2107,7 @@
       "title": "Angenommene Aktivität",
       "useRecent": "Durchschnitt der letzten 3 Abrechnungszeiträume verwenden",
       "varyByPeriod": "Aktivität je Rechnung festlegen",
-      "zeroActivity": "Dieser Service trägt 0 $ bei, bis die angenommene Aktivität größer als null ist."
+      "zeroActivity": "Dieser Service trägt nichts bei, bis die angenommene Aktivität größer als null ist."
     },
     "compare": {
       "added": "Hinzugefügt",

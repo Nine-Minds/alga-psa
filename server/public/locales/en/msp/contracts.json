@@ -2099,7 +2099,7 @@
       "advanceHint": "Each invoice bills its current service period.",
       "invoicePeriodLabel": "{{period}} invoice",
       "overrideInputLabel": "{{period}} invoice — {{unit}} from its service period — {{service}}",
-      "zeroActivity": "This service contributes $0 until assumed activity is greater than zero.",
+      "zeroActivity": "This service contributes nothing until assumed activity is greater than zero.",
       "averageLoaded": "Activity average loaded from {{window}}. {{count}} assumed values changed.",
       "replayLoaded": "Historical activity loaded from {{window}} with {{count}} issued invoices. {{changed}} assumed values changed.",
       "replayRangeLoaded": "Historical activity and {{count}} issued invoices loaded from {{window}}. Assumed activity is unchanged.",
