@@ -16,6 +16,7 @@ interface EntraRunDetail {
     processedTenants: number;
     succeededTenants: number;
     failedTenants: number;
+    summary?: Record<string, unknown>;
   } | null;
   tenantResults: Array<{
     managedTenantId: string | null;
@@ -26,6 +27,7 @@ interface EntraRunDetail {
     updated: number;
     ambiguous: number;
     inactivated: number;
+    skipped?: number;
     errorMessage: string | null;
   }>;
 }
@@ -163,6 +165,14 @@ export default function EntraSyncHistoryPanel() {
 
                 {expandedRunId === run.runId && details ? (
                   <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
+                    {typeof details.run?.summary?.skipped === 'number' ? (
+                      <p className="text-xs text-muted-foreground">
+                        {t('integrations.entra.syncHistory.details.summarySkipped', {
+                          defaultValue: 'Skipped provisioning outcomes: {{count}}',
+                          count: details.run.summary.skipped,
+                        })}
+                      </p>
+                    ) : null}
                     {details.tenantResults.length === 0 ? (
                       <p className="text-xs text-muted-foreground">{t('integrations.entra.syncHistory.details.noResults')}</p>
                     ) : (
@@ -178,13 +188,13 @@ export default function EntraSyncHistoryPanel() {
                             })}
                           </p>
                           <p className="text-muted-foreground">
-                            {t('integrations.entra.syncHistory.details.stats', {
+                            {`${t('integrations.entra.syncHistory.details.stats', {
                               created: tenant.created,
                               linked: tenant.linked,
                               updated: tenant.updated,
                               ambiguous: tenant.ambiguous,
                               inactivated: tenant.inactivated,
-                            })}
+                            })}, skipped ${tenant.skipped ?? 0}`}
                           </p>
                           {tenant.errorMessage ? (
                             <p className="text-destructive">{tenant.errorMessage}</p>

@@ -1866,11 +1866,17 @@
       "notConfigured": "55555"
     },
     "autoLink": {
-      "title": "55555",
-      "description": "55555",
       "body": "55555",
-      "toggleLabel": "55555",
-      "disabledInfo": "55555"
+      "clientBody": "55555",
+      "clientTitle": "55555",
+      "clientToggleLabel": "55555",
+      "description": "55555",
+      "disabledInfo": "55555",
+      "internalBody": "55555",
+      "internalTitle": "55555",
+      "internalToggleLabel": "55555",
+      "title": "55555",
+      "toggleLabel": "55555"
     },
     "bulk": {
       "title": "55555",
@@ -1959,6 +1965,21 @@
         "google": "55555",
         "microsoft": "55555"
       }
+    },
+    "clientPortalProvisioning": {
+      "deactivateBody": "55555",
+      "deactivateLabel": "55555",
+      "deactivateTitle": "55555",
+      "defaultRoleBody": "55555",
+      "defaultRoleLabel": "55555",
+      "defaultRoleTitle": "55555",
+      "modeBody": "55555",
+      "modeBuiltIn": "55555",
+      "modeDisabled": "55555",
+      "modeLabel": "55555",
+      "modeTitle": "55555",
+      "modeWorkflowManaged": "55555",
+      "workflowManagedInfo": "55555"
     }
   },
   "profile": {

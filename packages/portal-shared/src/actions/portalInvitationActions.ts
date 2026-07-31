@@ -1,12 +1,11 @@
 'use server'
 
+import { randomBytes } from 'node:crypto';
 import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
 import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
-import { UserService } from '@alga-psa/users';
-import { runAsSystem, createSystemContext } from '@alga-psa/db';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
@@ -18,6 +17,8 @@ import type {
   InvitationHistoryItem,
   CreateClientPortalUserParams,
   PortalInvitationErrorCode,
+  SendPortalInvitationOptions,
+  PortalInvitationEntraPrelink,
   ClientUserActionError,
 } from '../types';
 
@@ -478,7 +479,8 @@ export const createClientPortalUser = withAuth(async (
 export const sendPortalInvitation = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
-  contactId: string
+  contactId: string,
+  options?: SendPortalInvitationOptions
 ): Promise<SendInvitationResult> => {
   try {
     const { knex } = await createTenantKnex();
@@ -568,6 +570,17 @@ export const sendPortalInvitation = withAuth(async (
           invitationResult.error || 'Portal invitation could not be created. Please try again.',
           'INVITATION_FAILED'
         );
+      }
+
+      if (options?.entraPrelink?.providerAccountId && invitationResult.invitationId) {
+        await trx('portal_invitations')
+          .where({ tenant, invitation_id: invitationResult.invitationId })
+          .update({
+            metadata: trx.raw(
+              "COALESCE(metadata, '{}'::jsonb) || ?::jsonb",
+              [JSON.stringify({ entraPrelink: options.entraPrelink })]
+            )
+          });
       }
 
       // Get the tenant's default client (MSP client) for reply-to email
@@ -720,9 +733,13 @@ export async function verifyPortalToken(token: string): Promise<VerifyTokenResul
       };
     }
 
+    const prelinkedOAuth = (verificationResult.invitation?.metadata?.entraPrelink ??
+      null) as PortalInvitationEntraPrelink | null;
+
     return {
       success: true,
-      contact: verificationResult.contact
+      contact: verificationResult.contact,
+      prelinkedOAuth: prelinkedOAuth?.providerAccountId ? prelinkedOAuth : undefined
     };
 
   } catch (error) {
@@ -736,23 +753,14 @@ export async function verifyPortalToken(token: string): Promise<VerifyTokenResul
  */
 export async function completePortalSetup(
   token: string, 
-  password: string
+  password?: string
 ): Promise<CompleteSetupResult> {
   try {
-    if (!token || !password) {
+    if (!token) {
       return {
         success: false,
         error: 'Token and password are required',
         errorCode: 'TOKEN_AND_PASSWORD_REQUIRED'
-      };
-    }
-
-    // Validate password strength
-    if (password.length < 8) {
-      return {
-        success: false,
-        error: 'Password must be at least 8 characters long',
-        errorCode: 'PASSWORD_TOO_SHORT'
       };
     }
 
@@ -768,6 +776,25 @@ export async function completePortalSetup(
 
     const tenantFromInvitation = verificationResult.tenant;
     const contact = verificationResult.contact;
+    const prelinkedOAuth = (verificationResult.invitation?.metadata?.entraPrelink ??
+      null) as PortalInvitationEntraPrelink | null;
+    const normalizedPassword = typeof password === 'string' ? password : '';
+    const hasPrelinkedOAuth = Boolean(prelinkedOAuth?.providerAccountId);
+
+    if (!hasPrelinkedOAuth && !normalizedPassword) {
+      return {
+        success: false,
+        error: 'Token and password are required',
+        errorCode: 'TOKEN_AND_PASSWORD_REQUIRED'
+      };
+    }
+    if (normalizedPassword && normalizedPassword.length < 8) {
+      return {
+        success: false,
+        error: 'Password must be at least 8 characters long',
+        errorCode: 'PASSWORD_TOO_SHORT'
+      };
+    }
 
     // Run the rest of the flow in the invitation's tenant context
     const result = await runWithTenant(tenantFromInvitation, async () => {
@@ -783,19 +810,162 @@ export async function completePortalSetup(
 
       const scopedDb = tenantDb(knex, tenant);
 
+      const assertMicrosoftOAuthLinkAvailable = async (
+        userId?: string,
+        db: DbConnection = knex
+      ) => {
+        if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
+          return;
+        }
+
+        const existingProviderAccountQuery = tenantDb(db, tenant).table('user_auth_accounts')
+          .where({
+            provider: 'microsoft',
+            provider_account_id: prelinkedOAuth.providerAccountId,
+          });
+        if (userId) {
+          existingProviderAccountQuery.whereNot('user_id', userId);
+        }
+
+        const existingProviderAccount = await existingProviderAccountQuery.first(['user_id']);
+        if (existingProviderAccount?.user_id) {
+          throw new PortalInvitationError(
+            'This Microsoft account is already linked to another portal user',
+            'SETUP_FAILED'
+          );
+        }
+      };
+
+      const acquireMicrosoftOAuthLinkLock = async (db: DbConnection = knex) => {
+        if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
+          return;
+        }
+
+        await db.raw(
+          'select pg_advisory_xact_lock(hashtext(?), hashtext(?))',
+          [
+            'oauth_account_link',
+            `${tenant}:microsoft:${prelinkedOAuth.providerAccountId}`,
+          ]
+        );
+      };
+
+      const upsertMicrosoftOAuthLink = async (userId: string, trx: DbConnection = knex) => {
+        if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
+          return;
+        }
+
+        try {
+          await tenantDb(trx, tenant).table('user_auth_accounts')
+            .insert({
+              tenant,
+              user_id: userId,
+              provider: 'microsoft',
+              provider_account_id: prelinkedOAuth.providerAccountId,
+              metadata: {},
+              created_at: trx.raw('now()'),
+              updated_at: trx.raw('now()')
+            })
+            .onConflict(['tenant', 'user_id', 'provider'])
+            .merge({
+              provider_account_id: prelinkedOAuth.providerAccountId,
+              updated_at: trx.raw('now()')
+            });
+        } catch (error) {
+          if ((error as { code?: string })?.code === '23505') {
+            throw new PortalInvitationError(
+              'This Microsoft account is already linked to another portal user',
+              'SETUP_FAILED'
+            );
+          }
+          throw error;
+        }
+      };
+
+      const createDefaultUserPreferences = async (userId: string, db: DbConnection = knex) => {
+        const defaultPreferences = {
+          theme: 'light',
+          language: 'en',
+          timezone: 'UTC',
+          notifications_email: true,
+          notifications_browser: true,
+          dashboard_layout: 'default'
+        };
+
+        for (const [settingName, settingValue] of Object.entries(defaultPreferences)) {
+          await tenantDb(db, tenant).table('user_preferences').insert({
+            user_id: userId,
+            setting_name: settingName,
+            setting_value: JSON.stringify(settingValue),
+            tenant,
+            updated_at: new Date()
+          });
+        }
+      };
+
+      const createPortalUserInTransaction = async (db: DbConnection = knex) => {
+        const { hashPassword } = await import('@alga-psa/core/encryption');
+        const passwordForStorage = normalizedPassword || randomBytes(32).toString('hex');
+        const hashedPassword = await hashPassword(passwordForStorage);
+        const fullName = String(contact.full_name || '').trim() || String(contact.email || '').trim();
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || fullName;
+        const lastName = nameParts.slice(1).join(' ') || null;
+
+        const [user] = await tenantDb(db, tenant).table('users')
+          .insert({
+            user_id: db.raw('gen_random_uuid()'),
+            username: contact.email.toLowerCase(),
+            email: contact.email.toLowerCase(),
+            first_name: firstName,
+            last_name: lastName,
+            hashed_password: hashedPassword,
+            user_type: 'client',
+            contact_id: contact.contact_name_id,
+            is_inactive: false,
+            two_factor_enabled: false,
+            is_google_user: false,
+            tenant,
+            created_at: db.raw('now()'),
+            updated_at: db.raw('now()')
+          })
+          .returning('*');
+
+        if (!user || !user.user_id) {
+          throw new Error('Failed to create user account');
+        }
+
+        await createDefaultUserPreferences(user.user_id, db);
+        return user;
+      };
+
       // Check if user already exists
       const existingUser = await scopedDb.table('users')
         .where({ contact_id: contact.contact_name_id })
         .first();
 
       if (existingUser) {
-        // Treat as a password reset for existing client user
+        // Treat as a password reset for existing client user when a password is supplied.
+        // For Entra pre-link invitations, password setup is optional.
         try {
-          const { hashPassword } = await import('@alga-psa/core/encryption');
-          const hashedPassword = await hashPassword(password);
-          await scopedDb.table('users')
-            .where({ user_id: existingUser.user_id })
-            .update({ hashed_password: hashedPassword, is_inactive: false, updated_at: knex.raw('now()') });
+          await knex.transaction(async (trx) => {
+            await acquireMicrosoftOAuthLinkLock(trx);
+            await assertMicrosoftOAuthLinkAvailable(existingUser.user_id, trx);
+
+            if (normalizedPassword) {
+              const { hashPassword } = await import('@alga-psa/core/encryption');
+              const hashedPassword = await hashPassword(normalizedPassword);
+              await tenantDb(trx, tenant).table('users')
+                .where({ user_id: existingUser.user_id })
+                .update({ hashed_password: hashedPassword, is_inactive: false, updated_at: trx.raw('now()') });
+            } else {
+              await tenantDb(trx, tenant).table('users')
+                .where({ user_id: existingUser.user_id })
+                .update({ is_inactive: false, updated_at: trx.raw('now()') });
+            }
+
+            await upsertMicrosoftOAuthLink(existingUser.user_id, trx);
+          });
 
           // Mark invitation as used
           const tokenMarked = await PortalInvitationService.markTokenAsUsed(token);
@@ -816,9 +986,22 @@ export async function completePortalSetup(
             console.warn('Failed to set password reset preference for existing user:', prefError);
           }
 
-          // Return success; frontend can redirect to sign-in or auto-login if supported
-          return { success: true, userId: existingUser.user_id, username: existingUser.username, message: 'Password updated. You can now sign in.' } as CompleteSetupResult;
+          return {
+            success: true,
+            userId: existingUser.user_id,
+            username: existingUser.username,
+            message: normalizedPassword
+              ? 'Password updated. You can now sign in.'
+              : 'Portal account is ready. Continue with Microsoft sign in.'
+          } as CompleteSetupResult;
         } catch (e) {
+          if (e instanceof PortalInvitationError) {
+            return {
+              success: false,
+              error: e.message,
+              errorCode: e.errorCode
+            } as CompleteSetupResult;
+          }
           console.error('Error resetting password for existing user:', e);
           return {
             success: false,
@@ -828,38 +1011,31 @@ export async function completePortalSetup(
         }
       }
 
-      // Create user account using UserService within a system operation
+      const normalizedContactEmail = String(contact.email || '').trim().toLowerCase();
+      const existingEmailOwner = normalizedContactEmail
+        ? await knex('users')
+            .where({ tenant })
+            .andWhereRaw('lower(email) = ?', [normalizedContactEmail])
+            .first(['user_id'])
+        : null;
+      if (existingEmailOwner?.user_id) {
+        return {
+          success: false,
+          error: 'A portal user already exists for this contact or email address',
+          errorCode: 'PORTAL_USER_ALREADY_EXISTS'
+        } as CompleteSetupResult;
+      }
+
       let newUser;
       try {
-        newUser = await runAsSystem('portal-invitation-user-creation', async () => {
-          const userService = new UserService();
-          const systemContext = createSystemContext(tenant);
-
-          // Extract first and last names from full_name
-          const nameParts = contact.full_name.split(' ');
-          const firstName = nameParts[0] || contact.full_name;
-          const lastName = nameParts.slice(1).join(' ') || undefined;
-
-          const user = await userService.create({
-            username: contact.email.toLowerCase(),
-            email: contact.email.toLowerCase(),
-            password: password,
-            first_name: firstName,
-            last_name: lastName,
-            contact_id: contact.contact_name_id,
-            user_type: 'client',
-            is_inactive: false,
-            two_factor_enabled: false,
-            is_google_user: false
-          }, systemContext);
-
-          if (!user || !user.user_id) {
-            throw new PortalInvitationError(
-              'Client portal user account could not be created. Please try again.',
-              'CREATE_USER_FAILED'
-            );
-          }
-
+        // The Entra pre-link has to land in the same transaction as the user row:
+        // a portal user created without its provider link would be a passwordless
+        // account nobody can sign in to.
+        newUser = await knex.transaction(async (trx) => {
+          await acquireMicrosoftOAuthLinkLock(trx);
+          await assertMicrosoftOAuthLinkAvailable(undefined, trx);
+          const user = await createPortalUserInTransaction(trx);
+          await upsertMicrosoftOAuthLink(user.user_id, trx);
           return user;
         });
       } catch (error) {
@@ -900,17 +1076,19 @@ export async function completePortalSetup(
         // Continue even if role assignment fails - user can still login
       }
 
-      // Mark that the user has set their password (not using a temporary password)
-      try {
-        const UserPreferences = await import('@alga-psa/db').then(m => m.UserPreferences);
-        await UserPreferences.upsert(knex, {
-          user_id: newUser.user_id,
-          setting_name: 'has_reset_password',
-          setting_value: true,
-          updated_at: new Date()
-        });
-      } catch (prefError) {
-        console.warn('Failed to set password reset preference:', prefError);
+      // Mark that the user has set their password only when a real password was provided.
+      if (normalizedPassword) {
+        try {
+          const UserPreferences = await import('@alga-psa/db').then(m => m.UserPreferences);
+          await UserPreferences.upsert(knex, {
+            user_id: newUser.user_id,
+            setting_name: 'has_reset_password',
+            setting_value: true,
+            updated_at: new Date()
+          });
+        } catch (prefError) {
+          console.warn('Failed to set password reset preference:', prefError);
+        }
       }
 
       // Mark invitation as used (tenant context is active)
@@ -922,12 +1100,22 @@ export async function completePortalSetup(
       // Trigger token cleanup
       await PortalInvitationService.cleanupExpiredTokens();
 
-      return { success: true, userId: newUser.user_id, username: contact.email.toLowerCase(), message: 'Portal account created successfully' } as CompleteSetupResult;
+      return {
+        success: true,
+        userId: newUser.user_id,
+        username: contact.email.toLowerCase(),
+        message: normalizedPassword
+          ? 'Portal account created successfully'
+          : 'Portal account is ready. Continue with Microsoft sign in.'
+      } as CompleteSetupResult;
     });
 
     return result;
 
   } catch (error) {
+    if (error instanceof PortalInvitationError) {
+      return { success: false, error: error.message, errorCode: error.errorCode };
+    }
     console.error('Error completing portal setup:', error);
     return { success: false, error: 'Failed to complete portal setup', errorCode: 'SETUP_FAILED' };
   }

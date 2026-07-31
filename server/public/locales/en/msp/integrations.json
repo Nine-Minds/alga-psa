@@ -1034,6 +1034,7 @@
         "details": {
           "noResults": "No tenant results recorded.",
           "stats": "created {{created}}, linked {{linked}}, updated {{updated}}, ambiguous {{ambiguous}}, inactivated {{inactivated}}",
+          "summarySkipped": "Skipped provisioning outcomes: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
           "unknownTenant": "unknown"
         },
@@ -1067,8 +1068,11 @@
         "columns": {
           "actions": "Actions",
           "confidence": "Confidence",
+          "defaultRole": "Default Role",
           "entraTenant": "Entra Tenant",
+          "portalAccessGroup": "Portal Access Group",
           "primaryDomain": "Primary Domain",
+          "provisioningModeOverride": "Provisioning Mode Override",
           "selectClient": "Select Client",
           "status": "Status",
           "suggestedClient": "Suggested Client"
@@ -1094,6 +1098,16 @@
         "picker": {
           "placeholder": "Select client...",
           "unknownClient": "Unknown client"
+        },
+        "portal": {
+          "broadGroupWarning": "Warning: every enabled user in this Entra group will be eligible for client portal access.",
+          "defaultRolePlaceholder": "Inherit workspace role",
+          "groupLoading": "Loading groups…",
+          "modeBuiltIn": "Built-in",
+          "modeDisabled": "Disabled",
+          "modeInherit": "Inherit MSP workspace default",
+          "modeWorkflowManaged": "Workflow-managed",
+          "noGroupSelected": "No group selected"
         },
         "reasons": {
           "exactDomain": "Exact domain",

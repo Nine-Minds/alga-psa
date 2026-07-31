@@ -4,6 +4,7 @@ const axiosPostMock = vi.fn();
 const resolveMicrosoftCredentialsForTenantMock = vi.fn();
 const getEntraDirectRefreshTokenMock = vi.fn();
 const saveEntraDirectTokenSetMock = vi.fn();
+const saveEntraDirectRefreshTokenMock = vi.fn();
 
 vi.mock('axios', () => ({
   default: { post: axiosPostMock },
@@ -16,6 +17,7 @@ vi.mock('@ee/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
 
 vi.mock('@ee/lib/integrations/entra/auth/tokenStore', () => ({
   getEntraDirectRefreshToken: getEntraDirectRefreshTokenMock,
+  saveEntraDirectRefreshToken: saveEntraDirectRefreshTokenMock,
   saveEntraDirectTokenSet: saveEntraDirectTokenSetMock,
 }));
 
@@ -26,6 +28,7 @@ describe('refreshEntraDirectToken', () => {
     axiosPostMock.mockReset();
     resolveMicrosoftCredentialsForTenantMock.mockReset();
     getEntraDirectRefreshTokenMock.mockReset();
+    saveEntraDirectRefreshTokenMock.mockReset();
     saveEntraDirectTokenSetMock.mockReset();
   });
 
@@ -78,5 +81,37 @@ describe('refreshEntraDirectToken', () => {
       expiresAt: expectedExpiresAt,
       scope: 'https://graph.microsoft.com/User.Read offline_access',
     });
+  });
+
+  it('T035b: can mint a customer-tenant access token without replacing the stored partner access token', async () => {
+    resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
+      clientId: 'client-id-35',
+      clientSecret: 'client-secret-35',
+      tenantId: null,
+      source: 'tenant-secret',
+    });
+    getEntraDirectRefreshTokenMock.mockResolvedValue('refresh-token-old');
+    axiosPostMock.mockResolvedValue({
+      data: {
+        access_token: 'access-token-customer',
+        refresh_token: 'refresh-token-rotated',
+        expires_in: 1800,
+        scope: 'https://graph.microsoft.com/Directory.Read.All offline_access',
+      },
+    });
+
+    const { refreshEntraDirectAccessTokenForTenant } = await import('@ee/lib/integrations/entra/auth/refreshDirectToken');
+    const result = await refreshEntraDirectAccessTokenForTenant('tenant-35', 'customer-tenant-35');
+
+    expect(axiosPostMock).toHaveBeenCalledWith(
+      'https://login.microsoftonline.com/customer-tenant-35/oauth2/v2.0/token',
+      expect.stringContaining('grant_type=refresh_token'),
+      expect.objectContaining({
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      })
+    );
+    expect(saveEntraDirectTokenSetMock).not.toHaveBeenCalled();
+    expect(saveEntraDirectRefreshTokenMock).toHaveBeenCalledWith('tenant-35', 'refresh-token-rotated');
+    expect(result.accessToken).toBe('access-token-customer');
   });
 });

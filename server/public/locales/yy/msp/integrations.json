@@ -1034,6 +1034,7 @@
         "details": {
           "noResults": "55555",
           "stats": "55555 {{created}} 55555 {{linked}} 55555 {{updated}} 55555 {{ambiguous}} 55555 {{inactivated}} 55555",
+          "summarySkipped": "55555 {{count}} 55555",
           "tenantHeader": "55555 {{tenant}} 55555 {{status}} 55555",
           "unknownTenant": "55555"
         },
@@ -1067,8 +1068,11 @@
         "columns": {
           "actions": "55555",
           "confidence": "55555",
+          "defaultRole": "55555",
           "entraTenant": "55555",
+          "portalAccessGroup": "55555",
           "primaryDomain": "55555",
+          "provisioningModeOverride": "55555",
           "selectClient": "55555",
           "status": "55555",
           "suggestedClient": "55555"
@@ -1094,6 +1098,16 @@
         "picker": {
           "placeholder": "55555",
           "unknownClient": "55555"
+        },
+        "portal": {
+          "broadGroupWarning": "55555",
+          "defaultRolePlaceholder": "55555",
+          "groupLoading": "55555",
+          "modeBuiltIn": "55555",
+          "modeDisabled": "55555",
+          "modeInherit": "55555",
+          "modeWorkflowManaged": "55555",
+          "noGroupSelected": "55555"
         },
         "reasons": {
           "exactDomain": "55555",

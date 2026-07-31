@@ -24,6 +24,7 @@ export const routes: Record<string, RouteLoader> = {
     syncRunsRoute: () => import('@enterprise/app/api/integrations/entra/sync/runs/route'),
     mappingsRoute: () => import('@enterprise/app/api/integrations/entra/mappings/route'),
     mappingsPreviewRoute: () => import('@enterprise/app/api/integrations/entra/mappings/preview/route'),
+    mappingsGroupsRoute: () => import('@enterprise/app/api/integrations/entra/mappings/groups/route'),
     mappingsConfirmRoute: () => import('@enterprise/app/api/integrations/entra/mappings/confirm/route'),
     mappingsUnmapRoute: () => import('@enterprise/app/api/integrations/entra/mappings/unmap/route'),
     mappingsRemapRoute: () => import('@enterprise/app/api/integrations/entra/mappings/remap/route'),

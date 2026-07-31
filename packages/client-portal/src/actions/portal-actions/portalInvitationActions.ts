@@ -14,6 +14,7 @@ import type {
   CompleteSetupResult as SharedCompleteSetupResult,
   InvitationHistoryItem as SharedInvitationHistoryItem,
   CreateClientPortalUserParams as SharedCreateClientPortalUserParams,
+  SendPortalInvitationOptions,
   PortalInvitationErrorCode,
 } from '@alga-psa/portal-shared/types';
 
@@ -29,15 +30,18 @@ export async function createClientPortalUser(
   return createClientPortalUserAction(params);
 }
 
-export async function sendPortalInvitation(contactId: string): Promise<SendInvitationResult> {
-  return sendPortalInvitationAction(contactId);
+export async function sendPortalInvitation(
+  contactId: string,
+  options?: SendPortalInvitationOptions
+): Promise<SendInvitationResult> {
+  return sendPortalInvitationAction(contactId, options);
 }
 
 export async function verifyPortalToken(token: string): Promise<VerifyTokenResult> {
   return verifyPortalTokenAction(token);
 }
 
-export async function completePortalSetup(token: string, password: string): Promise<CompleteSetupResult> {
+export async function completePortalSetup(token: string, password?: string): Promise<CompleteSetupResult> {
   return completePortalSetupAction(token, password);
 }
 

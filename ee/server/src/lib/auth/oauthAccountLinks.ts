@@ -37,6 +37,8 @@ export class OAuthAccountLinkConflictError extends Error {
 const TABLE_NAME = 'user_auth_accounts';
 const OAUTH_ACCOUNT_LINK_DISCOVERY_TENANT = 'oauth-account-link-discovery';
 
+type KnexLike = Awaited<ReturnType<typeof getAdminConnection>>;
+
 function normalizeEmail(email?: string | null): string | null {
   if (!email) {
     return null;
@@ -44,31 +46,85 @@ function normalizeEmail(email?: string | null): string | null {
   return email.trim().toLowerCase();
 }
 
-export async function upsertOAuthAccountLink(input: OAuthAccountLinkInput): Promise<void> {
-  const knex = await getAdminConnection();
+async function assertProviderAccountAvailableForUser(
+  knex: KnexLike,
+  input: OAuthAccountLinkInput,
+): Promise<void> {
+  const conflictingLink = await tenantDb(knex, input.tenant)
+    .table<OAuthAccountLinkRecord>(TABLE_NAME)
+    .where({
+      provider: input.provider,
+      provider_account_id: input.providerAccountId,
+    })
+    .whereNot('user_id', input.userId)
+    .first(['user_id']);
+
+  if (conflictingLink?.user_id) {
+    throw new OAuthAccountLinkConflictError(
+      `Provider account ${input.provider}:${input.providerAccountId} is already linked.`,
+    );
+  }
+}
+
+async function withProviderAccountLock<T>(
+  knex: KnexLike,
+  input: OAuthAccountLinkInput,
+  callback: (trx: KnexLike) => Promise<T>,
+  startTransaction = true
+): Promise<T> {
+  const run = async (trx: KnexLike): Promise<T> => {
+    if (typeof (trx as any).raw === 'function') {
+      const lockKey = `${input.tenant}:${input.provider}:${input.providerAccountId}`;
+      await (trx as any).raw(
+        'select pg_advisory_xact_lock(hashtext(?), hashtext(?))',
+        ['oauth_account_link', lockKey]
+      );
+    }
+
+    return callback(trx);
+  };
+
+  if (startTransaction && typeof (knex as any).transaction === 'function') {
+    return (knex as any).transaction((trx: KnexLike) => run(trx));
+  }
+
+  return run(knex);
+}
+
+export async function upsertOAuthAccountLink(
+  input: OAuthAccountLinkInput,
+  connection?: KnexLike
+): Promise<void> {
+  const knex = connection ?? (await getAdminConnection());
   const metadataPayload = input.metadata ?? {};
   const providerEmail = normalizeEmail(input.providerEmail);
-  const db = tenantDb(knex, input.tenant);
 
   try {
-    await db.table(TABLE_NAME)
-      .insert({
-        tenant: input.tenant,
-        user_id: input.userId,
-        provider: input.provider,
-        provider_account_id: input.providerAccountId,
-        provider_email: providerEmail,
-        metadata: metadataPayload,
-        last_used_at: input.lastUsedAt ?? knex.fn.now(),
-      })
-      .onConflict(['tenant', 'user_id', 'provider'])
-      .merge({
-        provider_account_id: input.providerAccountId,
-        provider_email: providerEmail,
-        metadata: metadataPayload,
-        last_used_at: input.lastUsedAt ?? new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+    const writeLink = async (trx: KnexLike) => {
+      await assertProviderAccountAvailableForUser(trx, input);
+
+      await tenantDb(trx, input.tenant)
+        .table(TABLE_NAME)
+        .insert({
+          tenant: input.tenant,
+          user_id: input.userId,
+          provider: input.provider,
+          provider_account_id: input.providerAccountId,
+          provider_email: providerEmail,
+          metadata: metadataPayload,
+          last_used_at: input.lastUsedAt ?? trx.fn.now(),
+        })
+        .onConflict(['tenant', 'user_id', 'provider'])
+        .merge({
+          provider_account_id: input.providerAccountId,
+          provider_email: providerEmail,
+          metadata: metadataPayload,
+          last_used_at: input.lastUsedAt ?? new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+    };
+
+    await withProviderAccountLock(knex, input, writeLink, !connection);
   } catch (error: any) {
     if (error?.code === '23505') {
       logger.warn('[oauthAccountLinks] conflict while linking account', {
@@ -96,17 +152,25 @@ export async function upsertOAuthAccountLink(input: OAuthAccountLinkInput): Prom
 export async function findOAuthAccountLink(
   provider: OAuthLinkProvider,
   providerAccountId: string,
+  tenant?: string,
 ): Promise<OAuthAccountLinkRecord | undefined> {
   const knex = await getAdminConnection();
-  const record = await tenantDb(knex, OAUTH_ACCOUNT_LINK_DISCOVERY_TENANT)
-    .unscoped<OAuthAccountLinkRecord>(
-      TABLE_NAME,
-      'OAuth account sign-in discovers the owning tenant from provider account id before tenant context exists',
-    )
+  // When the caller already knows the tenant we stay tenant-scoped; otherwise the
+  // provider account id is the only handle we have and we must discover the owner.
+  const query = tenant
+    ? tenantDb(knex, tenant).table<OAuthAccountLinkRecord>(TABLE_NAME)
+    : tenantDb(knex, OAUTH_ACCOUNT_LINK_DISCOVERY_TENANT)
+        .unscoped<OAuthAccountLinkRecord>(
+          TABLE_NAME,
+          'OAuth account sign-in discovers the owning tenant from provider account id before tenant context exists',
+        );
+
+  const record = await query
     .where({
       provider,
       provider_account_id: providerAccountId,
     })
+    .orderBy('updated_at', 'desc')
     .first();
 
   return record ?? undefined;

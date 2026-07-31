@@ -1866,11 +1866,17 @@
       "notConfigured": "Not configured"
     },
     "autoLink": {
-      "title": "SSO automatisch instellen voor nieuwe interne gebruikers",
-      "description": "Schakel dit in om elk nieuw personeelsaccount direct te voorzien van uw zakelijke SSO-provider, zodat ze nooit een wachtwoordgebaseerde aanmelding nodig hebben.",
       "body": "Wanneer ingeschakeld, kunnen nieuw toegevoegde MSP-gebruikers zich aanmelden met Google of Microsoft via hun zakelijk e-mailadres. Ze hoeven hun account niet handmatig te koppelen.",
-      "toggleLabel": "Automatische SSO-matching in-/uitschakelen",
-      "disabledInfo": "Schakel dit in om nieuw en bestaand personeel de “SSO koppelen”-flow over te laten slaan wanneer hun e-mailadres al overeenkomt met een geconfigureerde provider. We registreren nog steeds elke automatische koppeling."
+      "clientBody": "When enabled, matching client portal users are automatically linked to their SSO identities on login.",
+      "clientTitle": "Auto-link client portal users",
+      "clientToggleLabel": "Toggle client auto-linking",
+      "description": "Schakel dit in om elk nieuw personeelsaccount direct te voorzien van uw zakelijke SSO-provider, zodat ze nooit een wachtwoordgebaseerde aanmelding nodig hebben.",
+      "disabledInfo": "Schakel dit in om nieuw en bestaand personeel de “SSO koppelen”-flow over te laten slaan wanneer hun e-mailadres al overeenkomt met een geconfigureerde provider. We registreren nog steeds elke automatische koppeling.",
+      "internalBody": "When enabled, matching MSP/internal users are automatically linked to their SSO identities on login.",
+      "internalTitle": "Auto-link internal users",
+      "internalToggleLabel": "Toggle internal auto-linking",
+      "title": "SSO automatisch instellen voor nieuwe interne gebruikers",
+      "toggleLabel": "Automatische SSO-matching in-/uitschakelen"
     },
     "bulk": {
       "title": "Bulk Single sign-on-toewijzing",
@@ -1959,6 +1965,21 @@
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
       }
+    },
+    "clientPortalProvisioning": {
+      "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
+      "deactivateLabel": "Toggle deactivation on entitlement removal",
+      "deactivateTitle": "Deactivate Entra-managed users on entitlement removal",
+      "defaultRoleBody": "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
+      "defaultRoleLabel": "MSP workspace default client portal role",
+      "defaultRoleTitle": "MSP workspace default client portal role",
+      "modeBody": "Choose whether client portal access from Entra sync is disabled, handled by built-in provisioning, or delegated to workflows.",
+      "modeBuiltIn": "Built-in",
+      "modeDisabled": "Disabled",
+      "modeLabel": "Client portal Entra provisioning mode",
+      "modeTitle": "Client portal Entra provisioning mode",
+      "modeWorkflowManaged": "Workflow-managed",
+      "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
     }
   },
   "profile": {

@@ -8,6 +8,13 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildClientCreatedPayload } from '@alga-psa/workflow-streams';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
+import {
+  normalizeWorkspaceProvisioningMode,
+  resolveEffectiveDefaultRoleName,
+  resolveEffectiveProvisioningMode,
+} from '@ee/lib/integrations/entra/sync/clientPortalEntitlementResolution';
+import { handleIneligibleClientPortalLifecycle } from '@ee/lib/integrations/entra/sync/clientPortalProvisioning';
+import { publishWorkflowManagedPortalProvisioningEvent } from '@ee/lib/integrations/entra/sync/workflowManagedProvisioning';
 import { provisionEntraClientForMapping } from '@ee/lib/integrations/entra/sync/clientProvisioningService';
 import { projectCompletedSyncUserCount } from '@ee/lib/integrations/entra/sync/completedSyncUserCountService';
 import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
@@ -37,6 +44,17 @@ type MappingRow = {
   mapping_state: 'mapped' | 'create_new';
   display_name: string | null;
   primary_domain: string | null;
+  client_portal_entra_provisioning_mode:
+    | 'inherit'
+    | 'disabled'
+    | 'built_in'
+    | 'workflow_managed'
+    | null;
+  client_portal_entitlement_group_id: string | null;
+  client_portal_entitlement_membership_mode: 'transitive' | null;
+  client_portal_default_role_name: string | null;
+  client_portal_workflow_target: string | null;
+  client_portal_workflow_config: Record<string, unknown> | null;
 };
 
 async function getActiveConnectionType(tenantId: string): Promise<EntraConnectionType> {
@@ -55,6 +73,77 @@ async function getActiveConnectionType(tenantId: string): Promise<EntraConnectio
   }
 
   return activeConnection.connection_type as EntraConnectionType;
+}
+
+interface TenantSsoSettings {
+  clientPortalEntraProvisioningMode?: unknown;
+  clientPortalDefaultRoleName?: unknown;
+  deactivateEntraManagedPortalUsersOnEntitlementRemoval?: unknown;
+}
+
+/**
+ * `tenant_settings.settings` reaches us as jsonb or as a JSON string depending
+ * on the driver path, and every field inside is operator-authored, so it is
+ * read as `unknown` and narrowed by the resolvers that consume it.
+ */
+function readTenantSsoSettings(rawSettings: unknown): TenantSsoSettings {
+  let settings: unknown = rawSettings;
+  if (typeof settings === 'string') {
+    try {
+      settings = JSON.parse(settings);
+    } catch {
+      return {};
+    }
+  }
+
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    return {};
+  }
+
+  const sso = (settings as { sso?: unknown }).sso;
+  return sso && typeof sso === 'object' && !Array.isArray(sso) ? (sso as TenantSsoSettings) : {};
+}
+
+function parseWorkspaceSsoSettings(rawSettings: unknown): {
+  defaultProvisioningMode: 'disabled' | 'built_in' | 'workflow_managed';
+  defaultRoleName: string;
+} {
+  const sso = readTenantSsoSettings(rawSettings);
+  const provisioningMode = normalizeWorkspaceProvisioningMode(
+    sso.clientPortalEntraProvisioningMode
+  );
+  const defaultRoleName = resolveEffectiveDefaultRoleName(
+    null,
+    sso.clientPortalDefaultRoleName
+  );
+  return {
+    defaultProvisioningMode: provisioningMode,
+    defaultRoleName,
+  };
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (true) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      if (currentIndex >= items.length) {
+        return;
+      }
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  };
+
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
 }
 
 export async function loadMappedTenantsActivity(
@@ -88,6 +177,12 @@ export async function loadMappedTenantsActivity(
         entra_tenant_id: 't.entra_tenant_id',
         display_name: 't.display_name',
         primary_domain: 't.primary_domain',
+        client_portal_entra_provisioning_mode: 'm.client_portal_entra_provisioning_mode',
+        client_portal_entitlement_group_id: 'm.client_portal_entitlement_group_id',
+        client_portal_entitlement_membership_mode: 'm.client_portal_entitlement_membership_mode',
+        client_portal_default_role_name: 'm.client_portal_default_role_name',
+        client_portal_workflow_target: 'm.client_portal_workflow_target',
+        client_portal_workflow_config: 'm.client_portal_workflow_config',
       })
       .orderBy('m.updated_at', 'asc');
     db.tenantJoin(query, 'entra_managed_tenants as t', 'm.managed_tenant_id', 't.managed_tenant_id');
@@ -105,6 +200,13 @@ export async function loadMappedTenantsActivity(
     return query;
   });
 
+  const workspaceSsoDefaults = await runWithTenant(input.tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const tenantSettingsRow = await tenantDb(knex, input.tenantId).table('tenant_settings')
+      .first(['settings']);
+    return parseWorkspaceSsoSettings(tenantSettingsRow?.settings);
+  });
+
   return {
     mappings: (mappings as MappingRow[]).map((row) => ({
       managedTenantId: String(row.managed_tenant_id),
@@ -113,6 +215,37 @@ export async function loadMappedTenantsActivity(
       mappingState: row.mapping_state,
       displayName: row.display_name ? String(row.display_name) : null,
       primaryDomain: row.primary_domain ? String(row.primary_domain) : null,
+      clientPortalEntraProvisioningMode:
+        resolveEffectiveProvisioningMode(
+          row.client_portal_entra_provisioning_mode,
+          workspaceSsoDefaults.defaultProvisioningMode
+        ),
+      clientPortalEntraProvisioningModeOverride:
+        row.client_portal_entra_provisioning_mode === 'built_in' ||
+        row.client_portal_entra_provisioning_mode === 'workflow_managed' ||
+        row.client_portal_entra_provisioning_mode === 'disabled'
+          ? row.client_portal_entra_provisioning_mode
+          : 'inherit',
+      clientPortalEntitlementGroupId: row.client_portal_entitlement_group_id
+        ? String(row.client_portal_entitlement_group_id)
+        : null,
+      clientPortalEntitlementMembershipMode: 'transitive',
+      clientPortalDefaultRoleName: resolveEffectiveDefaultRoleName(
+        row.client_portal_default_role_name,
+        workspaceSsoDefaults.defaultRoleName
+      ),
+      clientPortalDefaultRoleNameOverride: row.client_portal_default_role_name
+        ? String(row.client_portal_default_role_name)
+        : null,
+      clientPortalWorkflowTarget: row.client_portal_workflow_target
+        ? String(row.client_portal_workflow_target)
+        : null,
+      clientPortalWorkflowConfig:
+        row.client_portal_workflow_config &&
+        typeof row.client_portal_workflow_config === 'object' &&
+        !Array.isArray(row.client_portal_workflow_config)
+          ? row.client_portal_workflow_config
+          : null,
     })),
   };
 }
@@ -211,15 +344,59 @@ export async function syncTenantUsersActivity(
     managedTenantId: input.mapping.entraTenantId,
   });
   const filteredUsers = await filterEntraUsersForTenant(input.tenantId, users);
+  const portalEntitlementGroupId = input.mapping.clientPortalEntitlementGroupId || null;
+  const portalEntitlementMode = input.mapping.clientPortalEntitlementMembershipMode || 'transitive';
+  const membershipCheckConcurrency = 8;
+  const usersWithEntitlement = portalEntitlementGroupId
+    ? await mapWithConcurrency(
+        filteredUsers.included,
+        membershipCheckConcurrency,
+        async (user) => {
+          const isMember = await adapter.isUserInSecurityGroup({
+            tenant: input.tenantId,
+            managedTenantId: input.mapping.entraTenantId,
+            userEntraObjectId: user.entraObjectId,
+            groupId: portalEntitlementGroupId,
+            membershipMode: portalEntitlementMode,
+          });
+          return {
+            ...user,
+            clientPortalEntitlement: {
+              groupId: portalEntitlementGroupId,
+              membershipMode: portalEntitlementMode,
+              isMember,
+            },
+          };
+        }
+      )
+    : filteredUsers.included.map((user) => ({
+        ...user,
+        clientPortalEntitlement: {
+          groupId: null,
+          membershipMode: portalEntitlementMode,
+          isMember: null,
+        },
+      }));
 
   const fieldSyncConfig = await runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const row = await tenantDb(knex, input.tenantId).table('entra_sync_settings')
-      .first(['field_sync_config']);
-    const raw = row?.field_sync_config;
-    return raw && typeof raw === 'object' && !Array.isArray(raw)
-      ? (raw as Record<string, unknown>)
-      : {};
+    const [syncRow, tenantSettingsRow] = await Promise.all([
+      tenantDb(knex, input.tenantId).table('entra_sync_settings').first(['field_sync_config']),
+      tenantDb(knex, input.tenantId).table('tenant_settings').first(['settings']),
+    ]);
+    const raw = syncRow?.field_sync_config;
+    const fieldSyncConfig =
+      raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : {};
+    const ssoSettings = readTenantSsoSettings(tenantSettingsRow?.settings);
+    // Absent means the setting predates the toggle, where deactivation was
+    // unconditional; preserve that rather than silently changing behaviour.
+    const deactivateOnEntitlementRemoval =
+      ssoSettings.deactivateEntraManagedPortalUsersOnEntitlementRemoval === undefined
+        ? true
+        : Boolean(ssoSettings.deactivateEntraManagedPortalUsersOnEntitlementRemoval);
+    return { fieldSyncConfig, deactivateOnEntitlementRemoval };
   });
 
   const disabledIdentities = filteredUsers.excluded
@@ -238,11 +415,92 @@ export async function syncTenantUsersActivity(
     tenantId: input.tenantId,
     clientId: input.mapping.clientId,
     managedTenantId: input.mapping.managedTenantId,
-    users: filteredUsers.included,
-    fieldSyncConfig,
+    users: usersWithEntitlement,
+    fieldSyncConfig: fieldSyncConfig.fieldSyncConfig,
     dryRun: Boolean(input.dryRun),
     disabledIdentities,
+    portalEntitlement: {
+      provisioningMode: input.mapping.clientPortalEntraProvisioningMode || 'disabled',
+      groupId: input.mapping.clientPortalEntitlementGroupId || null,
+      membershipMode: input.mapping.clientPortalEntitlementMembershipMode || 'transitive',
+      defaultRoleName: input.mapping.clientPortalDefaultRoleName || 'User',
+      workflowTarget: input.mapping.clientPortalWorkflowTarget || null,
+      workflowConfig: input.mapping.clientPortalWorkflowConfig || null,
+      deactivateOnEntitlementRemoval: fieldSyncConfig.deactivateOnEntitlementRemoval,
+    },
+    syncRunId: input.runId,
   });
+
+  // Portal-user lifecycle for upstream-disabled accounts. Contact inactivation
+  // already happened inside executeEntraSync (which is what the dry-run guard
+  // covers); this deactivates the portal user behind the contact, so it must
+  // stay behind the same guard.
+  const disabledEntries = filteredUsers.excluded.filter(
+    (entry) => entry.reason === 'account_disabled'
+  );
+  let portalDisabledCount = 0;
+  if (!input.dryRun && input.mapping.clientPortalEntraProvisioningMode !== 'disabled') {
+    for (const entry of disabledEntries) {
+      const disabledUser = {
+        ...entry.user,
+        clientPortalEntitlement: {
+          groupId: portalEntitlementGroupId,
+          membershipMode: portalEntitlementMode,
+          isMember: false,
+        },
+      };
+
+      const contactLink = await runWithTenant(input.tenantId, async () => {
+        const { knex } = await createTenantKnex();
+        return tenantDb(knex, input.tenantId).table('entra_contact_links')
+          .where({
+            entra_tenant_id: entry.user.entraTenantId,
+            entra_object_id: entry.user.entraObjectId,
+          })
+          .orderBy('updated_at', 'desc')
+          .first(['contact_name_id']);
+      });
+      const contactNameId = contactLink?.contact_name_id
+        ? String(contactLink.contact_name_id)
+        : '';
+
+      if (input.mapping.clientPortalEntraProvisioningMode === 'workflow_managed') {
+        if (contactNameId) {
+          await publishWorkflowManagedPortalProvisioningEvent(
+            {
+              tenantId: input.tenantId,
+              clientId: input.mapping.clientId,
+              managedTenantId: input.mapping.managedTenantId,
+              contactNameId,
+              defaultRoleName: input.mapping.clientPortalDefaultRoleName || 'User',
+              syncRunId: input.runId,
+              workflowTarget: input.mapping.clientPortalWorkflowTarget || null,
+              workflowConfig: input.mapping.clientPortalWorkflowConfig || null,
+            },
+            disabledUser
+          );
+        }
+      } else {
+        const lifecycle = await handleIneligibleClientPortalLifecycle(
+          {
+            tenantId: input.tenantId,
+            clientId: input.mapping.clientId,
+            managedTenantId: input.mapping.managedTenantId,
+            contactNameId,
+            defaultRoleName: input.mapping.clientPortalDefaultRoleName || 'User',
+          },
+          disabledUser,
+          { eligible: false, reason: 'account_disabled' },
+          {
+            deactivateOnEntitlementRemoval: fieldSyncConfig.deactivateOnEntitlementRemoval,
+          }
+        );
+        if (lifecycle.outcome === 'deactivated') {
+          portalDisabledCount += 1;
+        }
+      }
+    }
+  }
 
   return {
     managedTenantId: input.mapping.managedTenantId,
@@ -254,7 +512,8 @@ export async function syncTenantUsersActivity(
     linked: syncResult.counters.linked,
     updated: syncResult.counters.updated,
     ambiguous: syncResult.counters.ambiguous,
-    inactivated: syncResult.counters.inactivated,
+    inactivated: syncResult.counters.inactivated + portalDisabledCount,
+    skipped: syncResult.counters.skipped,
     errorMessage: null,
   };
 }

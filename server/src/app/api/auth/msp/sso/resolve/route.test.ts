@@ -66,6 +66,11 @@ vi.mock('@alga-psa/auth/lib/sso/mspSsoResolution', () => ({
   resolveMspSsoCredentialSource: (...args: unknown[]) => resolveSourceMock(...args),
 }));
 
+vi.mock('@alga-psa/auth/lib/sso/clientPortalSsoResolution', () => ({
+  CLIENT_PORTAL_SSO_DISCOVERY_COOKIE: 'client_portal_sso_discovery',
+  CLIENT_PORTAL_SSO_RESOLUTION_COOKIE: 'client_portal_sso_resolution',
+}));
+
 vi.mock('@alga-psa/auth/lib/mspRememberedEmail', () => ({
   buildClearedPendingRememberContextCookie: () => ({
     name: 'msp_pending_remember_context',
@@ -186,6 +191,13 @@ describe('POST /api/auth/msp/sso/resolve', () => {
         maxAge: 300,
         httpOnly: true,
         sameSite: 'lax',
+      })
+    );
+    expect(setCookieMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'client_portal_sso_resolution',
+        value: '',
+        maxAge: 0,
       })
     );
     expect(setCookieMock).toHaveBeenCalledWith(

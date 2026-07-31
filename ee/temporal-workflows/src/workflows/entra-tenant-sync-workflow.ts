@@ -56,6 +56,7 @@ function createEmptySummary(totalTenants: number): EntraSyncRunSummary {
     updated: 0,
     ambiguous: 0,
     inactivated: 0,
+    skipped: 0,
   };
 }
 
@@ -131,6 +132,7 @@ export async function entraTenantSyncWorkflow(
       updated: 0,
       ambiguous: 0,
       inactivated: 0,
+      skipped: 0,
       errorMessage: error instanceof Error ? error.message : 'Tenant sync failed.',
     };
   }
@@ -153,6 +155,7 @@ export async function entraTenantSyncWorkflow(
   summary.updated = tenantResult.updated;
   summary.ambiguous = tenantResult.ambiguous;
   summary.inactivated = tenantResult.inactivated;
+  summary.skipped = tenantResult.skipped;
 
   const status = tenantResult.status === 'completed' ? 'completed' : 'failed';
   await activities.finalizeSyncRunActivity({

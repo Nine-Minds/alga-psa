@@ -78,6 +78,7 @@ function createEmptySummary(totalTenants: number): EntraSyncRunSummary {
     updated: 0,
     ambiguous: 0,
     inactivated: 0,
+    skipped: 0,
   };
 }
 
@@ -140,6 +141,7 @@ export async function entraInitialSyncWorkflow(
         updated: 0,
         ambiguous: 0,
         inactivated: 0,
+        skipped: 0,
         errorMessage,
       };
       tenantResults.push(failedResult);
@@ -163,6 +165,7 @@ export async function entraInitialSyncWorkflow(
     summary.updated += result.updated;
     summary.ambiguous += result.ambiguous;
     summary.inactivated += result.inactivated;
+    summary.skipped += result.skipped;
   }
 
   const runStatus =

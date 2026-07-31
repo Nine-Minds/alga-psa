@@ -41,6 +41,18 @@ export async function getEntraDirectRefreshToken(tenant: string): Promise<string
   return (await secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.refreshToken)) ?? null;
 }
 
+export async function saveEntraDirectRefreshToken(
+  tenant: string,
+  refreshToken: string
+): Promise<void> {
+  const secretProvider = await getSecretProviderInstance();
+  await secretProvider.setTenantSecret(
+    tenant,
+    ENTRA_DIRECT_SECRET_KEYS.refreshToken,
+    refreshToken
+  );
+}
+
 /**
  * The whole stored token set, for callers that have to put it back. Saving a
  * new set is destructive — there is one slot per tenant — so anything that

@@ -31,15 +31,27 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export interface SsoProviderButtonsProps {
   callbackUrl: string;
   tenantHint?: string;
+  portalDomainHint?: string;
   email?: string;
+  publicWorkstation?: boolean;
   onError?: (message: string) => void;
+  authSurface?: 'msp' | 'client_portal';
+  discoveryEndpoint?: string;
+  resolveEndpoint?: string;
+  storageKey?: string;
 }
 
 export default function SsoProviderButtons({
   callbackUrl,
   tenantHint,
+  portalDomainHint,
   email,
+  publicWorkstation = false,
   onError,
+  authSurface = 'msp',
+  discoveryEndpoint,
+  resolveEndpoint,
+  storageKey,
 }: SsoProviderButtonsProps): React.ReactElement {
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [isDiscovering, setIsDiscovering] = useState(false);
@@ -49,14 +61,33 @@ export default function SsoProviderButtons({
   const hasValidEmail = EMAIL_PATTERN.test(normalizedEmail);
   const genericStartFailureMessage =
     "We couldn't start SSO sign-in. Please verify provider setup and try again.";
+  const effectiveDiscoveryEndpoint =
+    discoveryEndpoint ??
+    (authSurface === 'client_portal'
+      ? '/api/auth/client-portal/sso/discover'
+      : '/api/auth/msp/sso/discover');
+  const effectiveResolveEndpoint =
+    resolveEndpoint ??
+    (authSurface === 'client_portal'
+      ? '/api/auth/client-portal/sso/resolve'
+      : '/api/auth/msp/sso/resolve');
+  const effectiveStorageKey =
+    storageKey ??
+    (authSurface === 'client_portal'
+      ? 'client_portal_sso_last_provider'
+      : LAST_PROVIDER_STORAGE_KEY);
+  const inferredPortalDomain =
+    typeof window !== 'undefined' ? window.location.hostname : undefined;
+  const portalDomainContext =
+    portalDomainHint || (authSurface === 'client_portal' ? inferredPortalDomain : undefined);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem(LAST_PROVIDER_STORAGE_KEY);
+    const stored = window.localStorage.getItem(effectiveStorageKey);
     if (stored === 'google' || stored === 'azure-ad') {
       setPreferredProvider(stored);
     }
-  }, []);
+  }, [effectiveStorageKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,11 +103,16 @@ export default function SsoProviderButtons({
     const runDiscovery = async () => {
       setIsDiscovering(true);
       try {
-        const response = await fetch('/api/auth/msp/sso/discover', {
+        const response = await fetch(effectiveDiscoveryEndpoint, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ email: normalizedEmail }),
+          body: JSON.stringify({
+            email: normalizedEmail,
+            tenantSlug: tenantHint,
+            portalDomain: portalDomainContext,
+            callbackUrl,
+          }),
         });
 
         let result: { providers?: unknown } | null = null;
@@ -111,7 +147,7 @@ export default function SsoProviderButtons({
     return () => {
       cancelled = true;
     };
-  }, [hasValidEmail, normalizedEmail]);
+  }, [callbackUrl, effectiveDiscoveryEndpoint, hasValidEmail, normalizedEmail, portalDomainContext, tenantHint]);
 
   const orderedProviders = useMemo(() => {
     if (!preferredProvider || !allowedProviders.includes(preferredProvider)) {
@@ -128,14 +164,17 @@ export default function SsoProviderButtons({
     setPendingProvider(providerId);
     try {
       onError?.('');
-      const resolveResponse = await fetch('/api/auth/msp/sso/resolve', {
+      const resolveResponse = await fetch(effectiveResolveEndpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           provider: providerId,
           email: normalizedEmail,
+          publicWorkstation,
           callbackUrl,
+          tenantSlug: tenantHint,
+          portalDomain: portalDomainContext,
         }),
       });
 
@@ -152,13 +191,25 @@ export default function SsoProviderButtons({
       }
 
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(LAST_PROVIDER_STORAGE_KEY, providerId);
+        window.localStorage.setItem(effectiveStorageKey, providerId);
       }
       setPreferredProvider(providerId);
 
+      if (
+        process.env.NEXT_PUBLIC_PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true' &&
+        providerId === 'google'
+      ) {
+        const completionUrl = new URL('/api/auth/e2e/google/complete', window.location.origin);
+        completionUrl.searchParams.set('callbackUrl', callbackUrl);
+        window.location.assign(completionUrl.toString());
+        return;
+      }
+
       const statePayload: Record<string, unknown> = {
         mode: 'login',
+        user_type: authSurface === 'client_portal' ? 'client' : 'internal',
         tenant: tenantHint ?? null,
+        callback_url: callbackUrl,
       };
 
       const authorizationParams: Record<string, string> = {
@@ -167,6 +218,9 @@ export default function SsoProviderButtons({
 
       if (tenantHint) {
         authorizationParams.tenant_hint = tenantHint;
+      }
+      if (authSurface === 'client_portal') {
+        authorizationParams.user_type = 'client';
       }
 
       await signIn(providerId, { callbackUrl }, authorizationParams);
