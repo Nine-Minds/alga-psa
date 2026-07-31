@@ -572,7 +572,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   ): Promise<Array<{ id: string; displayName: string | null }>> {
     const groups: Array<{ id: string; displayName: string | null }> = [];
     const seen = new Set<string>();
-    let nextUrl = `${GRAPH_BASE_URL}/groups?$select=id,displayName,securityEnabled&$top=200`;
+    let nextUrl = `${graphBaseUrl()}/groups?$select=id,displayName,securityEnabled&$top=200`;
     const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
 
     while (nextUrl) {
@@ -609,7 +609,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     membershipMode: 'transitive';
   }): Promise<boolean> {
     const encodedUser = encodeURIComponent(input.userEntraObjectId);
-    const endpoint = `${GRAPH_BASE_URL}/users/${encodedUser}/checkMemberGroups`;
+    const endpoint = `${graphBaseUrl()}/users/${encodedUser}/checkMemberGroups`;
     const accessToken = await this.getManagedTenantAccessToken(input.tenant, input.managedTenantId);
     const response = await axios.post(
       endpoint,
