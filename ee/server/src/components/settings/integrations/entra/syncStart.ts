@@ -12,6 +12,7 @@ export interface EntraSyncStartEnvelope {
   data?: {
     accepted?: boolean;
     runId?: string | null;
+    workflowId?: string | null;
     error?: string | null;
   } | null;
 }

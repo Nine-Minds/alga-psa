@@ -5,7 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntraClientsTab } from '@ee/components/settings/integrations/entra/EntraClientsTab';
 import type { EntraConfirmedMapping } from '@alga-psa/integrations/actions';
 
-const { runEntraPreflightMock, startEntraSyncMock, unmapEntraTenantMock } = vi.hoisted(() => ({
+const {
+  getEntraSyncRunDetailMock,
+  runEntraPreflightMock,
+  startEntraSyncMock,
+  unmapEntraTenantMock,
+} = vi.hoisted(() => ({
+  getEntraSyncRunDetailMock: vi.fn(),
   runEntraPreflightMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
   unmapEntraTenantMock: vi.fn(),
@@ -17,6 +23,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 });
 
 vi.mock('@alga-psa/integrations/actions', () => ({
+  getEntraSyncRunDetail: getEntraSyncRunDetailMock,
   runEntraPreflight: runEntraPreflightMock,
   startEntraSync: startEntraSyncMock,
   unmapEntraTenant: unmapEntraTenantMock,
@@ -56,6 +63,9 @@ function client(overrides: Partial<EntraConfirmedMapping> = {}): EntraConfirmedM
     displayName: 'Contoso Ltd',
     primaryDomain: 'contoso.com',
     sourceUserCount: 12,
+    userCount: 12,
+    userCountSource: 'sync',
+    userCountObservedAt: '2026-07-25T10:00:00.000Z',
     lastSyncedAt: '2026-07-25T10:00:00.000Z',
     lastRunStatus: 'completed',
     ...overrides,
@@ -67,10 +77,18 @@ const rowText = () =>
 
 describe('EntraClientsTab', () => {
   beforeEach(() => {
+    getEntraSyncRunDetailMock.mockReset();
     runEntraPreflightMock.mockReset();
     startEntraSyncMock.mockReset();
     unmapEntraTenantMock.mockReset();
-    startEntraSyncMock.mockResolvedValue({ success: true, data: { accepted: true, runId: 'run-1' } });
+    startEntraSyncMock.mockResolvedValue({
+      success: true,
+      data: { accepted: true, runId: 'run-1', workflowId: 'workflow-1' },
+    });
+    getEntraSyncRunDetailMock.mockResolvedValue({
+      success: true,
+      data: { run: { status: 'completed' }, tenantResults: [] },
+    });
     unmapEntraTenantMock.mockResolvedValue({ success: true, data: {} });
   });
 
@@ -293,5 +311,51 @@ describe('EntraClientsTab', () => {
       expect(document.getElementById('entra-clients-error')?.textContent).toContain('did not start')
     );
     expect(document.getElementById('entra-clients-message')).toBeNull();
+  });
+
+  it('T143: keeps the previous count visible until the workflow finishes, then reloads it', async () => {
+    let finishRun: ((value: unknown) => void) | null = null;
+    getEntraSyncRunDetailMock.mockImplementation(
+      () => new Promise((resolve) => {
+        finishRun = resolve;
+      })
+    );
+
+    function Harness(): React.JSX.Element {
+      const [mapping, setMapping] = React.useState(client());
+      return (
+        <EntraClientsTab
+          mappings={[mapping]}
+          loading={false}
+          onChanged={() => {
+            setMapping((current) => ({
+              ...current,
+              userCount: 15,
+              userCountSource: 'sync',
+              userCountObservedAt: '2026-07-25T11:00:00.000Z',
+            }));
+          }}
+        />
+      );
+    }
+
+    render(<Harness />);
+    fireEvent.click(document.getElementById('entra-client-sync-managed-1') as HTMLButtonElement);
+
+    await waitFor(() =>
+      expect(getEntraSyncRunDetailMock).toHaveBeenCalledWith('workflow-1')
+    );
+    expect(document.getElementById('entra-client-user-count-managed-1')?.textContent).toContain(
+      '12Previous'
+    );
+
+    finishRun?.({
+      success: true,
+      data: { run: { status: 'completed' }, tenantResults: [] },
+    });
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-client-user-count-managed-1')?.textContent).toBe('15')
+    );
   });
 });

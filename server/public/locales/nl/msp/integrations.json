@@ -453,7 +453,11 @@
           "unlinkFailed": "Die klant kon niet worden ontkoppeld.",
           "hidePreview": "Voorbeeld verbergen",
           "previewLoading": "Directory van {{client}} wordt gelezen bij Microsoft…",
-          "previewLoadingHint": "Hoe lang dit duurt hangt af van het aantal gebruikers van de klant."
+          "previewLoadingHint": "Hoe lang dit duurt hangt af van het aantal gebruikers van de klant.",
+          "previousCount": "Vorige",
+          "syncFinished": "Synchronisatie voltooid voor {{client}}.",
+          "syncing": "Bezig met synchroniseren…",
+          "syncTrackingFailed": "De synchronisatie is gestart, maar deze pagina kon deze niet tot voltooiing volgen. Vernieuw om het nieuwste resultaat te bekijken."
         },
         "connection": {
           "changeAction": "Verbinding wijzigen",
@@ -601,6 +605,7 @@
       },
       "pilot": {
         "actions": {
+          "createAndSync": "Goedgekeurde klanten maken en synchroniseren",
           "preview": "Wijzigingen bekijken",
           "previewing": "Bezig met bekijken…",
           "syncOne": "Deze klant synchroniseren",
@@ -617,6 +622,7 @@
           "syncFailed": "De synchronisatie kon niet worden gestart."
         },
         "gateNote": "Synchroniseer eerst één klant. De rest komt vrij zodra die run klaar is.",
+        "pendingCreate": "Goedgekeurde nieuwe klanten ({{count}}) worden door deze expliciete synchronisatie gemaakt. Geplande synchronisaties kunnen ze niet maken.",
         "previewPrompt": "Bekijk de wijzigingen voor deze klant voordat er iets wordt weggeschreven.",
         "remainingStarted": "Synchronisatie gestart voor de resterende {{count}} klanten.",
         "started": "Synchronisatie gestart voor {{client}}."

@@ -92,6 +92,9 @@ const CONTOSO = {
   displayName: 'Contoso',
   primaryDomain: 'contoso.com',
   sourceUserCount: 153,
+  userCount: 153,
+  userCountSource: 'sync',
+  userCountObservedAt: '2026-07-25T03:04:00.000Z',
   lastSyncedAt: '2026-07-25T03:04:00.000Z',
   lastRunStatus: 'completed',
 };
@@ -105,6 +108,7 @@ const FABRIKAM = {
   displayName: 'Fabrikam',
   primaryDomain: 'fabrikam.com',
   sourceUserCount: 76,
+  userCount: 76,
   lastRunStatus: 'failed',
 };
 
