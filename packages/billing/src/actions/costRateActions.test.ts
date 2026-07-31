@@ -97,9 +97,11 @@ describe('cost rate actions', () => {
   it('requires billing.read to list cost rates', async () => {
     vi.mocked(hasPermission).mockResolvedValue(false);
 
-    await expect(callListCostRates({ user_id: 'u1' }, { tenant: 'tenant-1' })).rejects.toThrow(
-      'Permission denied: billing read required'
-    );
+    // Expected failures return typed errors since 4af6e76070 (#2892).
+    await expect(callListCostRates({ user_id: 'u1' }, { tenant: 'tenant-1' })).resolves.toEqual({
+      code: 'permission_denied',
+      message: 'Permission denied: billing read required',
+    });
   });
 
   it('requires billing.update to upsert and delete cost rates', async () => {
@@ -109,11 +111,15 @@ describe('cost rate actions', () => {
       { user_id: 'u1' },
       { tenant: 'tenant-1' },
       { user_id: null, cost_rate: 5000, effective_from: '2026-01-01' }
-    )).rejects.toThrow('Permission denied: billing update required');
+    )).resolves.toEqual({
+      code: 'permission_denied',
+      message: 'Permission denied: billing update required',
+    });
 
-    await expect(callDeleteCostRate({ user_id: 'u1' }, { tenant: 'tenant-1' }, 'rate-1')).rejects.toThrow(
-      'Permission denied: billing update required'
-    );
+    await expect(callDeleteCostRate({ user_id: 'u1' }, { tenant: 'tenant-1' }, 'rate-1')).resolves.toEqual({
+      code: 'permission_denied',
+      message: 'Permission denied: billing update required',
+    });
   });
 
   it('lists only internal users and returns current per-user history in the tenant currency', async () => {

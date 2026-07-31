@@ -41,6 +41,7 @@ export interface BatchImportResult {
  */
 export interface ReconciliationResult {
   invoiceId: string;
+  currencyCode: string | null;
   internalTax: number;
   externalTax: number;
   difference: number;
@@ -430,7 +431,7 @@ export class ExternalTaxImportService {
 
     const invoice = await db.table('invoices')
       .where({ invoice_id: invoiceId })
-      .select('invoice_id', 'tax_source')
+      .select('invoice_id', 'tax_source', 'currency_code')
       .first();
 
     if (!invoice) {
@@ -466,6 +467,7 @@ export class ExternalTaxImportService {
 
     return {
       invoiceId,
+      currencyCode: invoice.currency_code ?? null,
       internalTax,
       externalTax,
       difference,

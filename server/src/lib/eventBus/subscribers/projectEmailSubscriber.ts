@@ -24,6 +24,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -172,10 +173,14 @@ async function fetchProjectForEmail(
     .first();
 }
 
-function formatProjectBillingAmount(amountCents: number, currency: string | null | undefined): string {
+function formatProjectBillingAmount(
+  amountCents: number,
+  currency: string | null | undefined,
+  locale: string,
+): string {
   const currencyCode = currency?.trim() || 'USD';
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currencyCode,
     }).format(amountCents / 100);
@@ -189,6 +194,7 @@ async function handleProjectBillingNotificationEmail(
 ): Promise<void> {
   const { tenantId, projectId } = event.payload;
   const { knex } = await createTenantKnex(tenantId);
+  const emailLocale = await getTenantDefaultLocale(tenantId);
   const project = await fetchProjectForEmail(knex, tenantId, projectId);
   if (!project) {
     logger.warn('[ProjectEmailSubscriber] Project billing event project not found', {
@@ -224,9 +230,9 @@ async function handleProjectBillingNotificationEmail(
             url: internalUrl,
           },
           budget: {
-            billed: formatProjectBillingAmount(payload.billed, currency),
-            cap: formatProjectBillingAmount(payload.cap, currency),
-            writtenDown: formatProjectBillingAmount(payload.writtenDown, currency),
+            billed: formatProjectBillingAmount(payload.billed, currency, emailLocale),
+            cap: formatProjectBillingAmount(payload.cap, currency, emailLocale),
+            writtenDown: formatProjectBillingAmount(payload.writtenDown, currency, emailLocale),
           },
         },
         replyContext: { projectId },
@@ -237,7 +243,7 @@ async function handleProjectBillingNotificationEmail(
 
   if (event.eventType === 'PROJECT_MILESTONE_READY') {
     const payload = event.payload;
-    const amount = formatProjectBillingAmount(payload.computedAmount, currency);
+    const amount = formatProjectBillingAmount(payload.computedAmount, currency, emailLocale);
     for (const recipient of uniqueRecipients) {
       await sendNotificationIfEnabled({
         tenantId,
@@ -277,8 +283,8 @@ async function handleProjectBillingNotificationEmail(
         },
         budget: {
           threshold: `${payload.threshold}%`,
-          billed: formatProjectBillingAmount(payload.billed, currency),
-          cap: formatProjectBillingAmount(payload.cap, currency),
+          billed: formatProjectBillingAmount(payload.billed, currency, emailLocale),
+          cap: formatProjectBillingAmount(payload.cap, currency, emailLocale),
         },
       },
       replyContext: { projectId },

@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
@@ -121,6 +122,11 @@ export class EmailService {
     }
   ) {
     const hasPaymentLink = !!options?.paymentLink;
+    // Tenant default locale for the email; last-resort en-US when the caller
+    // did not thread a tenant id.
+    const emailLocale = invoice.tenantId
+      ? await getTenantDefaultLocale(invoice.tenantId, 'client')
+      : 'en-US';
     const template = await this.getInvoiceEmailTemplate(hasPaymentLink);
     const attachments = [{
       filename: `invoice_${invoice.invoice_number}.pdf`,
@@ -133,7 +139,7 @@ export class EmailService {
       subject: template.subject
         .replace('{{invoice_number}}', invoice.invoice_number)
         .replace('{{company_name}}', options?.companyName || 'Your Company'),
-      html: this.renderInvoiceTemplate(template.body, invoice, options),
+      html: this.renderInvoiceTemplate(template.body, invoice, emailLocale, options),
       attachments
     });
   }
@@ -169,6 +175,7 @@ export class EmailService {
   private renderInvoiceTemplate(
     template: string,
     invoice: InvoiceViewModel,
+    emailLocale: string,
     options?: {
       paymentLink?: string;
       companyName?: string;
@@ -181,7 +188,7 @@ export class EmailService {
         /{{total_amount}}/g,
         formatCurrencyFromMinorUnits(
           invoice.total_amount - (invoice.credit_applied ?? 0),
-          'en-US',
+          emailLocale,
           invoice.currencyCode || 'USD',
         ),
       )

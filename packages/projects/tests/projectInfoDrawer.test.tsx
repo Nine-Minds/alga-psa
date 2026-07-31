@@ -10,6 +10,14 @@ import type { IProject } from '@alga-psa/types';
 const openDrawer = vi.fn();
 const closeDrawer = vi.fn();
 
+// A component in the render tree calls useSession; there is no SessionProvider
+// in this test, so stub the hook (matches how the server suite's components
+// are tested).
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: null, status: 'unauthenticated', update: vi.fn() }),
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 vi.mock('@alga-psa/ui', () => ({
   useDrawer: () => ({
     openDrawer,
@@ -78,6 +86,7 @@ describe('ProjectInfo materials drawer', () => {
         project={project}
         users={[]}
         clients={[]}
+        phases={[]}
       />
     );
 

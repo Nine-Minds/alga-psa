@@ -6,6 +6,8 @@ interface QuoteEmailTemplateInput {
   companyName: string;
   portalLink?: string;
   customMessage?: string;
+  /** BCP-47 locale for amount formatting; falls back to 'en'. */
+  locale?: string;
 }
 
 export const formatQuoteDate = (value?: string | null): string => {
@@ -30,9 +32,10 @@ export function buildQuoteSentEmailTemplate({
   companyName,
   portalLink,
   customMessage,
+  locale,
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
   const quoteNumber = quote.quote_number ?? quote.quote_id;
-  const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, 'en-US', quote.currency_code || 'USD');
+  const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
   const validUntil = formatQuoteDate(quote.valid_until ?? null);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();
@@ -75,9 +78,10 @@ export function buildQuoteReminderEmailTemplate({
   companyName,
   portalLink,
   customMessage,
+  locale,
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
   const quoteNumber = quote.quote_number ?? quote.quote_id;
-  const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, 'en-US', quote.currency_code || 'USD');
+  const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
   const validUntil = formatQuoteDate(quote.valid_until ?? null);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();
@@ -110,9 +114,10 @@ export function buildQuoteAcceptedConfirmationEmailTemplate({
   companyName,
   portalLink,
   customMessage,
+  locale,
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
   const quoteNumber = quote.quote_number ?? quote.quote_id;
-  const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, 'en-US', quote.currency_code || 'USD');
+  const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
   const acceptedAt = formatQuoteDate(quote.accepted_at ?? null);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();

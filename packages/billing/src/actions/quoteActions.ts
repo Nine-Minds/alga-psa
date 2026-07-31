@@ -569,13 +569,13 @@ const renderQuoteEmail = async ({
     const buildFallback = templateName === 'quote-reminder-email'
       ? buildQuoteReminderEmailTemplate
       : buildQuoteSentEmailTemplate;
-    return buildFallback({ quote, companyName, portalLink, customMessage });
+    return buildFallback({ quote, companyName, portalLink, customMessage, locale });
   }
 
   const templateContext = {
     quote: {
       number: quote.quote_number ?? quote.quote_id,
-      amount: formatCurrency((quote.total_amount ?? 0) / 100, 'en-US', quote.currency_code || 'USD'),
+      amount: formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD'),
       validUntil: formatQuoteDate(quote.valid_until ?? null),
     },
     company: {

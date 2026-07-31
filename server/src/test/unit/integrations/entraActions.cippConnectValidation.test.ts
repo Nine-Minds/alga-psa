@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, afterAll } from 'vitest';
 
 // connectEntraCipp probes CIPP with the candidate credential before persisting
 // anything — no secret-store staging, no connection-row writes on failure.
+const prevEdition = process.env.EDITION;
 process.env.EDITION = 'ee';
+afterAll(() => {
+  if (prevEdition === undefined) delete process.env.EDITION;
+  else process.env.EDITION = prevEdition;
+});
 
 const hasPermissionMock = vi.fn();
 const saveEntraCippCredentialsMock = vi.fn();

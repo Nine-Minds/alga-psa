@@ -62,7 +62,9 @@ afterAll(async () => {
   await new Promise((resolve) => webhook.close(resolve));
 });
 
-describe('msgraph emulator', () => {
+// Tests narrate one protocol session (token minted early, reused later);
+// opt out of the server suite's intra-file shuffle.
+describe('msgraph emulator', { shuffle: false }, () => {
   let accessToken: string;
   let refreshToken: string;
 

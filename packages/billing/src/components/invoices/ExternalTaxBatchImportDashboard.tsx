@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import toast from 'react-hot-toast';
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
@@ -43,6 +44,7 @@ const isExternalTaxActionError = (value: unknown) =>
 export function ExternalTaxBatchImportDashboard() {
   const { t } = useTranslation('msp/invoicing');
   const { formatCurrency, formatDate } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingInvoices, setPendingInvoices] = useState<PendingInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -199,7 +201,7 @@ export function ExternalTaxBatchImportDashboard() {
     {
       title: t('externalTax.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (value) => formatCurrency(Number(value) / 100, 'USD')
+      render: (value) => formatCurrency(Number(value) / 100, tenantCurrency)
     },
     {
       title: t('externalTax.columns.system', { defaultValue: 'System' }),

@@ -59,7 +59,7 @@ import {
 import { toPlainDate } from "@alga-psa/core";
 import { useBillingFrequencyOptions } from "@alga-psa/billing/hooks/useBillingEnumOptions";
 import { CURRENCY_OPTIONS } from "@alga-psa/core";
-import { formatCurrencyFromMinorUnits } from "@alga-psa/core";
+import { useCurrencyFormat } from "@alga-psa/ui/lib";
 import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
 import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
@@ -221,6 +221,7 @@ function isUsageConfig(
 }
 
 const ContractTemplateDetail: React.FC = () => {
+  const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const router = useRouter();
@@ -1555,11 +1556,7 @@ const ContractTemplateDetail: React.FC = () => {
                       const currencyCode = contract?.currency_code ?? "USD";
                       const poAmount =
                         assignment.po_required && assignment.po_amount != null
-                          ? formatCurrencyFromMinorUnits(
-                              Number(assignment.po_amount),
-                              "en-US",
-                              currencyCode,
-                            )
+                          ? money(Number(assignment.po_amount), currencyCode)
                           : "—";
 
                       return (
@@ -1972,11 +1969,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
         defaultValue: "Not set",
       });
     }
-    return formatCurrencyFromMinorUnits(
-      Math.round(Number(minorUnits)),
-      "en-US",
-      currencyCode,
-    );
+    return money(Math.round(Number(minorUnits)), currencyCode);
   };
 
   const handleSaveRate = async (

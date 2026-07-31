@@ -23,7 +23,14 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth:
     (handler: any) =>
     async (input: any) =>
-      handler({ id: 'test-user' }, {}, input),
+      handler({ id: 'test-user', tenant: 'test-tenant' }, {}, input),
+}));
+
+// The action imports hasPermission from the /rbac subpath — a distinct module
+// id from '@alga-psa/auth', so it needs its own mock or the real DB-backed
+// check runs.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async () => true,
 }));
 
 vi.mock('../components/invoice-designer/ast/workspaceAst', () => ({

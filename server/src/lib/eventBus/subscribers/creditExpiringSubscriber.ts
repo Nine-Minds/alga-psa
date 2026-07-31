@@ -13,6 +13,7 @@ import { EventSchemas } from '@alga-psa/event-schemas';
 import { createTenantKnex, runWithTenant, withTransaction, tenantDb } from '@alga-psa/db';
 import { getEmailNotificationService } from '@alga-psa/notifications';
 import { formatCurrency, formatDate } from '@alga-psa/core/formatters';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import type { Knex } from 'knex';
 
 const CREDIT_EXPIRING_SUBTYPE = 'Credit Expiring';
@@ -123,13 +124,14 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
               .first()
           )?.default_currency_code ||
           'USD';
+        const emailLocale = await getTenantDefaultLocale(tenantId, 'client');
 
         // Format credit data for the email template
         const creditItems = credits.map((credit) => {
           const transactionId = transactionIdByCreditId[credit.creditId];
           return {
             creditId: credit.creditId,
-            amount: formatCurrency(Number(credit.amount), 'en-US', currencyCode),
+            amount: formatCurrency(Number(credit.amount), emailLocale, currencyCode),
             expirationDate: formatDate(credit.expirationDate),
             transactionId,
             description: transactionMap[transactionId]?.description || 'N/A',
@@ -143,7 +145,7 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
             name: client.name,
           },
           credits: {
-            totalAmount: formatCurrency(totalAmount, 'en-US', currencyCode),
+            totalAmount: formatCurrency(totalAmount, emailLocale, currencyCode),
             expirationDate: formatDate(credits[0].expirationDate),
             daysRemaining: daysBeforeExpiration,
             items: creditItems,

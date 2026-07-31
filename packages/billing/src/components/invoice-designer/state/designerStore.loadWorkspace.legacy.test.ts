@@ -148,8 +148,11 @@ describe('designerStore.loadWorkspace (legacy nodes[] import)', () => {
 
     const astStyle = getNodeStyle(astField);
     const nativeStyle = getNodeStyle(nativeField);
-    expect(astStyle?.width).toBeUndefined();
-    expect(astStyle?.height).toBeUndefined();
+    // Fluid is now expressed explicitly: loadWorkspace merges schema defaults,
+    // and fields default to width/height 'auto' (content-hugging) — same
+    // intent as the old absent-style contract.
+    expect(astStyle?.width).toBe('auto');
+    expect(astStyle?.height).toBe('auto');
     expect(nativeStyle?.width).toBe('200px');
     expect(nativeStyle?.height).toBe('48px');
   });

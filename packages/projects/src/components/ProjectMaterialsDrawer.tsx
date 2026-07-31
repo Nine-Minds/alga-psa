@@ -37,7 +37,7 @@ import {
   getProductAvailability,
   type ProductAvailability,
 } from '@alga-psa/inventory/actions/availabilityActions';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectMaterialsDrawerProps {
@@ -71,6 +71,7 @@ export default function ProjectMaterialsDrawer({
   clientId,
 }: ProjectMaterialsDrawerProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { money } = useCurrencyFormat();
   const billingIntegration = useProjectBillingIntegration();
   const materialsT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`materials.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
@@ -551,7 +552,7 @@ export default function ProjectMaterialsDrawer({
                     id="project-materials-currency-select"
                     options={productPrices.map((price) => ({
                       value: price.currency_code,
-                      label: `${price.currency_code} - ${formatCurrencyFromMinorUnits(price.rate, 'en-US', price.currency_code)}`,
+                      label: `${price.currency_code} - ${money(price.rate, price.currency_code)}`,
                     }))}
                     value={selectedCurrency}
                     onValueChange={setSelectedCurrency}
@@ -578,7 +579,7 @@ export default function ProjectMaterialsDrawer({
                   <Label>{materialsT('catalogUnitCost', 'Catalog unit cost')}</Label>
                   <div className="h-10 px-3 py-2 bg-gray-100 border rounded-md text-gray-700 flex items-center">
                     {selectedCatalogCost
-                      ? formatCurrencyFromMinorUnits(selectedCatalogCost.cost, 'en-US', selectedCatalogCost.currency)
+                      ? money(selectedCatalogCost.cost, selectedCatalogCost.currency)
                       : materialsT('costNotConfigured', 'Not configured')}
                   </div>
                 </div>
@@ -601,11 +602,7 @@ export default function ProjectMaterialsDrawer({
                 <Label>{materialsT('total', 'Total')}</Label>
                 <div className="h-10 px-3 py-2 bg-white border rounded-md text-gray-700 flex items-center">
                   {selectedPrice
-                    ? formatCurrencyFromMinorUnits(
-                        saleRate * quantity,
-                        'en-US',
-                        selectedPrice.currency_code
-                      )
+                    ? money(saleRate * quantity, selectedPrice.currency_code)
                     : '-'}
                 </div>
               </div>
@@ -742,10 +739,10 @@ export default function ProjectMaterialsDrawer({
                       </td>
                       <td className="py-2 text-right">{material.quantity}</td>
                       <td className="py-2 text-right">
-                        {formatCurrencyFromMinorUnits(material.rate, 'en-US', material.currency_code)}
+                        {money(material.rate, material.currency_code)}
                       </td>
                       <td className="py-2 text-right font-medium">
-                        {formatCurrencyFromMinorUnits(calculateTotal(material), 'en-US', material.currency_code)}
+                        {money(calculateTotal(material), material.currency_code)}
                       </td>
                       <td className="py-2 text-xs">
                         {billingDestinationOptions.find((option) => option.value === billingSelectValue(
@@ -803,7 +800,7 @@ export default function ProjectMaterialsDrawer({
                     <div key={currency} className="text-right">
                       <span className="text-gray-500">{materialsT('unbilledTotal', 'Unbilled ({{currency}}): ', { currency })}</span>
                       <span className="font-semibold">
-                        {formatCurrencyFromMinorUnits(total, 'en-US', currency)}
+                        {money(total, currency)}
                       </span>
                     </div>
                   ))}
@@ -841,11 +838,7 @@ export default function ProjectMaterialsDrawer({
                 <div className="text-sm text-gray-500">
                   {materialsT('catalogUnitCost', 'Catalog unit cost')}: {' '}
                   {editingMaterial.catalog_unit_cost != null && editingMaterial.catalog_cost_currency
-                    ? formatCurrencyFromMinorUnits(
-                        editingMaterial.catalog_unit_cost,
-                        'en-US',
-                        editingMaterial.catalog_cost_currency,
-                      )
+                    ? money(editingMaterial.catalog_unit_cost, editingMaterial.catalog_cost_currency)
                     : materialsT('costNotConfigured', 'Not configured')}
                 </div>
               </div>
@@ -952,7 +945,7 @@ export default function ProjectMaterialsDrawer({
                     <span className="block text-xs text-gray-500">{row.description}</span>
                   </span>
                   <span className="tabular-nums">
-                    {formatCurrencyFromMinorUnits(row.total, 'en-US', row.currency_code)}
+                    {money(row.total, row.currency_code)}
                   </span>
                 </label>
               ))}
@@ -963,7 +956,7 @@ export default function ProjectMaterialsDrawer({
                   <div key={currency} className="flex justify-between">
                     <span>{materialsT('draftPreview', '{{currency}} draft ({{count}} products)', { currency, count: rows.length })}</span>
                     <span className="font-medium">
-                      {formatCurrencyFromMinorUnits(rows.reduce((sum, row) => sum + row.total, 0), 'en-US', currency)}
+                      {money(rows.reduce((sum, row) => sum + row.total, 0), currency)}
                     </span>
                   </div>
                 ))}

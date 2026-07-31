@@ -108,14 +108,19 @@ const previewFixture = {
 };
 
 // Radix Select needs these DOM APIs, which jsdom lacks.
+// configurable matters: jsdom is reused across files in the shared fork, and
+// a non-configurable descriptor here makes every later file's own
+// defineProperty for the same key throw "Cannot redefine property".
 beforeEach(() => {
   Object.defineProperty(Element.prototype, 'scrollIntoView', {
-    value: vi.fn(),
+    configurable: true,
     writable: true,
+    value: vi.fn(),
   });
   Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
-    value: vi.fn(() => false),
+    configurable: true,
     writable: true,
+    value: vi.fn(() => false),
   });
 });
 

@@ -16,7 +16,8 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { formatCurrencyFromMinorUnits, toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import type { DateValue, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
 import {
   updateDraftInvoiceProperties,
@@ -77,6 +78,7 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
   invoice,
   onSaved,
 }) => {
+  const { money } = useCurrencyFormat();
   const initialState = useMemo(() => (invoice ? buildFormState(invoice) : null), [
     invoice?.invoice_id,
     invoice?.invoice_number,
@@ -275,7 +277,7 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
           <div className="space-y-1">
             <span className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Amount</span>
             <div className="min-h-10 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-3 py-2 text-sm text-[rgb(var(--color-text-900))]">
-              {formatCurrencyFromMinorUnits(Number(invoice.total_amount ?? 0), 'en-US', invoice.currencyCode || 'USD')}
+              {money(Number(invoice.total_amount ?? 0), invoice.currencyCode || undefined)}
             </div>
           </div>
         </div>

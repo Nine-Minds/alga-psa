@@ -1,9 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, afterAll } from 'vitest';
 
 // The Entra actions are EE-only and dispatch to EE route handlers; connectEntraCipp
 // now validates through one before it persists anything, so the suite has to run
 // as EE. Set before the dynamic imports below, which read this at module scope.
+const prevEdition = process.env.EDITION;
 process.env.EDITION = 'ee';
+afterAll(() => {
+  if (prevEdition === undefined) delete process.env.EDITION;
+  else process.env.EDITION = prevEdition;
+});
 
 const hasPermissionMock = vi.fn();
 const featureFlagIsEnabledMock = vi.fn();

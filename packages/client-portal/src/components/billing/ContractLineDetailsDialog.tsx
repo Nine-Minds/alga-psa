@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import type { IClientContractLine } from '@alga-psa/types';
@@ -21,15 +22,14 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
   contractLine,
   isOpen,
   onClose,
-  formatCurrency = (amount: number, currencyCode: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currencyCode
-    }).format(amount / 100);
-  },
+  formatCurrency,
   formatDate
 }) => {
   const { t } = useTranslation('features/billing');
+  const { money } = useCurrencyFormat();
+  // Default formatter: minor units through the tenant's locale + currency
+  // (a prop default can't call hooks).
+  const fmt = formatCurrency ?? ((amount: number, currencyCode?: string) => money(amount, currencyCode));
   const { t: tCommon } = useTranslation('common');
   // Loading state when contract line is null but dialog is open
   const isLoading = isOpen && !contractLine;
@@ -94,7 +94,7 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
           {contractLine.custom_rate !== undefined && (
             <div>
               <p className="text-sm font-medium text-gray-500">{t('contractLine.customRate')}</p>
-              <p className="mt-1">{formatCurrency(contractLine.custom_rate, contractLine.currency_code)}</p>
+              <p className="mt-1">{fmt(contractLine.custom_rate, contractLine.currency_code)}</p>
             </div>
           )}
           {(contractLine.service_category_name || contractLine.service_category) && (

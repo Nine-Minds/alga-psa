@@ -3,10 +3,17 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 
 describe('CommentMetadataDebugModal', () => {
+  afterEach(() => {
+    // The navigator stub below replaces the whole object ({...navigator}
+    // copies nothing — jsdom's props are prototype getters), so without an
+    // unstub every later file in the shared fork sees navigator.platform
+    // undefined (TipTap's isiOS() crashes on it).
+    vi.unstubAllGlobals();
+  });
   it('renders summary rows and raw JSON; copy writes JSON to clipboard', async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
