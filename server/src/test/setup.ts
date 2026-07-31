@@ -77,27 +77,39 @@ afterEach(async () => {
 //  - FORK baseline (captured the first time this setup runs in the process):
 //    restored when the file finishes, so a module-scope setter can't leak its
 //    edition into every later file in the shared fork.
-const FORK_ENV_KEY = Symbol.for('alga.test.forkEditionBaseline');
-const forkBaseline = ((globalThis as any)[FORK_ENV_KEY] ??= {
-  EDITION: process.env.EDITION,
-  NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION,
-}) as { EDITION?: string; NEXT_PUBLIC_EDITION?: string };
+// Guarded vars: EDITION flips Temporal-vs-PgBoss and CE/EE dispatch; the
+// base-URL trio feeds getEmailWebhookBaseUrl and friends (a leaked
+// localhost NEXTAUTH_URL makes webhook probes silently enter polling mode).
+const GUARDED_ENV_VARS = [
+  'EDITION',
+  'NEXT_PUBLIC_EDITION',
+  'APPLICATION_URL',
+  'NEXTAUTH_URL',
+  'NEXT_PUBLIC_BASE_URL',
+] as const;
+type GuardedEnvVar = (typeof GUARDED_ENV_VARS)[number];
 
-const restoreEnv = (key: 'EDITION' | 'NEXT_PUBLIC_EDITION', value: string | undefined) => {
+const FORK_ENV_KEY = Symbol.for('alga.test.forkEditionBaseline');
+const forkBaseline = ((globalThis as any)[FORK_ENV_KEY] ??= Object.fromEntries(
+  GUARDED_ENV_VARS.map((key) => [key, process.env[key]])
+)) as Partial<Record<GuardedEnvVar, string | undefined>>;
+
+const restoreEnv = (key: GuardedEnvVar, value: string | undefined) => {
   if (process.env[key] === value) return;
   if (value === undefined) delete process.env[key];
   else process.env[key] = value;
 };
 
-let realEdition: string | undefined;
-let realPublicEdition: string | undefined;
+let testEnvBaseline: Partial<Record<GuardedEnvVar, string | undefined>> = {};
 beforeEach(() => {
-  realEdition = process.env.EDITION;
-  realPublicEdition = process.env.NEXT_PUBLIC_EDITION;
+  testEnvBaseline = Object.fromEntries(
+    GUARDED_ENV_VARS.map((key) => [key, process.env[key]])
+  );
 });
 afterAll(() => {
-  restoreEnv('EDITION', forkBaseline.EDITION);
-  restoreEnv('NEXT_PUBLIC_EDITION', forkBaseline.NEXT_PUBLIC_EDITION);
+  for (const key of GUARDED_ENV_VARS) {
+    restoreEnv(key, forkBaseline[key]);
+  }
   // Per-file stubGlobal hygiene: a file that stubs a global (e.g. a gutted
   // `navigator` for clipboard tests) and never unstubs leaks it to every
   // later file in the shared fork. In-file persistence is preserved — this
@@ -105,13 +117,8 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 afterEach(() => {
-  if (process.env.EDITION !== realEdition) {
-    if (realEdition === undefined) delete process.env.EDITION;
-    else process.env.EDITION = realEdition;
-  }
-  if (process.env.NEXT_PUBLIC_EDITION !== realPublicEdition) {
-    if (realPublicEdition === undefined) delete process.env.NEXT_PUBLIC_EDITION;
-    else process.env.NEXT_PUBLIC_EDITION = realPublicEdition;
+  for (const key of GUARDED_ENV_VARS) {
+    restoreEnv(key, testEnvBaseline[key]);
   }
 });
 
