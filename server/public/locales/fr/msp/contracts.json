@@ -1157,6 +1157,12 @@
         "active": "Actif",
         "inactive": "Inactif"
       }
+    },
+    "simulation": {
+      "client": "Contexte client",
+      "hypothetical": "Profil client hypothétique",
+      "open": "Simuler",
+      "title": "Simulation du modèle"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "Enregistrer en brouillon",
       "saving": "Enregistrement...",
       "completing": "Finalisation..."
+    },
+    "simulation": {
+      "description": "Testez ce brouillon non enregistré avec une activité prévue. La simulation n'enregistre et n'émet rien.",
+      "title": "Simuler avant de créer"
     }
   },
   "wizardBasics": {

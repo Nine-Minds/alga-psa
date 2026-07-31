@@ -1157,6 +1157,12 @@
         "active": "Actief",
         "inactive": "Inactief"
       }
+    },
+    "simulation": {
+      "client": "Klantcontext",
+      "hypothetical": "Hypothetisch klantprofiel",
+      "open": "Simuleren",
+      "title": "Sjabloonsimulatie"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "Opslaan als concept",
       "saving": "Opslaan...",
       "completing": "Voltooien..."
+    },
+    "simulation": {
+      "description": "Test dit niet-opgeslagen concept met verwachte activiteit. De simulatie slaat niets op en geeft niets uit.",
+      "title": "Simuleren vóór het aanmaken"
     }
   },
   "wizardBasics": {

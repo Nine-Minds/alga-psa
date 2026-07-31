@@ -1157,6 +1157,12 @@
         "active": "Activo",
         "inactive": "Inactivo"
       }
+    },
+    "simulation": {
+      "client": "Contexto del cliente",
+      "hypothetical": "Perfil de cliente hipotético",
+      "open": "Simular",
+      "title": "Simulación de plantilla"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "Guardar como borrador",
       "saving": "Guardando...",
       "completing": "Finalizando..."
+    },
+    "simulation": {
+      "description": "Pruebe este borrador sin guardar con actividad prevista. La simulación no guarda ni emite nada.",
+      "title": "Simular antes de crear"
     }
   },
   "wizardBasics": {

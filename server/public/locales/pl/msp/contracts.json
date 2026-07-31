@@ -1157,6 +1157,12 @@
         "active": "Aktywne",
         "inactive": "Nieaktywne"
       }
+    },
+    "simulation": {
+      "client": "Kontekst klienta",
+      "hypothetical": "Hipotetyczny profil klienta",
+      "open": "Symuluj",
+      "title": "Symulacja szablonu"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "Zapisz jako wersję roboczą",
       "saving": "Zapisywanie...",
       "completing": "Kończenie..."
+    },
+    "simulation": {
+      "description": "Przetestuj tę niezapisaną wersję roboczą z zakładaną aktywnością. Symulacja niczego nie zapisuje ani nie wystawia.",
+      "title": "Symuluj przed utworzeniem"
     }
   },
   "wizardBasics": {

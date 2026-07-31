@@ -1157,6 +1157,12 @@
         "active": "11111",
         "inactive": "11111"
       }
+    },
+    "simulation": {
+      "client": "11111",
+      "hypothetical": "11111",
+      "open": "11111",
+      "title": "11111"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "11111",
       "saving": "11111",
       "completing": "11111"
+    },
+    "simulation": {
+      "description": "11111",
+      "title": "11111"
     }
   },
   "wizardBasics": {

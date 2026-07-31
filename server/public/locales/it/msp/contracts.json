@@ -1157,6 +1157,12 @@
         "active": "Attivo",
         "inactive": "Inattivo"
       }
+    },
+    "simulation": {
+      "client": "Contesto cliente",
+      "hypothetical": "Profilo cliente ipotetico",
+      "open": "Simula",
+      "title": "Simulazione del modello"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "Salva come bozza",
       "saving": "Salvataggio...",
       "completing": "Completamento..."
+    },
+    "simulation": {
+      "description": "Prova questa bozza non salvata con attività prevista. La simulazione non salva né emette nulla.",
+      "title": "Simula prima di creare"
     }
   },
   "wizardBasics": {

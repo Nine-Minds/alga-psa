@@ -1157,6 +1157,12 @@
         "active": "Aktiv",
         "inactive": "Inaktiv"
       }
+    },
+    "simulation": {
+      "client": "Kundenkontext",
+      "hypothetical": "Hypothetisches Kundenprofil",
+      "open": "Simulieren",
+      "title": "Vorlagensimulation"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "Als Entwurf speichern",
       "saving": "Wird gespeichert...",
       "completing": "Wird abgeschlossen..."
+    },
+    "simulation": {
+      "description": "Diesen ungespeicherten Entwurf mit angenommener Aktivität testen. Die Simulation speichert nichts und stellt nichts aus.",
+      "title": "Vor dem Erstellen simulieren"
     }
   },
   "wizardBasics": {

@@ -1157,6 +1157,12 @@
         "active": "Active",
         "inactive": "Inactive"
       }
+    },
+    "simulation": {
+      "client": "Client context",
+      "hypothetical": "Hypothetical client profile",
+      "open": "Simulate",
+      "title": "Template simulation"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "Save as Draft",
       "saving": "Saving...",
       "completing": "Completing..."
+    },
+    "simulation": {
+      "description": "Test this unsaved draft with assumed activity. Simulation does not save or issue anything.",
+      "title": "Simulate before creating"
     }
   },
   "wizardBasics": {

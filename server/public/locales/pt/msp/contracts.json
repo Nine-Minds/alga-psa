@@ -1157,6 +1157,12 @@
         "active": "Ativo",
         "inactive": "Inativo"
       }
+    },
+    "simulation": {
+      "client": "Contexto do cliente",
+      "hypothetical": "Perfil de cliente hipotético",
+      "open": "Simular",
+      "title": "Simulação do modelo"
     }
   },
   "quickStart": {
@@ -1322,6 +1328,10 @@
       "saveDraft": "Salvar como rascunho",
       "saving": "Salvando...",
       "completing": "Concluindo..."
+    },
+    "simulation": {
+      "description": "Teste este rascunho não salvo com atividade prevista. A simulação não salva nem emite nada.",
+      "title": "Simular antes de criar"
     }
   },
   "wizardBasics": {
