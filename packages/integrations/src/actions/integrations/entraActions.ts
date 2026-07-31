@@ -992,14 +992,6 @@ export const listEntraMappingGroups = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ groups: EntraMappingGroupOption[] }>();
-  }
-
   const managedTenantId = String(input.managedTenantId || '').trim();
   if (!managedTenantId) {
     return { success: false, error: 'managedTenantId is required.' } as const;
