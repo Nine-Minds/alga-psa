@@ -959,6 +959,18 @@
     "updateError": "Nie udało się zaktualizować ustawień",
     "useDefaultSuccess": "Klient będzie teraz korzystał z domyślnych ustawień wygaśnięcia kredytu."
   },
+  "clientExternalCreditSettings": {
+    "title": "Kredyt zewnętrzny w ewidencji",
+    "enable": "Klient posiada środki w systemie księgowym",
+    "enableHelp": "Dla klientów, których saldo dodatnie znajduje się w QuickBooks (np. zapłacone z góry czekiem). Wyświetla informację na stronie rozliczeń w portalu klienta, aby otwarte faktury nie były mylone z zaległościami.",
+    "note": "Notatka wyświetlana klientowi",
+    "notePlaceholder": "np. opłacone do grudnia 2026",
+    "save": "Zapisz",
+    "loadError": "Nie udało się załadować ustawień",
+    "saveError": "Nie udało się zapisać ustawień",
+    "updatedSuccess": "Zaktualizowano ustawienie kredytu zewnętrznego.",
+    "noteUpdatedSuccess": "Zaktualizowano notatkę o kredycie zewnętrznym."
+  },
   "clientGridCard": {
     "actions": "Działania klienta",
     "quickView": "Szybki podgląd",

@@ -11,6 +11,7 @@
   "viewContractLineDetails": "Exibir detalhes da linha de contrato",
   "viewAllInvoices": "Ver todas as faturas",
   "failedToLoad": "Falha ao carregar faturas. Por favor, tente novamente.",
+  "externalCreditNotice": "Sua conta possui um saldo de crédito registrado em nossa equipe de faturamento. Faturas recentes podem aparecer como em aberto até que esse crédito seja aplicado.",
   "payments": "Pagamentos",
   "contractLines": "Linhas de contrato de serviço",
   "usage": "Métricas de uso",

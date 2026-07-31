@@ -909,6 +909,18 @@
     "updateError": "No se pudo actualizar la configuración",
     "useDefaultSuccess": "El cliente ahora utilizará la configuración predeterminada de vencimiento de crédito."
   },
+  "clientExternalCreditSettings": {
+    "title": "Crédito externo registrado",
+    "enable": "El cliente tiene crédito en el sistema contable",
+    "enableHelp": "Para clientes cuyo saldo a favor está en QuickBooks (por ejemplo, pagado por adelantado con cheque). Muestra un aviso en la página de facturación de su portal para que las facturas abiertas no se confundan con morosidad.",
+    "note": "Nota que se muestra al cliente",
+    "notePlaceholder": "por ejemplo, pagado hasta diciembre de 2026",
+    "save": "Guardar",
+    "loadError": "No se pudo cargar la configuración",
+    "saveError": "No se pudo guardar la configuración",
+    "updatedSuccess": "Se actualizó la configuración de crédito externo.",
+    "noteUpdatedSuccess": "Se actualizó la nota de crédito externo."
+  },
   "clientGridCard": {
     "actions": "Acciones del cliente",
     "quickView": "Vista rápida",

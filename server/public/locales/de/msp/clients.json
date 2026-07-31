@@ -909,6 +909,18 @@
     "updateError": "Die Einstellungen konnten nicht aktualisiert werden",
     "useDefaultSuccess": "Der Kunde verwendet nun die Standardeinstellungen für den Ablauf des Guthabens."
   },
+  "clientExternalCreditSettings": {
+    "title": "Externes Guthaben vorhanden",
+    "enable": "Kunde hat Guthaben im Buchhaltungssystem",
+    "enableHelp": "Für Kunden, deren Guthaben in QuickBooks geführt wird (z. B. per Scheck im Voraus bezahlt). Zeigt einen Hinweis auf der Abrechnungsseite des Kundenportals, damit offene Rechnungen nicht als Zahlungsverzug missverstanden werden.",
+    "note": "Für den Kunden sichtbarer Hinweis",
+    "notePlaceholder": "z. B. bezahlt bis Dezember 2026",
+    "save": "Speichern",
+    "loadError": "Die Einstellungen konnten nicht geladen werden",
+    "saveError": "Einstellungen konnten nicht gespeichert werden",
+    "updatedSuccess": "Die Einstellung für externes Guthaben wurde aktualisiert.",
+    "noteUpdatedSuccess": "Der Hinweis zum externen Guthaben wurde aktualisiert."
+  },
   "clientGridCard": {
     "actions": "Client-Aktionen",
     "quickView": "Schnellansicht",

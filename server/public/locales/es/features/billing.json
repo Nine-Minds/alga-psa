@@ -11,6 +11,7 @@
   "viewContractLineDetails": "Ver detalles de la línea de contrato",
   "viewAllInvoices": "Ver todas las facturas",
   "failedToLoad": "No se pudieron cargar las facturas. Inténtalo de nuevo.",
+  "externalCreditNotice": "Su cuenta tiene un saldo a favor registrado en nuestro equipo de facturación. Es posible que las facturas recientes aparezcan como abiertas hasta que se aplique ese crédito.",
   "invoices": {
     "locations": {
       "groupHeading": "Ubicación",

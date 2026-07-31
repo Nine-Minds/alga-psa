@@ -909,6 +909,18 @@
     "updateError": "Échec de la mise à jour des paramètres",
     "useDefaultSuccess": "Le client utilisera désormais les paramètres d'expiration du crédit par défaut."
   },
+  "clientExternalCreditSettings": {
+    "title": "Crédit externe enregistré",
+    "enable": "Le client détient un crédit dans le système comptable",
+    "enableHelp": "Pour les clients dont le solde créditeur se trouve dans QuickBooks (par exemple payé d'avance par chèque). Affiche un avis sur la page de facturation de leur portail afin que les factures ouvertes ne soient pas confondues avec un impayé.",
+    "note": "Note affichée au client",
+    "notePlaceholder": "par exemple, payé jusqu'en décembre 2026",
+    "save": "Enregistrer",
+    "loadError": "Échec du chargement des paramètres",
+    "saveError": "Échec de l'enregistrement des paramètres",
+    "updatedSuccess": "Le paramètre de crédit externe a été mis à jour.",
+    "noteUpdatedSuccess": "La note de crédit externe a été mise à jour."
+  },
   "clientGridCard": {
     "actions": "Actions des clients",
     "quickView": "Aperçu rapide",

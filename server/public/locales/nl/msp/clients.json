@@ -909,6 +909,18 @@
     "updateError": "Kan de instellingen niet updaten",
     "useDefaultSuccess": "Klant gebruikt nu de standaardinstellingen voor het verlopen van het krediet."
   },
+  "clientExternalCreditSettings": {
+    "title": "Extern tegoed geregistreerd",
+    "enable": "Klant heeft tegoed in het boekhoudsysteem",
+    "enableHelp": "Voor klanten van wie het tegoed in QuickBooks staat (bijvoorbeeld vooruitbetaald per cheque). Toont een melding op de facturatiepagina van hun portaal zodat openstaande facturen niet worden aangezien voor wanbetaling.",
+    "note": "Notitie die aan de klant wordt getoond",
+    "notePlaceholder": "bijvoorbeeld betaald tot december 2026",
+    "save": "Opslaan",
+    "loadError": "Kan instellingen niet laden",
+    "saveError": "Kan instellingen niet opslaan",
+    "updatedSuccess": "De instelling voor extern tegoed is bijgewerkt.",
+    "noteUpdatedSuccess": "De notitie over het externe tegoed is bijgewerkt."
+  },
   "clientGridCard": {
     "actions": "Klantacties",
     "quickView": "Snelle weergave",

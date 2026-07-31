@@ -909,6 +909,18 @@
     "updateError": "55555",
     "useDefaultSuccess": "55555"
   },
+  "clientExternalCreditSettings": {
+    "title": "55555",
+    "enable": "55555",
+    "enableHelp": "55555",
+    "note": "55555",
+    "notePlaceholder": "55555",
+    "save": "55555",
+    "loadError": "55555",
+    "saveError": "55555",
+    "updatedSuccess": "55555",
+    "noteUpdatedSuccess": "55555"
+  },
   "clientGridCard": {
     "actions": "55555",
     "quickView": "55555",
