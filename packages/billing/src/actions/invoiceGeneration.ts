@@ -2942,7 +2942,13 @@ export const createInvoiceFromBillingResult = withAuth(async (
       standardCharges,
       client,
       sessionObject,
-      tenant
+      tenant,
+      {
+        // Project invoices bill project work directly; their charges are not
+        // backed by persisted recurring service periods, so the recurring
+        // linkage assertion does not apply to them.
+        requireRecurringServicePeriodLinkage: !options.projectId,
+      }
     );
     const projectScheduleSubtotal = await persistProjectScheduleCharges(
       trx,

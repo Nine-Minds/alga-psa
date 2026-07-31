@@ -596,7 +596,8 @@ async function persistFixedInvoiceCharges(
   fixedCharges: IFixedPriceCharge[],
   client: any,
   session: Session,
-  tenant: string
+  tenant: string,
+  requireRecurringServicePeriodLinkage: boolean
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
@@ -896,7 +897,8 @@ async function persistFixedInvoiceCharges(
       });
 
       if (
-        isRecurringFixedCharge(detail)
+        requireRecurringServicePeriodLinkage
+        && isRecurringFixedCharge(detail)
         && !linkedServicePeriodRecordIds.has(detail.servicePeriodRecordId ?? '')
       ) {
         const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
@@ -944,8 +946,20 @@ export async function persistInvoiceCharges(
   billingCharges: IBillingCharge[],
   client: any,
   session: Session,
-  tenant: string
+  tenant: string,
+  options: {
+    /**
+     * Recurring (cadence-driven) invoices must consume exactly one persisted
+     * recurring_service_periods row per charge, and generation aborts if a
+     * charge cannot claim one. Project-driven invoices bill project work
+     * directly and have no recurring service period to claim, so callers on
+     * that path opt out.
+     */
+    requireRecurringServicePeriodLinkage?: boolean;
+  } = {}
 ): Promise<number> {
+  const requireRecurringServicePeriodLinkage =
+    options.requireRecurringServicePeriodLinkage ?? true;
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
@@ -970,7 +984,8 @@ export async function persistInvoiceCharges(
     fixedCharges,
     client,
     session,
-    tenant
+    tenant,
+    requireRecurringServicePeriodLinkage
   );
 
   // --- Handle Other Billing Charge Types (Usage, Hourly, Product, License etc.) ---
@@ -1021,7 +1036,9 @@ export async function persistInvoiceCharges(
       && Boolean(charge.config_id)
       && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
     const shouldLinkRecurringServicePeriod =
-      shouldPersistDetail && requiresRecurringServicePeriodLinkage(charge);
+      requireRecurringServicePeriodLinkage
+      && shouldPersistDetail
+      && requiresRecurringServicePeriodLinkage(charge);
 
     await linkAndMarkSourceBillingRecord({
       tx,

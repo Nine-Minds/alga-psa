@@ -352,6 +352,9 @@ describe('invoice generation header billing periods', () => {
         }),
       }),
       'tenant-1',
+      // Recurring generation must claim a persisted recurring service period
+      // for every recurring charge; only project invoices opt out.
+      { requireRecurringServicePeriodLinkage: true },
     );
     expect(mocks.state.invoiceUpdates).toContainEqual({
       where: { invoice_id: 'invoice-1', tenant: 'tenant-1' },
