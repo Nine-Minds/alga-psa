@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { workItemDescriptionText } from '../src/lib/workItemDescription';
+import { workItemDescriptionParagraphs, workItemDescriptionText } from '../src/lib/workItemDescription';
 
 describe('workItemDescriptionText', () => {
   it('flattens serialized BlockNote paragraphs to plain text', () => {
@@ -83,5 +83,55 @@ describe('workItemDescriptionText', () => {
   it('returns an empty string for null and undefined', () => {
     expect(workItemDescriptionText(null)).toBe('');
     expect(workItemDescriptionText(undefined)).toBe('');
+  });
+});
+
+describe('workItemDescriptionParagraphs', () => {
+  it('keeps multi-block documents as separate paragraphs', () => {
+    const raw = JSON.stringify([
+      {
+        id: '1',
+        type: 'heading',
+        props: { level: 1, textColor: 'default', backgroundColor: 'default', textAlignment: 'left' },
+        content: [{ type: 'text', text: 'Outage', styles: {} }],
+        children: [],
+      },
+      {
+        id: '2',
+        type: 'paragraph',
+        props: { textColor: 'default', backgroundColor: 'default', textAlignment: 'left' },
+        content: [{ type: 'text', text: 'First block', styles: { backgroundColor: 'purple' } }],
+        children: [],
+      },
+      {
+        id: '3',
+        type: 'paragraph',
+        props: { textColor: 'default', backgroundColor: 'default', textAlignment: 'left' },
+        content: [{ type: 'text', text: 'Second block', styles: {} }],
+        children: [],
+      },
+    ]);
+
+    expect(workItemDescriptionParagraphs(raw)).toBe('Outage\n\nFirst block\n\nSecond block');
+  });
+
+  it('returns an empty string for empty documents and nullish input', () => {
+    const raw = JSON.stringify([
+      {
+        id: '1',
+        type: 'paragraph',
+        props: { textColor: 'default', backgroundColor: 'default', textAlignment: 'left' },
+        content: [],
+        children: [],
+      },
+    ]);
+
+    expect(workItemDescriptionParagraphs(raw)).toBe('');
+    expect(workItemDescriptionParagraphs(null)).toBe('');
+    expect(workItemDescriptionParagraphs(undefined)).toBe('');
+  });
+
+  it('passes legacy plain-string descriptions through unchanged', () => {
+    expect(workItemDescriptionParagraphs('Legacy plain text description')).toBe('Legacy plain text description');
   });
 });
