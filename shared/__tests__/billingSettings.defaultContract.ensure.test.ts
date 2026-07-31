@@ -1,4 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// defaultContract/billingSettings query through the tenantDb facade; the fake
+// knex below is an in-memory table store dispatched by name, so mock the
+// facade as a passthrough — tenant scoping is the real facade's concern, and
+// its injected scoping clauses confuse the fake's criteria-object where().
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (name: string) => conn(name),
+  }),
+}));
+
 import { ensureClientBillingSettingsRow, updateClientBillingSettings } from '../billingClients/billingSettings';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
 

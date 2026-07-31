@@ -156,6 +156,50 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     });
   });
 
+  // The next two scenarios were ported from the retired shared/ duplicate
+  // suite (5956b3faff-era), which uniquely covered the renew and 404-recreate
+  // paths.
+  it('renews a webhook whose expiry falls inside the look-ahead window', async () => {
+    provider.webhook_expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+      lookAheadMinutes: 60,
+    });
+
+    expect(mocks.adapter.renewWebhookSubscription).toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, action: 'renewed' });
+
+    // The harness's default first() returns a row, so the health write takes
+    // the existing-row update path.
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({
+      subscription_status: 'healthy',
+      last_renewal_result: 'success',
+    }));
+  });
+
+  it('recreates the subscription when renewal fails with a Graph 404', async () => {
+    provider.webhook_expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    mocks.adapter.renewWebhookSubscription.mockRejectedValueOnce({
+      response: { status: 404 },
+      message: 'ResourceNotFound',
+    });
+    mocks.adapter.initializeWebhook.mockResolvedValueOnce({ success: true });
+    mocks.adapter.getConfig.mockReturnValueOnce({
+      webhook_expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+      lookAheadMinutes: 60,
+    });
+
+    expect(mocks.adapter.initializeWebhook).toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, action: 'recreated' });
+  });
+
   it('does not renew, recreate, or reconcile polling providers before their probe is due', async () => {
     provider.delivery_mode = 'polling';
     provider.next_subscription_probe_at = new Date(Date.now() + 60 * 60 * 1000).toISOString();

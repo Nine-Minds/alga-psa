@@ -43,8 +43,13 @@ describe('Email Content Conversion Logic', () => {
     const hasLink = allContent.some((c: any) =>
       c.type === 'link' || (c.styles && c.styles.link)
     );
-    // At minimum, the text should be present
-    const allText = allContent.map((c: any) => c.text || '').join('');
+    // At minimum, the text should be present. Link inlines carry their text
+    // in a nested content array (BlockNote represents links as inline nodes
+    // wrapping styled-text children), so extract recursively.
+    const textOf = (node: any): string =>
+      (node?.text ?? '') +
+      (Array.isArray(node?.content) ? node.content.map(textOf).join('') : '');
+    const allText = allContent.map(textOf).join('');
     expect(allText).toContain('Read more');
   });
 

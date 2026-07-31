@@ -1,6 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TicketModel } from '../ticketModel';
 
+// The model queries through the tenantDb facade now; these fakes dispatch by
+// table name, so mock the facade as a passthrough — tenant scoping is the
+// real facade's concern, not these tests'. tenantJoin degrades to a plain
+// join call on the underlying builder.
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (name: string) => conn(name),
+    tenantJoin: (query: any, table: string, left: string, right: string, opts?: { type?: string }) =>
+      opts?.type === 'left' ? query.leftJoin?.(table, left, right) ?? query : query.join?.(table, left, right) ?? query,
+  }),
+}));
+
+
 function createTrxHarness(options?: {
   ticketExists?: boolean;
   contactExists?: boolean;
@@ -30,6 +43,8 @@ function createTrxHarness(options?: {
     ),
   }));
 
+  const threadInserts: any[] = [];
+
   const trx: any = vi.fn((table: string) => {
     if (table === 'tickets') {
       return { where: ticketsWhere };
@@ -40,8 +55,25 @@ function createTrxHarness(options?: {
     if (table === 'comments') {
       return { insert: commentsInsert };
     }
+    // Comment threading: root comments insert a thread row; replies bump
+    // reply_count via where().update().
+    if (table === 'comment_threads') {
+      return {
+        insert: vi.fn(async (data: any) => {
+          threadInserts.push(data);
+          return [data];
+        }),
+        where: vi.fn(() => ({ update: vi.fn(async () => 1) })),
+      };
+    }
+    // Response-state gate: no settings row means tracking defaults to enabled.
+    if (table === 'tenant_settings') {
+      return { select: vi.fn(() => ({ first: vi.fn(async () => undefined) })) };
+    }
     throw new Error(`Unexpected table in TicketModel.createComment unit test: ${table}`);
   });
+
+  trx.raw = vi.fn((sql: string) => sql);
 
   return {
     trx,

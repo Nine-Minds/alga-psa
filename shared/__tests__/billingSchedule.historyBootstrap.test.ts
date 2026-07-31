@@ -1,6 +1,27 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ISO8601String } from '@alga-psa/types';
 import { updateClientBillingSchedule } from '../billingClients/billingSchedule';
+
+// billingSchedule queries through the tenantDb facade; this harness is an
+// in-memory table store dispatched by name, so the facade is mocked as a
+// passthrough. subquery returns an opaque marker: FakeQuery.whereNotExists
+// models "no invoice" as a flag and never inspects the subquery, and the
+// fake's select() executes eagerly so a real build would explode.
+// tenantJoin degrades to FakeQuery.join (which flags the invoices join).
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (name: string) => conn(name),
+    subquery: (name: string) => {
+      const marker: any = { __subqueryTable: name };
+      marker.select = () => marker;
+      marker.whereRaw = () => marker;
+      marker.where = () => marker;
+      return marker;
+    },
+    tenantJoin: (query: any, table: string, _left: string, _right: string) =>
+      query.join?.(table, () => undefined) ?? query,
+  }),
+}));
 
 vi.mock('../billingClients/billingSettings', () => ({
   ensureClientBillingSettingsRow: vi.fn(async () => undefined),
@@ -125,8 +146,13 @@ class FakeQuery {
     return this;
   }
 
-  select(...fields: string[]): Promise<any> {
-    this.selectedFields = fields;
+  select(...fields: Array<string | Record<string, string>>): Promise<any> {
+    // Knex also accepts an alias map: .select({ alias: 'tbl.column' }).
+    this.selectedFields = fields.flatMap((field) =>
+      typeof field === 'string'
+        ? [field]
+        : Object.entries(field).map(([alias, source]) => `${source} as ${alias}`)
+    );
     return this.execute();
   }
 
@@ -235,6 +261,7 @@ function makeFakeTrx(seed: DbState): any {
 
   const trx: any = (table: string) => new FakeQuery(state, normalizeTableName(table), () => 'NOW');
   trx.fn = { now: () => 'NOW' };
+  trx.raw = (sql: string) => sql;
   trx.schema = { hasColumn: vi.fn(async () => true) };
   trx.commit = vi.fn(async () => undefined);
   trx.rollback = vi.fn(async () => undefined);
@@ -253,6 +280,11 @@ describe('billing history bootstrap cycle regeneration', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-21T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    // Never leak the frozen clock into later files in the shared fork.
+    vi.useRealTimers();
   });
 
   it('T019: saving schedule with optional history date and no cycles creates cycles from normalized boundary through present', async () => {

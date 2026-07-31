@@ -1,6 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TicketModel } from '../ticketModel';
 
+// The model queries through the tenantDb facade now; these fakes dispatch by
+// table name, so mock the facade as a passthrough — tenant scoping is the
+// real facade's concern, not these tests'. tenantJoin degrades to a plain
+// join call on the underlying builder.
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, _tenant: string) => ({
+    table: (name: string) => conn(name),
+    tenantJoin: (query: any, table: string, left: string, right: string, opts?: { type?: string }) =>
+      opts?.type === 'left' ? query.leftJoin?.(table, left, right) ?? query : query.join?.(table, left, right) ?? query,
+  }),
+}));
+
+
 type StatusRow = {
   tenant: string;
   status_id: string;
